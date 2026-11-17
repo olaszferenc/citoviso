@@ -81,7 +81,18 @@ def call_busy():
 
 
 def norm(ph):
-    d = re.sub(r"\D", "", ph)
+    """E.164 digits without '+'. ORSZÁG-RÉTEG 3/5 (ADR-0437): the queue hands over E.164 for
+    ANY dial code ("+420777123456" -> "420777123456"); a Hungarian national "06..." number and
+    a bare "36..." keep the old reading byte for byte."""
+    s = (ph or "").strip()
+    d = re.sub(r"\D", "", s)
+    if s.startswith("+"):
+        if d.startswith("36"):
+            if not re.fullmatch(r"36\d{8,9}", d):
+                raise Fail(f"bad phone {ph!r}")
+        elif not re.fullmatch(r"[1-9]\d{6,14}", d):
+            raise Fail(f"bad phone {ph!r}")
+        return d
     if d.startswith("06"):
         d = "36" + d[2:]
     if not re.fullmatch(r"36\d{8,9}", d):

@@ -9,9 +9,18 @@
 // linked page, exactly as for the companion SMS (ADR-0112).
 
 import { T } from "../i18n/mail.js";
+import { collectFallbacks } from "../i18n/packs.js";
+import { DEFAULT_LANG } from "../i18n/lang.js";
 import { planCountOf, smsDraftParts, smsInvite, type DraftInput, type SmsDraft } from "./draft.js";
 
 export function renderMessengerCaption(d: DraftInput): SmsDraft {
+  // ORSZÁG-RÉTEG 3/5: the caption carries its Hungarian fallbacks — the §C gate refuses a
+  // foreign caption with any (only the country's language goes out).
+  const { value, fallbacks } = collectFallbacks(() => captionText(d));
+  return d.lang !== DEFAULT_LANG ? { ...value, untranslated: fallbacks } : value;
+}
+
+function captionText(d: DraftInput): SmsDraft {
   const { link, unsubscribeLink } = smsDraftParts(d);
   const plans = planCountOf(d);
   const invite = smsInvite(d, "formal");

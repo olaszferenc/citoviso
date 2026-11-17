@@ -223,6 +223,22 @@ export async function countryOfLead(leadId: string): Promise<string | null> {
   return countryOf(row.raw as { country?: unknown } | null, row.areaCountry);
 }
 
+/** countryOfLead() for many leads in one query (ORSZÁG-RÉTEG 3/5: the send lists) — id → ISO-2 | null. */
+export async function countryOfLeads(leadIds: readonly string[]): Promise<Map<string, string | null>> {
+  await fresh();
+  const out = new Map<string, string | null>();
+  if (!leadIds.length) return out;
+  const rows = await db
+    .selectFrom("lead")
+    .leftJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
+    .leftJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
+    .select(["lead.id as id", "lead.raw as raw", "scraper_definition.country as areaCountry"])
+    .where("lead.id", "in", [...new Set(leadIds)])
+    .execute();
+  for (const r of rows) out.set(r.id, countryOf(r.raw as { country?: unknown } | null, r.areaCountry));
+  return out;
+}
+
 /** The pricing region (pricing_config.region, ADR-0020) a country buys in; a country
  *  without a row — or whose region has no price sheet — buys in 'global' (EUR). */
 export function pricingRegionForCountry(iso: string | null | undefined): string {

@@ -171,7 +171,7 @@ function plansWord(lang: string | undefined, count: number): string {
  * multi-plan page: same three statements, from the same constants (§B.5), on one line.
  */
 export function injectPlanSwitcherBar(html: string, i: SwitcherInput): string {
-  const parts = trackedBarParts(i.token);
+  const parts = trackedBarParts(i.token, i.lang);
   const chips = i.plans
     .map((p) => {
       const style = p.hasThumb ? ` style="background-image:url(${planThumbUrl(i.token, p.n)})"` : "";

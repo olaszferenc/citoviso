@@ -14,6 +14,15 @@
 
 import { config } from "../config.js";
 import { mapOutsideScripts } from "../engine/htmlOutsideScripts.js";
+import { interpolate, tSync } from "../i18n/packs.js";
+
+/** ORSZÁG-RÉTEG 3/5 (ADR-XXXX): the page's labels in the lead's language — the same T() contract
+ *  as i18n/mail.ts, without importing the country layer (this module stays light for the guards).
+ *  The LEGAL sentences (LEGAL_BASIS, TRACKING_NOTICE) stay Hungarian here: they belong to the
+ *  country's legal pack (ország-réteg step 7), not to a UI translation. */
+function T(lang: string | undefined, hu: string, vars?: Record<string, string | number>): string {
+  return interpolate(lang, hu, tSync(lang, hu), vars);
+}
 
 /** Local escape on purpose: this module must stay importable without dragging in
  *  the console views or the template kit (i18n packs, icons) — a guard that costs
@@ -57,12 +66,15 @@ const SURFACE = "#101216";
 
 /** WHO is advertising — an advertiser may not stay anonymous (Grt.), and the SMS
  *  signs off with the brand only, so the operating entity is named on this page. */
-function senderSentence(): string {
+function senderSentence(lang?: string): string {
   const advertiser = advertiserName();
   // an unset env may not invent an identity — §B.17 binds us about ourselves too
   // "Olasz Ferenc e.v.." — a name that ends with a period must not get a second one
   // (measured on the served footer, 2026-09-26).
-  return advertiser ? `A megkeresés küldője: ${escapeHtml(advertiser)}${advertiser.endsWith(".") ? "" : "."} ` : "";
+  // ORSZÁG-RÉTEG 3/5: the letter's own key (one translation for the letter and the page).
+  return advertiser
+    ? `${T(lang, "A megkeresés küldője: {who}", { who: escapeHtml(advertiser) })}${advertiser.endsWith(".") ? "" : "."} `
+    : "";
 }
 
 /**
@@ -123,10 +135,10 @@ export function deferConsentUntilEngagement(html: string): string {
 }
 
 /** The way out, and the full information — same markup wherever it appears. */
-function legalLinks(token: string): string {
+function legalLinks(token: string, lang?: string): string {
   return (
-    `<a href="/privacy" style="color:${INK_MUTED};${TAP_LINK}">Adatkezelési tájékoztató</a> · ` +
-    `<a href="/p/${token}/unsubscribe" style="color:${INK_MUTED};${TAP_LINK}">Leiratkozás</a>`
+    `<a href="/privacy" style="color:${INK_MUTED};${TAP_LINK}">${T(lang, "Adatkezelési tájékoztató")}</a> · ` +
+    `<a href="/p/${token}/unsubscribe" style="color:${INK_MUTED};${TAP_LINK}">${T(lang, "Leiratkozás")}</a>`
   );
 }
 
@@ -142,12 +154,12 @@ function legalLinks(token: string): string {
  * the top (ADR-0112, owner's ruling): the opt-out is reachable at the very end of
  * the page, and nothing of the mock renders below it.
  */
-export function injectTrackingNotice(html: string, token: string): string {
+export function injectTrackingNotice(html: string, token: string, lang?: string): string {
   const notice =
     `<div data-cit-footer="tracked" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;font:12px/1.6 system-ui,sans-serif;` +
-    `color:${INK_MUTED};background:${SURFACE}">${LEGAL_BASIS} ${senderSentence()}` +
+    `color:${INK_MUTED};background:${SURFACE}">${LEGAL_BASIS} ${senderSentence(lang)}` +
     `${TRACKING_NOTICE} ` +
-    legalLinks(token) +
+    legalLinks(token, lang) +
     `</div>`;
   return appendToBody(html, notice);
 }
@@ -176,7 +188,7 @@ export function injectTrackingNotice(html: string, token: string): string {
  *    the privacy notice and the working opt-out with it.
  */
 /** WHO made it and WHAT it is not yet — the tracked bar's second statement. */
-function trackedMadeSentence(): string {
+function trackedMadeSentence(lang?: string): string {
   const advertiser = advertiserName();
   // "Készítette: X." and not "A(z) X készítette" on purpose: a Hungarian article
   // in front of an unknown company name forces the "a(z)" crutch, and the ADR-0101
@@ -192,41 +204,40 @@ function trackedMadeSentence(): string {
   // assets/design-refs/prospect-page/first-screen-compact/.
   const dot = advertiser.endsWith(".") ? "" : ".";
   return advertiser
-    ? `Készítette: ${escapeHtml(advertiser)}${dot}<span class="cit-fr-long"> — ingyen, az Ön nyilvánosan ` +
-      `elérhető adataiból.</span> Ez még nem élő oldal.`
-    : `Az Ön nyilvánosan elérhető adataiból készült, ingyen. Ez még nem élő oldal.`;
+    ? `${T(lang, "Készítette: {who}", { who: escapeHtml(advertiser) })}${dot}<span class="cit-fr-long"> ${T(lang, "— ingyen, az Ön nyilvánosan elérhető adataiból.")}</span> ${T(lang, "Ez még nem élő oldal.")}`
+    : T(lang, "Az Ön nyilvánosan elérhető adataiból készült, ingyen. Ez még nem élő oldal.");
 }
 
-/** The tracked bar's headline — shared with the multi-plan bar. */
-const TRACKED_HEADLINE = "Ez egy honlap-terv az Ön szállásáról.";
+/** The tracked bar's headline — shared with the multi-plan bar (ORSZÁG-RÉTEG 3/5: in the lead's language). */
+const trackedHeadline = (lang?: string): string => T(lang, "Ez egy honlap-terv az Ön szállásáról.");
 
 /**
  * The tracked bar's three statements as PARTS, for the multi-plan bar
  * (assets/design-refs/prospect-page/plan-tabs/ §B.5): the same sentences from the
  * same constants, laid out on one line instead of three. Two bars, one truth.
  */
-export function trackedBarParts(token: string): { headline: string; made: string; why: string } {
+export function trackedBarParts(token: string, lang?: string): { headline: string; made: string; why: string } {
   return {
-    headline: TRACKED_HEADLINE,
-    made: trackedMadeSentence(),
-    why: `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token)}`,
+    headline: trackedHeadline(lang),
+    made: trackedMadeSentence(lang),
+    why: `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token, lang)}`,
   };
 }
 
-export function injectTrackingBanner(html: string, token: string): string {
-  const made = trackedMadeSentence();
+export function injectTrackingBanner(html: string, token: string, lang?: string): string {
+  const made = trackedMadeSentence(lang);
   const banner =
     FRAMING_CSS +
     `<div data-cit-framing="tracked" class="cit-fr" style="text-align:center;` +
     `font:400 12.5px/1.4 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
     `<div class="cit-fr-in">` +
-    `<strong style="color:#fff;font-weight:600">${TRACKED_HEADLINE}</strong> ` +
+    `<strong style="color:#fff;font-weight:600">${trackedHeadline(lang)}</strong> ` +
     `${made}` +
     `<details class="cit-fr-det">` +
     `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline">` +
-    `Miért kaptam?</summary>` +
+    `${T(lang, "Miért kaptam?")}</summary>` +
     `<div class="cit-fr-body">` +
-    `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token)}</div>` +
+    `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token, lang)}</div>` +
     `</details></div></div>`;
   return prependToBody(html, banner);
 }
@@ -513,18 +524,17 @@ export function containHorizontalOverflow(html: string): string {
  * in its chrome-less layout. Colours: citui tokens (this page IS a console page, it
  * loads citui.css — unlike the mock underneath the framing bar).
  */
-export function unsubscribeConfirmBody(token: string): string {
+export function unsubscribeConfirmBody(token: string, lang?: string): string {
   const action = `/p/${encodeURIComponent(token)}/unsubscribe`;
   return (
     `<div class="panel" data-cit-unsub-confirm style="max-width:480px;margin:48px auto;text-align:center">` +
-    `<h2>Leiratkozás</h2>` +
-    `<p class="mut">Ha leiratkozik, ezzel az ajánlattal nem keressük többé, és a megtekintési adatok ` +
-    `rögzítését leállítjuk. A honlap-tervet ezután is megnézheti.</p>` +
+    `<h2>${T(lang, "Leiratkozás")}</h2>` +
+    `<p class="mut">${T(lang, "Ha leiratkozik, ezzel az ajánlattal nem keressük többé, és a megtekintési adatok rögzítését leállítjuk. A honlap-tervet ezután is megnézheti.")}</p>` +
     `<form method="post" action="${action}" style="margin:18px 0 0">` +
-    `<button type="submit" class="citui-btn citui-btn--primary" style="min-height:44px;padding:0 22px">Leiratkozom</button>` +
+    `<button type="submit" class="citui-btn citui-btn--primary" style="min-height:44px;padding:0 22px">${T(lang, "Leiratkozom")}</button>` +
     `</form>` +
     `<p class="mut small" style="margin:14px 0 0"><a href="/p/${encodeURIComponent(token)}" ` +
-    `style="display:inline-block;padding:6px 4px">Mégsem — vissza a tervhez</a></p>` +
+    `style="display:inline-block;padding:6px 4px">${T(lang, "Mégsem — vissza a tervhez")}</a></p>` +
     `</div>`
   );
 }
@@ -560,14 +570,13 @@ function advertiserName(): string {
  * unsubscribe link: they already did that, and re-offering it would suggest the
  * first one did not take.
  */
-export function injectOptedOutNotice(html: string, _token: string): string {
+export function injectOptedOutNotice(html: string, _token: string, lang?: string): string {
   const who = advertiserName();
   const notice =
     `<div data-cit-footer="opted-out" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;font:12px/1.6 system-ui,sans-serif;` +
-    `color:#8a8f98;background:#101216">Ön korábban leiratkozott, ezért nem keressük többé, ` +
-    `és ezt a megtekintést nem rögzítjük. Ezt az oldalt Ön nyitotta meg. ` +
-    (who ? `A megkeresés küldője volt: ${escapeHtml(who)}. ` : "") +
-    `<a href="/privacy" style="color:#8a8f98;${TAP_LINK}">Adatkezelési tájékoztató</a></div>`;
+    `color:#8a8f98;background:#101216">${T(lang, "Ön korábban leiratkozott, ezért nem keressük többé, és ezt a megtekintést nem rögzítjük. Ezt az oldalt Ön nyitotta meg.")} ` +
+    (who ? `${T(lang, "A megkeresés küldője volt: {who}.", { who: escapeHtml(who) })} ` : "") +
+    `<a href="/privacy" style="color:#8a8f98;${TAP_LINK}">${T(lang, "Adatkezelési tájékoztató")}</a></div>`;
   return appendToBody(html, notice);
 }
 
@@ -576,15 +585,13 @@ export function injectOptedOutNotice(html: string, _token: string): string {
  * scroll to the bottom to learn why this page still works after they opted out.
  * Approved wording (owner, 2026-09-08).
  */
-export function injectOptedOutBanner(html: string): string {
+export function injectOptedOutBanner(html: string, lang?: string): string {
   // Same two greys as the footer (the module's only allowed literals): this bar
   // sits on an ENGINE-rendered mock that never loads citui.css, so --citui-*
   // would not resolve — and a third colour would need its own exception.
   const banner =
     `<div data-cit-framing="opted-out" style="padding:10px 18px;text-align:center;` +
     `font:13px/1.5 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
-    `Leiratkozott, ezért nem keressük többé — ` +
-    `ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük és nem küldünk ` +
-    `emlékeztetőt.</div>`;
+    `${T(lang, "Leiratkozott, ezért nem keressük többé — ezt az oldalt Ön nyitotta meg. Megnézheti és meg is rendelheti; nem mérjük és nem küldünk emlékeztetőt.")}</div>`;
   return prependToBody(html, banner);
 }

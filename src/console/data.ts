@@ -1020,9 +1020,13 @@ export async function saveLeadEdits(
   // approval page shows its channel within 1–2 minutes (owner 2026-11-08: „ha beírom a mobilszámot,
   // mi triggereli, hogy frissüljön?”). Read only on the phone — no message goes out.
   if (edits.phone?.trim()) {
-    const { normalizePhone, isHuMobileE164 } = await import("../text/phone.js");
-    const m = normalizePhone(edits.phone.trim());
-    if (m && isHuMobileE164(m)) {
+    // ORSZÁG-RÉTEG 3/5: the number read in the lead's country, checked only where the row lets
+    // the mobile outreach go (the HU row: the Hungarian plan, as before).
+    const { leadMobileIn, modemPairBlocks } = await import("../outreach/countryOutreach.js");
+    const { countryConfig, countryOfLead } = await import("../country.js");
+    const cc = await countryConfig(await countryOfLead(id));
+    const m = modemPairBlocks(cc) ? null : leadMobileIn(edits.phone.trim(), cc);
+    if (m) {
       const { requestPresence } = await import("../mms/messenger.js");
       await requestPresence(m);
     }

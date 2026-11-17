@@ -15,7 +15,7 @@ import { esc, helpLink, layout } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { ic } from "../ui/icons.js";
-import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { leadMobileIn, modemPairBlocks } from "../outreach/countryOutreach.js";
 import { countryConfigSync, countryOf } from "../country.js";
 import {
   expectedChannel,
@@ -94,15 +94,19 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       join lead l on l.id = d.lead_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE}
      order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
-  const mobile = (raw: string | null): string | null => {
-    const e = raw ? normalizePhone(raw) : null;
-    return e && isHuMobileE164(e) ? e : null;
+  // ORSZÁG-RÉTEG 3/5: a mobile of the lead's OWN country, and only where the country's row lets
+  // the mobile pair go (the local modem; a foreign mobile-only lead is held, not offered).
+  const mobileOf = (raw: string | null, cc: string | null): string | null => {
+    const c = countryConfigSync(cc);
+    return modemPairBlocks(c) ? null : leadMobileIn(raw, c);
   };
+  const ccOf = (r: (typeof rows.rows)[number]): string | null => countryOf({ country: r.country }, r.area_country);
+  const mobile = (r: (typeof rows.rows)[number]): string | null => mobileOf(r.phone, ccOf(r));
   const cfg = await getMessengerConfig();
-  const presence = await presenceOf(rows.rows.map((r) => mobile(r.phone)).filter((p): p is string => !!p));
+  const presence = await presenceOf(rows.rows.map((r) => mobile(r)).filter((p): p is string => !!p));
   const lang = consoleLang();
   return rows.rows.map((r) => {
-    const m = mobile(r.phone);
+    const m = mobile(r);
     return {
       leadId: r.lead_id,
       name: r.name,
@@ -120,7 +124,13 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       waOn: cfg.whatsapp !== false,
       channel: m
         ? expectedChannel(presence.get(m) ?? null, cfg)
-        : { channel: "email" as const, step: 0 as const, reason: T(lang, "nincs magyar mobilszám — csak e-mail megy") },
+        : {
+            channel: "email" as const,
+            step: 0 as const,
+            reason: modemPairBlocks(countryConfigSync(ccOf(r)))
+              ? T(lang, "a lead országában nincs engedélyezett mobil-csatorna — csak e-mail megy, a mobil megkeresés tartva")
+              : T(lang, "nincs magyar mobilszám — csak e-mail megy"),
+          },
     };
   });
 }
@@ -514,7 +524,10 @@ export function approvalPage(
     `<h4>${esc(T(lang, "Második terv"))}</h4>${chips("alt", [["yes", T(lang, "Van")], ["no", T(lang, "Nincs — egy tervvel megy")]], lang)}` +
     `<button type="button" class="aq-clear">${esc(T(lang, "Szűrők törlése"))}</button></div>`;
   const left =
-    `<nav class="aq-list"><div class="aq-cnt">${esc(T(lang, "Jóváhagyásra vár"))}: ${items.length}</div>${items.length ? filters : ""}${groups}` +
+    `<nav class="aq-list"><div class="aq-cnt">${esc(T(lang, "Jóváhagyásra vár"))}: ${items.length}${
+      // ORSZÁG-RÉTEG 3/5: a multi-country queue counts per country (each has its own window and cap).
+      multi ? ` <small class="aq-ccn">${countries.map((c) => `${esc(c || "?")} ${items.filter((i) => i.country === c).length}`).join(" · ")}</small>` : ""
+    }</div>${items.length ? filters : ""}${groups}` +
     (items.length ? `<div class="aq-none" hidden>${esc(T(lang, "Nincs a szűrőnek megfelelő lead."))}</div>` : "") +
     `</nav>`;
   const top = pageTop("wait", items.length, ctx.notSeen, ctx.cfg, lang);

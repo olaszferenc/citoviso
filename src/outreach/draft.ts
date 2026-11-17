@@ -18,11 +18,14 @@ import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import { ensurePreviewLabel, peekPreviewLabel, previewLink } from "./previewLabel.js";
 import { listProspectPlans } from "./planSet.js";
-import { formatNumber } from "../text/money.js";
+import { formatMinor, formatNumber } from "../text/money.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
+import { collectFallbacks } from "../i18n/packs.js";
 import { DEFAULT_LANG, langForCountry } from "../i18n/lang.js";
-import { countryConfig, countryOf } from "../country.js";
+import { countryConfig, countryConfigSync, countryOf } from "../country.js";
+import { gsm7FoldableLang, outreachLangOf } from "./countryOutreach.js";
+import { foreignOfferSentence } from "./foreignPrice.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { HU_PRICING_REGION, loadPricing } from "../pricing.js";
 import { cheapestOfferedMonthly, cheapestOfferedMonthlyFrom } from "../packageOffer.js";
@@ -177,6 +180,14 @@ export interface OutreachDraft {
   readonly privacyLink: string;
   /** ADR-0322 ④/B: the absolute /p/<token>/why link — present only with `parts.why`. */
   readonly whyLink?: string;
+  /**
+   * ORSZÁG-RÉTEG 3/5 (ADR-XXXX): the source strings that fell back to Hungarian while this
+   * letter rendered (a gap in the reader's pack). Non-empty → the §C gate refuses it: a cold
+   * outreach to a foreign country goes out only wholly in that country's language. Present on
+   * every non-Hungarian render (empty = measured, complete); ABSENT on a non-Hungarian message
+   * = not measured → the gate refuses it too (a follow-up text not yet wired to the measure).
+   */
+  readonly untranslated?: readonly string[];
 }
 
 export interface DraftInput {
@@ -227,6 +238,12 @@ export interface DraftInput {
    */
   readonly fromMonthly?: number | null;
   /**
+   * ADR-0443 / ORSZÁG-RÉTEG 3/5: the currency of the lead's pricing region — the from-price is
+   * printed in it (MINOR units, formatMinor). Absent or HUF → the Hungarian forint sentence,
+   * byte for byte as before.
+   */
+  readonly currency?: string;
+  /**
    * The trial length the linked page offers (trialDaysOnOffer) — the letter and the companion
    * SMS name it; null / absent = the page offers no trial and neither says a word of one.
    */
@@ -260,12 +277,26 @@ export const NO_PACKAGE_PRICE = "[NINCS KÍNÁLT CSOMAG — Konzol ▸ Árazás]
 export function fromPricePair(
   fromMonthly: number | null,
   percent: number,
+  /** ORSZÁG-RÉTEG 3/5: the lead region's currency + the reader's language; absent / HUF = forint. */
+  money?: { readonly currency?: string; readonly lang?: string },
 ): { priceList: string; priceOffer: string } {
   if (fromMonthly === null) return { priceList: NO_PACKAGE_PRICE, priceOffer: NO_PACKAGE_PRICE };
+  if (!isForint(money?.currency)) {
+    const cur = money!.currency!;
+    return {
+      priceList: formatMinor(fromMonthly, cur, money?.lang),
+      priceOffer: formatMinor(applyOffer(fromMonthly, { percent }), cur, money?.lang),
+    };
+  }
   return {
     priceList: formatHuf(fromMonthly),
     priceOffer: formatHuf(applyOffer(fromMonthly, { percent })),
   };
+}
+
+/** Absent or HUF: the price sentence is the Hungarian „… forinttól” one (ADR-0443: HUF minor = forint). */
+function isForint(currency: string | undefined): boolean {
+  return !currency || currency.toUpperCase() === "HUF";
 }
 
 /** The site-check outcome the letter may quote (see DraftInput.siteCheck). */
@@ -406,6 +437,13 @@ export function formatHuf(n: number): string {
  * from real data + config; the §C gate (outreachCheck) judges the result.
  */
 export function renderDraft(d: DraftInput): OutreachDraft {
+  // ORSZÁG-RÉTEG 3/5: the letter carries the strings that fell back to Hungarian (the §C gate
+  // refuses a foreign letter with any). A Hungarian render never falls back (tSync).
+  const { value, fallbacks } = collectFallbacks(() => renderDraftText(d));
+  return d.lang !== DEFAULT_LANG ? { ...value, untranslated: fallbacks } : value;
+}
+
+function renderDraftText(d: DraftInput): OutreachDraft {
   const base = config.publicBaseUrl.replace(/\/+$/, "");
   // The link carries a READABLE slug before the token (/p/<slug>/<token>). A bare
   // random token from an unknown sender reads exactly like a phishing link — the
@@ -452,6 +490,7 @@ export function renderDraft(d: DraftInput): OutreachDraft {
     // the from-price of its LEAD's region (buildDraftForProspect below, ADR-0443).
     d.fromMonthly !== undefined ? d.fromMonthly : cheapestOfferedMonthlyFrom(new Set(), HU_PRICING_REGION),
     draftOfferPercent(d),
+    { currency: d.currency, lang: d.lang },
   );
 
   // ⛔ NYELVI TILALMAK (ADR-0101, tulaj-kifogás: "gépi szöveg"): nincs "a(z)", nincs
@@ -480,11 +519,15 @@ export function renderDraft(d: DraftInput): OutreachDraft {
         : plans === 2
           ? T(d.lang, "Egy kattintással válthat a két kinézet között, és beállíthatja, mi kerüljön az oldalra.")
           : T(d.lang, "A linken beállíthatja, mi kerüljön az oldalra."),
-    p3: T(
-      d.lang,
-      "Bemutatkozó ajánlatként minden csomagra {percent}% kedvezményt adunk: havi {price} helyett {offerPrice} forinttól.",
-      { percent, price: priceList, offerPrice: priceOffer },
-    ),
+    // ORSZÁG-RÉTEG 3/5: the amount is in the lead region's currency; the forint sentence is the
+    // Hungarian one, any other currency carries its own sign in the amount (formatMinor).
+    p3: isForint(d.currency)
+      ? T(
+          d.lang,
+          "Bemutatkozó ajánlatként minden csomagra {percent}% kedvezményt adunk: havi {price} helyett {offerPrice} forinttól.",
+          { percent, price: priceList, offerPrice: priceOffer },
+        )
+      : foreignOfferSentence(d.lang, { percent, price: priceList, offerPrice: priceOffer }),
     // The one-click start IS the trial (ADR-0440: the page's single „Indítsa el” button) — so
     // the sentence exists only while the page offers the trial; without it the letter says
     // the site can be ordered on the link, never that one click starts it.
@@ -596,6 +639,8 @@ export interface SmsDraft {
    * Absent = the name stands in the text unchanged.
    */
   readonly name?: string;
+  /** ORSZÁG-RÉTEG 3/5: source strings that fell back to Hungarian (see OutreachDraft.untranslated). */
+  readonly untranslated?: readonly string[];
 }
 
 /** Shared pieces of every SMS-shaped outreach message (link, opt-out). */
@@ -706,7 +751,15 @@ function foldedSms(
   unsubscribeLink: string,
 ): SmsDraft {
   const MARK = "@@LINK@@";
-  const build = (name: string): string => toGsm7(body(name, MARK)).replace(MARK, link);
+  // ORSZÁG-RÉTEG 3/5: GSM-7 folding only where the language's alphabet survives it — a Cyrillic
+  // or Greek text stays as written and goes out UCS-2 (smsEncoding counts 70 / 67 per segment).
+  const fold = gsm7FoldableLang(d.lang) ? toGsm7 : (t: string): string => t;
+  const untranslated = new Set<string>();
+  const build = (name: string): string => {
+    const r = collectFallbacks(() => body(name, MARK));
+    for (const f of r.fallbacks) untranslated.add(f);
+    return fold(r.value).replace(MARK, link);
+  };
   const fits = (t: string): boolean => smsEncoding(t).segments <= PAIR_SMS_MAX_SEGMENTS;
   let name = d.leadName;
   let text = build(name);
@@ -714,7 +767,7 @@ function foldedSms(
     name = `${[...d.leadName].slice(0, n).join("").trimEnd()}...`;
     text = build(name);
   }
-  return { text, link, unsubscribeLink, name: toGsm7(name) };
+  return { text, link, unsubscribeLink, name: fold(name), ...(d.lang !== DEFAULT_LANG ? { untranslated: [...untranslated] } : {}) };
 }
 
 /** A cold SMS (solo or companion) may cost at most this many segments (ADR-0366, as the campaign SMS). */
@@ -723,11 +776,12 @@ export const PAIR_SMS_MAX_SEGMENTS = 2;
 /** Load the draft inputs for a prospect id (real lead data only). Returns both the e-mail
  *  draft and the SMS draft (ADR-0030), plus the lead's phone for the SMS channel. */
 /** The cheapest offered package in the lead's own pricing region, or null (fail closed). */
-async function leadFromMonthly(leadId: string): Promise<number | null> {
+async function leadFromMonthly(leadId: string): Promise<{ readonly amount: number | null; readonly currency?: string }> {
   try {
-    return await cheapestOfferedMonthly((await regionForLead(leadId)).region);
+    const money = await regionForLead(leadId);
+    return { amount: await cheapestOfferedMonthly(money.region), currency: money.currency };
   } catch (e) {
-    if (e instanceof OrderRegionError) return null;
+    if (e instanceof OrderRegionError) return { amount: null };
     throw e;
   }
 }
@@ -794,14 +848,19 @@ export async function buildDraftForProspect(
   // page it links to must not disagree. A country with no layer row has no language: the
   // draft still renders (the console shows it) in Hungarian, but the gate below is shut,
   // so it can never be SENT.
+  //
+  // ORSZÁG-RÉTEG 3/5 — owner 2026-11-17: a cold outreach goes out ONLY in the COUNTRY's default
+  // language (the row's default_lang), never in a lead's individual language signal; the mock's
+  // language is the fallback only for a country without a row (whose gate is shut anyway).
   const sdLang = (inputs.siteData as { lang?: string } | undefined)?.lang;
-  const lang = await prepareMailLang(sdLang || langForCountry(country) || DEFAULT_LANG);
+  const lang = await prepareMailLang(outreachLangOf(countryConfigSync(country)) || sdLang || langForCountry(country) || DEFAULT_LANG);
   // The plan count from the SAME rule the page counts with — the letter may not say "3"
   // while the link shows 2 (one rule, one copy).
   const planCount =
     r.artifactId && r.artifactPath
       ? (await listProspectPlans(prospectId, { artifactId: r.artifactId, artifactPath: r.artifactPath })).length
       : 1;
+  const money = await leadFromMonthly(r.leadId);
   const input: DraftInput = {
     planCount,
     leadName: r.leadName,
@@ -818,7 +877,9 @@ export async function buildDraftForProspect(
     previewLabel: opts.reserveLabel === false ? await peekPreviewLabel(r.leadId) : await ensurePreviewLabel(r.leadId),
     // Owner 2026-10-12: the from-price follows /pricing — read at send time, every time.
     // ADR-0443: in the LEAD's pricing region; a market that cannot price advertises none.
-    fromMonthly: await leadFromMonthly(r.leadId),
+    fromMonthly: money.amount,
+    // ORSZÁG-RÉTEG 3/5: the amount in that region's currency (HUF → the forint sentence, as before).
+    ...(money.currency ? { currency: money.currency } : {}),
     // Owner 2026-10-27: the trial sentence — the SAME rule as the /p page's trial entry.
     trialDays: await trialDaysOnOffer(r.leadId, isEngineArtifact(r.artifactInputs)),
   };

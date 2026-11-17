@@ -701,7 +701,10 @@ try {
     const body = gateSrc.slice(gateSrc.indexOf("export async function mobileOutreachGates("));
     say(!isHuMobileE164("+3688424136") && ["+36201234567", "+36301234567", "+36311234567", "+36501234567", "+36701234567"].every(isHuMobileE164),
       "⑳ a mobil-felismerő: 88 vezetékes ✗, 20/30/31/50/70 ✓");
-    say(/if \(!isHuMobileE164\(to\)\) \{\s*return no\(/.test(body) && body.indexOf("isHuMobileE164(to)") < body.indexOf("phoneContactBlocks("),
+    // ORSZÁG-RÉTEG 3/5 (ADR-XXXX): the mobile test is the lead country's (isMobileE164In(to, cc)); for
+    // the HU row it IS isHuMobileE164 (country-layer-check ⑨ compares the two on samples).
+    const mob = /if \(!(?:isHuMobileE164\(to\)|isMobileE164In\(to, cc\))\) \{\s*return no\(/.exec(body);
+    say(!!mob && body.indexOf(mob[0]) < body.indexOf("phoneContactBlocks("),
       "⑳ a mobil-kapu (pár + SMS) vezetékes számra no()-val megáll, a többi kizárás előtt");
 
     // ⑳d the relay waits longer than mms-send's own ceiling (deploy/mms-send/mms-send TOTAL_BUDGET).

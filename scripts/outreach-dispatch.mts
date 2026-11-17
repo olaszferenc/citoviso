@@ -8,7 +8,7 @@
 //   tsx scripts/outreach-dispatch.mts requeue <leadId> --by=<name>
 //   tsx scripts/outreach-dispatch.mts cancel <leadId> --by=<name> --reason="…"
 //   tsx scripts/outreach-dispatch.mts on|off
-//   tsx scripts/outreach-dispatch.mts cap <n>
+//   tsx scripts/outreach-dispatch.mts cap <n> [--country=CZ]          # HU (home) cap, or one country's own cap (ADR-0437/3-5)
 //   tsx scripts/outreach-dispatch.mts list [--status=held]
 //   tsx scripts/outreach-dispatch.mts attach-second --sent [--dry-run]
 //        owner 2026-10-26: the links the timer already SENT with one plan get the second
@@ -21,7 +21,9 @@ import { readFile } from "node:fs/promises";
 import { db } from "../src/db/client.js";
 import {
   cancelDispatch,
+  DISPATCH_HOME_COUNTRY,
   dispatchStatus,
+  getAutoDispatchSettings,
   attachSecondPlan,
   enqueueDispatch,
   requeueDispatch,
@@ -124,8 +126,15 @@ async function main(): Promise<void> {
     }
     case "cap": {
       const n = Number(pos[0]);
-      if (!Number.isInteger(n) || n < 0) throw new Error("cap <egész szám ≥ 0>");
-      console.log(JSON.stringify(await setAutoDispatchSettings({ dailyCap: n })));
+      if (!Number.isInteger(n) || n < 0) throw new Error("cap <egész szám ≥ 0> [--country=XX]");
+      const cc = opt("country")?.trim().toUpperCase();
+      if (cc && cc !== DISPATCH_HOME_COUNTRY) {
+        if (!/^[A-Z]{2}$/.test(cc)) throw new Error("--country=<ISO-2>");
+        const cur = await getAutoDispatchSettings();
+        console.log(JSON.stringify(await setAutoDispatchSettings({ countryCaps: { ...(cur.countryCaps ?? {}), [cc]: n } })));
+      } else {
+        console.log(JSON.stringify(await setAutoDispatchSettings({ dailyCap: n })));
+      }
       return;
     }
     case "list": {

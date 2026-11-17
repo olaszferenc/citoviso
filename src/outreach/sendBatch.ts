@@ -27,11 +27,11 @@ import { sql } from "kysely";
 import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
-import { huArticleLower } from "../hu.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
-import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
+import { countryConfigSync } from "../country.js";
+import { babelHoldReason, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { alreadyCustomerBlocks } from "./customerGate.js";
 import { isTestLeadName } from "./ownerTestPhone.js";
 import { planCountStill } from "./planSet.js";
@@ -417,7 +417,8 @@ export async function sendOutreachMail(
         ...base,
         outcome: {
           kind: "skipped",
-          reason: `${huArticleLower(d.lang)} ${d.lang} nyelvi csomagból ${missing} string hiányzik — rossz nyelvű levél helyett NEM küldünk`,
+          // ORSZÁG-RÉTEG 3/5: TARTVA „Bábelre vár” — never a Hungarian fallback (owner 2026-11-17).
+          reason: babelHoldReason(d.lang, missing),
         },
       };
     }
@@ -568,7 +569,8 @@ export async function sendOutreachMail(
   // it is a pure function of the clock, not of the prospect — „Mehet ki most?” and the
   // dry-run guards judge the MAIL, and the send itself says when the hour is wrong.
   if (!testLead) {
-    const mockBlock = mockOutreachWindowBlocks(new Date());
+    // ORSZÁG-RÉTEG 3/5: in the lead's zone, on its country's working days (HU = Budapest).
+    const mockBlock = outreachWindowBlocksIn(new Date(), countryConfigSync(d.market.country));
     if (mockBlock) return { ...base, outcome: { kind: "skipped", reason: mockBlock } };
   }
 

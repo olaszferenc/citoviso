@@ -480,17 +480,41 @@ export async function requestPresence(phone: string): Promise<void> {
   await setSetting(PRESENCE_PRIORITY_KEY, JSON.stringify([phone, ...list].slice(0, 20)));
 }
 
+/**
+ * ORSZÁG-RÉTEG 3/5: the approval-queue numbers worth a presence read — each read in its lead's
+ * country (was: „+36 20/30/31/50/70” only), and only where the country's row enables the
+ * messenger AND the pair (the queued row carries the MMS fallback on the local modem). The HU row
+ * keeps the Hungarian plan: the same list as before.
+ */
+async function messengerPhones(
+  rows: readonly { phone: string | null; country: string | null; area_country: string | null }[],
+  ch: "viber" | "whatsapp",
+): Promise<string[]> {
+  const { countryConfigSync, countryOf } = await import("../country.js");
+  const { leadMobileIn, messengerBlocks, modemPairBlocks } = await import("../outreach/countryOutreach.js");
+  const out = new Set<string>();
+  for (const r of rows) {
+    const cc = countryConfigSync(countryOf({ country: r.country }, r.area_country));
+    if (modemPairBlocks(cc) || messengerBlocks(cc, ch)) continue;
+    const m = leadMobileIn(r.phone, cc);
+    if (m) out.add(m);
+  }
+  return [...out];
+}
+
 /** Numbers of leads waiting for the owner's approval with no fresh presence read (requested ones first). */
 export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH): Promise<string[]> {
   const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
-  const { normalizePhone } = await import("../text/phone.js");
-  const rows = await sql<{ phone: string | null }>`
-    select l.raw->>'phone' as phone
+  const rows = await sql<{ phone: string | null; country: string | null; area_country: string | null }>`
+    select l.raw->>'phone' as phone, l.raw->>'country' as country,
+           (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id
+             where sr.id = l.scrape_run_id) as area_country
       from outreach_dispatch d join lead l on l.id = d.lead_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   // Leads with an e-mail address first (owner 2026-11-08: the e-mail + Viber leads are what matters).
-  const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
+  // ORSZÁG-RÉTEG 3/5: a mobile of the lead's own country, where its row lets Viber + the pair go.
+  const phones = await messengerPhones(rows.rows, "viber");
   if (!phones.length) return [];
   // Viber-off mode (owner 2026-11-11): the phone cannot read Viber — no Viber lookups until it is back.
   const { VIBER_OFF_KEY } = await import("./relayQueue.js");
@@ -538,13 +562,14 @@ export async function whatsappPresenceDue(now: Date = new Date()): Promise<strin
   const last = Date.parse((await getSetting(WA_LOOKUP_AT_KEY)) ?? "");
   if (Number.isFinite(last) && now.getTime() - last < WA_LOOKUP_EVERY_MS) return [];
   const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
-  const { normalizePhone } = await import("../text/phone.js");
-  const rows = await sql<{ phone: string | null }>`
-    select l.raw->>'phone' as phone
+  const rows = await sql<{ phone: string | null; country: string | null; area_country: string | null }>`
+    select l.raw->>'phone' as phone, l.raw->>'country' as country,
+           (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id
+             where sr.id = l.scrape_run_id) as area_country
       from outreach_dispatch d join lead l on l.id = d.lead_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
-  let phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
+  let phones = await messengerPhones(rows.rows, "whatsapp");
   if (!phones.length) return [];
   // Viber-off mode (owner 2026-11-12: „ha nincs viber vagy nem működik, akkor nézzünk whatsuppot”):
   // a number whose Viber is not read yet gets the WhatsApp lookup too (same tempo, one per 2 minutes).

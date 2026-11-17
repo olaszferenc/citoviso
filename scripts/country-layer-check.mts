@@ -27,6 +27,12 @@
 //      send hour and heat map are in the lead's zone, portals come from the catalogue, and the
 //      tenant reports/letters run on the lodging's zone; no burned HUF / Ft / Budapest clock.
 //
+//   ⑨ ADR-XXXX — KIKÜLDÉS (ország-réteg 3/5): the send files carry no burned +36 / isHuMobileE164 /
+//      Budapest-only mock window / HUF amount / lang==="hu" country gate (each remaining one on the
+//      ALLOW list WITH its reason); the window, the channel, the mobile, the cap and the language
+//      hold are wired to the country row; and the HU row answers exactly what the Budapest /
+//      Hungarian-only code answered (window sweep, mobile samples, cap, channel).
+//
 //   ⑧ ADR-0455 — CRM ÉS KOMMUNIKÁCIÓ (ország-réteg 3/4): the CRM files read phone numbers in the
 //      lead's / partner's country (no Hungarian-only normalizePhone), keep no burned
 //      Europe/Budapest / "hu"-fallback / Budapest clock (each one on the ALLOW list WITH its
@@ -194,6 +200,7 @@ const SCOPE = [
 const BURNED = /["'`](?:HU|hu|HUF|hu-HU)["'`]|\+36|Europe\/Budapest|search_lang=hu|languageCode:\s*["']hu/;
 // file → exact code fragment that may stay, and WHY.
 const ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+  { file: "src/outreach/draft.ts", frag: 'return !currency || currency.toUpperCase() === "HUF";', why: "ADR-XXXX: a FORINT-mondat ága („… forinttól”) — pénznem szerinti szöveg-ág, nem ország; más pénznem a saját jelével (formatMinor)" },
   { file: "src/scraper/persist.ts", frag: 'new Intl.DateTimeFormat("hu-HU"', why: "az operátori napló órája (platform-idő, APP_TZ) — nem a lead országa" },
   { file: "src/scraper/enrichWebSearch.ts", frag: "(?:\\+36|0036|06)", why: "a webes kontakt-kinyerő HU-szám mintája; az ország-függő kinyerés a telefon-csoport következő lépése (ADR-0437 ⑤3)" },
   { file: "src/i18n/lang.ts", frag: 'const UI_LANGS: readonly string[] = ["hu"', why: "a saját felületeink lefordított NYELVEI (nem ország)" },
@@ -456,7 +463,6 @@ const CRM_BURNED =
   /\bnormalizePhone\(|Europe\/Budapest|budapestTime\.js|\|\|\s*["'`]hu["'`]|\?\?\s*["'`]hu["'`]|smsQuietHours\(|mockOutreachWindowOpen\(/;
 const CRM_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
   { file: "src/console/partnerMessages.ts", frag: 'import { budapestIsoDay } from "../text/budapestTime.js"', why: "a szálban a dátum az OPERÁTOR naptárában (konzol-felirat), nem a partner küldési órája" },
-  { file: "src/console/approvalQueue.ts", frag: "const e = raw ? normalizePhone(raw) : null;", why: "a MOBIL-CSATORNA terve (Viber/WA/MMS a magyar modemről) a kiküldés-kör (ország-réteg 3/5) dolga; a lap csak magyar mobilt ajánl" },
   { file: "src/console/approvalQueue.ts", frag: 'new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest"', why: "a „Messengeren nem nézte meg” fül a magyar telefonról küldött üzenetek idejét az OPERÁTOR naptárában írja (operátori lap)" },
 ];
 const crmHits: string[] = [];
@@ -520,6 +526,94 @@ check("a jóváhagyási sor ország-oszlop + szűrő", /chips\("cc"/.test(src("s
     }
     check("a HU-sor órája = a régi budapesti ablak és csendes óra (két hét, DST-váltással)", bad === 0, `${bad} eltérés`);
   }
+}
+
+console.log("⑨ Kiküldés (ország-réteg 3/5)");
+const SEND_SCOPE = [
+  "src/outreach/countryOutreach.ts", "src/outreach/sendOutreachSms.ts", "src/outreach/sendOutreachPair.ts",
+  "src/outreach/sendBatch.ts", "src/outreach/autoDispatch.ts", "src/outreach/outreachCheck.ts", "src/outreach/draft.ts",
+  "src/outreach/trialCampaign.ts", "src/outreach/messengerCaption.ts", "src/console/approvalQueue.ts",
+  "src/console/approvalCopy.ts", "src/console/data.ts", "src/mms/messenger.ts",
+];
+const SEND_BURNED =
+  /isHuMobileE164\(|\\\+36\(|["'`]\+36|mockOutreachWindowBlocks\(|\blang\s*[!=]==\s*["'`]hu["'`]|["'`]hu["'`]\s*[!=]==\s*lang\b|formatHuf\(/;
+const SEND_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+  { file: "src/outreach/countryOutreach.ts", frag: "if (isBudapestClock(cfg)) return mockOutreachWindowBlocks(now);", why: "a HU-sor órája = a budapesti ablak: a magyar mondat bájtra azonos marad (a ⑨ söprés méri)" },
+  { file: "src/outreach/draft.ts", frag: "priceList: formatHuf(fromMonthly),", why: "a FORINT-ág (HUF régió): a magyar ármondat bájtra azonos; más pénznem formatMinor-ral" },
+  { file: "src/outreach/draft.ts", frag: "priceOffer: formatHuf(applyOffer(fromMonthly, { percent })),", why: "a FORINT-ág (HUF régió), mint fent" },
+  { file: "src/outreach/draft.ts", frag: "export function formatHuf(n: number): string {", why: "a forint-formázó maga (a HUF-ág és a régi hívók használják)" },
+];
+const sendHits: string[] = [];
+const sendAllowUsed = new Set<number>();
+for (const f of SEND_SCOPE) {
+  src(f).split("\n").forEach((raw, n) => {
+    const code = stripComments(raw);
+    if (!SEND_BURNED.test(code)) return;
+    const a = SEND_ALLOW.findIndex((x) => x.file === f && code.includes(x.frag));
+    if (a >= 0) {
+      sendAllowUsed.add(a);
+      return;
+    }
+    sendHits.push(`${f}:${n + 1}: ${raw.trim()}`);
+  });
+}
+check("nincs +36 / isHuMobileE164 / budapesti mock-ablak / HUF-összeg / lang===\"hu\" a kiküldés-fájlokban", sendHits.length === 0, `\n      ${sendHits.join("\n      ")}`);
+SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, sendAllowUsed.has(i)));
+{
+  const sms = src("src/outreach/sendOutreachSms.ts");
+  const pair = src("src/outreach/sendOutreachPair.ts");
+  const batch = src("src/outreach/sendBatch.ts");
+  const auto = src("src/outreach/autoDispatch.ts");
+  const oc = src("src/outreach/outreachCheck.ts");
+  const dr = src("src/outreach/draft.ts");
+  check(
+    "a küldési ablak a lead országában (levél, pár, hideg SMS, kiküldési sor)",
+    /outreachWindowBlocksIn\(new Date\(\), countryConfigSync\(d\.market\.country\)\)/.test(batch) &&
+      /outreachWindowBlocksIn\(new Date\(\), countryConfigSync\(d\.market\.country\)\)/.test(pair) &&
+      /outreachWindowBlocksIn\(new Date\(\), countryConfigSync\(d\.market\.country\)\)/.test(sms) &&
+      /outreachWindowBlocksIn\(now, cfg\)/.test(auto),
+  );
+  check(
+    "a mobil-csatorna az ország-sorból (modem-pár kapu, a szám a lead országában)",
+    /const pairBlock = modemPairBlocks\(cc\)/.test(sms) && /normalizePhoneIn\(d\.phone, cc\)/.test(sms) && /isMobileE164In\(to, cc\)/.test(sms),
+  );
+  check("hiányzó nyelvi csomag = TARTVA „Bábelre vár” (levél, mobil)", /babelHoldReason\(d\.lang, missing\)/.test(batch) && /babelHoldReason\(d\.lang, pack\.missing\)/.test(sms));
+  check(
+    "a kvóta országonként (saját nap, saját számláló), a sor az országot nézi",
+    /dailyCapFor\(cfg, settings, DISPATCH_HOME_COUNTRY\)/.test(auto) && /countryOfLeads\(rows\.map/.test(auto) && /country: known\?\.iso2 \?\? iso/.test(auto),
+  );
+  check(
+    "a megkeresés nyelve az ország nyelve, a render a magyar fallbackjeit hordozza, az ellenőrző méri",
+    /outreachLangOf\(countryConfigSync\(country\)\)/.test(dr) && /collectFallbacks\(\(\) => renderDraftText\(d\)\)/.test(dr) &&
+      /reasons\.push\(\.\.\.languageReasons\(lang, market, draft\.untranslated\)\)/.test(oc) &&
+      /reasons\.push\(\.\.\.languageReasons\(lang, market, sms\.untranslated\)\)/.test(oc),
+  );
+  check("az összeg a lead régiójának pénznemében", /currency: money\.currency/.test(dr) && /formatMinor\(fromMonthly, cur, money\?\.lang\)/.test(dr));
+  check("a cirill/görög SMS nem hajlik GSM-7-re (UCS-2 marad)", /gsm7FoldableLang\(d\.lang\) \? toGsm7/.test(dr) && /gsm7FoldableLang\(lang\) \? toGsm7\(t\) : t/.test(oc));
+  check("az S10 norm() bármely hívószám E.164-ét elfogadja", /if s\.startswith\("\+"\):/.test(src("scripts/s10-a11y/s10_send.py")));
+}
+{
+  const { outreachWindowBlocksIn, modemPairBlocks, leadMobileIn, dailyCapFor, channelEnabled, gsm7FoldableLang } = await import("../src/outreach/countryOutreach.js");
+  const { mockOutreachWindowBlocks } = await import("../src/sms/sendWindow.js");
+  const { isHuMobileE164, normalizePhone } = await import("../src/text/phone.js");
+  if (hu) {
+    let bad = 0;
+    for (let t = Date.UTC(2026, 2, 20); t < Date.UTC(2026, 3, 3); t += 20 * 60_000) {
+      const d = new Date(t);
+      if (outreachWindowBlocksIn(d, hu) !== mockOutreachWindowBlocks(d)) bad++;
+    }
+    check("a HU-sor küldési ablaka = a régi budapesti mock-ablak, mondatra is (két hét, DST-váltással)", bad === 0, `${bad} eltérés`);
+    check("a HU-sor mobil-párja nyitva (MMS+SMS engedélyezett, a modem helyi)", modemPairBlocks(hu) === null && channelEnabled(hu, "email"));
+    const samples = ["06 30 123 4567", "+36301234567", "0620/555-1234", "06 1 234 5678", "+36 88 424 136", "06 70 123 456", "123", "+420 777 123 456"];
+    const diff = samples.filter((x) => {
+      const old = normalizePhone(x);
+      return (old && isHuMobileE164(old) ? old : null) !== leadMobileIn(x, hu);
+    });
+    check("a HU-sor mobil-ítélete = a régi normalizePhone + isHuMobileE164", diff.length === 0, diff.join(", "));
+    check("a HU-kvóta a beállított napi plafon (ma 40)", dailyCapFor(hu, { dailyCap: 40 }, HOME) === 40 && dailyCapFor(hu, { dailyCap: 7, countryCaps: { HU: 99 } }, HOME) === 7);
+  }
+  check("ismeretlen ország: nincs ablak, nincs mobil-pár", outreachWindowBlocksIn(new Date(), null) !== null && modemPairBlocks(null) !== null);
+  check("bolgár/görög SMS nem hajlik GSM-7-re, a cseh igen", !gsm7FoldableLang("bg") && !gsm7FoldableLang("el") && gsm7FoldableLang("cs") && gsm7FoldableLang("hu"));
 }
 
 await db.destroy();

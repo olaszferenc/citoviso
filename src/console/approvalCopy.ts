@@ -25,7 +25,8 @@ import {
 import { checkOutreachDraft, checkOutreachSms } from "../outreach/outreachCheck.js";
 import { GSM7_BASIC, smsEncoding } from "../sms/encoding.js";
 import { jsonForScript } from "../text/jsonForScript.js";
-import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { leadMobileIn, modemPairBlocks } from "../outreach/countryOutreach.js";
+import { countryConfigSync } from "../country.js";
 import { renderMessengerCaption } from "../outreach/messengerCaption.js";
 import { T } from "../i18n/mail.js";
 import { esc } from "./views.js";
@@ -63,8 +64,9 @@ async function loadContext(item: PendingApproval): Promise<Loaded> {
   const d = await buildDraftForProspect(prospectId);
   if (!d) return { ok: false, note: T(lang, "a piszkozat nem állítható elő") };
   const p = await db.selectFrom("prospect").select("contact_email").where("id", "=", prospectId).executeTakeFirst();
-  const e164 = d.phone ? normalizePhone(d.phone) : null;
-  const mobile = e164 && isHuMobileE164(e164) ? e164 : null;
+  // ORSZÁG-RÉTEG 3/5: the mobile in the lead's country, and only where its row lets the pair go.
+  const cc = countryConfigSync(d.market.country);
+  const mobile = modemPairBlocks(cc) ? null : leadMobileIn(d.phone, cc);
   return {
     ok: true,
     ctx: {

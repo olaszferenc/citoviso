@@ -39,7 +39,8 @@ import { mobileOutreachGates, pairWindowBlocks } from "./sendOutreachSms.js";
 import { sendSms } from "../sms/sender.js";
 import { ensureMmsJpeg, sendMms } from "../mms/sender.js";
 import { config } from "../config.js";
-import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
+import { countryConfigSync } from "../country.js";
+import { outreachWindowBlocksIn } from "./countryOutreach.js";
 import { copyOutreachMms, copyOutreachSms } from "./pilotCopy.js";
 import { planCountStill } from "./planSet.js";
 import { tagLinkInText } from "./openVia.js";
@@ -133,7 +134,8 @@ export async function startOutreachPair(
   // The owner's mock-outreach window (ADR-0334): a pair STARTS only on a weekday 9–16
   // Budapest. Refused, not queued for the morning: the operator sees the reason now
   // instead of an MMS waiting overnight in a queue (and the e-mail half has no queue).
-  const mockBlock = mockOutreachWindowBlocks(new Date());
+  // ORSZÁG-RÉTEG 3/5: in the lead's zone, on its country's working days (HU = Budapest, as before).
+  const mockBlock = outreachWindowBlocksIn(new Date(), countryConfigSync(d.market.country));
   if (mockBlock) return { ok: false, message: mockBlock };
 
   // Pair one-shot (0043): a stamped MMS means the lead saw the image — never again.

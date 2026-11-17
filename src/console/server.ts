@@ -4067,7 +4067,9 @@ async function handle(
     // (SafeLinks, iOS preview, vírusirtó) GET-tel járják a levél minden linkjét — egy
     // ilyen gépi látogatás egy sosem olvasott levél címzettjét némította el. A GET egy
     // megerősítő lap egyetlen gombbal; a tett a POST (lent).
-    return send(res, 200, layout("Leiratkozás", unsubscribeConfirmBody(unsubMatch[1]), { chrome: false }));
+    // ORSZÁG-RÉTEG 3/5: the page in the lead's page language (the mock's), Hungarian without one.
+    const unsubLang = (await getProspectByToken(unsubMatch[1]).catch(() => null))?.lang ?? undefined;
+    return send(res, 200, layout("Leiratkozás", unsubscribeConfirmBody(unsubMatch[1], unsubLang), { chrome: false }));
   }
   if (method === "POST" && unsubMatch) {
     // RFC 8058 one-click (List-Unsubscribe-Post) ÉS a megerősítő lap gombja — mindkettő
@@ -4679,10 +4681,11 @@ async function handle(
                       // folds into the end block's plan cards (C2 „B”) — only a page without it keeps it.
                       endBlock: page === html,
                     })
-                  : injectTrackingBanner(disableIntroAnimation(page), pMatch[1]),
+                  : injectTrackingBanner(disableIntroAnimation(page), pMatch[1], p.lang ?? undefined),
                 pMatch[1],
+                p.lang ?? undefined,
               )
-            : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page)), pMatch[1]),
+            : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page), p.lang ?? undefined), pMatch[1], p.lang ?? undefined),
         ),
       );
     } catch {

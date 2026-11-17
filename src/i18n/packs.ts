@@ -45,12 +45,33 @@ export function tSync(lang: string | undefined, hu: string): string {
   if (l === DEFAULT_LANG) return hu;
   const hit = cache.get(l)?.[hu];
   if (hit) return hit;
+  fallbackSink?.add(hu);
   const wk = `${l}:${hu}`;
   if (!warned.has(wk)) {
     warned.add(wk);
     console.error(`[i18n] hiányzó fordítás (${l}): "${hu}" — hu-fallback (Bábelre vár: babel-pack export ${l})`);
   }
   return hu;
+}
+
+/**
+ * ORSZÁG-RÉTEG 3/5 (ADR-XXXX): which source strings fell back to Hungarian while `fn` rendered.
+ * A cold outreach to a non-Hungarian country goes out ONLY when every text part of it is in
+ * the country's language (owner 2026-11-17) — the render collects its own fallbacks, and the
+ * §C gate (outreachCheck) refuses a message that has any. Synchronous renders only (T() is sync).
+ */
+let fallbackSink: Set<string> | null = null;
+export function collectFallbacks<V>(fn: () => V): { value: V; fallbacks: string[] } {
+  const prev = fallbackSink;
+  const sink = new Set<string>();
+  fallbackSink = sink;
+  try {
+    const value = fn();
+    return { value, fallbacks: [...sink] };
+  } finally {
+    fallbackSink = prev;
+    if (prev) for (const s of sink) prev.add(s);
+  }
 }
 
 /** {placeholder} tokens of a string, order-insensitive set. */

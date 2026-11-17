@@ -47,9 +47,10 @@ import { DEFAULT_LANG } from "../i18n/lang.js";
 import { missingPackStrings } from "../i18n/packs.js";
 import { getEscalationConfig, legacyOutreachPercent } from "../payment/offers.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
-import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
-import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { countryConfigSync, countryOfLeads } from "../country.js";
+import { leadMobileIn, modemPairBlocks, outreachWindowBlocksIn } from "./countryOutreach.js";
+import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { getFreeTrialConfig } from "../trial/config.js";
 import { TRIAL_RETENTION_DAYS } from "../trial/retention.js";
 import { advertiserIdentity, buildDraftForProspect, senderParts } from "./draft.js";
@@ -228,6 +229,8 @@ export async function listTrialCampaignCandidates(
   const eligible: { readonly target: Omit<TrialCampaignCandidate, "excluded">; readonly keys: readonly string[] }[] = [];
   // Stable order: by lead name, so a re-run walks the same list.
   const sorted = [...leads].sort((a, b) => a.name.localeCompare(b.name, "hu"));
+  // ORSZÁG-RÉTEG 3/5: each lead's mobile is read in its own country (one query for the list).
+  const leadCountry = await countryOfLeads(sorted.map((l) => l.id));
   for (const lead of sorted) {
     const rows = byLead.get(lead.id) ?? [];
     const live = rows
@@ -248,8 +251,10 @@ export async function listTrialCampaignCandidates(
     const liveEmail = (live?.contact_email ?? "").trim() || null;
     const addressChanged = Boolean(mailedEmail && liveEmail && recipientKey(mailedEmail) !== recipientKey(liveEmail));
     const rawPhone = ((lead.raw ?? {}) as { phone?: string }).phone;
-    const phone = rawPhone ? normalizePhone(rawPhone) : null;
-    const mobile = phone && isHuMobileE164(phone) ? phone : null;
+    // ORSZÁG-RÉTEG 3/5: a mobile of the lead's own country, on a country whose row lets the SMS go.
+    const cc = countryConfigSync(leadCountry.get(lead.id) ?? null);
+    const phone = rawPhone ? normalizePhoneIn(rawPhone, cc) : null;
+    const mobile = modemPairBlocks(cc) ? null : leadMobileIn(rawPhone, cc);
     let channel: TrialCampaignChannel | null = null;
     let address: string | null = null;
     let addressKey: string | null = null;
@@ -620,7 +625,8 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   }
   if (deps.dryRun) return { kind: "dry-run", detail: letter.subject };
 
-  const block = mockOutreachWindowBlocks(deps.now ?? new Date());
+  // ORSZÁG-RÉTEG 3/5: the lead's zone and working days (the HU row: the Budapest window, as before).
+  const block = outreachWindowBlocksIn(deps.now ?? new Date(), countryConfigSync(market.country));
   if (block) return { kind: "skipped", reason: block };
 
   const heroShotPath = !deps.offline && c.artifactId ? await ensureHeroShot(c.artifactId) : null;
@@ -678,7 +684,8 @@ export async function sendTrialCampaignSms(c: TrialCampaignCandidate, deps: Tria
   if (gate.verdict === "FLAG") return { kind: "skipped", reason: `§C FLAG: ${gate.reasons.join(" · ")}` }; // i18n-exempt: operátori CLI-kimenet
   if (deps.dryRun) return { kind: "dry-run", detail: sms.text };
 
-  const block = mockOutreachWindowBlocks(deps.now ?? new Date());
+  // ORSZÁG-RÉTEG 3/5: the lead's zone and working days (the HU row: the Budapest window, as before).
+  const block = outreachWindowBlocksIn(deps.now ?? new Date(), countryConfigSync(market.country));
   if (block) return { kind: "skipped", reason: block };
 
   const changed = await rejudge(c, deps);

@@ -21,7 +21,11 @@ import { huArticleLower } from "../hu.js";
 import { toGsm7 } from "../sms/encoding.js";
 import { HU_PRICING_REGION, hasPricingRegion, isPricingConfirmed } from "../pricing.js";
 import { countryConfigSync } from "../country.js";
+import { DEFAULT_LANG } from "../i18n/lang.js";
+import { formatMinor } from "../text/money.js";
 import { NO_PACKAGE_PRICE, type OutreachDraft } from "./draft.js";
+import { T } from "../i18n/mail.js";
+import { gsm7FoldableLang } from "./countryOutreach.js";
 
 /** ADR-0111: a market decision as the synchronous gate sees it. */
 export interface MarketVerdict {
@@ -588,6 +592,88 @@ function senderIsIdentifiable(text: string): boolean {
  * (scripts/optout-carrier-check.mts), because this gate only sees strings.
  */
 /**
+ * ORSZÁG-RÉTEG 3/5 (ADR-XXXX) — what the §C gate looks for in a NON-Hungarian message. The
+ * Hungarian rules read Hungarian words („A megkeresés küldője:”, „terv”, „jogos érdek”), which a
+ * translated letter never contains; for another language the gate looks for the TRANSLATION of
+ * the very sentences that carry the element in the Hungarian source. Each mark is the longest
+ * fixed fragment of one template in `lang` (placeholders cut out), lower-cased; SMS-shaped marks
+ * also in their GSM-7 fold when the language is folded. Literal T() calls on purpose: the
+ * catalog extractor only sees literals, and these are the templates' own keys (draft.ts,
+ * messengerCaption.ts). Kept HERE, not in draft.ts: the letter critic fingerprints draft.ts's T()
+ * literals, and a second copy of the same keys there would change the fingerprint for nothing.
+ */
+function foreignGateMarks(lang: string): { identity: string; legal: string; framing: string[] } {
+  const Z = "\u0000";
+  const v = { name: Z, link: Z, invite: Z, who: Z };
+  const longest = (t: string): string =>
+    t.split(Z).map((x) => x.trim()).sort((a, b) => b.length - a.length)[0] ?? "";
+  const fold = gsm7FoldableLang(lang) ? toGsm7 : (t: string): string => t;
+  const sms = [
+    T(lang, "{name} – három honlap-látványtervet is készítettünk Önnek, amelyeket {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – két honlap-látványtervet is készítettünk Önnek, amelyeket {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – készítettünk Önnek egy honlap-látványtervet, amit {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – az imént küldött terv mellé még kettőt készítettünk: mindhármat {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – az imént küldött terv mellé még egyet készítettünk: mindkettőt {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – az imént MMS-ben küldött honlap-látványtervet {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – a képen látható terv mellé még kettőt készítettünk: mindhármat {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – a képen látható terv mellé még egyet készítettünk: mindkettőt {invite} A Citoviso csapata\n{link}", v),
+    T(lang, "{name} – a képen látható honlap-látványtervet {invite} A Citoviso csapata\n{link}", v),
+  ].map(longest);
+  const mail = T(
+    lang,
+    "Nem kép, hanem működő oldal: kattintható, telefonon is jól mutat, és benne vannak a szállása képei és adatai. Még nem nyilvános, csak ezen a linken érhető el:",
+  );
+  const framing = [...new Set([mail, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
+  return {
+    identity: longest(T(lang, "A megkeresés küldője: {who}", v)).toLowerCase(),
+    legal: T(
+      lang,
+      "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
+    ).toLowerCase(),
+    framing,
+  };
+}
+
+/**
+ * ORSZÁG-RÉTEG 3/5 (ADR-XXXX) — the LANGUAGE rule (owner 2026-11-17): a cold outreach goes out
+ * ONLY in its country's default language (the row's default_lang, not a lead's own signal), and
+ * only when EVERY text part of it is in that language. A single string that fell back to
+ * Hungarian (the render records them: OutreachDraft.untranslated) holds the whole message —
+ * signature, opt-out line and price label included. Hungarian itself never falls back.
+ */
+function languageReasons(
+  lang: string | undefined,
+  market: MarketVerdict | undefined,
+  untranslated: readonly string[] | undefined,
+): string[] {
+  const out: string[] = [];
+  const cfg = market?.country ? countryConfigSync(market.country) : null;
+  if (cfg && (lang ?? DEFAULT_LANG) !== cfg.defaultLang) {
+    out.push(`NYELV: a megkeresés nyelve (${lang ?? DEFAULT_LANG}) nem ${cfg.name} nyelve (${cfg.defaultLang}) — csak az ország nyelvén mehet ki`);
+  }
+  if (foreignLang(lang) && untranslated === undefined) {
+    out.push(`NYELV: ${huArticleLower(lang)} ${lang} nyelvű szöveg nyelvi teljessége nem mért — nem magyar megkeresés csak mért (teljesen lefordított) szöveggel mehet ki`);
+  } else if (untranslated && untranslated.length > 0) {
+    const sample = untranslated.slice(0, 3).map((u) => `„${u.slice(0, 60)}”`).join(" · ");
+    out.push(`NYELV: ${untranslated.length} szövegrész nincs ${lang ?? "?"} nyelven (Bábelre vár) — magyar szó nem mehet ki: ${sample}`);
+  }
+  return out;
+}
+
+/** Is `lang` a non-source language (its §C elements are read from their translations)? */
+function foreignLang(lang: string | undefined): lang is string {
+  return !!lang && lang !== DEFAULT_LANG;
+}
+
+/** Does a non-Hungarian message advertise an amount in its country's currency? */
+function foreignPriceAd(prose: string, market: MarketVerdict | undefined, lang: string): boolean {
+  const cur = market?.country ? countryConfigSync(market.country)?.currency : null;
+  if (!cur || !/\d/.test(prose)) return false;
+  const sign = formatMinor(0, cur, lang).replace(/[\d\s.,\u00a0\u202f-]/g, "");
+  return prose.includes(cur) || (!!sign && prose.includes(sign));
+}
+
+/**
  * ADR-0111 §C country gate — the ONE place that decides whether cold outreach may
  * leave for a given market.
  *
@@ -611,9 +697,10 @@ function countryGateReason(
       `outreach erre az országra tiltva`
     );
   }
-  // No verdict supplied: keep the pre-ADR-0111 behaviour, which is closed-by-default
-  // outside Hungarian.
-  if (lang && lang !== "hu") {
+  // No verdict supplied: closed-by-default outside the source language (the home row's
+  // language) — ORSZÁG-RÉTEG 3/5: no burned language code; without a verdict there is no
+  // country row to open anything else.
+  if (foreignLang(lang)) {
     return (
       `PIAC: ${huArticleLower(lang)} "${lang}" nyelvterület piac-jóváhagyása ismeretlen — ` +
       `outreach erre az országra tiltva`
@@ -633,11 +720,11 @@ function priceConfirmedFor(lang: string | undefined, market: MarketVerdict | und
     const r = countryConfigSync(market.country)?.pricingRegion;
     return !!r && hasPricingRegion(r) && isPricingConfirmed(r);
   }
-  return !lang || lang === "hu" ? isPricingConfirmed(HU_PRICING_REGION) : false;
+  return !foreignLang(lang) ? isPricingConfirmed(HU_PRICING_REGION) : false;
 }
 
 export function checkOutreachSms(
-  sms: { text: string; link: string; unsubscribeLink: string },
+  sms: { text: string; link: string; unsubscribeLink: string; untranslated?: readonly string[] },
   leadName: string,
   lang?: string,
   market?: MarketVerdict,
@@ -645,6 +732,8 @@ export function checkOutreachSms(
   const reasons: string[] = [];
   const countryBlock = countryGateReason(lang, market);
   if (countryBlock) reasons.push(countryBlock);
+  reasons.push(...languageReasons(lang, market, sms.untranslated));
+  const marks = foreignLang(lang) ? foreignGateMarks(lang) : null;
   const text = sms.text;
   // ⚠️ The PROSE, with the URLs cut out — and every C-rule about what the message
   // SAYS must measure this, not `text`. The tracked link carries our domain
@@ -701,7 +790,9 @@ export function checkOutreachSms(
   // ADR-0366: a GSM-7 text carries the name folded (Bánó → Bano) and maybe shortened — the
   // draft says how (`sms.name`), and the comparison is accent-blind on both sides.
   const nameInText = (sms as { name?: string }).name ?? leadName;
-  const fold = (t: string): string => toGsm7(t).toLowerCase();
+  // ORSZÁG-RÉTEG 3/5: a Cyrillic / Greek SMS is not folded (toGsm7 would erase every letter, and
+  // an empty name is "included" in anything) — compare it as written.
+  const fold = (t: string): string => (gsm7FoldableLang(lang) ? toGsm7(t) : t).toLowerCase();
   if (leadName && !fold(prose).includes(fold(nameInText))) {
     reasons.push("SZEMÉLYRE SZABÁS: az SMS nem hivatkozik a lead nevére (tömeg-szöveg gyanú)");
   }
@@ -718,12 +809,19 @@ export function checkOutreachSms(
   }
   // The framing must be SAID, so it is measured on the prose: a lead named
   // "Látványterv Panzió" would otherwise satisfy the gate through its own slug.
-  if (!FRAMING_PATTERN.test(prose) && !FRAMING_PATTERN_PLAIN.test(plainProse)) {
+  if (
+    !FRAMING_PATTERN.test(prose) &&
+    !FRAMING_PATTERN_PLAIN.test(plainProse) &&
+    !(marks && marks.framing.some((m) => prose.toLowerCase().includes(m)))
+  ) {
     reasons.push("KERETEZÉS: hiányzik az explicit terv/előzetes megfogalmazás (a mock nem kész oldal)");
   }
 
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
-  if (!priceConfirmedFor(lang, market) && (PRICE_AD.test(prose) || PRICE_AD_PLAIN.test(plainProse))) {
+  if (
+    !priceConfirmedFor(lang, market) &&
+    (PRICE_AD.test(prose) || PRICE_AD_PLAIN.test(plainProse) || (foreignLang(lang) && foreignPriceAd(prose, market, lang)))
+  ) {
     reasons.push(
       "ÁR-HIRDETÉS: az SMS árat hirdet, de az árazás még nincs véglegesítve (Konzol ▸ Árazás)",
     );
@@ -740,6 +838,8 @@ export function checkOutreachSms(
  */
 export type CheckableLetter = Pick<OutreachDraft, "subject" | "body" | "link" | "unsubscribeLink" | "privacyLink"> & {
   readonly parts?: { readonly identity?: string };
+  /** ORSZÁG-RÉTEG 3/5: strings that fell back to Hungarian while the letter rendered. */
+  readonly untranslated?: readonly string[];
 };
 
 export function checkOutreachDraft(
@@ -756,6 +856,10 @@ export function checkOutreachDraft(
   // Mock/site/configurator flow freely; cold mail does not.
   const countryBlock = countryGateReason(lang, market);
   if (countryBlock) reasons.push(countryBlock);
+  reasons.push(...languageReasons(lang, market, draft.untranslated));
+  // ORSZÁG-RÉTEG 3/5: the elements below are Hungarian words in the source; a letter in another
+  // language is judged on the TRANSLATION of the same sentences (foreignGateMarks).
+  const marks = foreignLang(lang) ? foreignGateMarks(lang) : null;
   const text = draft.subject + "\n" + draft.body;
   // ⚠️ The letter carries THREE of our URLs, so the same NO-OP the SMS gate had
   // lived here too — measured 2026-09-09 with the production link shape: an
@@ -796,7 +900,7 @@ export function checkOutreachDraft(
   // company name that only appears inside our own URL never satisfies this.
   if (/\[CÉGAZONOSÍTÓ/iu.test(text)) {
     reasons.push("HIRDETŐ: a cégazonosítás kitöltetlen (LEGAL_ENTITY_* env hiányzik)");
-  } else if (!/A megkeresés küldője:/iu.test(prose)) {
+  } else if (!/A megkeresés küldője:/iu.test(prose) && !(marks && marks.identity && prose.toLowerCase().includes(marks.identity))) {
     reasons.push("HIRDETŐ: hiányzik a cégazonosítás (név, székhely, nyilvántartási/adószám)");
   }
   // ⚠️ SCOPE, not sensitivity. This heuristic looks for fake CONTACT values
@@ -848,12 +952,12 @@ export function checkOutreachDraft(
       break;
     }
   }
-  if (!FRAMING_PATTERN.test(prose)) {
+  if (!FRAMING_PATTERN.test(prose) && !(marks && marks.framing.some((m) => prose.toLowerCase().includes(m)))) {
     reasons.push("KERETEZÉS: hiányzik az explicit terv/előzetes megfogalmazás (a mock nem kész oldal)");
   }
 
   // Legal-basis note (Grt./GDPR transparency line) — a sentence, not a link.
-  if (!/jogos érdek|GDPR|Grt/iu.test(prose)) {
+  if (!/jogos érdek|GDPR|Grt/iu.test(prose) && !(marks && prose.toLowerCase().includes(marks.legal))) {
     reasons.push("JOGALAP: hiányzik a tájékoztatás (Grt./GDPR sor)");
   }
 
@@ -869,7 +973,10 @@ export function checkOutreachDraft(
   // C4/Fttv. — an advertised price must be the OWNER-CONFIRMED real price.
   // While pricing is not owner-confirmed (default), any price claim in the mail is
   // a fabricated commercial promise → not sendable. Confirm on Konzol ▸ Árazás.
-  if (!priceConfirmedFor(lang, market) && /forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose)) {
+  if (
+    !priceConfirmedFor(lang, market) &&
+    (/forinttól|Ft-tól|havi\s[\d  ]+\s?(forint|Ft)/iu.test(prose) || (foreignLang(lang) && foreignPriceAd(prose, market, lang)))
+  ) {
     reasons.push(
       // ⚠️ The switch's REAL label is "Az árak véglegesek, élesíthetők" (views.ts) —
       // advice that names a control the operator cannot find is worse than none.

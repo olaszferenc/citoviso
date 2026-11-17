@@ -37,17 +37,17 @@ import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { ensureLanguagePack } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
-import { isHuMobileE164 } from "../text/phone.js";
+import { isMobileE164In, normalizePhoneIn } from "../text/phoneCountry.js";
+import { countryConfigSync } from "../country.js";
+import { babelHoldReason, modemPairBlocks, outreachWindowBlocksIn } from "./countryOutreach.js";
 import {
   SEND_WINDOW,
   budapestHhmm,
   minutesUntilWindowCloses,
   mobileWindowOff,
-  mockOutreachWindowBlocks,
   sendWindowOpen,
 } from "../sms/sendWindow.js";
 import { config } from "../config.js";
-import { huArticleLower } from "../hu.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { isLiveHost } from "../invoicing/keyGuard.js";
@@ -232,14 +232,19 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   if (!d) return no("a piszkozat nem állítható elő");
 
   // ADR-0070 §3 — LANGUAGE gate: a half-translated cold message reads as a scam.
+  // ORSZÁG-RÉTEG 3/5: TARTVA „Bábelre vár” — never a Hungarian fallback (owner 2026-11-17).
   if (d.lang !== DEFAULT_LANG) {
     const pack = await ensureLanguagePack(d.lang);
-    if (pack.missing > 0) {
-      return no(
-        `${huArticleLower(d.lang)} ${d.lang} nyelvi csomagból ${pack.missing} string hiányzik — rossz nyelvű üzenet helyett NEM küldünk`,
-      );
-    }
+    if (pack.missing > 0) return no(babelHoldReason(d.lang, pack.missing));
   }
+
+  // ORSZÁG-RÉTEG 3/5: the CHANNEL is the lead's country's. The pair rides the local modem (a
+  // Hungarian SIM): a country whose row does not enable MMS+SMS, or whose numbers the modem would
+  // reach only internationally, is HELD here — never switched to a bare SMS, and before any
+  // per-message check (a closed channel is closed whatever the mock looks like). The HU row passes.
+  const cc = countryConfigSync(d.market.country);
+  const pairBlock = modemPairBlocks(cc);
+  if (pairBlock) return no(pairBlock);
 
   // §A assert on the ARTIFACT's stored guard verdicts — a generation-time FLAGged
   // mock must not go out on any channel (mirrors the mail path).
@@ -296,7 +301,8 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
     );
   }
 
-  const to = d.phone ? normalizePhone(d.phone) : null;
+  // ORSZÁG-RÉTEG 3/5: the number and the mobile ranges are the LEAD's country's (cc, above).
+  const to = d.phone ? normalizePhoneIn(d.phone, cc) : null;
   if (!to) {
     return no(
       d.phone
@@ -308,7 +314,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   // MOBILE ONLY (2026-10-07): a landline (+3688424136, Veszprém) got into a pair; the
   // MMSC refused it (2517 Unresolvable recipient) after the image was queued and
   // modem time was spent. An MMS/SMS pair needs a Hungarian mobile (20/30/31/50/70).
-  if (!isHuMobileE164(to)) {
+  if (!isMobileE164In(to, cc)) {
     return no(
       `a lead telefonszáma (${to}) nem magyar mobilszám (20/30/31/50/70 előtag) — vezetékesre MMS/SMS nem megy ki; ` +
         "adj meg mobilszámot a lead Begyűjtött adatok paneljén",
@@ -348,7 +354,8 @@ export async function sendOutreachSms(prospectId: string): Promise<SmsSendReport
   // A standalone cold SMS is a mock outreach: weekdays 9–16 Budapest only (ADR-0334).
   // Not in mobileOutreachGates — the pair's SMS half shares that, and a pair started at
   // 15:59 must still get its link SMS (and its repair) after 16:00.
-  const mockBlock = mockOutreachWindowBlocks(new Date());
+  // ORSZÁG-RÉTEG 3/5: in the lead's zone, on its country's working days (HU = Budapest, as before).
+  const mockBlock = outreachWindowBlocksIn(new Date(), countryConfigSync(d.market.country));
   if (mockBlock) return no(mockBlock);
 
   // Channel one-shot (ADR-0082): the SMS stamp gates the SMS channel only.

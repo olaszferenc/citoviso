@@ -27,13 +27,13 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, reviewOf, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
 import { startOutreachPair } from "./sendOutreachPair.js";
-import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
+import { dailyCapFor, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
 import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
-import { countryConfigSync, countryOf } from "../country.js";
+import { allCountriesSync, countryConfigSync, countryOf, countryOfLeads, type CountryConfig } from "../country.js";
 import type { QualifiedLead } from "../scraper/types.js";
 
 /**
@@ -64,12 +64,19 @@ export const DISPATCH_PRIORITY = sql<number>`(
 
 export const AUTO_SETTING_KEY = "outreach_auto";
 export const DEFAULT_DAILY_CAP = 40;
+/**
+ * ORSZÁG-RÉTEG 3/5: the country whose cap is `dailyCap` (the operator's 40) — the home market.
+ * Every other country counts on its own (countryCaps, else its row's daily_quota).
+ */
+export const DISPATCH_HOME_COUNTRY = "HU";
 
 export interface AutoDispatchSettings {
   /** Master switch — false = the timer sends nothing (the queue keeps filling). */
   readonly enabled: boolean;
-  /** Leads contacted per Budapest day by the timer (e-mail and/or pair counts as one). */
+  /** Leads contacted per Budapest day by the timer for the HOME country (e-mail and/or pair counts as one). */
   readonly dailyCap: number;
+  /** ORSZÁG-RÉTEG 3/5: per-country caps (ISO-2 → leads per that country's day); absent = the row's daily_quota. */
+  readonly countryCaps?: Readonly<Record<string, number>>;
 }
 
 export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
@@ -82,9 +89,13 @@ export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
     return { enabled: false, dailyCap: DEFAULT_DAILY_CAP };
   }
   const cap = Number(parsed.dailyCap);
+  const caps = Object.entries((parsed.countryCaps ?? {}) as Record<string, unknown>).filter(
+    (e): e is [string, number] => /^[A-Z]{2}$/.test(e[0]) && Number.isInteger(e[1]) && (e[1] as number) >= 0,
+  );
   return {
     enabled: parsed.enabled === true,
     dailyCap: Number.isInteger(cap) && cap >= 0 ? cap : DEFAULT_DAILY_CAP,
+    ...(caps.length ? { countryCaps: Object.fromEntries(caps) } : {}),
   };
 }
 
@@ -200,7 +211,25 @@ async function sharedPhoneHold(leadId: string): Promise<string | null> {
   return sharedContactBlocks(leadId, "phone", e164, isAllowlistedTestNumber(e164) || ownerTestPhoneExempt(lead.name, e164));
 }
 
-/** Leads the timer contacted today (Budapest day). */
+/**
+ * ORSZÁG-RÉTEG 3/5: leads the timer contacted today in ONE country — that country's day, in its
+ * zone. The home country also counts the rows claimed before migration 0140 (country NULL, all
+ * Hungarian), so the HU counter reads what sentToday() always read for a Hungarian queue.
+ */
+export async function sentTodayIn(cfg: Pick<CountryConfig, "iso2" | "timeZone">): Promise<number> {
+  const r = await db
+    .selectFrom("outreach_dispatch")
+    .select((eb) => eb.fn.countAll<string>().as("n"))
+    .where("status", "=", "sent")
+    .where((eb) =>
+      cfg.iso2 === DISPATCH_HOME_COUNTRY ? eb.or([eb("country", "=", cfg.iso2), eb("country", "is", null)]) : eb("country", "=", cfg.iso2),
+    )
+    .where("sent_at", ">=", sql<Date>`(date_trunc('day', now() AT TIME ZONE ${cfg.timeZone}) AT TIME ZONE ${cfg.timeZone})`)
+    .executeTakeFirstOrThrow();
+  return Number(r.n);
+}
+
+/** Leads the timer contacted today (Budapest day), every country together. */
 export async function sentToday(): Promise<number> {
   const r = await db
     .selectFrom("outreach_dispatch")
@@ -223,6 +252,39 @@ export type TickOutcome =
   | { readonly kind: "done"; readonly leadId: string; readonly status: "sent" | "held" | "skipped"; readonly note: string };
 
 /**
+ * ORSZÁG-RÉTEG 3/5 — which countries may get a lead NOW: their window is open (the lead's zone,
+ * working days) and their own daily cap has room. The home country's closed window / full cap
+ * is what the tick reports when nothing is open — a Hungarian-only queue sees today's answers.
+ */
+async function openCountries(
+  now: Date,
+  settings: AutoDispatchSettings,
+): Promise<{ open: Set<string>; homeWindow: string | null; homeCap: { sent: number; cap: number } | null }> {
+  const open = new Set<string>();
+  let homeWindow: string | null = null;
+  let homeCap: { sent: number; cap: number } | null = null;
+  for (const cfg of allCountriesSync()) {
+    const home = cfg.iso2 === DISPATCH_HOME_COUNTRY;
+    const w = outreachWindowBlocksIn(now, cfg);
+    if (w) {
+      if (home) homeWindow = w;
+      continue;
+    }
+    const cap = dailyCapFor(cfg, settings, DISPATCH_HOME_COUNTRY);
+    const sent = await sentTodayIn(cfg);
+    if (sent >= cap) {
+      if (home) homeCap = { sent, cap };
+      continue;
+    }
+    open.add(cfg.iso2);
+  }
+  return { open, homeWindow, homeCap };
+}
+
+/** How many queued rows one claim looks through for a lead of an open country. */
+const CLAIM_SCAN = 500;
+
+/**
  * One tick: at most ONE lead. `force` skips only the master switch (for a supervised first
  * run); the window and the cap always hold.
  */
@@ -238,31 +300,50 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
 
   const settings = await getAutoDispatchSettings();
   if (!settings.enabled && !opts.force) return { kind: "off" };
-  const windowBlock = mockOutreachWindowBlocks(now);
-  if (windowBlock) return { kind: "window", reason: windowBlock };
-  const sent = await sentToday();
-  if (sent >= settings.dailyCap) return { kind: "cap", sent, cap: settings.dailyCap };
+  // ORSZÁG-RÉTEG 3/5: the window and the cap are the LEAD's country's (zone, working days, its
+  // own counter). Nothing open anywhere → the home country's reason, as before.
+  const { open, homeWindow, homeCap } = await openCountries(now, settings);
+  if (!open.size) {
+    if (homeWindow) return { kind: "window", reason: homeWindow };
+    if (homeCap) return { kind: "cap", ...homeCap };
+    return { kind: "window", reason: "egyik ország küldési ablaka sincs nyitva, vagy mindegyik napi kvótája betelt" }; // i18n-exempt: operátori ok, sosem éri el a leadet
+  }
 
   // Claim the best-placed queued row (DISPATCH_PRIORITY: no own site first, ADR-0409), the oldest
-  // within its rank; an overlapping tick finds nothing (SKIP LOCKED + status flip).
+  // within its rank, among the leads of an OPEN country — the order holds within each country. A
+  // lead whose country has no layer row is claimed too, and held with the reason (fail closed).
+  // An overlapping tick finds nothing (SKIP LOCKED + status flip).
   const claimed = await db.transaction().execute(async (trx) => {
-    const row = await trx
+    const rows = await trx
       .selectFrom("outreach_dispatch")
       .select(["id", "lead_id", "artifact_id"])
       .where("status", "=", "queued")
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
-      .limit(1)
-      .forUpdate()
-      .skipLocked()
-      .executeTakeFirst();
-    if (!row) return null;
-    await trx
-      .updateTable("outreach_dispatch")
-      .set({ status: "sending", attempts: sql`attempts + 1`, last_attempt_at: now })
-      .where("id", "=", row.id)
+      .limit(CLAIM_SCAN)
       .execute();
-    return row;
+    const cc = await countryOfLeads(rows.map((r) => r.lead_id));
+    for (const cand of rows) {
+      const iso = cc.get(cand.lead_id) ?? null;
+      const known = iso ? countryConfigSync(iso) : null;
+      if (known && !open.has(known.iso2)) continue;
+      const row = await trx
+        .selectFrom("outreach_dispatch")
+        .select(["id", "lead_id", "artifact_id"])
+        .where("id", "=", cand.id)
+        .where("status", "=", "queued")
+        .forUpdate()
+        .skipLocked()
+        .executeTakeFirst();
+      if (!row) continue;
+      await trx
+        .updateTable("outreach_dispatch")
+        .set({ status: "sending", attempts: sql`attempts + 1`, last_attempt_at: now, country: known?.iso2 ?? iso })
+        .where("id", "=", row.id)
+        .execute();
+      return { ...row, country: known };
+    }
+    return null;
   });
   if (!claimed) return { kind: "empty" };
 
@@ -279,7 +360,9 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .executeTakeFirst();
     result = answered
       ? { status: "skipped", note: "nem küldjük: a lead már válaszolt vagy leiratkozott (tulaj-szabály 2026-10-26)" }
-      : await dispatchOne(claimed.lead_id, claimed.artifact_id);
+      : !claimed.country
+        ? { status: "held", note: "a lead országa nincs az ország-rétegben — nem küldhető (zárva)" }
+        : await dispatchOne(claimed.lead_id, claimed.artifact_id);
   } catch (e) {
     result = { status: "held", note: `hiba: ${(e as Error).message}`.slice(0, 500) };
   }
@@ -435,6 +518,8 @@ export interface DispatchStatus {
   readonly settings: AutoDispatchSettings;
   readonly sentToday: number;
   readonly counts: Readonly<Record<string, number>>;
+  /** ORSZÁG-RÉTEG 3/5: per country — sent today (its own day) against its own cap. */
+  readonly byCountry: ReadonlyArray<{ readonly country: string; readonly sentToday: number; readonly cap: number }>;
 }
 
 export async function dispatchStatus(): Promise<DispatchStatus> {
@@ -443,10 +528,16 @@ export async function dispatchStatus(): Promise<DispatchStatus> {
     .select(["status", (eb) => eb.fn.countAll<string>().as("n")])
     .groupBy("status")
     .execute();
+  const settings = await getAutoDispatchSettings();
+  const byCountry: { country: string; sentToday: number; cap: number }[] = [];
+  for (const cfg of allCountriesSync()) {
+    byCountry.push({ country: cfg.iso2, sentToday: await sentTodayIn(cfg), cap: dailyCapFor(cfg, settings, DISPATCH_HOME_COUNTRY) });
+  }
   return {
-    settings: await getAutoDispatchSettings(),
+    settings,
     sentToday: await sentToday(),
     counts: Object.fromEntries(rows.map((r) => [r.status, Number(r.n)])),
+    byCountry,
   };
 }
 
