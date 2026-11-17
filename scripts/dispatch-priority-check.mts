@@ -25,14 +25,25 @@ const check = (label: string, pass: boolean, detail?: unknown): void => {
 
 class Rollback extends Error {}
 
+// email: the lead's raw.email (null = none, and raw.otherEmails is cleared too).
 const CASES = [
-  { key: "modern, legrégebbi", qualification: "modern", websiteStatus: "has_own", ageMin: 180 },
-  { key: "elavult", qualification: "outdated", websiteStatus: "has_own", ageMin: 120 },
-  { key: "honlap nélküli, újabb", qualification: "no_site", websiteStatus: "none", ageMin: 60 },
-  { key: "csak portál (minősítetlen)", qualification: "unknown", websiteStatus: "portal_only", ageMin: 30 },
-  { key: "minősítetlen, legrégebbi", qualification: "unknown", websiteStatus: null, ageMin: 240 },
+  { key: "modern, legrégebbi", qualification: "modern", websiteStatus: "has_own", email: "a@pelda.hu", ageMin: 180 },
+  { key: "elavult", qualification: "outdated", websiteStatus: "has_own", email: "b@pelda.hu", ageMin: 120 },
+  { key: "honlap nélküli, újabb", qualification: "no_site", websiteStatus: "none", email: "c@pelda.hu", ageMin: 60 },
+  { key: "csak portál (minősítetlen)", qualification: "unknown", websiteStatus: "portal_only", email: "d@pelda.hu", ageMin: 30 },
+  { key: "minősítetlen, legrégebbi", qualification: "unknown", websiteStatus: null, email: "e@pelda.hu", ageMin: 240 },
+  { key: "honlap nélküli, e-mail nélkül, legrégebbi", qualification: "no_site", websiteStatus: "none", email: null, ageMin: 300 },
+  { key: "elavult, e-mail nélkül, legrégebbi", qualification: "outdated", websiteStatus: "has_own", email: null, ageMin: 300 },
 ] as const;
-const EXPECTED = ["honlap nélküli, újabb", "csak portál (minősítetlen)", "elavult", "modern, legrégebbi", "minősítetlen, legrégebbi"];
+const EXPECTED = [
+  "honlap nélküli, újabb",
+  "csak portál (minősítetlen)",
+  "honlap nélküli, e-mail nélkül, legrégebbi",
+  "elavult",
+  "elavult, e-mail nélkül, legrégebbi",
+  "modern, legrégebbi",
+  "minősítetlen, legrégebbi",
+];
 
 console.log("dispatch-sorrend: honlap nélküli elöl (ADR-0409)");
 try {
@@ -57,9 +68,11 @@ try {
         .updateTable("lead")
         .set({
           qualification: c.qualification,
-          raw: c.websiteStatus
-            ? sql`jsonb_set(coalesce(raw, '{}'::jsonb), '{websiteStatus}', ${JSON.stringify(c.websiteStatus)}::jsonb)`
-            : sql`coalesce(raw, '{}'::jsonb) - 'websiteStatus'`,
+          raw: sql`jsonb_set(
+            ${c.websiteStatus
+              ? sql`jsonb_set(coalesce(raw, '{}'::jsonb), '{websiteStatus}', ${JSON.stringify(c.websiteStatus)}::jsonb)`
+              : sql`coalesce(raw, '{}'::jsonb) - 'websiteStatus'`} - 'otherEmails',
+            '{email}', ${JSON.stringify(c.email)}::jsonb)`,
         })
         .where("id", "=", f.leadId)
         .execute();
@@ -84,7 +97,8 @@ try {
     ).map((r) => ids.get(r.id)!);
 
     check("① az újabb honlap nélküli sor a régebbi modern ELÉ kerül", order.indexOf("honlap nélküli, újabb") < order.indexOf("modern, legrégebbi"), order);
-    check("② sorrend: honlap nélküli (no_site, portal_only) → elavult → modern → minősítetlen; rangon belül a régebbi", JSON.stringify(order) === JSON.stringify(EXPECTED), order);
+    check("②b tulaj 11-17: honlap-rangon belül az e-mailes lead megy előbb, az e-mail nélküli (WhatsApp) utána — akkor is, ha régebbi", order.indexOf("honlap nélküli, újabb") < order.indexOf("honlap nélküli, e-mail nélkül, legrégebbi") && order.indexOf("honlap nélküli, e-mail nélkül, legrégebbi") < order.indexOf("elavult"), order);
+    check("② sorrend: honlap nélküli (no_site, portal_only) → elavult → modern → minősítetlen; rangon belül előbb az e-mailes, utána a régebbi", JSON.stringify(order) === JSON.stringify(EXPECTED), order);
     throw new Rollback();
   });
 } catch (e) {
@@ -101,4 +115,4 @@ if (failures) {
   console.error(`\n⛔ dispatch-priority-check: ${failures} bukás — a kiküldési sor nem a tulaj sorrendjében megy.`);
   process.exit(1);
 }
-console.log("\n✅ dispatch-priority-check: a honlap nélküliek mennek elsőként, utánuk az elavult, majd a modern honlapúak.");
+console.log("\n✅ dispatch-priority-check: a honlap nélküliek mennek elsőként (rangon belül az e-mailesek előbb), utánuk az elavult, majd a modern honlapúak.");

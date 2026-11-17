@@ -41,16 +41,24 @@ import type { QualifiedLead } from "../scraper/types.js";
  * elfogytak, jöhetnek a többiek”). A claim takes the best-placed lead first:
  *   0 — no own site (lead.qualification no_site, or raw.websiteStatus none / portal_only),
  *   1 — an outdated own site, 2 — a modern own site, 3 — not classified;
- * within a rank the oldest queued row. A subquery, not a join: the FOR UPDATE SKIP LOCKED
- * claim keeps locking the dispatch row alone.
+ * owner 2026-11-17 („Haladjunk azokkal, akiknek van e-mail-címük, de nincs honlapjuk. Aztán WhatsApp,
+ * ahol nincs e-mail nincs honlap”): within a site rank a lead WITH an e-mail address (raw.email or
+ * raw.otherEmails) goes before one without; within that the oldest queued row. A subquery, not a
+ * join: the FOR UPDATE SKIP LOCKED claim keeps locking the dispatch row alone.
  */
 export const DISPATCH_PRIORITY = sql<number>`(
-  select case
+  select (case
     when l.qualification = 'no_site' or l.raw->>'websiteStatus' in ('none', 'portal_only') then 0
     when l.qualification = 'outdated' then 1
     when l.qualification = 'modern' then 2
     else 3
-  end
+  end) * 2 + (case
+    when btrim(coalesce(l.raw->>'email', '')) <> '' then 0
+    when jsonb_typeof(l.raw->'otherEmails') = 'array' and exists (
+      select 1 from jsonb_array_elements_text(l.raw->'otherEmails') e where btrim(e) <> ''
+    ) then 0
+    else 1
+  end)
   from lead l where l.id = outreach_dispatch.lead_id
 )`;
 
