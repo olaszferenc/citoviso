@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-17_dev_teszt_levelek_lenemitva.md](2026-11-17_dev_teszt_levelek_lenemitva.md) — 2026-11-17 — Dev teszt-levelek lenémítva; élesben 8 előtt nincs küldés
 - [2026-11-16_tervvalto_admin_kinezet.md](2026-11-16_tervvalto_admin_kinezet.md) — 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-0451)
 - [2026-11-16_proba_rendeles_nezett_terv.md](2026-11-16_proba_rendeles_nezett_terv.md) — 2026-11-16 — Próba és rendelés a nézett / futó tervhez kötve (tervvaltas A, ADR-0449)
 - [2026-11-16_p_lap_vegleges.md](2026-11-16_p_lap_vegleges.md) — 2026-11-16 · A /p lap végleges elrendezése megépült (tervvaltas F, ADR-0453)
