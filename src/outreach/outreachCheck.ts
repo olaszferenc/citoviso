@@ -592,7 +592,7 @@ function senderIsIdentifiable(text: string): boolean {
  * (scripts/optout-carrier-check.mts), because this gate only sees strings.
  */
 /**
- * ORSZÁG-RÉTEG 3/5 (ADR-XXXX) — what the §C gate looks for in a NON-Hungarian message. The
+ * ORSZÁG-RÉTEG 3/5 (ADR-0456) — what the §C gate looks for in a NON-Hungarian message. The
  * Hungarian rules read Hungarian words („A megkeresés küldője:”, „terv”, „jogos érdek”), which a
  * translated letter never contains; for another language the gate looks for the TRANSLATION of
  * the very sentences that carry the element in the Hungarian source. Each mark is the longest
@@ -635,7 +635,7 @@ function foreignGateMarks(lang: string): { identity: string; legal: string; fram
 }
 
 /**
- * ORSZÁG-RÉTEG 3/5 (ADR-XXXX) — the LANGUAGE rule (owner 2026-11-17): a cold outreach goes out
+ * ORSZÁG-RÉTEG 3/5 (ADR-0456) — the LANGUAGE rule (owner 2026-11-17): a cold outreach goes out
  * ONLY in its country's default language (the row's default_lang, not a lead's own signal), and
  * only when EVERY text part of it is in that language. A single string that fell back to
  * Hungarian (the render records them: OutreachDraft.untranslated) holds the whole message —

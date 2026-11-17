@@ -117,7 +117,7 @@ const fnBody = (file: string, signature: string): string => {
   const next = src.slice(i + signature.length).search(/\n(export )?(async )?function /);
   return next < 0 ? src.slice(i) : src.slice(i, i + signature.length + next);
 };
-// ORSZÁG-RÉTEG 3/5 (ADR-XXXX): a send path asks the window in the LEAD's country —
+// ORSZÁG-RÉTEG 3/5 (ADR-0456): a send path asks the window in the LEAD's country —
 // outreachWindowBlocksIn(now, cfg), which for the HU row IS mockOutreachWindowBlocks (sentence for
 // sentence, country-layer-check ⑨ sweeps it). Either call counts as asking the window.
 const WIN = /(?:mockOutreachWindowBlocks|outreachWindowBlocksIn)\(/;

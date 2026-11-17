@@ -181,7 +181,7 @@ export interface OutreachDraft {
   /** ADR-0322 ④/B: the absolute /p/<token>/why link — present only with `parts.why`. */
   readonly whyLink?: string;
   /**
-   * ORSZÁG-RÉTEG 3/5 (ADR-XXXX): the source strings that fell back to Hungarian while this
+   * ORSZÁG-RÉTEG 3/5 (ADR-0456): the source strings that fell back to Hungarian while this
    * letter rendered (a gap in the reader's pack). Non-empty → the §C gate refuses it: a cold
    * outreach to a foreign country goes out only wholly in that country's language. Present on
    * every non-Hungarian render (empty = measured, complete); ABSENT on a non-Hungarian message

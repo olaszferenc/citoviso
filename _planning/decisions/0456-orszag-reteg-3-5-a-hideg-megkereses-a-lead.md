@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/5: a hideg megkeresés a lead országának nyelvén, ablakában, csatornáján és kvótájával megy — hiányzó nyelvnél TARTVA
+## ADR-0456 — Ország-réteg 3/5: a hideg megkeresés a lead országának nyelvén, ablakában, csatornáján és kvótájával megy — hiányzó nyelvnél TARTVA
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-17, „Ok” a kiküldés lépésre; brief `orszag-reteg-3e-kikuldes-20261117.md`, koordinátor `cit9b4690e3`; nyelvi pontosítás: tulaj-szabály 2026-11-17 a koordinátoron át) ·
 **Épít:** ADR-0437 (ország-réteg), ADR-0443 (pénzút), ADR-0450/0452 (`phoneCountry.ts`), ADR-0455 (CRM: `countryClock`, `public_holidays`), ADR-0409 (kiküldési sor), ADR-0334 (mock-ablak), ADR-0111 (piac-kapu) ·

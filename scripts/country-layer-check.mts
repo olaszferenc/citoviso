@@ -27,7 +27,7 @@
 //      send hour and heat map are in the lead's zone, portals come from the catalogue, and the
 //      tenant reports/letters run on the lodging's zone; no burned HUF / Ft / Budapest clock.
 //
-//   ⑨ ADR-XXXX — KIKÜLDÉS (ország-réteg 3/5): the send files carry no burned +36 / isHuMobileE164 /
+//   ⑨ ADR-0456 — KIKÜLDÉS (ország-réteg 3/5): the send files carry no burned +36 / isHuMobileE164 /
 //      Budapest-only mock window / HUF amount / lang==="hu" country gate (each remaining one on the
 //      ALLOW list WITH its reason); the window, the channel, the mobile, the cap and the language
 //      hold are wired to the country row; and the HU row answers exactly what the Budapest /
@@ -200,7 +200,7 @@ const SCOPE = [
 const BURNED = /["'`](?:HU|hu|HUF|hu-HU)["'`]|\+36|Europe\/Budapest|search_lang=hu|languageCode:\s*["']hu/;
 // file → exact code fragment that may stay, and WHY.
 const ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
-  { file: "src/outreach/draft.ts", frag: 'return !currency || currency.toUpperCase() === "HUF";', why: "ADR-XXXX: a FORINT-mondat ága („… forinttól”) — pénznem szerinti szöveg-ág, nem ország; más pénznem a saját jelével (formatMinor)" },
+  { file: "src/outreach/draft.ts", frag: 'return !currency || currency.toUpperCase() === "HUF";', why: "ADR-0456: a FORINT-mondat ága („… forinttól”) — pénznem szerinti szöveg-ág, nem ország; más pénznem a saját jelével (formatMinor)" },
   { file: "src/scraper/persist.ts", frag: 'new Intl.DateTimeFormat("hu-HU"', why: "az operátori napló órája (platform-idő, APP_TZ) — nem a lead országa" },
   { file: "src/scraper/enrichWebSearch.ts", frag: "(?:\\+36|0036|06)", why: "a webes kontakt-kinyerő HU-szám mintája; az ország-függő kinyerés a telefon-csoport következő lépése (ADR-0437 ⑤3)" },
   { file: "src/i18n/lang.ts", frag: 'const UI_LANGS: readonly string[] = ["hu"', why: "a saját felületeink lefordított NYELVEI (nem ország)" },

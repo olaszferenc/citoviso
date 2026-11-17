@@ -55,7 +55,7 @@ export function tSync(lang: string | undefined, hu: string): string {
 }
 
 /**
- * ORSZÁG-RÉTEG 3/5 (ADR-XXXX): which source strings fell back to Hungarian while `fn` rendered.
+ * ORSZÁG-RÉTEG 3/5 (ADR-0456): which source strings fell back to Hungarian while `fn` rendered.
  * A cold outreach to a non-Hungarian country goes out ONLY when every text part of it is in
  * the country's language (owner 2026-11-17) — the render collects its own fallbacks, and the
  * §C gate (outreachCheck) refuses a message that has any. Synchronous renders only (T() is sync).

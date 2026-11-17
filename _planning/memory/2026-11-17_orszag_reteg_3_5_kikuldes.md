@@ -1,6 +1,6 @@
 # 2026-11-17 — Ország-réteg 3/5: kiküldés a lead országában (cit c737a035)
 
-Brief: `~/rc-briefs/orszag-reteg-3e-kikuldes-20261117.md` · koordinátor `cit9b4690e3` · ADR-XXXX (a land számozza).
+Brief: `~/rc-briefs/orszag-reteg-3e-kikuldes-20261117.md` · koordinátor `cit9b4690e3` · ADR-0456 (a land számozza).
 
 ## Elvégezve
 - Új modul `src/outreach/countryOutreach.ts`: csatorna (`modemPairBlocks`, `messengerBlocks`), mobil (`leadMobileIn`),

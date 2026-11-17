@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/5 (ADR-XXXX) — the cold letter's price sentence for a NON-forint pricing region.
+// ORSZÁG-RÉTEG 3/5 (ADR-0456) — the cold letter's price sentence for a NON-forint pricing region.
 //
 // The Hungarian letter says „… havi {price} helyett {offerPrice} forinttól.” — the word „forint”
 // is in the sentence, so a CZK / EUR / BGN amount cannot ride in it. A lead whose region prices in

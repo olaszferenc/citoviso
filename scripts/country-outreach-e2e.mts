@@ -1,4 +1,4 @@
-// ADR-XXXX ACCEPTANCE — the COUNTRY LAYER's COLD OUTREACH (ország-réteg 3/5), in a SCRATCH database
+// ADR-0456 ACCEPTANCE — the COUNTRY LAYER's COLD OUTREACH (ország-réteg 3/5), in a SCRATCH database
 // (never the shared dev DB, never production). Nothing is sent: e-mail / SMS / MMS providers are
 // 'mock', the network is fenced, and every send call below is either refused by a gate (the point
 // of the test) or a dry run.

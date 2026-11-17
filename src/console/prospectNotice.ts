@@ -16,7 +16,7 @@ import { config } from "../config.js";
 import { mapOutsideScripts } from "../engine/htmlOutsideScripts.js";
 import { interpolate, tSync } from "../i18n/packs.js";
 
-/** ORSZÁG-RÉTEG 3/5 (ADR-XXXX): the page's labels in the lead's language — the same T() contract
+/** ORSZÁG-RÉTEG 3/5 (ADR-0456): the page's labels in the lead's language — the same T() contract
  *  as i18n/mail.ts, without importing the country layer (this module stays light for the guards).
  *  The LEGAL sentences (LEGAL_BASIS, TRACKING_NOTICE) stay Hungarian here: they belong to the
  *  country's legal pack (ország-réteg step 7), not to a UI translation. */
