@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/6: a mock a lead országának nyelvén, írásával és szabályaival készül — magyar maradvány = TARTVA
+## ADR-0457 — Ország-réteg 3/6: a mock a lead országának nyelvén, írásával és szabályaival készül — magyar maradvány = TARTVA
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-17, „mehet a mock generálás”; brief `orszag-reteg-3f-mock-nyelv-20261117.md`, koordinátor `cit9b4690e3`) ·
 **Épít:** ADR-0437 (ország-réteg), ADR-0450/0452 (felületek, `tourist_tax_model`), ADR-0455 (CRM), ADR-0456 (kiküldés: `untranslated`-mérés, „Bábelre vár”), ADR-0036/0412 (nyelvi csomag, csak Bábel fordít), ADR-0329 (kurátori út) ·

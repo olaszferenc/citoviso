@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/6 (ADR-XXXX): Cyrillic / Greek → Latin transliteration for the ASCII labels a
+// ORSZÁG-RÉTEG 3/6 (ADR-0457): Cyrillic / Greek → Latin transliteration for the ASCII labels a
 // name becomes (preview host, tenant slug, domain suggestion, mock file name).
 //
 // ⛔ Until 2026-11-17 `slugify("Къща Мария")` returned "" — the NFD accent strip leaves Cyrillic

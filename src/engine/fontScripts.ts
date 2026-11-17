@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/6 (ADR-XXXX): a generated page's web fonts in the page language's SCRIPT.
+// ORSZÁG-RÉTEG 3/6 (ADR-0457): a generated page's web fonts in the page language's SCRIPT.
 //
 // ⛔ Until 2026-11-17 a Bulgarian mock asked Google Fonts for Fraunces/Outfit/Archivo/… — families
 // with NO Cyrillic glyphs — so every Bulgarian letter fell to the visitor's system font (Georgia /

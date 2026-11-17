@@ -40,7 +40,7 @@
 //      and the partner quiet hours run on the lead's / partner's zone; the reply stores its
 //      language; and the HU row's clock is byte-for-byte the old Budapest window.
 //
-//   ⑩ ORSZÁG-RÉTEG 3/6 — MOCK ÉS NYELV (ADR-XXXX): the lookalike scrub follows the page's script
+//   ⑩ ORSZÁG-RÉTEG 3/6 — MOCK ÉS NYELV (ADR-0457): the lookalike scrub follows the page's script
 //      (no unconditional Cyrillic→Latin swap), every web-font URL of a Cyrillic/Greek page names
 //      the script's subset and loads only families that carry it, a Cyrillic name gets a
 //      transliterated slug and its market's endings (no `…szallas.hu` outside .hu), the AI guards

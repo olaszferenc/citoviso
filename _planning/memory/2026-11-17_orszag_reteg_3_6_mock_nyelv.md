@@ -1,6 +1,6 @@
 # 2026-11-17 — Ország-réteg 3/6: mock és nyelv (SUB `citf44663e7`, koordinátor `cit9b4690e3`)
 
-Brief: `~/rc-briefs/orszag-reteg-3f-mock-nyelv-20261117.md` · Döntés: ADR-XXXX (`_planning/decisions/XXXX-orszag-reteg-3-6-mock-es-nyelv.md`).
+Brief: `~/rc-briefs/orszag-reteg-3f-mock-nyelv-20261117.md` · Döntés: ADR-0457 (`_planning/decisions/XXXX-orszag-reteg-3-6-mock-es-nyelv.md`).
 
 ## Elvégzett munka
 - **Írás:** `src/i18n/script.ts` (CLDR-ből az írás; `alignHomoglyphs`) — `fixHomoglyphs(s, lang)` a motorban, az újraírásban, a kurátori csomagban és a konzol kurátori előnézetében.

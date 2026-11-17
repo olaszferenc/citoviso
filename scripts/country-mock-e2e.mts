@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/6 ACCEPTANCE — THE MOCK AND ITS LANGUAGE (ADR-XXXX), in a SCRATCH database (never the
+// ORSZÁG-RÉTEG 3/6 ACCEPTANCE — THE MOCK AND ITS LANGUAGE (ADR-0457), in a SCRATCH database (never the
 // shared dev DB, never production). No AI call (no API key: the curator path writes the words,
 // as Poe does), no network (fenced), nothing is sent.
 //

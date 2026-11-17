@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-orszag-reteg-3-6-mock-es-nyelv.md) — Ország-réteg 3/6: a mock a lead országának nyelvén, írásával és szabályaival készül — magyar maradvány = TARTVA
+- [ADR-0457](decisions/0457-orszag-reteg-3-6-a-mock-a-lead-orszaganak.md) — Ország-réteg 3/6: a mock a lead országának nyelvén, írásával és szabályaival készül — magyar maradvány = TARTVA
 - [ADR-0456](decisions/0456-orszag-reteg-3-5-a-hideg-megkereses-a-lead.md) — Ország-réteg 3/5: a hideg megkeresés a lead országának nyelvén, ablakában, csatornáján és kvótájával megy — hiányzó nyelvnél TARTVA
 - [ADR-0455](decisions/0455-orszag-reteg-3-4-a-crm-es-a-kommunikacio-a-lead.md) — Ország-réteg 3/4: a CRM és a kommunikáció a lead országának telefon-rendjén, nyelvén, időzónáján és ünnepnapjain fut
 - [ADR-0454](decisions/0454-orszag-reteg-3-3-a-riportok-penznemenkent.md) — Ország-réteg 3/3: a riportok pénznemenként, országonként és a helyi időben

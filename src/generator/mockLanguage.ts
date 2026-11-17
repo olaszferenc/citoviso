@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/6 (ADR-XXXX): THE MOCK'S LANGUAGE GATE — a non-Hungarian mock may be offered to its
+// ORSZÁG-RÉTEG 3/6 (ADR-0457): THE MOCK'S LANGUAGE GATE — a non-Hungarian mock may be offered to its
 // lead only when every visible text of it is in the country's language.
 //
 // Owner's rule (2026-11-17, through the coordinator): a non-Hungarian lead gets NOTHING in Hungarian,

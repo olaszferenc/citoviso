@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/6 (ADR-XXXX): the WRITING SYSTEM of a language — the one fact the mock's
+// ORSZÁG-RÉTEG 3/6 (ADR-0457): the WRITING SYSTEM of a language — the one fact the mock's
 // homoglyph scrub, its web-font subset and its slug transliteration all hang on.
 //
 // ⛔ Not a hand-kept table: the script is a property of the language, and the platform's
