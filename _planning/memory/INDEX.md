@@ -9,6 +9,7 @@
 - [2026-11-17_tervvaltas_csomag_zaras.md](2026-11-17_tervvaltas_csomag_zaras.md) — 2026-11-17 — Tervváltás-csomag zárása (élesítés 22ffe575, deploy-kapu türelem, SUB-ok archiválva)
 - [2026-11-17_orszag_reteg_3_6_mock_nyelv.md](2026-11-17_orszag_reteg_3_6_mock_nyelv.md) — 2026-11-17 — Ország-réteg 3/6: mock és nyelv (SUB `citf44663e7`, koordinátor `cit9b4690e3`)
 - [2026-11-17_orszag_reteg_3_5_kikuldes.md](2026-11-17_orszag_reteg_3_5_kikuldes.md) — 2026-11-17 — Ország-réteg 3/5: kiküldés a lead országában (cit c737a035)
+- [2026-11-17_lemez_takaritas_cit.md](2026-11-17_lemez_takaritas_cit.md) — 2026-11-17 — Lemez-takarítás CIT (938M → 26G szabad)
 - [2026-11-17_dev_teszt_levelek_lenemitva.md](2026-11-17_dev_teszt_levelek_lenemitva.md) — 2026-11-17 — Dev teszt-levelek lenémítva; élesben 8 előtt nincs küldés
 - [2026-11-16_tervvalto_admin_kinezet.md](2026-11-16_tervvalto_admin_kinezet.md) — 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-0451)
 - [2026-11-16_proba_rendeles_nezett_terv.md](2026-11-16_proba_rendeles_nezett_terv.md) — 2026-11-16 — Próba és rendelés a nézett / futó tervhez kötve (tervvaltas A, ADR-0449)
