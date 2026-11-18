@@ -26,6 +26,7 @@ import { db } from "../src/db/client.js";
 import {
   cancelDispatch,
   dispatchStatus,
+  getAutoDispatchSettings,
   attachSecondPlan,
   enqueueDispatch,
   requeueDispatch,
