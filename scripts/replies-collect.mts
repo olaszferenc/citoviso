@@ -337,7 +337,7 @@ try {
     const creds = imapCreds();
     if (!creds) console.log("[replies-email] nincs IMAP-hitelesítő (REPLIES_IMAP_URL / SMTP_URL) — nincs teendő.");
     else await collectEmail(creds, "citoviso-replies-email.json");
-    // The cold lane's mailbox (ADR-XXXX): replies to getcitoviso.com letters land there.
+    // The cold lane's mailbox (ADR-0459): replies to getcitoviso.com letters land there.
     const cold = coldImapCreds();
     if (cold) await collectEmail(cold, "citoviso-replies-email-cold.json");
   }

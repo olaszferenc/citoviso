@@ -1,4 +1,4 @@
-## ADR-XXXX — A hideg megkeresés KÜLÖN domainről megy (getcitoviso.com), saját SMTP-vel és DKIM-mel, felfutással és fékkel
+## ADR-0459 — A hideg megkeresés KÜLÖN domainről megy (getcitoviso.com), saját SMTP-vel és DKIM-mel, felfutással és fékkel
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-18: „B szerintem a jobb megoldás” a Websupport-tárhelyre, „Ok menjen” a kódra; brief `email-spam-20261118-125036.md`, session `cit73105eb0`) ·
 **Épít:** ADR-0069 (List-Unsubscribe kapcsoló), ADR-0405/0409 (kiküldési sor), ADR-0456 (ország-réteg kiküldés), ADR-0334 (mock-ablak) ·

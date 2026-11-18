@@ -1,4 +1,4 @@
-# 2026-11-18 — Hideg megkeresés külön domainről: getcitoviso.com sáv, felfutás, fék (ADR-XXXX)
+# 2026-11-18 — Hideg megkeresés külön domainről: getcitoviso.com sáv, felfutás, fék (ADR-0459)
 
 **Session:** `cit73105eb0` (brief `email-spam-20261118-125036.md`). **Élesen: a kód NINCS kint**, az infra IGEN (lent).
 
