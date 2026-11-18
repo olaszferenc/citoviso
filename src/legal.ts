@@ -1048,7 +1048,7 @@ export function missingImprintFields(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ORSZÁG-RÉTEG 3/7 (ADR-XXXX) — the COUNTRY legal pack's own data.
+// ORSZÁG-RÉTEG 3/7 (ADR-0458) — the COUNTRY legal pack's own data.
 //
 // Lawyer's position (owner, 2026-11-18): today's texts, placed IN THE COUNTRY'S LANGUAGE,
 // allow business in that country until the lawyer comments further. So a country's pack is

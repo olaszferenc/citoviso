@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/7 (ADR-XXXX): the country legal pack seen through the COUNTRY LAYER — the
+// ORSZÁG-RÉTEG 3/7 (ADR-0458): the country legal pack seen through the COUNTRY LAYER — the
 // pack must be in the country row's `default_lang` (ADR-0437). Kept apart from legalPack.ts so
 // that module stays free of the database (the outreach guards import it).
 import { countryConfig } from "./country.js";

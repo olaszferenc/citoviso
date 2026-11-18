@@ -36,7 +36,7 @@ export function normalizeCountryCode(raw: string | null | undefined): string | n
  * A null/unknown country is NOT approved. That is deliberate: "we do not know where
  * this customer is" is not a reason to publish a Hungarian imprint in their name.
  *
- * ORSZÁG-RÉTEG 3/7 (ADR-XXXX): an owner's approval no longer opens a country on its own —
+ * ORSZÁG-RÉTEG 3/7 (ADR-0458): an owner's approval no longer opens a country on its own —
  * the country's legal pack must also be COMPLETE in the country's language (every text Bábel
  * translated, the local-item schema defined; src/legalPack.ts). This is the ONE gate every
  * caller reads (cold outreach, trial start, pay-link, go-live, configurator), so an

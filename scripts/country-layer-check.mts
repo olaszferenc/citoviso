@@ -48,7 +48,7 @@
 //      page), the lead's mail language has no quiet Hungarian fallback, the mock's language gate
 //      and the follow-ups' fallback measurement are wired, and the HU answers are the old ones.
 //
-//   ⑪ ORSZÁG-RÉTEG 3/7 — JOGI CSOMAG (ADR-XXXX): no Hungarian legal text in a non-HU country's pack
+//   ⑪ ORSZÁG-RÉTEG 3/7 — JOGI CSOMAG (ADR-0458): no Hungarian legal text in a non-HU country's pack
 //      (no entry equal to its Hungarian source, no ő/ű, placeholders and markup intact, the pack's
 //      language = the country row's); no pack version without country AND language (the stamp,
 //      and both acceptance inserts carry it); the market gate cannot be bypassed (one reader of

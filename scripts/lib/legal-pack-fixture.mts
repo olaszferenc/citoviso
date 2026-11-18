@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/7 (ADR-XXXX) — TEST FIXTURE for country legal packs. ⛔ NOT a translation:
+// ORSZÁG-RÉTEG 3/7 (ADR-0458) — TEST FIXTURE for country legal packs. ⛔ NOT a translation:
 // every text run of the Hungarian source becomes a marker (‹it›), tags and {{placeholders}}
 // survive — so a test can open a market (the gate needs a COMPLETE pack) and assert that the
 // page is "in the country's language" (no Hungarian source text left) without a model call.

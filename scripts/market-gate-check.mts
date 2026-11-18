@@ -72,7 +72,7 @@ const XX = "X" + String.fromCharCode(65 + (process.pid % 26));
 console.log(`\n2. Piac-nyilvántartás (DB, eldobható ${XX} ország)`);
 await db.deleteFrom("market_log").where("country", "=", XX).execute();
 await db.deleteFrom("market").where("country", "=", XX).execute();
-// ORSZÁG-RÉTEG 3/7 (ADR-XXXX): a market opens only with a COMPLETE legal pack in the country
+// ORSZÁG-RÉTEG 3/7 (ADR-0458): a market opens only with a COMPLETE legal pack in the country
 // row's language. The throwaway country gets its own row (a copy of the HU row, removed in the
 // finally blocks below) and — after the "approved but no pack" leg — a marker FIXTURE pack
 // (scripts/lib/legal-pack-fixture.mts: never a translation, lives in a temp directory).

@@ -1355,7 +1355,7 @@ async function handleOrderRequest(
     return;
   }
   const region = money.region;
-  // ORSZÁG-RÉTEG 3/7 (ADR-XXXX): the wordings the buyer accepts come from the LODGING country's
+  // ORSZÁG-RÉTEG 3/7 (ADR-0458): the wordings the buyer accepts come from the LODGING country's
   // legal pack (the configurator showed them). ⛔ No complete pack = no order (never the
   // Hungarian wording stamped for a foreign buyer); FR/PT without OUR consumer dispute body
   // configured = the CONSUMER route is shut, the business route is not.
@@ -1625,7 +1625,7 @@ async function acquireOrderLock(key: string): Promise<() => void> {
 async function regionForArtifactOrNull(artifactId: string): Promise<string | null> {
   const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
   if (!a) return null;
-  // ORSZÁG-RÉTEG 3/7 (ADR-0111 + ADR-XXXX): the CONFIGURATOR is part of the conversion path —
+  // ORSZÁG-RÉTEG 3/7 (ADR-0111 + ADR-0458): the CONFIGURATOR is part of the conversion path —
   // a lodging whose market is shut (not approved, or its legal pack not complete in the
   // country's language) gets the mock WITHOUT an order entry, like a market that cannot price.
   // Every configurator entry (/configure, /p/<t>, /folytatas) reads this one function.

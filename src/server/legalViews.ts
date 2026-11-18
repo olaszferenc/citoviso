@@ -172,7 +172,7 @@ export function adatfeldolgozasPage(pack?: LegalPack): string {
   return legalPage("Adatfeldolgozási feltételek", intro, DPA_V1);
 }
 
-// ── ORSZÁG-RÉTEG 3/7 (ADR-XXXX): the same pages in a COUNTRY's pack ──────────────────────
+// ── ORSZÁG-RÉTEG 3/7 (ADR-0458): the same pages in a COUNTRY's pack ──────────────────────
 //
 // A country page is the Hungarian page rendered with PLACEHOLDER registry facts, translated
 // unit by unit from the country's pack (translateLegalHtml — a gap throws, no Hungarian

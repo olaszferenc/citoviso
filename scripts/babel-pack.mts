@@ -41,7 +41,7 @@
 //       src/i18n/babel/sites/<site-id>/<lang>.json, which the paid generation reads.
 //
 //   legal-export <CC> [--all] [--out file.json]
-//       ORSZÁG-RÉTEG 3/7 (ADR-XXXX): a COUNTRY's legal pack (ISO-2, not a language — the pack
+//       ORSZÁG-RÉTEG 3/7 (ADR-0458): a COUNTRY's legal pack (ISO-2, not a language — the pack
 //       belongs to a legal system; its language is the country row's default_lang). The units
 //       to translate (default: the ones missing) → JSON {country, lang, base, rules, units:
 //       [{hu, doc, most?}]}. ⛔ LEGAL TEXT: the content stays identical — statute references

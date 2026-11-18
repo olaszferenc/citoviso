@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/7: a jogi csomag országonként, az ország nyelvén — a piac-kapu a csomag teljességét nézi
+## ADR-0458 — Ország-réteg 3/7: a jogi csomag országonként, az ország nyelvén — a piac-kapu a csomag teljességét nézi
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-18, ügyvédi állásponttal; brief `orszag-reteg-3g-jogi-csomag-20261118.md`, koordinátor `cit9b4690e3`) ·
 **Épít:** ADR-0110 (tenant jogi lábazat), ADR-0111 (piac-kapu), ADR-0036 §C, ADR-0437 (ország-réteg `legal_pack` mező), ADR-0456 (megkeresés: `untranslated`, „Bábelre vár”), ADR-0457, ADR-0412 (csak Bábel fordít) ·

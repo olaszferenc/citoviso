@@ -45,7 +45,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // errors and logs (a fatal boot error, a progress line) — none reaches a customer.
   "src/country.ts": "operátori hiba-/naplószöveg (az ország-réteg nem olvasható) — vevőhöz nem jut",
   "src/scraper/enrichGeo.ts": "operátori napló (Nominatim-dúsítás folyamatjelzése) — vevőhöz nem jut",
-  // ORSZÁG-RÉTEG 3/7 (ADR-XXXX): the market gate's REASONS (why a country is shut) are operator
+  // ORSZÁG-RÉTEG 3/7 (ADR-0458): the market gate's REASONS (why a country is shut) are operator
   // text — the console log and the coming „Országok” lap; the legal pack's own texts live in the
   // country packs (legalPack.ts), never in these lines. None reaches a customer.
   "src/markets.ts": "operátori ok-szöveg (miért zárt egy piac) — vevőhöz nem jut",

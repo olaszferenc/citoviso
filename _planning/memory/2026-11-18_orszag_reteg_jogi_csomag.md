@@ -1,4 +1,4 @@
-# 2026-11-18 — Ország-réteg 3/7: jogi csomag országonként (ADR-XXXX)
+# 2026-11-18 — Ország-réteg 3/7: jogi csomag országonként (ADR-0458)
 
 **Session:** `citf0a013ee` (SUB, koordinátor `cit9b4690e3`), brief `~/rc-briefs/orszag-reteg-3g-jogi-csomag-20261118.md`.
 

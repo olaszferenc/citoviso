@@ -1,4 +1,4 @@
--- 0141 ORSZÁG-RÉTEG 3/7 — JOGI CSOMAG (ADR-XXXX).
+-- 0141 ORSZÁG-RÉTEG 3/7 — JOGI CSOMAG (ADR-0458).
 --
 -- ① tenant_legal.local_fields — the country's mandatory LOCAL imprint items the accommodation
 --    publishes (IT CIN/CIR, ES NRUA + regional number, PT AL number / complaints book / ADR body,
@@ -14,8 +14,8 @@ ALTER TABLE tenant_legal ADD COLUMN IF NOT EXISTS local_fields jsonb NOT NULL DE
 ALTER TABLE order_intent ADD COLUMN IF NOT EXISTS legal_pack text;
 ALTER TABLE free_trial ADD COLUMN IF NOT EXISTS legal_pack text;
 COMMENT ON COLUMN tenant_legal.local_fields IS
-  'ADR-XXXX/3-7: az ország kötelező helyi impresszum-elemei (LEGAL_LOCAL mező-id → érték); magyar tenantnál üres.';
+  'ADR-0458/3-7: az ország kötelező helyi impresszum-elemei (LEGAL_LOCAL mező-id → érték); magyar tenantnál üres.';
 COMMENT ON COLUMN order_intent.legal_pack IS
-  'ADR-XXXX/3-7: az elfogadott szövegek jogi csomagja: <ország>/<nyelv>/<forrásverzió>. NULL = 0141 előtti (magyar).';
+  'ADR-0458/3-7: az elfogadott szövegek jogi csomagja: <ország>/<nyelv>/<forrásverzió>. NULL = 0141 előtti (magyar).';
 COMMENT ON COLUMN free_trial.legal_pack IS
-  'ADR-XXXX/3-7: az elfogadott szövegek jogi csomagja: <ország>/<nyelv>/<forrásverzió>. NULL = 0141 előtti (magyar).';
+  'ADR-0458/3-7: az elfogadott szövegek jogi csomagja: <ország>/<nyelv>/<forrásverzió>. NULL = 0141 előtti (magyar).';

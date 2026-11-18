@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/7 (ADR-XXXX) — THE COUNTRY LEGAL PACK.
+// ORSZÁG-RÉTEG 3/7 (ADR-0458) — THE COUNTRY LEGAL PACK.
 //
 // Until this step there was ONE legal pack, the Hungarian one (src/legal.ts and the pages
 // built from it), and the ADR-0111 market gate kept every other country shut for that reason.

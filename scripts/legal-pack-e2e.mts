@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/7 ACCEPTANCE — THE COUNTRY LEGAL PACK (ADR-XXXX), in a SCRATCH database (never the
+// ORSZÁG-RÉTEG 3/7 ACCEPTANCE — THE COUNTRY LEGAL PACK (ADR-0458), in a SCRATCH database (never the
 // shared dev DB, never production). No AI call, no network (fenced), nothing is sent.
 //
 // Four markets, all APPROVED by the owner in the market table: HU (the home pack), IT, BG (EUR —

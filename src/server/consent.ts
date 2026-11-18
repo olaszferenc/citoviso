@@ -31,7 +31,7 @@ const escAttr = (s: string): string =>
 /**
  * The bar's labels for a NON-Hungarian page, as data-t-* attributes of the loader script
  * (cit-consent.js reads them, its Hungarian literals are the fallback). ORSZÁG-RÉTEG 3/7
- * (ADR-XXXX): the wording is part of the country's LEGAL pack (src/legal.ts COOKIE_BAR_TEXT_V1),
+ * (ADR-0458): the wording is part of the country's LEGAL pack (src/legal.ts COOKIE_BAR_TEXT_V1),
  * printed in the page's declared language. A Hungarian page — or one that declares no
  * language — gets nothing: its markup is byte for byte the old one.
  */
