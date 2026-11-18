@@ -27,6 +27,9 @@ import {
   HOME_MARKET,
 } from "../src/markets.js";
 import { db } from "../src/db/client.js";
+import { sql } from "kysely";
+import { countryConfigSync, refreshCountries } from "../src/country.js";
+import { installLegalPackFixture } from "./lib/legal-pack-fixture.mts";
 
 let fails = 0;
 function check(name: string, ok: boolean, detail = ""): void {
@@ -69,6 +72,24 @@ const XX = "X" + String.fromCharCode(65 + (process.pid % 26));
 console.log(`\n2. Piac-nyilvántartás (DB, eldobható ${XX} ország)`);
 await db.deleteFrom("market_log").where("country", "=", XX).execute();
 await db.deleteFrom("market").where("country", "=", XX).execute();
+// ORSZÁG-RÉTEG 3/7 (ADR-XXXX): a market opens only with a COMPLETE legal pack in the country
+// row's language. The throwaway country gets its own row (a copy of the HU row, removed in the
+// finally blocks below) and — after the "approved but no pack" leg — a marker FIXTURE pack
+// (scripts/lib/legal-pack-fixture.mts: never a translation, lives in a temp directory).
+await db.deleteFrom("country").where("iso2", "=", XX).execute();
+await sql`
+  insert into country (iso2, name, aliases, default_lang, time_zone, currency, pricing_region, area_bbox,
+    search_keywords, portal_domains, own_site_tlds, search_lang, search_region, browser_locale, accept_language,
+    dial_code, trunk_prefix, mobile_prefixes, phone_plan, phone_nsn_min, phone_nsn_max,
+    outreach_channels, send_window_from, send_window_to, daily_quota, invoice_lang, legal_pack, payment_provider,
+    tourist_tax_model, public_holidays)
+  select ${XX}, ${"_mkt_check " + XX}, '[]'::jsonb, default_lang, time_zone, currency, pricing_region, area_bbox,
+    search_keywords, '[]'::jsonb, own_site_tlds, search_lang, ${XX}, browser_locale, accept_language,
+    dial_code, trunk_prefix, mobile_prefixes, phone_plan, phone_nsn_min, phone_nsn_max,
+    outreach_channels, send_window_from, send_window_to, daily_quota, invoice_lang, ${XX}, payment_provider,
+    tourist_tax_model, public_holidays
+  from country where iso2 = 'HU'`.execute(db);
+await refreshCountries();
 try {
   check("ismeretlen ország nincs jóváhagyva", !(await isMarketApproved(XX)));
   check("indoklás nélkül NEM nyílik meg", !(await approveMarket({ country: XX, actor: "teszt", reason: "" })));
@@ -77,7 +98,9 @@ try {
     "indoklással megnyílik",
     await approveMarket({ country: XX, actor: "teszt", reason: "ADR-0111 önteszt" }),
   );
-  check("a kapu most nyitva", await isMarketApproved(XX));
+  check("jóváhagyva, de jogi csomag nélkül ZÁRVA (ország-réteg 3/7)", !(await isMarketApproved(XX)));
+  await installLegalPackFixture({ [XX]: countryConfigSync(XX)!.defaultLang });
+  check("a kapu most nyitva (jóváhagyás + teljes csomag)", await isMarketApproved(XX));
   check("kisbetűs írásmód ugyanaz a piac", await isMarketApproved(XX.toLowerCase()), "normalizálás nélkül két piac lenne");
   check(
     "lezárható",
@@ -256,6 +279,9 @@ console.log("\n4. Élesítési kapu — SORREND (a kapu a live-kapcsoló ELŐTT)
   check("a megtagadás naplóz (nem néma)", /console\.error/.test(refusal));
   check("…és kimondja, hogy a vevő FIZETETT", /FIZETETT/.test(refusal));
 }
+
+// The throwaway country row (ország-réteg 3/7) goes with the run.
+await db.deleteFrom("country").where("iso2", "=", XX).execute();
 
 console.log(
   fails === 0

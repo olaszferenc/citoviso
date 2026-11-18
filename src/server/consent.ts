@@ -21,6 +21,30 @@ import path from "node:path";
 
 import { config } from "../config.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { DEFAULT_LANG } from "../i18n/lang.js";
+import { COOKIE_BAR_TEXT_V1 } from "../legal.js";
+import { legalTextForLang } from "../legalPack.js";
+
+const escAttr = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * The bar's labels for a NON-Hungarian page, as data-t-* attributes of the loader script
+ * (cit-consent.js reads them, its Hungarian literals are the fallback). ORSZÁG-RÉTEG 3/7
+ * (ADR-XXXX): the wording is part of the country's LEGAL pack (src/legal.ts COOKIE_BAR_TEXT_V1),
+ * printed in the page's declared language. A Hungarian page — or one that declares no
+ * language — gets nothing: its markup is byte for byte the old one.
+ */
+function consentLabelAttrs(lang: string | undefined): string {
+  if (!lang || lang === DEFAULT_LANG) return "";
+  return (
+    Object.entries(COOKIE_BAR_TEXT_V1)
+      .map(([k, hu]) => ` data-t-${k}="${escAttr(legalTextForLang(lang, hu))}"`)
+      .join("") +
+    // …and its privacy link opens the notice in the same language (legalViews `?l=`).
+    ` data-t-href="/adatvedelem?l=${escAttr(lang)}"`
+  );
+}
 
 const PUBLIC_DIR = path.resolve(process.cwd(), "public");
 
@@ -88,7 +112,7 @@ export type PageAudience = "own" | "guest" | "operator";
  * egy pont teszi ki, a stíluslapot is ez hivatkozza: egy jövőbeli saját lap nem
  * tudja „elfelejteni" behúzni.
  */
-export function consentSnippet(): { head: string; body: string } {
+export function consentSnippet(lang?: string): { head: string; body: string } {
   // A Barion azonosító alakja `BP-<10 jel>-<2 jel>` (élő webshopokban mérve). Ami nem
   // ilyen, az el sem jut a lapra: szűrünk, nem escape-elünk — egy rossz konfig-érték
   // így nem kerülhet HTML-be, és a sáv sem jelenik meg.
@@ -99,7 +123,7 @@ export function consentSnippet(): { head: string; body: string } {
   return {
     head: `<link rel="stylesheet" href="/assets/runtime/cit-consent.css?v=${CONSENT_CSS_VERSION}">`,
     body:
-      `<script src="/assets/runtime/cit-consent.js?v=${CONSENT_JS_VERSION}" data-pixel-id="${pixelId}" defer></script>` +
+      `<script src="/assets/runtime/cit-consent.js?v=${CONSENT_JS_VERSION}" data-pixel-id="${pixelId}"${consentLabelAttrs(lang)} defer></script>` +
       `<noscript><img height="1" width="1" style="display:none" alt=""` +
       ` src="https://pixel.barion.com/a.gif?__ba_pixel_id=${pixelId}` +
       `&ev=contentView&noscript=1"></noscript>`,
@@ -141,7 +165,8 @@ export function markAudience(res: { }, audience: PageAudience): void {
 export function injectConsent(html: string, res: object): string {
   if ((res as Record<symbol, PageAudience | undefined>)[PAGE_AUDIENCE] !== "own") return html;
   if (!html.includes("</body>")) return html;
-  const snippet = consentSnippet();
+  // ORSZÁG-RÉTEG 3/5: the bar speaks the page's declared language (<html lang>).
+  const snippet = consentSnippet(/<html\b[^>]*\slang="([a-z]{2,3})"/i.exec(html)?.[1]?.toLowerCase());
   if (!snippet.body) return html;
   // A stíluslap a HEAD-be megy, ha van — ott nem villan fel egy pillanatra a
   // csupasz sáv. Head nélküli (részleges) kimenetnél a body-ág elé fűzzük: a

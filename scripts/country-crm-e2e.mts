@@ -106,7 +106,7 @@ async function addCountry(r: {
   );
 }
 await addCountry({
-  iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "BGN", dial: "359", trunk: "0",
+  iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "EUR", dial: "359", trunk: "0",
   mobiles: ["87", "88", "89", "98"], nsn: [8, 9], holidays: ["01-01", "03-03", "05-01", "05-06", "05-24", "09-06", "09-22", "12-24", "12-25", "12-26"],
   portals: ["pochivka.bg"], tlds: ["bg", "com"],
 });

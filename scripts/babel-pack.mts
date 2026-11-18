@@ -40,6 +40,20 @@
 //       {hu: translation} back; numbers must survive (§B.17 digit integrity); --seed writes
 //       src/i18n/babel/sites/<site-id>/<lang>.json, which the paid generation reads.
 //
+//   legal-export <CC> [--all] [--out file.json]
+//       ORSZÁG-RÉTEG 3/7 (ADR-XXXX): a COUNTRY's legal pack (ISO-2, not a language — the pack
+//       belongs to a legal system; its language is the country row's default_lang). The units
+//       to translate (default: the ones missing) → JSON {country, lang, base, rules, units:
+//       [{hu, doc, most?}]}. ⛔ LEGAL TEXT: the content stays identical — statute references
+//       (45/2014. Korm. r., Grt., Eker.tv., GDPR…) are translated as names, NEVER replaced by
+//       the target country's law (lawyer's position, owner 2026-11-18). Keep every {{x}} and
+//       {X_Y} placeholder and every HTML tag (<a href…>, <b>) verbatim.
+//   legal-import <CC> <file.json> [--seed]
+//       {hu: translation} back (or the export file with a filled `tr` per unit). Unknown units
+//       and placeholder/markup breaks are refused. --seed writes src/i18n/babel/legal/<CC>.json
+//       (merged; units no longer in the source are dropped). The market gate opens only when
+//       the pack is COMPLETE (src/legalPack.ts legalPackStatus).
+//
 //   npx tsx scripts/babel-pack.mts export sl --out ~/babel/munka/sl-hianyzo.json
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -64,12 +78,85 @@ const opt = (name: string): string | undefined => {
 };
 
 function usage(): never {
-  console.error("használat: babel-pack.mts export|import|audit|glossary|kb-export|kb-import <lang> … | site-export|site-import <site-id> <lang> … (lásd a fejlécet)");
+  console.error("használat: babel-pack.mts export|import|audit|glossary|kb-export|kb-import <lang> … | site-export|site-import <site-id> <lang> … | legal-export|legal-import <CC> … (lásd a fejlécet)");
   process.exit(2);
 }
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const digits = (x: string): string => (x.match(/\d+/g) ?? []).join("|");
+
+if (cmd === "legal-export" || cmd === "legal-import") {
+  const cc = (lang ?? "").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc) || cc === "HU") usage();
+  const lp = await import("../src/legalPack.js");
+  const { countryConfig } = await import("../src/country.js");
+  const row = await countryConfig(cc);
+  const packLang = row?.defaultLang ?? opt("--lang");
+  if (!packLang) {
+    console.error(`${cc}: nincs ország-sor (default_lang) — add meg: --lang <kód>`);
+    process.exit(2);
+  }
+  const sources = await lp.legalSources(cc);
+  const file = path.join(lp.legalPackDir(), `${cc}.json`);
+  let current: Record<string, string> = {};
+  try {
+    current = (JSON.parse(readFileSync(file, "utf8")) as { entries: Record<string, string> }).entries ?? {};
+  } catch {
+    current = {};
+  }
+  if (cmd === "legal-export") {
+    const units = [...sources]
+      .filter(([hu]) => flag("--all") || !current[hu])
+      .map(([hu, doc]) => ({ hu, doc, ...(current[hu] ? { most: current[hu] } : {}) }));
+    const out = {
+      country: cc,
+      lang: packLang,
+      base: lp.LEGAL_PACK_BASE,
+      rules:
+        "JOGI SZÖVEG: a tartalom azonos marad, csak a nyelv más. A jogszabály-hivatkozásokat (45/2014. Korm. r., Grt., " +
+        "Eker.tv., Ptk., GDPR, NAIH…) NE cseréld a célország jogára — fordítsd a nevüket, a hivatkozás marad. " +
+        "Minden {{x}} és {X_Y} helyőrző és HTML-jelölés (<a href=…>, <b>, <em>) változatlanul marad.",
+      units,
+    };
+    const json = JSON.stringify(out, null, 1);
+    if (opt("--out")) writeFileSync(opt("--out")!, json, "utf8");
+    else console.log(json);
+    console.error(`${cc} (${packLang}): ${units.length} egység exportálva (${sources.size} összesen)`);
+  } else {
+    const src = rest.find((a) => !a.startsWith("--") && a !== opt("--lang"));
+    if (!src) usage();
+    const raw = JSON.parse(readFileSync(src, "utf8")) as Record<string, string> | { units: { hu: string; tr?: string }[] };
+    const incoming: Record<string, string> =
+      "units" in raw && Array.isArray(raw.units)
+        ? Object.fromEntries(raw.units.filter((u) => u.tr).map((u) => [u.hu, u.tr!]))
+        : (raw as Record<string, string>);
+    let accepted = 0;
+    let refused = 0;
+    const merged: Record<string, string> = {};
+    for (const [hu, v] of Object.entries(current)) if (sources.has(lp.normUnit(hu))) merged[lp.normUnit(hu)] = v;
+    for (const [huRaw, tr] of Object.entries(incoming)) {
+      const hu = lp.normUnit(huRaw);
+      const problem = !sources.has(hu) ? "ismeretlen egység (nincs a forrásban)" : lp.legalUnitProblem(hu, tr);
+      if (problem) {
+        refused++;
+        console.error(`  ✗ ${hu.slice(0, 70)}… — ${problem}`);
+        continue;
+      }
+      accepted++;
+      merged[hu] = tr;
+    }
+    const missing = [...sources.keys()].filter((hu) => !merged[hu]).length;
+    console.log(`${cc} (${packLang}): ${accepted} elfogadva, ${refused} elutasítva; hiányzik még ${missing}/${sources.size}`);
+    if (flag("--seed")) {
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, JSON.stringify({ country: cc, lang: packLang, base: lp.LEGAL_PACK_BASE, entries: merged }, null, 1) + "\n", "utf8");
+      console.log(`✅ ${path.relative(ROOT, file)} (commit + land → deploy; a piac-kapu csak TELJES csomagnál nyit)`);
+    } else console.log("(száraz futás — a maghoz: --seed)");
+    if (refused) process.exitCode = 1;
+  }
+  await db.destroy();
+  process.exit();
+}
 
 if (cmd === "site-export" || cmd === "site-import") {
   // `lang` holds the site id here; the language is the next argument.

@@ -109,8 +109,11 @@ async function addCountry(r: { iso: string; name: string; lang: string; tz: stri
   );
 }
 await addCountry({ iso: "CZ", name: "Csehország (e2e)", lang: "cs", tz: "Europe/Prague", currency: "CZK", region: "cz", dial: "420", trunk: "", tlds: ["cz", "com"] });
-await addCountry({ iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "BGN", region: "bg", dial: "359", trunk: "0", tlds: ["bg", "com"] });
+await addCountry({ iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "EUR", region: "bg", dial: "359", trunk: "0", tlds: ["bg", "com"] });
 await refreshCountries();
+// ORSZÁG-RÉTEG 3/7: the market gate opens only on a COMPLETE legal pack — a marker FIXTURE (never a
+// translation, never the API) stands in for Bábel's, so this run measures what it always measured.
+await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", BG: "bg" });
 const HU = countryConfigSync("HU")!;
 const CZ = countryConfigSync("CZ")!;
 const BG = countryConfigSync("BG")!;
@@ -123,7 +126,7 @@ for (const cc of ["HU", "CZ", "BG"]) {
 // Markets: CZ and BG carry their own ending (+ .com/.eu); "global" keeps the code default (.hu only).
 await pricing.loadPricing();
 const tld = (t: string, cur: string) => ({ tld: t, offered: true, costNet: 1000, costCurrency: cur, costMeasuredAt: "2026-11-17T00:00:00.000Z", maxCost: 5000, monthlyFee: 990, freeInPackage: false });
-for (const [region, cur, own] of [["cz", "CZK", ".cz"], ["bg", "BGN", ".bg"]] as const) {
+for (const [region, cur, own] of [["cz", "CZK", ".cz"], ["bg", "EUR", ".bg"]] as const) {
   await pricing.createPricingRegion(region, cur);
   await pricing.saveDomainTlds(region, [tld(own, cur), tld(".com", cur), tld(".eu", cur)]);
 }

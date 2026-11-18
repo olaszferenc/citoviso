@@ -48,6 +48,15 @@
 //      page), the lead's mail language has no quiet Hungarian fallback, the mock's language gate
 //      and the follow-ups' fallback measurement are wired, and the HU answers are the old ones.
 //
+//   ⑪ ORSZÁG-RÉTEG 3/7 — JOGI CSOMAG (ADR-XXXX): no Hungarian legal text in a non-HU country's pack
+//      (no entry equal to its Hungarian source, no ő/ű, placeholders and markup intact, the pack's
+//      language = the country row's); no pack version without country AND language (the stamp,
+//      and both acceptance inserts carry it); the market gate cannot be bypassed (one reader of
+//      legal_status, the gate requires completeness, every conversion entry reads it, a gap
+//      throws instead of printing Hungarian, the test-only switches are not in .env); the six
+//      first-round countries' local items are defined; and the Hungarian pages / strip /
+//      stamped wordings are the old ones byte for byte.
+//
 //   npx tsx scripts/country-layer-check.mts
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -753,6 +762,79 @@ console.log("⑩ Mock és nyelv (ország-réteg 3/6)");
       /endingsForCountry\(offeredTlds\(sugRegion\)/.test(src("src/console/server.ts")) && /endingsForCountry\(offeredTlds\(regionId\)/.test(src("src/domains/domainAdmin.ts")));
   check("településfotó: a wiki-nyelv az ország-rétegből", /countryConfigSync\(cc\)\?\.defaultLang/.test(src("src/generator/townPhoto.ts")));
   check("foglalási levelek napja a levél nyelvén (csak a huDate definíciója és a magyar ág maradt)", (src("src/booking/requests.ts").match(/\bhuDate\(/g) ?? []).length === 2);
+}
+
+console.log("\n⑪ jogi csomag (ország-réteg 3/7)");
+{
+  const lp = await import("../src/legalPack.js");
+  const legal = await import("../src/legal.js");
+  const { readdirSync, existsSync } = await import("node:fs");
+  const src = (f: string): string => readFileSync(f, "utf8");
+
+  // ── a lefordított csomagok: nincs bennük magyar ──
+  const dir = "src/i18n/babel/legal";
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")) : [];
+  const HU_ONLY = /[őűŐŰ]/;
+  const HU_WORDISH = /[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/;
+  for (const f of files) {
+    const j = JSON.parse(src(`${dir}/${f}`)) as { country: string; lang: string; base: string; entries: Record<string, string> };
+    const cc = f.replace(/\.json$/, "");
+    check(`${f}: fejléc (ország = fájlnév, nem HU, nyelv megadva, forrásverzió)`, j.country === cc && cc !== HOME && /^[a-z]{2,3}$/.test(j.lang) && !!j.base);
+    const row = countryConfigSync(cc);
+    check(`${f}: a csomag nyelve az ország-soré`, !row || row.defaultLang === j.lang, `${j.lang} vs ${row?.defaultLang}`);
+    const huLeft = Object.entries(j.entries).filter(([hu, tr]) => (tr === hu && HU_WORDISH.test(hu)) || HU_ONLY.test(tr));
+    check(`${f}: nincs magyar szöveg a fordításban (${Object.keys(j.entries).length} egység)`, j.lang === "hu" || huLeft.length === 0, huLeft.slice(0, 2).map(([h]) => h.slice(0, 50)).join(" | "));
+    const broken = Object.entries(j.entries).filter(([hu, tr]) => lp.legalUnitProblem(lp.normUnit(hu), tr));
+    check(`${f}: helyőrzők és jelölés épek`, broken.length === 0, broken.slice(0, 2).map(([h]) => h.slice(0, 50)).join(" | "));
+  }
+  if (!files.length) console.log("  · lefordított országcsomag még nincs (Bábelre vár) — minden nem-HU piac zárva");
+
+  // ── bélyeg: ország + nyelv + verzió ──
+  check("bélyeg = ország/nyelv/forrásverzió", lp.legalStamp("it", "it") === `IT/it/${lp.LEGAL_PACK_BASE}` && /^HU\/hu\/aszf-[\d.]+\+tenant-[\d.]+$/.test(lp.homeLegalPack().stamp));
+  check("a rendelés és a próba a csomag bélyegét és a csomag szövegét írja",
+    /legal_pack: lp\.stamp/.test(src("src/console/data.ts")) && /terms_text: lp\.t\(TERMS_ACCEPTANCE_V1\)/.test(src("src/console/data.ts")) &&
+      /legal_pack: legalPack\.stamp/.test(src("src/trial/start.ts")) && /legalPack\.t\(input\.clickwrap/.test(src("src/trial/start.ts")));
+
+  // ── a piac-kapu nem kerülhető meg ──
+  const readers = execFileSync("git", ["grep", "-l", "legal_status", "--", "src"], { encoding: "utf8" }).split("\n").filter(Boolean)
+    .filter((f) => !["src/markets.ts", "src/db/schema.ts"].includes(f));
+  check("a market.legal_status-t csak a markets.ts olvassa", readers.length === 0, readers.join(", "));
+  const mk = src("src/markets.ts");
+  check("isMarketApproved = jóváhagyás ÉS teljes csomag", /return \(await marketGate\(country\)\)\.open;/.test(mk) && /open: approved && pack\.complete/.test(mk));
+  const con = src("src/console/server.ts");
+  check("konfigurátor (minden belépő) a piac-kaput olvassa; a rendelés a csomagot",
+    /const gate = await marketGate\(/.test(con.slice(con.indexOf("async function regionForArtifactOrNull"))) &&
+      /const orderLegal = await orderLegalPack\(/.test(con) && /if \(!orderLegal\.ok\)/.test(con));
+  check("próba, fizetési link, élesítés: isMarketApproved", /isMarketApproved\(leadCountry\)/.test(src("src/trial/start.ts")) &&
+    (src("src/payment/service.ts").match(/isMarketApproved\(/g) ?? []).length >= 2);
+  const envText = existsSync(".env") ? src(".env") : "";
+  check("a teszt-kapcsolók (CIT_LEGAL_LOCAL_FIXTURE, CIT_LEGAL_PACK_DIR) nincsenek a .env-ben", !/^\s*CIT_LEGAL_(LOCAL_FIXTURE|PACK_DIR)\s*=/m.test(envText));
+  const st = await lp.legalPackStatus("XQ", "xq");
+  check("csomag nélküli ország: hiányos, okkal", !st.complete && st.reasons.length > 0);
+  const empty = { country: "XQ", lang: "xq", home: false, stamp: "XQ/xq/x", t: (hu: string): string => { throw new lp.LegalPackGap("XQ", hu); } };
+  let threw = false;
+  try { lp.translateLegalHtml("<p>Szöveg</p>", empty); } catch (e) { threw = e instanceof lp.LegalPackGap; }
+  check("hiányzó egység → kivétel, NEM magyar szöveg", threw);
+  const views = await import("../src/server/legalViews.js");
+  check("saját jogi lap hiányos csomagú országra: 404, nem a magyar lap", (await views.serveOwnLegalPage("/aszf", new URLSearchParams("c=XQ")))?.status === 404);
+
+  // ── helyi kötelező elemek: adatból, a hat első országra ──
+  const FIRST = ["BG", "FR", "IT", "ES", "HR", "PT"];
+  check("a hat első ország helyi elem-sémája definiált", FIRST.every((c) => legal.legalLocalDefined(c) && legal.legalLocalFor(c).fields.length > 0));
+  check("FR: a tárhelyszolgáltató adatai kötelezők; PT: panaszkönyv-link + vitarendező; FR/PT: saját vitarendezőnk konfigból",
+    legal.LEGAL_LOCAL.FR?.hostContactRequired === true && legal.LEGAL_LOCAL.PT!.fields.some((f) => f.kind === "url" && !!f.default) &&
+      legal.LEGAL_LOCAL.PT!.fields.some((f) => f.id === "adr_entity") && !!legal.LEGAL_LOCAL.FR?.consumerAdr?.envKey && !!legal.LEGAL_LOCAL.PT?.consumerAdr?.envKey);
+  check("a HU-sémában nincs helyi elem (az impresszum változatlan)", legal.LEGAL_LOCAL.HU!.fields.length === 0 && !legal.LEGAL_LOCAL.HU!.taxIdLabel);
+
+  // ── HU bájtra a régi ──
+  const home = lp.homeLegalPack();
+  check("HU saját jogi lapok: csomaggal = a régi", views.aszfPage(home) === views.aszfPage() && views.impresszumPage(home) === views.impresszumPage() &&
+    views.elallasPage(home) === views.elallasPage() && views.adatfeldolgozasPage(home) === views.adatfeldolgozasPage());
+  const { renderLegalStrip } = await import("../src/engine/legalPages.js");
+  const who = { legalName: "Teszt Kft.", address: "Szólád", taxNumber: "1", regNumber: null, ntakId: null, email: "a@b.hu", phone: null };
+  check("HU sáv: csomaggal = a régi", renderLegalStrip(who) === renderLegalStrip(who, home));
+  check("HU bélyeg-szövegek: a csomag a forrást adja", [legal.TERMS_ACCEPTANCE_V1, legal.WITHDRAWAL_WAIVER_V1, legal.RECURRING_MANDATE_V1, legal.PHOTO_RIGHTS_DECLARATION_V1, legal.TRIAL_CLICKWRAP_V1].every((t) => home.t(t) === t));
+  check("HU jogi mondatok a megkeresésben: a forrás", lp.legalTextForLang("hu", legal.OUTREACH_LEGAL_BASIS_V1) === legal.OUTREACH_LEGAL_BASIS_V1 && lp.legalTextForLang(undefined, legal.OUTREACH_LETTER_LEGAL_V1) === legal.OUTREACH_LETTER_LEGAL_V1);
 }
 
 await db.destroy();

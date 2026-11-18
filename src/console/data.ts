@@ -21,6 +21,7 @@ import {
   TERMS_ACCEPTANCE_V1,
   WITHDRAWAL_WAIVER_V1,
 } from "../legal.js";
+import { homeLegalPack, type LegalPack } from "../legalPack.js";
 import { circleToBbox } from "../scraper/regions.js";
 import { reapStaleScrapeRuns } from "../scraper/persist.js";
 import { photoUrlKey } from "../generator/heroPick.js";
@@ -1201,6 +1202,8 @@ export async function recordOrderIntent(input: {
   photoRightsDeclared?: boolean;
   /** ADR-0088 ⑨: the buyer ticked the recurring-card mandate at checkout. */
   recurringConsent?: boolean;
+  /** ORSZÁG-RÉTEG 3/7: the legal pack the checkout showed (the lodging country's); HU when absent. */
+  legalPack?: LegalPack;
   /**
    * Validated billing identity (0029) — WHO is buying and how we invoice them.
    * Already normalised by validateBuyer(); this function does not re-judge it.
@@ -1260,6 +1263,7 @@ export async function recordOrderIntent(input: {
       .execute();
   }
 
+  const lp = input.legalPack ?? homeLegalPack();
   const order = await db
     .insertInto("order_intent")
     .values({
@@ -1284,14 +1288,16 @@ export async function recordOrderIntent(input: {
       ...(input.offerId
         ? { offer_id: input.offerId, list_price: input.listPrice ?? null }
         : {}),
+      // ORSZÁG-RÉTEG 3/7: the pack the wordings below come from — country/language/version.
+      legal_pack: lp.stamp,
       // §A: stamp the EXACT accepted wording, not a reference to it.
       ...(input.photoRightsDeclared
-        ? { photo_rights_declared_at: new Date(), photo_rights_text: PHOTO_RIGHTS_DECLARATION_V1 }
+        ? { photo_rights_declared_at: new Date(), photo_rights_text: lp.t(PHOTO_RIGHTS_DECLARATION_V1) }
         : {}),
       // ADR-0088 ⑨: same stamping doctrine as §A above — the ACCEPTED WORDING is
       // recorded, so the mandate is evidenced by this row and not by today's code.
       ...(input.recurringConsent
-        ? { recurring_consent_at: new Date(), recurring_consent_text: RECURRING_MANDATE_V1 }
+        ? { recurring_consent_at: new Date(), recurring_consent_text: lp.t(RECURRING_MANDATE_V1) }
         : {}),
       // 0029 billing identity — the buyer as declared at purchase. Same doctrine
       // as §A above: the ACCEPTED WORDING is stamped, not referenced, so a later
@@ -1317,10 +1323,10 @@ export async function recordOrderIntent(input: {
             buyer_vies_checked_at: input.buyer.viesCheckedAt,
             buyer_vies_name: input.buyer.viesName,
             ...(input.buyer.termsAccepted
-              ? { terms_accepted_at: new Date(), terms_text: TERMS_ACCEPTANCE_V1 }
+              ? { terms_accepted_at: new Date(), terms_text: lp.t(TERMS_ACCEPTANCE_V1) }
               : {}),
             ...(input.buyer.withdrawalWaived
-              ? { withdrawal_waiver_at: new Date(), withdrawal_waiver_text: WITHDRAWAL_WAIVER_V1 }
+              ? { withdrawal_waiver_at: new Date(), withdrawal_waiver_text: lp.t(WITHDRAWAL_WAIVER_V1) }
               : {}),
           }
         : {}),

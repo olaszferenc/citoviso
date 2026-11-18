@@ -126,6 +126,9 @@ const VIEW_GROUPS = {
     // (feedback_label_change_breaks_its_quoters). A címke-drift őr csak akkor tudja
     // megvédeni, ha a fájl a korpuszban van.
     "src/console/prospectNotice.ts",
+    // ORSZÁG-RÉTEG 3/7 (ADR-XXXX): the unsubscribe page's wording („Leiratkozom”…) moved into
+    // the legal pack — its source lives HERE, prospectNotice.ts only prints it.
+    "src/legal.ts",
     // ADR-0336: the scout worksheet (/scout) — its labels („Felvétel”, „Csempe lezárása” …)
     // live in its own view file, so the handbook quotes THEM.
     "src/console/scoutViews.ts",

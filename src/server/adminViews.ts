@@ -38,7 +38,8 @@ import { proratedFirstChargeMonths } from "../tenant/moduleUpsell.js";
 import { RETRY_COOLDOWN_MINUTES } from "../payment/retryCharge.js";
 import { COUPON_JS } from "../payment/couponRule.js";
 import { SHRINK_JS } from "../tenant/photoUpload.js";
-import type { TenantLegalIdentity } from "../legal.js";
+import type { CountryLegalLocal, TenantLegalIdentity } from "../legal.js";
+import { legalTextForLang } from "../legalPack.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { contactSection, type ContactView } from "./contactViews.js";
 import { lookSection, overviewLookButton, overviewLookTag, type LookView } from "./planSwitchViews.js";
@@ -5357,6 +5358,8 @@ export interface LegalAdminData {
   /** Links to the tenant's own published pages, when the site is public. */
   readonly privacyUrl?: string | null;
   readonly imprintUrl?: string | null;
+  /** ORSZÁG-RÉTEG 3/7: the lodging country's mandatory local items (none for HU). */
+  readonly local?: CountryLegalLocal;
 }
 
 export interface DocumentsAdminData {
@@ -6227,7 +6230,7 @@ export function walletSection(
   );
 }
 
-function legalSection(legal: LegalAdminData, lang = "hu"): string {
+export function legalSection(legal: LegalAdminData, lang = "hu"): string {
   const field = (
     id: string,
     label: string,
@@ -6244,7 +6247,7 @@ function legalSection(legal: LegalAdminData, lang = "hu"): string {
       // `citui-note--warn` that exists in no stylesheet, so the warning rendered as
       // plain text — caught by looking at the generated KB screenshot, not by tsc.
       `<div class="adm-banner adm-banner--warn" style="margin-bottom:14px">` +
-      `<strong>${T(lang, "Hiányzó kötelező adat")}:</strong> ${esc(legal.missing.join(", "))}. ` +
+      `<strong>${T(lang, "Hiányzó kötelező adat")}:</strong> ${esc(legal.missing.map((m) => legalTextForLang(lang, m)).join(", "))}. ` +
       T(
         lang,
         "Ezek a sorok addig „— nincs megadva —” felirattal jelennek meg a honlapja impresszumában. Az elektronikus kereskedelemről szóló törvény kötelezővé teszi őket.",
@@ -6261,19 +6264,30 @@ function legalSection(legal: LegalAdminData, lang = "hu"): string {
     `<form method="POST" action="/admin/legal" class="adm-blk">` +
     field("legal_name", T(lang, "Név vagy cégnév"), legal.who.legalName) +
     field("address", T(lang, "Székhely (irányítószám, település, utca, házszám)"), legal.who.address) +
-    field("tax_number", T(lang, "Adószám"), legal.who.taxNumber) +
+    field(
+      "tax_number",
+      legal.local?.taxIdLabel ? legalTextForLang(lang, legal.local.taxIdLabel) : T(lang, "Adószám"),
+      legal.who.taxNumber,
+    ) +
     field(
       "reg_number",
       T(lang, "Nyilvántartási szám"),
       legal.who.regNumber,
       T(lang, "Cégjegyzékszám, vagy egyéni vállalkozói nyilvántartási szám."),
     ) +
-    field(
-      "ntak_id",
-      T(lang, "Szálláshely-azonosító (NTAK)"),
-      legal.who.ntakId,
-      T(lang, "Nem kötelező az impresszumhoz, de a vendégek bizalmát erősíti."),
-    ) +
+    (legal.local?.ntak === false
+      ? ""
+      : field(
+          "ntak_id",
+          T(lang, "Szálláshely-azonosító (NTAK)"),
+          legal.who.ntakId,
+          T(lang, "Nem kötelező az impresszumhoz, de a vendégek bizalmát erősíti."),
+        )) +
+    // ORSZÁG-RÉTEG 3/7: the country's own registry items (IT CIN, PT AL-szám…), labelled in the
+    // country's legal pack — the same wording the imprint prints. None for a Hungarian tenant.
+    (legal.local?.fields ?? [])
+      .map((f) => field(`local_${f.id}`, legalTextForLang(lang, f.label), legal.who.local?.[f.id] ?? f.default ?? null))
+      .join("") +
     field("email", T(lang, "Közzétett e-mail cím"), legal.who.email) +
     field("phone", T(lang, "Közzétett telefonszám"), legal.who.phone) +
     // citui-btn WITHOUT a variant paints nothing (no background, no border): the

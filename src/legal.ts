@@ -687,6 +687,9 @@ export interface TenantLegalIdentity {
   readonly ntakId: string | null;
   readonly email: string | null;
   readonly phone: string | null;
+  /** ORSZÁG-RÉTEG 3/7: the country's local registry items (`tenant_legal.local_fields`),
+   *  keyed by LocalLegalField.id. Absent for a Hungarian tenant. */
+  readonly local?: Readonly<Record<string, string | null>>;
 }
 
 /** Our own identity as the hosting/website provider, shown on the tenant's imprint. */
@@ -695,6 +698,8 @@ export interface HostingProviderIdentity {
   readonly address: string | null;
   readonly email: string;
   readonly site: string;
+  /** Shown only where the country pack makes the host's phone statutory (FR LCEN). */
+  readonly phone?: string | null;
 }
 
 /** A block inside a tenant legal section. The renderer turns these into HTML. */
@@ -940,6 +945,8 @@ export function tenantImprintSections(
   host: HostingProviderIdentity,
   /** Decides which rows are STATUTORY here; without it we assume the stricter case. */
   buyerType: "individual" | "business" | null = "business",
+  /** ORSZÁG-RÉTEG 3/7: the country's mandatory local imprint items (data, not if-chains). */
+  local: CountryLegalLocal = NO_LOCAL_ITEMS,
 ): readonly TenantLegalSection[] {
   // The loud "— nincs megadva —" marker belongs to STATUTORY rows only.
   //
@@ -950,9 +957,18 @@ export function tenantImprintSections(
   // optional row that is empty is simply not shown; a REQUIRED row that is empty is
   // shown loudly, and the admin panel warns about the same set (ADR-0110 ⑥).
   const required = new Set(missingImprintFields({ ...who, legalName: null, address: null,
-    taxNumber: null, regNumber: null, email: null }, buyerType));
+    taxNumber: null, regNumber: null, email: null, local: {} }, buyerType, local));
   const optionalRow = (term: string, value: string | null) =>
     value ? [{ term, value }] : [];
+  const taxLabel = local.taxIdLabel ?? "Adószám"; // i18n-exempt: legal pack (§H.22)
+  // ORSZÁG-RÉTEG 3/7: the country's own registry items (IT CIN, PT AL-szám…). A required one
+  // that is empty shows the loud marker; an optional empty one is not shown (same rule as above).
+  const localRows = local.fields
+    .filter((f) => f.where.includes("imprint"))
+    .flatMap((f) => {
+      const v = localValue(who, f);
+      return required.has(f.label) || v ? [{ term: f.label, value: v }] : [];
+    });
   return [
     {
       id: "szolgaltato",
@@ -963,14 +979,15 @@ export function tenantImprintSections(
           rows: [
             { term: "Név", value: who.legalName }, // i18n-exempt: legal pack (§H.22)
             { term: "Székhely", value: who.address }, // i18n-exempt: legal pack (§H.22)
-            ...(required.has("Adószám") || who.taxNumber
-              ? [{ term: "Adószám", value: who.taxNumber }] // i18n-exempt: legal pack (§H.22)
+            ...(required.has(taxLabel) || who.taxNumber
+              ? [{ term: taxLabel, value: who.taxNumber }]
               : []),
             ...(required.has("Nyilvántartási szám") || who.regNumber
               ? [{ term: "Nyilvántartási szám", value: who.regNumber }] // i18n-exempt: legal pack (§H.22)
               : []),
             // NTAK is sector guidance, never statutory → shown only when filled in.
-            ...optionalRow("Szálláshely-azonosító (NTAK)", who.ntakId), // i18n-exempt: legal pack (§H.22)
+            ...(local.ntak === false ? [] : optionalRow("Szálláshely-azonosító (NTAK)", who.ntakId)), // i18n-exempt: legal pack (§H.22)
+            ...localRows,
             { term: "E-mail", value: who.email }, // i18n-exempt: legal pack (§H.22)
             // A phone number is not required by Eker.tv. 4. § either.
             ...optionalRow("Telefon", who.phone), // i18n-exempt: legal pack (§H.22)
@@ -986,7 +1003,10 @@ export function tenantImprintSections(
           kind: "dl",
           rows: [
             { term: "Név", value: host.name }, // i18n-exempt: legal pack (§H.22)
-            ...(host.address ? [{ term: "Székhely", value: host.address }] : []), // i18n-exempt: legal pack (§H.22)
+            // FR (LCEN 6. cikk III.): the host's address and phone are statutory → a missing
+            // one shows the marker there; elsewhere they are shown only when we hold them.
+            ...(host.address || local.hostContactRequired ? [{ term: "Székhely", value: host.address }] : []), // i18n-exempt: legal pack (§H.22)
+            ...(local.hostContactRequired ? [{ term: "Telefon", value: host.phone ?? null }] : []), // i18n-exempt: legal pack (§H.22)
             { term: "E-mail", value: host.email }, // i18n-exempt: legal pack (§H.22)
             { term: "Honlap", value: host.site }, // i18n-exempt: legal pack (§H.22)
           ],
@@ -1008,14 +1028,200 @@ export const TENANT_LEGAL_MISSING = "— nincs megadva —"; // i18n-exempt: leg
 export function missingImprintFields(
   who: TenantLegalIdentity,
   buyerType: "individual" | "business" | null,
+  /** ORSZÁG-RÉTEG 3/7: the country's mandatory local items; none for the Hungarian pack. */
+  local: CountryLegalLocal = NO_LOCAL_ITEMS,
 ): readonly string[] {
   const missing: string[] = [];
   if (!who.legalName) missing.push("Név"); // i18n-exempt: legal pack (§H.22)
   if (!who.address) missing.push("Székhely"); // i18n-exempt: legal pack (§H.22)
   if (!who.email) missing.push("E-mail"); // i18n-exempt: legal pack (§H.22)
+  const taxLabel = local.taxIdLabel ?? "Adószám"; // i18n-exempt: legal pack (§H.22)
+  if (!who.taxNumber && (local.taxIdRequired === "always" || buyerType === "business")) missing.push(taxLabel);
   if (buyerType === "business") {
-    if (!who.taxNumber) missing.push("Adószám"); // i18n-exempt: legal pack (§H.22)
     if (!who.regNumber) missing.push("Nyilvántartási szám"); // i18n-exempt: legal pack (§H.22)
+  }
+  for (const f of local.fields) {
+    const owed = f.required === "always" || (f.required === "business" && buyerType === "business");
+    if (owed && !localValue(who, f)) missing.push(f.label);
   }
   return missing;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORSZÁG-RÉTEG 3/7 (ADR-XXXX) — the COUNTRY legal pack's own data.
+//
+// Lawyer's position (owner, 2026-11-18): today's texts, placed IN THE COUNTRY'S LANGUAGE,
+// allow business in that country until the lawyer comments further. So a country's pack is
+// THIS Hungarian wording translated by Bábel (src/i18n/babel/legal/<CC>.json, src/legalPack.ts),
+// content identical — statute references are NOT "localised" by the translation — plus the
+// mandatory LOCAL items below. Those are DATA (one entry per country), never language ifs.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One mandatory local registry item a country's accommodation must publish. */
+export interface LocalLegalField {
+  /** Key in `tenant_legal.local_fields` and the admin form field name (`local_<id>`). */
+  readonly id: string;
+  /** Hungarian SOURCE wording; the country's pack carries the translation. */
+  readonly label: string;
+  /** When the imprint owes it: always, only for a business buyer, or never (shown if filled). */
+  readonly required: "always" | "business" | "no";
+  /** Where it is published: the imprint page and/or the standing strip on EVERY page. */
+  readonly where: readonly ("imprint" | "strip")[];
+  readonly kind: "text" | "url";
+  /** A value that is right for every tenant of the country (PT complaints-book address). */
+  readonly default?: string;
+}
+
+/** A country's mandatory local legal items. */
+export interface CountryLegalLocal {
+  /** The tax-id row's label (Hungarian source) when it is not the HU „Adószám”. */
+  readonly taxIdLabel?: string;
+  /** Who owes the tax id on the imprint; the Hungarian rule (business only) when unset. */
+  readonly taxIdRequired?: "always" | "business";
+  /** false = the HU NTAK row is not offered (it is a Hungarian register). Unset = HU behaviour. */
+  readonly ntak?: boolean;
+  readonly fields: readonly LocalLegalField[];
+  /** FR (LCEN 6. cikk III.): the host's address and phone are statutory on the imprint. */
+  readonly hostContactRequired?: boolean;
+  /** OUR consumer dispute body (FR médiateur, PT RAL): its value comes from config
+   *  (`envKey`); while empty, the country's CONSUMER route is closed, the business one is not. */
+  readonly consumerAdr?: { readonly envKey: string; readonly label: string };
+}
+
+/** The Hungarian pack: no local items beyond the Eker.tv. rows above. */
+export const NO_LOCAL_ITEMS: CountryLegalLocal = { fields: [] };
+
+/** PT: the national online complaints book — the same address for every accommodation. */
+export const PT_COMPLAINTS_BOOK_URL = "https://www.livroreclamacoes.pt/Inicio/";
+
+/**
+ * The mandatory local items per country (brief 3/7, the six first-round countries). Every
+ * label is the Hungarian SOURCE (Bábel translates it with the rest of the pack). A country
+ * that is not listed has none — but its pack is not complete either until it is defined:
+ * `legalLocalDefined()` is part of the market gate.
+ */
+export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
+  HU: NO_LOCAL_ITEMS,
+  IT: {
+    taxIdLabel: "Olasz adószám (Partita IVA)", // i18n-exempt: legal pack (§H.22)
+    taxIdRequired: "business",
+    ntak: false,
+    fields: [
+      { id: "cin", label: "Nemzeti szálláshely-azonosító (CIN)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+      { id: "cir", label: "Regionális szálláshely-azonosító (CIR)", required: "no", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+    ],
+  },
+  ES: {
+    taxIdLabel: "Spanyol adóazonosító (NIF)", // i18n-exempt: legal pack (§H.22)
+    taxIdRequired: "always",
+    ntak: false,
+    fields: [
+      { id: "nrua", label: "Országos egységes nyilvántartási szám (NRUA)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+      { id: "reg_tur", label: "Regionális turisztikai nyilvántartási szám", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+    ],
+  },
+  PT: {
+    taxIdLabel: "Portugál adóazonosító (NIF)", // i18n-exempt: legal pack (§H.22)
+    taxIdRequired: "always",
+    ntak: false,
+    fields: [
+      { id: "al", label: "Helyi szálláshely nyilvántartási száma (AL)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+      { id: "complaints_book", label: "Online panaszkönyv (Livro de Reclamações)", required: "always", where: ["imprint", "strip"], kind: "url", default: PT_COMPLAINTS_BOOK_URL }, // i18n-exempt: legal pack (§H.22)
+      { id: "adr_entity", label: "Alternatív fogyasztói vitarendező szerv", required: "always", where: ["imprint"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+    ],
+    consumerAdr: { envKey: "LEGAL_ADR_PT", label: "Alternatív fogyasztói vitarendezés (RAL)" }, // i18n-exempt: legal pack (§H.22)
+  },
+  FR: {
+    taxIdLabel: "Francia cégazonosító (SIREN)", // i18n-exempt: legal pack (§H.22)
+    taxIdRequired: "business",
+    ntak: false,
+    hostContactRequired: true,
+    fields: [
+      { id: "fr_reg", label: "Szálláshely bejelentési száma (numéro d’enregistrement)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+    ],
+    consumerAdr: { envKey: "LEGAL_ADR_FR", label: "Fogyasztói ombudsman (médiateur de la consommation)" }, // i18n-exempt: legal pack (§H.22)
+  },
+  BG: {
+    taxIdLabel: "Bolgár cégazonosító (ЕИК)", // i18n-exempt: legal pack (§H.22)
+    taxIdRequired: "business",
+    ntak: false,
+    fields: [
+      { id: "bg_reg", label: "Kategorizálási / nyilvántartási szám (Nemzeti Turisztikai Nyilvántartás)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+    ],
+  },
+  HR: {
+    taxIdLabel: "Horvát személyi azonosító szám (OIB)", // i18n-exempt: legal pack (§H.22)
+    taxIdRequired: "always",
+    ntak: false,
+    fields: [
+      { id: "hr_cat", label: "Kategorizálási határozat száma", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
+    ],
+  },
+};
+
+/** The country's local items; the empty set for an unlisted country (the gate checks definedness). */
+export function legalLocalFor(country: string | null | undefined): CountryLegalLocal {
+  return LEGAL_LOCAL[(country ?? "").trim().toUpperCase()] ?? NO_LOCAL_ITEMS;
+}
+
+/**
+ * Is the country's local-item schema defined at all? Part of the pack's completeness.
+ * `CIT_LEGAL_LOCAL_FIXTURE` (comma list) is TEST-only: scripts/lib/legal-pack-fixture.mts sets
+ * it for the test countries it opens (CZ, RO, XA…) as "defined, no local items" — in its own
+ * process. Production never sets it (country-layer-check ⑪ measures .env).
+ */
+export function legalLocalDefined(country: string | null | undefined): boolean {
+  const cc = (country ?? "").trim().toUpperCase();
+  if (Object.prototype.hasOwnProperty.call(LEGAL_LOCAL, cc)) return true;
+  const fixture = (process.env.CIT_LEGAL_LOCAL_FIXTURE ?? "").split(",").map((x) => x.trim().toUpperCase());
+  return /^[A-Z]{2}$/.test(cc) && fixture.includes(cc);
+}
+
+/** A local item's published value: what the tenant entered, else the country-wide default. */
+export function localValue(who: TenantLegalIdentity, f: LocalLegalField): string | null {
+  const v = (who.local?.[f.id] ?? "").trim();
+  return v || f.default || null;
+}
+
+// ── The legal sentences of the OUTREACH surfaces, written once (brief 3/7 ④) ──
+// They moved here from prospectNotice.ts / draft.ts / the unsubscribe page so the country
+// pack can enumerate and translate them; the Hungarian wording is unchanged byte for byte.
+
+/** WHY we were allowed to contact them at all (the tracked page's footer and bar). */
+export const OUTREACH_LEGAL_BASIS_V1 =
+  "Ezt az előnézetet személyre szabottan Önnek készítettük, " + // i18n-exempt: legal pack (§H.22)
+  "mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos " +
+  "lehet Önnek (jogos érdekű megkeresés — Grt. 6. § / GDPR 6. cikk (1) f)).";
+
+/** WHAT we record while they look. */
+export const OUTREACH_TRACKING_NOTICE_V1 =
+  "A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot " + // i18n-exempt: legal pack (§H.22)
+  "az igényeihez igazíthassuk.";
+
+/** The letter's own legal line, followed by the privacy-notice link. */
+export const OUTREACH_LETTER_LEGAL_V1 =
+  "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:"; // i18n-exempt: legal pack (§H.22)
+
+/** The unsubscribe page (confirmation + done), one wording per line. */
+export const UNSUBSCRIBE_TEXT_V1 = {
+  title: "Leiratkozás", // i18n-exempt: legal pack (§H.22)
+  confirm:
+    "Ha leiratkozik, ezzel az ajánlattal nem keressük többé, és a megtekintési adatok rögzítését leállítjuk. A honlap-tervet ezután is megnézheti.", // i18n-exempt: legal pack (§H.22)
+  button: "Leiratkozom", // i18n-exempt: legal pack (§H.22)
+  back: "Mégsem — vissza a tervhez", // i18n-exempt: legal pack (§H.22)
+  doneTitle: "Leiratkozva", // i18n-exempt: legal pack (§H.22)
+  doneHeading: "Leiratkozott", // i18n-exempt: legal pack (§H.22)
+  done:
+    "Nem keressük többé ezzel az ajánlattal, és a megtekintési adatok rögzítését " + // i18n-exempt: legal pack (§H.22)
+    "leállítottuk. Ha mégis érdekli a saját weboldala, írjon nekünk bátran.",
+} as const;
+
+/** The payment-provider cookie bar on our own pages (cit-consent.js), one wording per line. */
+export const COOKIE_BAR_TEXT_V1 = {
+  text:
+    "A biztonságos kártyás fizetéshez a fizetési szolgáltatónk (Barion) csalásmegelőző sütiket használna. Enélkül az oldal ugyanúgy működik.", // i18n-exempt: legal pack (§H.22)
+  privacy: "Adatkezelési tájékoztató", // i18n-exempt: legal pack (§H.22)
+  no: "Csak a szükségeseket", // i18n-exempt: legal pack (§H.22)
+  yes: "Elfogadom", // i18n-exempt: legal pack (§H.22)
+  label: "Süti-hozzájárulás", // i18n-exempt: legal pack (§H.22)
+} as const;

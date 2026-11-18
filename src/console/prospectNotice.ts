@@ -15,11 +15,13 @@
 import { config } from "../config.js";
 import { mapOutsideScripts } from "../engine/htmlOutsideScripts.js";
 import { interpolate, tSync } from "../i18n/packs.js";
+import { OUTREACH_LEGAL_BASIS_V1, OUTREACH_TRACKING_NOTICE_V1, UNSUBSCRIBE_TEXT_V1 } from "../legal.js";
+import { legalTextForLang } from "../legalPack.js";
 
 /** ORSZÁG-RÉTEG 3/5 (ADR-0456): the page's labels in the lead's language — the same T() contract
  *  as i18n/mail.ts, without importing the country layer (this module stays light for the guards).
- *  The LEGAL sentences (LEGAL_BASIS, TRACKING_NOTICE) stay Hungarian here: they belong to the
- *  country's legal pack (ország-réteg step 7), not to a UI translation. */
+ *  The LEGAL sentences (LEGAL_BASIS, TRACKING_NOTICE, the unsubscribe page) come from the
+ *  country's legal pack (ország-réteg 3/7, src/legalPack.ts), not from a UI translation. */
 function T(lang: string | undefined, hu: string, vars?: Record<string, string | number>): string {
   return interpolate(lang, hu, tSync(lang, hu), vars);
 }
@@ -46,16 +48,13 @@ function escapeHtml(s: string): string {
 
 /** WHY we were allowed to contact them at all. NOT the same statement as the
  *  tracking notice below — the guard was once green while only the second one
- *  was ever printed (2026-09-08). */
-const LEGAL_BASIS =
-  "Ezt az előnézetet személyre szabottan Önnek készítettük, " +
-  "mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos " +
-  "lehet Önnek (jogos érdekű megkeresés — Grt. 6. § / GDPR 6. cikk (1) f)).";
+ *  was ever printed (2026-09-08). ORSZÁG-RÉTEG 3/7: the wording lives in the legal pack
+ *  (src/legal.ts OUTREACH_LEGAL_BASIS_V1) and is printed in the page's language from the
+ *  country pack (legalPack.legalTextForLang); Hungarian = the source, byte for byte. */
+const LEGAL_BASIS = (lang?: string): string => legalTextForLang(lang, OUTREACH_LEGAL_BASIS_V1);
 
 /** WHAT we record while they look. */
-const TRACKING_NOTICE =
-  "A megtekintés adatai (megnyitás, görgetés, kipróbált elemek) rögzülnek, hogy az ajánlatot " +
-  "az igényeihez igazíthassuk.";
+const TRACKING_NOTICE = (lang?: string): string => legalTextForLang(lang, OUTREACH_TRACKING_NOTICE_V1);
 
 /** The two greys are this module's ONLY allowed literals (design-token-lint
  *  ALLOW list): the page is an ENGINE-rendered mock that never loads citui.css,
@@ -134,10 +133,16 @@ export function deferConsentUntilEngagement(html: string): string {
   return /<html\b/i.test(html) ? html.replace(/<html\b/i, "<html data-cit-consent-defer") : html;
 }
 
+/** ORSZÁG-RÉTEG 3/7: the privacy notice in the page's language (`?l=` → that language's
+ *  country pack, legalViews.serveOwnLegalPage); Hungarian = the plain /privacy as before. */
+function privacyHref(lang?: string): string {
+  return lang && lang !== "hu" ? `/privacy?l=${encodeURIComponent(lang)}` : "/privacy";
+}
+
 /** The way out, and the full information — same markup wherever it appears. */
 function legalLinks(token: string, lang?: string): string {
   return (
-    `<a href="/privacy" style="color:${INK_MUTED};${TAP_LINK}">${T(lang, "Adatkezelési tájékoztató")}</a> · ` +
+    `<a href="${privacyHref(lang)}" style="color:${INK_MUTED};${TAP_LINK}">${T(lang, "Adatkezelési tájékoztató")}</a> · ` +
     `<a href="/p/${token}/unsubscribe" style="color:${INK_MUTED};${TAP_LINK}">${T(lang, "Leiratkozás")}</a>`
   );
 }
@@ -157,8 +162,8 @@ function legalLinks(token: string, lang?: string): string {
 export function injectTrackingNotice(html: string, token: string, lang?: string): string {
   const notice =
     `<div data-cit-footer="tracked" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;font:12px/1.6 system-ui,sans-serif;` +
-    `color:${INK_MUTED};background:${SURFACE}">${LEGAL_BASIS} ${senderSentence(lang)}` +
-    `${TRACKING_NOTICE} ` +
+    `color:${INK_MUTED};background:${SURFACE}">${LEGAL_BASIS(lang)} ${senderSentence(lang)}` +
+    `${TRACKING_NOTICE(lang)} ` +
     legalLinks(token, lang) +
     `</div>`;
   return appendToBody(html, notice);
@@ -220,7 +225,7 @@ export function trackedBarParts(token: string, lang?: string): { headline: strin
   return {
     headline: trackedHeadline(lang),
     made: trackedMadeSentence(lang),
-    why: `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token, lang)}`,
+    why: `${LEGAL_BASIS(lang)} ${TRACKING_NOTICE(lang)} ${legalLinks(token, lang)}`,
   };
 }
 
@@ -237,7 +242,7 @@ export function injectTrackingBanner(html: string, token: string, lang?: string)
     `<summary style="cursor:pointer;color:${INK_MUTED};text-decoration:underline">` +
     `${T(lang, "Miért kaptam?")}</summary>` +
     `<div class="cit-fr-body">` +
-    `${LEGAL_BASIS} ${TRACKING_NOTICE} ${legalLinks(token, lang)}</div>` +
+    `${LEGAL_BASIS(lang)} ${TRACKING_NOTICE(lang)} ${legalLinks(token, lang)}</div>` +
     `</details></div></div>`;
   return prependToBody(html, banner);
 }
@@ -528,13 +533,13 @@ export function unsubscribeConfirmBody(token: string, lang?: string): string {
   const action = `/p/${encodeURIComponent(token)}/unsubscribe`;
   return (
     `<div class="panel" data-cit-unsub-confirm style="max-width:480px;margin:48px auto;text-align:center">` +
-    `<h2>${T(lang, "Leiratkozás")}</h2>` +
-    `<p class="mut">${T(lang, "Ha leiratkozik, ezzel az ajánlattal nem keressük többé, és a megtekintési adatok rögzítését leállítjuk. A honlap-tervet ezután is megnézheti.")}</p>` +
+    `<h2>${legalTextForLang(lang, UNSUBSCRIBE_TEXT_V1.title)}</h2>` +
+    `<p class="mut">${legalTextForLang(lang, UNSUBSCRIBE_TEXT_V1.confirm)}</p>` +
     `<form method="post" action="${action}" style="margin:18px 0 0">` +
-    `<button type="submit" class="citui-btn citui-btn--primary" style="min-height:44px;padding:0 22px">${T(lang, "Leiratkozom")}</button>` +
+    `<button type="submit" class="citui-btn citui-btn--primary" style="min-height:44px;padding:0 22px">${legalTextForLang(lang, UNSUBSCRIBE_TEXT_V1.button)}</button>` +
     `</form>` +
     `<p class="mut small" style="margin:14px 0 0"><a href="/p/${encodeURIComponent(token)}" ` +
-    `style="display:inline-block;padding:6px 4px">${T(lang, "Mégsem — vissza a tervhez")}</a></p>` +
+    `style="display:inline-block;padding:6px 4px">${legalTextForLang(lang, UNSUBSCRIBE_TEXT_V1.back)}</a></p>` +
     `</div>`
   );
 }
@@ -576,7 +581,7 @@ export function injectOptedOutNotice(html: string, _token: string, lang?: string
     `<div data-cit-footer="opted-out" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;font:12px/1.6 system-ui,sans-serif;` +
     `color:#8a8f98;background:#101216">${T(lang, "Ön korábban leiratkozott, ezért nem keressük többé, és ezt a megtekintést nem rögzítjük. Ezt az oldalt Ön nyitotta meg.")} ` +
     (who ? `${T(lang, "A megkeresés küldője volt: {who}.", { who: escapeHtml(who) })} ` : "") +
-    `<a href="/privacy" style="color:#8a8f98;${TAP_LINK}">${T(lang, "Adatkezelési tájékoztató")}</a></div>`;
+    `<a href="${privacyHref(lang)}" style="color:#8a8f98;${TAP_LINK}">${T(lang, "Adatkezelési tájékoztató")}</a></div>`;
   return appendToBody(html, notice);
 }
 

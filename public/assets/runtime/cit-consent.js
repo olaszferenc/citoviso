@@ -23,6 +23,13 @@
   // hozzájárulást kérne olyan követésre, ami meg sem történik (§B.17).
   if (!pixelId) return;
 
+  // ORSZÁG-RÉTEG 3/5: a non-Hungarian page hands the bar its labels as data-t-* attributes of
+  // this script (src/server/consent.ts); the Hungarian literals below are the fallback.
+  function lbl(k, hu) {
+    var v = el && el.getAttribute("data-t-" + k);
+    return v ? String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : hu;
+  }
+
   /**
    * A hozzájárulásra VÁRÓ események. A gazdalap ide tolja be deklaratívan, amit
    * küldene (`window.citPixelQueue.push([név, adat])`) — a szerver által tudott
@@ -194,15 +201,16 @@
     bar.id = "cit-consent";
     bar.setAttribute("role", "dialog");
     bar.setAttribute("aria-live", "polite");
-    bar.setAttribute("aria-label", "Süti-hozzájárulás");
+    bar.setAttribute("aria-label", el && el.getAttribute("data-t-label") ? el.getAttribute("data-t-label") : "Süti-hozzájárulás");
     bar.innerHTML =
       '<div class="cit-consent__in">' +
-      '<p class="cit-consent__t">A biztonságos kártyás fizetéshez a fizetési szolgáltatónk ' +
-      "(Barion) csalásmegelőző sütiket használna. Enélkül az oldal ugyanúgy működik.  " +
-      '<a href="/adatvedelem">Adatkezelési tájékoztató</a></p>' +
+      '<p class="cit-consent__t">' +
+      lbl("text", "A biztonságos kártyás fizetéshez a fizetési szolgáltatónk (Barion) csalásmegelőző sütiket használna. Enélkül az oldal ugyanúgy működik.") +
+      "  " +
+      '<a href="' + lbl("href", "/adatvedelem") + '">' + lbl("privacy", "Adatkezelési tájékoztató") + "</a></p>" +
       '<div class="cit-consent__b">' +
-      '<button type="button" data-c="necessary" class="cit-consent__no">Csak a szükségeseket</button>' +
-      '<button type="button" data-c="all" class="cit-consent__yes">Elfogadom</button>' +
+      '<button type="button" data-c="necessary" class="cit-consent__no">' + lbl("no", "Csak a szükségeseket") + "</button>" +
+      '<button type="button" data-c="all" class="cit-consent__yes">' + lbl("yes", "Elfogadom") + "</button>" +
       "</div></div>";
     document.body.appendChild(bar);
     publishHeight(bar);

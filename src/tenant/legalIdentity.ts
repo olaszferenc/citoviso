@@ -18,8 +18,11 @@
 // output is worst, so it has to be the visible one.
 import { db } from "../db/client.js";
 import { config } from "../config.js";
-import type { HostingProviderIdentity, TenantLegalIdentity } from "../legal.js";
-import { missingImprintFields } from "../legal.js";
+import type { CountryLegalLocal, HostingProviderIdentity, TenantLegalIdentity } from "../legal.js";
+import { legalLocalFor, missingImprintFields, NO_LOCAL_ITEMS } from "../legal.js";
+import { countryLegalPack } from "../legalPackCountry.js";
+import { homeLegalPack, type LegalPack } from "../legalPack.js";
+import { countryOfTenant } from "./siteCountry.js";
 
 export interface TenantLegalState {
   readonly who: TenantLegalIdentity;
@@ -29,6 +32,16 @@ export interface TenantLegalState {
   readonly missing: readonly string[];
   /** True when the tenant has never edited its legal data (values are seeded). */
   readonly seeded: boolean;
+  /** ORSZÁG-RÉTEG 3/7: the lodging's country (ISO-2), null = unknown. */
+  readonly country: string | null;
+  /** The country's mandatory local items (none for HU / unknown). */
+  readonly local: CountryLegalLocal;
+  /**
+   * The pack the tenant's legal pages are published in: the Hungarian pack for HU, the
+   * country's COMPLETE pack otherwise — null when that pack is not complete (then nothing
+   * legal is published: no pages, no strip; never the Hungarian text under another flag).
+   */
+  readonly pack: LegalPack | null;
 }
 
 function trimOrNull(v: string | null | undefined): string | null {
@@ -88,14 +101,28 @@ export async function loadTenantLegal(tenantId: string): Promise<TenantLegalStat
     ntakId: trimOrNull(own?.ntak_id),
     email: trimOrNull(own?.email) ?? trimOrNull(buyer?.buyer_email),
     phone: trimOrNull(own?.phone),
+    local: Object.fromEntries(
+      Object.entries((own?.local_fields ?? {}) as Record<string, unknown>).map(([k, v]) => [k, trimOrNull(typeof v === "string" ? v : null)]),
+    ),
   };
 
   const buyerType = (buyer?.buyer_type as "individual" | "business" | null | undefined) ?? null;
+  // ORSZÁG-RÉTEG 3/7: the lodging's country decides the pack and the local items. A tenant
+  // whose country has no layer row keeps the Hungarian behaviour it always had (null country
+  // → HU pack) — the same rule as countryOfTenant's other callers; a non-HU row needs its pack.
+  const row = await countryOfTenant(tenantId);
+  const country = row?.iso2 ?? null;
+  const home = !country || country === "HU";
+  const local = home ? NO_LOCAL_ITEMS : legalLocalFor(country);
+  const pack = home ? homeLegalPack() : await countryLegalPack(country);
   return {
     who,
     buyerType,
-    missing: missingImprintFields(who, buyerType),
+    missing: missingImprintFields(who, buyerType, local),
     seeded: !own,
+    country,
+    local,
+    pack,
   };
 }
 
@@ -112,6 +139,8 @@ export function hostingProvider(): HostingProviderIdentity {
     address: trimOrNull(e.address),
     email: e.email || "info@citoviso.com",
     site: "citoviso.com",
+    // Printed only where a country pack makes the host's phone statutory (FR LCEN).
+    phone: trimOrNull(e.phone),
   };
 }
 
@@ -124,6 +153,8 @@ export interface TenantLegalEdit {
   readonly ntakId?: string | null;
   readonly email?: string | null;
   readonly phone?: string | null;
+  /** ORSZÁG-RÉTEG 3/7: the country's local items (LEGAL_LOCAL id → value); absent = untouched. */
+  readonly local?: Readonly<Record<string, string | null>>;
 }
 
 /**
@@ -142,6 +173,9 @@ export async function saveTenantLegal(tenantId: string, edit: TenantLegalEdit): 
     ntak_id: trimOrNull(edit.ntakId),
     email: trimOrNull(edit.email),
     phone: trimOrNull(edit.phone),
+    ...(edit.local
+      ? { local_fields: JSON.stringify(Object.fromEntries(Object.entries(edit.local).map(([k, v]) => [k, trimOrNull(v)]))) as never }
+      : {}),
     updated_at: new Date(),
   };
   await db

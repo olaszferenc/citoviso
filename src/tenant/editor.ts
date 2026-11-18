@@ -921,7 +921,14 @@ async function renderAndPersist(
   // the two legal pages written below, so the two can never disagree.
   const legal = await loadTenantLegal(s.tenantId);
   const host = hostingProvider();
-  html = withLegalStrip(html, legal.who);
+  // ORSZÁG-RÉTEG 3/7: in the lodging country's legal pack. ⛔ An incomplete non-HU pack
+  // publishes NO strip and NO legal pages (never the Hungarian text) — and the go-live gate
+  // (markets.isMarketApproved) keeps such a site from going live in the first place.
+  if (!legal.pack) {
+    console.error(`[legal-pack] tenant ${s.tenantId} (${legal.country}): a jogi csomag hiányos — jogi lapok és sáv nélkül`);
+  }
+  const strip = (h: string): string => (legal.pack ? withLegalStrip(h, legal.who, legal.pack, legal.local) : h);
+  html = strip(html);
 
   const finalHtml = asStatus === "live" ? html : toPrivatePreview(html, s.id);
   await mkdir(path.dirname(path.resolve(process.cwd(), s.path)), { recursive: true });
@@ -932,6 +939,7 @@ async function renderAndPersist(
   // contact address cannot leave a stale notice behind.
   const siteDir = path.dirname(path.resolve(process.cwd(), s.path));
   for (const kind of ["privacy", "imprint"] as const satisfies readonly TenantLegalKind[]) {
+    if (!legal.pack) break;
     const page = renderTenantLegalPage({
       recipe: s.recipe,
       data: effective,
@@ -939,6 +947,7 @@ async function renderAndPersist(
       who: legal.who,
       host,
       buyerType: legal.buyerType,
+      pack: legal.pack,
     });
     await writeFile(
       path.join(siteDir, kind === "privacy" ? "adatvedelem.html" : "impresszum.html"),
@@ -962,9 +971,8 @@ async function renderAndPersist(
       if (!u.slug) continue;
       const data = unitPageData(effective, u, byUnit.get(u.id) ?? [], s.canonicalUrl);
       if (!data) continue; // too thin to deserve a URL
-      const page = withLegalStrip(
+      const page = strip(
         await injectRuntime(renderSite(s.recipe, data, { phase: "live", hideGallery, hideAnchors }), data.lang, "live"),
-        legal.who,
       );
       await writeFile(
         path.join(dir, "apartman", `${u.slug}.html`),

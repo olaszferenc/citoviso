@@ -61,6 +61,12 @@ export function tSync(lang: string | undefined, hu: string): string {
  * §C gate (outreachCheck) refuses a message that has any. Synchronous renders only (T() is sync).
  */
 let fallbackSink: Set<string> | null = null;
+
+/** ORSZÁG-RÉTEG 3/7: a LEGAL sentence the country pack lacked (legalPack.legalTextForLang) joins
+ *  the same fallback list — the §C gate then holds the message exactly as for a UI string. */
+export function noteFallback(hu: string): void {
+  fallbackSink?.add(hu);
+}
 export function collectFallbacks<V>(fn: () => V): { value: V; fallbacks: string[] } {
   const prev = fallbackSink;
   const sink = new Set<string>();

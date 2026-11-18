@@ -223,6 +223,9 @@ import {
 import { marketOpenGaps } from "../payment/providers.js";
 import { a60Csv, a60Summary, parseA60Period } from "../billing/a60.js";
 import { countryConfigSync, countryOf, countryOfLead } from "../country.js";
+import { consumerAdrValue, homeLegalPack, legalTextForLang, type LegalPack } from "../legalPack.js";
+import { UNSUBSCRIBE_TEXT_V1 } from "../legal.js";
+import { countryLegalPack } from "../legalPackCountry.js";
 import { formatMinor, majorToMinor, minorDigits } from "../text/money.js";
 import { OrderRegionError, regionForCountry, regionForLead, type OrderMoney } from "../payment/orderRegion.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
@@ -299,6 +302,7 @@ import {
   aszfPage,
   elallasPage,
   impresszumPage,
+  serveOwnLegalPage,
 } from "../server/legalViews.js";
 import { injectConsent, markAudience, type PageAudience } from "../server/consent.js";
 
@@ -370,7 +374,9 @@ import {
   encounteredCountries,
   HOME_MARKET,
   listMarkets,
+  marketGate,
   marketLog,
+  normalizeCountryCode,
   revokeMarket,
 } from "../markets.js";
 import { getSetting, setSetting } from "./appSettings.js";
@@ -1145,6 +1151,25 @@ async function pickedPlanArtifact(
   return plans.find((x) => x.n === n)?.artifactId ?? "bad";
 }
 
+/**
+ * ORSZÁG-RÉTEG 3/7: the legal pack an order is taken under — the lodging country's, complete —
+ * plus the consumer-route rule (FR/PT: OUR dispute body must be configured for a consumer).
+ */
+async function orderLegalPack(
+  country: string | null,
+  buyerType: "individual" | "business" | null | undefined,
+): Promise<{ ok: true; pack: LegalPack } | { ok: false; error: string; reason: string }> {
+  // No lodging country at all = the Hungarian flow it always was (regionForLead already
+  // refused an unknown market above); a known country — HU included — reads its own pack.
+  if (!country) return { ok: true, pack: homeLegalPack() };
+  const pack = await countryLegalPack(country);
+  if (!pack) return { ok: false, error: "legal_pack_incomplete", reason: "a jogi csomag nem teljes az ország nyelvén (Bábelre vár)" };
+  if (buyerType === "individual" && consumerAdrValue(country) === null) {
+    return { ok: false, error: "consumer_route_closed", reason: "a fogyasztói vitarendező szerv nincs beállítva (fogyasztói út zárva)" };
+  }
+  return { ok: true, pack };
+}
+
 async function handleOrderRequest(
   req: http.IncomingMessage,
   res: http.ServerResponse,
@@ -1330,6 +1355,17 @@ async function handleOrderRequest(
     return;
   }
   const region = money.region;
+  // ORSZÁG-RÉTEG 3/7 (ADR-XXXX): the wordings the buyer accepts come from the LODGING country's
+  // legal pack (the configurator showed them). ⛔ No complete pack = no order (never the
+  // Hungarian wording stamped for a foreign buyer); FR/PT without OUR consumer dispute body
+  // configured = the CONSUMER route is shut, the business route is not.
+  const orderLegalCountry = orderLeadRow ? await countryOfLead(orderLeadRow.lead_id) : normalizeCountryCode(buyer.buyerCountry);
+  const orderLegal = await orderLegalPack(orderLegalCountry, buyer.buyerType);
+  if (!orderLegal.ok) {
+    console.warn(`[console] rendelés ELUTASÍTVA — ${orderLegalCountry}: ${orderLegal.reason} — nincs order_intent, nincs pay-link`);
+    send(res, 409, JSON.stringify({ ok: false, error: orderLegal.error }), "application/json");
+    return;
+  }
   const clientPrice = typeof body.price === "number" ? Math.round(body.price) : null;
   // ADR-0088: the computed amount is the LIST price; a tracked prospect may hold
   // an offer (outreach −25% / escalation / campaign — the single largest one,
@@ -1483,6 +1519,7 @@ async function handleOrderRequest(
     domainFee: domainFee || null,
     photoRightsDeclared: true,
     recurringConsent: true,
+    legalPack: orderLegal.pack,
     buyer,
     preset: orderPresetId(modules, body.preset, currentPresets()),
     ...(prospectToken ? { prospectToken } : {}),
@@ -1588,6 +1625,15 @@ async function acquireOrderLock(key: string): Promise<() => void> {
 async function regionForArtifactOrNull(artifactId: string): Promise<string | null> {
   const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
   if (!a) return null;
+  // ORSZÁG-RÉTEG 3/7 (ADR-0111 + ADR-XXXX): the CONFIGURATOR is part of the conversion path —
+  // a lodging whose market is shut (not approved, or its legal pack not complete in the
+  // country's language) gets the mock WITHOUT an order entry, like a market that cannot price.
+  // Every configurator entry (/configure, /p/<t>, /folytatas) reads this one function.
+  const gate = await marketGate((await countryOfLead(a.lead_id)) ?? null);
+  if (!gate.open) {
+    console.warn(`[console] konfigurátor: a(z) ${gate.country ?? "?"} piac zárva — ${gate.reasons.join("; ")} — rendelés-belépő nélkül`);
+    return null;
+  }
   try {
     const m = await regionForLead(a.lead_id);
     // ⛔ TEMPORARY (ADR-0443): the browser cart still formats whole units — its minor-unit
@@ -1612,6 +1658,18 @@ async function regionForArtifactOrNull(artifactId: string): Promise<string | nul
  *  confirmation, the same one-tap question as everywhere — a plain POST form (works
  *  without JS), optional, no beacon, no offer. */
 function unsubscribedPage(token: string, lang: string): string {
+  // ORSZÁG-RÉTEG 3/7: a non-Hungarian lead reads this page from its country's legal pack
+  // (until now it was Hungarian for everyone); the Hungarian page below is unchanged.
+  if (lang !== "hu") {
+    const L = (hu: string): string => legalTextForLang(lang, hu);
+    return layout(
+      L(UNSUBSCRIBE_TEXT_V1.doneTitle),
+      `<div class="panel" style="max-width:480px;margin:48px auto;text-align:center">` +
+        `<h2>${L(UNSUBSCRIBE_TEXT_V1.doneHeading)}</h2><p class="mut">${L(UNSUBSCRIBE_TEXT_V1.done)}</p>` +
+        `${feedbackFormHtml(token, "unsubscribe", lang)}</div>`,
+      { chrome: false },
+    );
+  }
   return layout(
     "Leiratkozva",
     `<div class="panel" style="max-width:480px;margin:48px auto;text-align:center">
@@ -4045,7 +4103,16 @@ async function handle(
   // tracking footer; §C.2 + §H.22 deterministic legal text). /adatvedelem is the
   // canonical path; /privacy stays a live alias for already-sent outreach mails.
   if (method === "GET" && (path === "/adatvedelem" || path === "/privacy")) {
+    // ORSZÁG-RÉTEG 3/7: `?c=<CC>` = the same notice in that country's legal pack.
+    if (url.searchParams.get("c") || url.searchParams.get("l")) {
+      const own = await serveOwnLegalPage(path, url.searchParams);
+      if (own) return send(res, own.status, own.html);
+    }
     return send(res, 200, privacyPage(config.outreachSender));
+  }
+  if (method === "GET" && (url.searchParams.get("c") || url.searchParams.get("l"))) {
+    const own = await serveOwnLegalPage(path, url.searchParams);
+    if (own) return send(res, own.status, own.html);
   }
   // The rest of the legal layer (ADR-0056). These are served HERE as well as on
   // the public site because the checkout lives on the console: `config.termsUrl`
@@ -4073,7 +4140,7 @@ async function handle(
     // megerősítő lap egyetlen gombbal; a tett a POST (lent).
     // ORSZÁG-RÉTEG 3/5: the page in the lead's page language (the mock's), Hungarian without one.
     const unsubLang = (await getProspectByToken(unsubMatch[1]).catch(() => null))?.lang ?? undefined;
-    return send(res, 200, layout("Leiratkozás", unsubscribeConfirmBody(unsubMatch[1], unsubLang), { chrome: false }));
+    return send(res, 200, layout(legalTextForLang(unsubLang, UNSUBSCRIBE_TEXT_V1.title), unsubscribeConfirmBody(unsubMatch[1], unsubLang), { chrome: false }));
   }
   if (method === "POST" && unsubMatch) {
     // RFC 8058 one-click (List-Unsubscribe-Post) ÉS a megerősítő lap gombja — mindkettő

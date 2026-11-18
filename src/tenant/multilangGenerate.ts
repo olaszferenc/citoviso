@@ -182,7 +182,12 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
   // primary page. Without it the /de/ and /en/ pages had NO imprint link at all —
   // the very gap this ADR closed on the Hungarian page (KB audit, 2026-09-08). The
   // legal PAGES themselves stay Hungarian: a legal pack is not a translation (§B.18).
-  const legalWho = (await loadTenantLegal(s.tenantId)).who;
+  // ORSZÁG-RÉTEG 3/7: the strip speaks the lodging COUNTRY's legal pack (not the guest page's
+  // language); an incomplete pack publishes no strip rather than Hungarian.
+  const legalState = await loadTenantLegal(s.tenantId);
+  const legalWho = legalState.who;
+  const stripOf = (html: string): string =>
+    legalState.pack ? withLegalStrip(html, legalWho, legalState.pack, legalState.local) : html;
 
     for (const lang of langs) {
       // ADR-0118 ÉLETJEL: a watcher must tell a SLOW run from a DEAD one — or it would
@@ -200,13 +205,12 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
       const dir = path.join(baseDir, lang);
       await mkdir(dir, { recursive: true });
 
-      const html = withLegalStrip(
+      const html = stripOf(
         await injectRuntime(
           renderSite(recipe, data, { phase: "live", hideGallery: site.hideGallery, hideAnchors: site.hideAnchors }),
           lang,
           "live",
         ),
-        legalWho,
       );
       await writeFile(path.join(dir, "index.html"), finalize(decorate(html, lang)), "utf8");
 
@@ -224,13 +228,12 @@ export async function runMultilangGeneration(generationId: string): Promise<Mult
             s.status === "live" && s.canonicalUrl ? `${s.canonicalUrl}/${lang}` : undefined,
           );
           if (!pageData) continue;
-          const page = withLegalStrip(
+          const page = stripOf(
             await injectRuntime(
               renderSite(recipe, pageData, { phase: "live", hideGallery: site.hideGallery, hideAnchors: site.hideAnchors }),
               lang,
               "live",
             ),
-            legalWho,
           );
           await writeFile(
             path.join(dir, "apartman", `${u.slug}.html`),

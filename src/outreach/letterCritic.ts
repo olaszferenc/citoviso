@@ -18,6 +18,7 @@
 // the CLI cannot fall back to API billing.
 
 import { createHash } from "node:crypto";
+import * as legal from "../legal.js";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,12 +33,20 @@ export const MODEL = "opus";
 /** The source files whose customer strings make up the letter family. */
 const TEMPLATE_FILES = ["draft.ts", "escalationFollowup.ts"] as const;
 
-/** Every T(lang, "…") literal of the letter family, in source order. */
+/**
+ * Every T(lang, "…") literal of the letter family, in source order. ORSZÁG-RÉTEG 3/7: the
+ * letter's legal line moved into the LEGAL pack (`legalTextForLang(d.lang, OUTREACH_…_V1, …)`);
+ * its wording is still part of the letter, so the constant's text counts at the same place.
+ */
 export function letterTemplateStrings(): string[] {
   const out: string[] = [];
+  const legalText = legal as unknown as Record<string, unknown>;
   for (const f of TEMPLATE_FILES) {
     const src = readFileSync(new URL(`./${f}`, import.meta.url), "utf8");
-    for (const m of src.matchAll(/\bT\(\s*(?:d\.lang|lang)\s*,\s*"((?:[^"\\]|\\.)*)"/g)) out.push(m[1]!);
+    for (const m of src.matchAll(/\bT\(\s*(?:d\.lang|lang)\s*,\s*"((?:[^"\\]|\\.)*)"|\blegalTextForLang\(\s*(?:d\.lang|lang)\s*,\s*([A-Z0-9_]+)/g)) {
+      if (m[1] !== undefined) out.push(m[1]);
+      else if (typeof legalText[m[2]!] === "string") out.push(legalText[m[2]!] as string);
+    }
   }
   return out;
 }

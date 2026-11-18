@@ -124,6 +124,9 @@ async function addCountry(iso: string, name: string, currency: string, region: s
 await addCountry("CZ", "Csehország (szintetikus)", "CZK", "cz", "cs");
 await addCountry("RO", "Románia (szintetikus)", "RON", "ro", "ro");
 await refreshCountries();
+// ORSZÁG-RÉTEG 3/7: the market gate opens only on a COMPLETE legal pack — a marker FIXTURE (never a
+// translation, never the API) stands in for Bábel's, so this run measures what it always measured.
+await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", RO: "ro" });
 
 // Regions + absolute prices in their own currency (minor units: 249,90 Kč = 24990).
 for (const [region, cur] of [["cz", "CZK"], ["ro", "RON"]] as const) {

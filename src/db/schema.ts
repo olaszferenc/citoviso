@@ -378,6 +378,8 @@ export interface OrderIntentTable {
   /** Consumer waiver of the 14-day withdrawal right (45/2014.); 'individual' only. */
   withdrawal_waiver_at: Timestamp | null;
   withdrawal_waiver_text: string | null;
+  /** 0141 (ország-réteg 3/7): the legal pack of the accepted wordings — <country>/<lang>/<version>. */
+  legal_pack: string | null;
   /**
    * 'initial' = the conversion checkout (no tenant yet — it is born from the
    * payment). 'upsell' = an existing tenant adding modules (0033); `modules`
@@ -560,6 +562,8 @@ export interface FreeTrialTable {
   terms_text: string;
   photo_rights_declared_at: Timestamp;
   photo_rights_text: string;
+  /** 0141 (ország-réteg 3/7): the legal pack of the accepted wordings — <country>/<lang>/<version>. */
+  legal_pack: string | null;
   started_at: Generated<Date>;
   trial_until: Timestamp;
   coupon_offer_id: string | null;
@@ -897,6 +901,8 @@ export interface TenantLegalTable {
   ntak_id: string | null;
   email: string | null;
   phone: string | null;
+  /** 0141 (ország-réteg 3/7): the country's mandatory local imprint items, LEGAL_LOCAL id → value. */
+  local_fields: Generated<Record<string, string | null>>;
   /** Generated<Date>, not Generated<Timestamp>: the nested ColumnType makes the
    *  insert side unassignable from a plain Date (see module_price for the same shape). */
   updated_at: Generated<Date>;

@@ -21,7 +21,9 @@ import { listProspectPlans } from "./planSet.js";
 import { formatMinor, formatNumber } from "../text/money.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { T, prepareMailLang } from "../i18n/mail.js";
-import { collectFallbacks } from "../i18n/packs.js";
+import { collectFallbacks, noteFallback } from "../i18n/packs.js";
+import { OUTREACH_LETTER_LEGAL_V1 } from "../legal.js";
+import { legalTextForLang } from "../legalPack.js";
 import { DEFAULT_LANG, langForCountry } from "../i18n/lang.js";
 import { countryConfig, countryConfigSync, countryOf } from "../country.js";
 import { gsm7FoldableLang, outreachLangOf } from "./countryOutreach.js";
@@ -464,7 +466,9 @@ function renderDraftText(d: DraftInput): OutreachDraft {
   const unsubscribeLink = base
     ? `${base}${pathBase}/unsubscribe`
     : `[HIÁNYZÓ PUBLIC_BASE_URL]${pathBase}/unsubscribe`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-  const privacyLink = base ? `${base}/privacy` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+  // ORSZÁG-RÉTEG 3/7: a non-Hungarian letter links the notice in its own language (`?l=`).
+  const privacyQuery = d.lang && d.lang !== DEFAULT_LANG ? `?l=${encodeURIComponent(d.lang)}` : "";
+  const privacyLink = base ? `${base}/privacy${privacyQuery}` : `[HIÁNYZÓ PUBLIC_BASE_URL]/privacy${privacyQuery}`; // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
 
   // Personal, first-person subject (no marketing hook) → better Primary-tab odds.
   //
@@ -563,10 +567,9 @@ function renderDraftText(d: DraftInput): OutreachDraft {
     // middle of the price sentence, into the grey footnote above the opt-out).
     fine: T(d.lang, "A kedvezmény az első díjra szól, a hosszabbítás már listaáras."),
     unsubTxt: T(d.lang, "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:"),
-    legal: T(
-      d.lang,
-      "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
-    ),
+    // ORSZÁG-RÉTEG 3/7: the legal line is the country's LEGAL pack (not a UI translation); a
+    // missing one joins the ADR-0456 fallback list, so the §C gate holds the letter.
+    legal: legalTextForLang(d.lang, OUTREACH_LETTER_LEGAL_V1, noteFallback),
     identity: advertiserIdentity(d.lang),
   };
 

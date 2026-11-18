@@ -31,6 +31,7 @@ import { tenantSiteUrl } from "../domains.js";
 import { isValidEmail } from "../email/leadEmails.js";
 import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1, TRIAL_CLICKWRAP_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
+import { countryLegalPack } from "../legalPackCountry.js";
 import { countryConfig, countryOfLead } from "../country.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
@@ -209,6 +210,10 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   if (!(await countryConfig(leadCountry)) || !(await isMarketApproved(leadCountry))) {
     return { ok: false, error: "market_not_approved" };
   }
+  // ORSZÁG-RÉTEG 3/7: the click-wrap the page showed is the lodging country's pack; the gate
+  // above already required it complete (isMarketApproved), so null cannot reach the stamp.
+  const legalPack = await countryLegalPack(leadCountry);
+  if (!legalPack) return { ok: false, error: "market_not_approved" };
 
   // 3. CLAIM the trial (unique lead_id). Losing the race = the other request is building it.
   let trial = prior;
@@ -241,9 +246,10 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
         contact_email: v.email,
         contact_phone: v.phone,
         terms_accepted_at: now,
-        terms_text: input.clickwrap ? TRIAL_CLICKWRAP_V1 : TERMS_ACCEPTANCE_V1,
+        terms_text: legalPack.t(input.clickwrap ? TRIAL_CLICKWRAP_V1 : TERMS_ACCEPTANCE_V1),
         photo_rights_declared_at: now,
-        photo_rights_text: input.clickwrap ? TRIAL_CLICKWRAP_V1 : PHOTO_RIGHTS_DECLARATION_V1,
+        photo_rights_text: legalPack.t(input.clickwrap ? TRIAL_CLICKWRAP_V1 : PHOTO_RIGHTS_DECLARATION_V1),
+        legal_pack: legalPack.stamp,
         started_at: now,
         trial_until: trialUntilFrom(now, cfg.days),
       })

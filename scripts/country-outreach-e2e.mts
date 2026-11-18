@@ -114,11 +114,14 @@ await addCountry({
   channels: ["email", "viber"], quota: 20,
 });
 await addCountry({
-  iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "BGN", region: "global", dial: "359", trunk: "0",
+  iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "EUR", region: "global", dial: "359", trunk: "0",
   mobiles: ["87", "88", "89", "98"], nsn: [8, 9], holidays: ["01-01", "03-03", "05-01", "05-06", "05-24", "09-06", "09-22", "12-24", "12-25", "12-26"],
   channels: ["email", "sms", "mms"], quota: 5,
 });
 await refreshCountries();
+// ORSZÁG-RÉTEG 3/7: the market gate opens only on a COMPLETE legal pack — a marker FIXTURE (never a
+// translation, never the API) stands in for Bábel's, so this run measures what it always measured.
+await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", BG: "bg" });
 const HU = countryConfigSync("HU")!;
 const CZ = countryConfigSync("CZ")!;
 const BG = countryConfigSync("BG")!;

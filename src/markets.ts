@@ -6,6 +6,7 @@
 // pack, never because a lookup happened to return nothing.
 import { sql } from "kysely";
 import { db } from "./db/client.js";
+import { countryLegalStatus } from "./legalPackCountry.js";
 
 /** Our home market: the entire legal pack (ÁSZF, elállás, DPA, tenant pages) is HU law. */
 export const HOME_MARKET = "HU";
@@ -30,20 +31,45 @@ export function normalizeCountryCode(raw: string | null | undefined): string | n
 }
 
 /**
- * Is this country's legal pack approved?
+ * Is this country's market OPEN — its legal pack approved AND complete?
  *
  * A null/unknown country is NOT approved. That is deliberate: "we do not know where
  * this customer is" is not a reason to publish a Hungarian imprint in their name.
+ *
+ * ORSZÁG-RÉTEG 3/7 (ADR-XXXX): an owner's approval no longer opens a country on its own —
+ * the country's legal pack must also be COMPLETE in the country's language (every text Bábel
+ * translated, the local-item schema defined; src/legalPack.ts). This is the ONE gate every
+ * caller reads (cold outreach, trial start, pay-link, go-live, configurator), so an
+ * incomplete pack shuts all of them at once; `marketGate()` says why.
  */
 export async function isMarketApproved(country: string | null | undefined): Promise<boolean> {
+  return (await marketGate(country)).open;
+}
+
+export interface MarketGateVerdict {
+  readonly country: string | null;
+  readonly open: boolean;
+  /** The owner's approval (ADR-0111 market row). */
+  readonly approved: boolean;
+  /** The country's legal pack is complete in its language (ország-réteg 3/7). */
+  readonly packComplete: boolean;
+  /** Hungarian operator text — why it is shut (empty when open). */
+  readonly reasons: readonly string[];
+}
+
+/** The market gate with its reasons — what the console's country/market lists show. */
+export async function marketGate(country: string | null | undefined): Promise<MarketGateVerdict> {
   const cc = normalizeCountryCode(country);
-  if (!cc) return false;
+  if (!cc) return { country: null, open: false, approved: false, packComplete: false, reasons: ["ismeretlen ország"] };
   const row = await db
     .selectFrom("market")
     .select("legal_status")
     .where("country", "=", cc)
     .executeTakeFirst();
-  return row?.legal_status === "approved";
+  const approved = row?.legal_status === "approved";
+  const pack = await countryLegalStatus(cc);
+  const reasons = [...(approved ? [] : ["a piacot a tulaj még nem nyitotta meg"]), ...pack.reasons];
+  return { country: cc, open: approved && pack.complete, approved, packComplete: pack.complete, reasons };
 }
 
 /** Every known market, home first, then alphabetically — the console list. */

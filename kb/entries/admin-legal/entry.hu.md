@@ -4,7 +4,7 @@ title: Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján
 audience: tenant
 category: account
 anchors: admin.legal
-updated: 2026-10-21
+updated: 2026-11-18
 ---
 
 A honlapjának két jogi oldala van: az **Impresszum** és az **Adatkezelési tájékoztató**.
@@ -78,10 +78,31 @@ látogatottság-mérésről szóló szakasza szól.
 
 ## Többnyelvű honlap esetén
 
-A jogi oldalak egyelőre **magyar nyelven** jelennek meg akkor is, ha megvásárolta a többnyelvű
-modult. Ennek az az oka, hogy a jogi szöveg nem fordítás kérdése: minden országnak saját jogi
-csomagja van, amit nem géppel fordítunk. A honlap többi része természetesen a megvásárolt
-nyelveken jelenik meg.
+A jogi oldalak **a szállás országának nyelvén** jelennek meg — magyarországi szállásnál
+magyarul — akkor is, ha megvásárolta a többnyelvű modult. Ennek az az oka, hogy a jogi szöveg
+nem a vendég nyelvéhez, hanem az ország jogához tartozik: minden országnak saját jogi csomagja
+van, amit nem géppel fordítunk. A honlap többi része természetesen a megvásárolt nyelveken
+jelenik meg.
+
+## Ha a szállása nem Magyarországon van
+
+Néhány országban a jogszabály más vagy további adatokat ír elő a honlapon. A panel ezért a
+szállás országa szerint mutatja a mezőket:
+
+- Az **adószám** mező az adott ország adóazonosítójának nevét viseli (például Olaszországban a
+  Partita IVA, Portugáliában a NIF). Spanyolországban, Portugáliában és Horvátországban
+  magánszemélyként is kötelező kitölteni.
+- A **„Szálláshely-azonosító (NTAK)”** mező nem jelenik meg, mert az NTAK magyar nyilvántartás.
+- **Külön mezők** jelennek meg az ország saját nyilvántartási számaihoz. Olaszországban ilyen a
+  nemzeti szálláshely-azonosító (CIN), Portugáliában a helyi szálláshely nyilvántartási száma és
+  az online panaszkönyv címe. A panaszkönyv címét előre kitöltöttük, a többit Önnek kell
+  megadnia.
+
+Ezek ugyanúgy működnek, mint a többi mező: ha egy kötelező mező üres, a panel tetején
+figyelmeztetés jelenik meg, és a honlap **impresszumában** a sor helyén **„— nincs megadva —”**
+olvasható (az ország nyelvén). Amikor kitöltötte, a regisztrációs szám a honlap minden oldalán,
+az alsó sötét sávban is megjelenik, mert több országban ezt a főoldalon is látni kell. Amíg
+üres, a sávban nem szerepel.
 
 ## Ki felel miért?
 

@@ -41,6 +41,7 @@ import {
   aszfPage,
   elallasPage,
   impresszumPage,
+  serveOwnLegalPage,
 } from "./legalViews.js";
 import { createMockRequest } from "../intake/mockRequest.js";
 import { frameDemoMock } from "../generator/demoFrame.js";
@@ -2330,6 +2331,7 @@ async function serveAdmin(
       // yet would be exactly the dead link this ADR exists to remove.
       privacyUrl: siteUrl ? `${siteUrl.replace(/\/$/, "")}${TENANT_LEGAL_PATHS.privacy}` : null,
       imprintUrl: siteUrl ? `${siteUrl.replace(/\/$/, "")}${TENANT_LEGAL_PATHS.imprint}` : null,
+      local: st.local,
     };
   } else if (tab === "uzenetek") {
     // Opening a message marks it read — the click IS the acknowledgement, so it
@@ -4298,7 +4300,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const session = await currentTenant(req);
     if (!session) return redirect(res, "/login");
     const form = await readFormBody(req);
+    // ORSZÁG-RÉTEG 3/7: the country's local items arrive as local_<id>; only the ids the
+    // country's schema defines are kept (a Hungarian tenant posts none → untouched).
+    const localDefs = (await loadTenantLegal(session.tenantId)).local.fields;
+    const local = localDefs.length
+      ? Object.fromEntries(localDefs.map((f) => [f.id, form.get(`local_${f.id}`)]))
+      : undefined;
     await saveTenantLegal(session.tenantId, {
+      ...(local ? { local } : {}),
       legalName: form.get("legal_name"),
       address: form.get("address"),
       taxNumber: form.get("tax_number"),
@@ -4677,6 +4686,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // GDPR Art. 13/14 notice. /adatvedelem is the canonical Hungarian path the
     // footers link to; /privacy stays a live alias because outreach mails have
     // already gone out carrying it (it was the only legal route that existed).
+    // ORSZÁG-RÉTEG 3/7: `?c=<CC>` = the legal page in that country's pack (404 while incomplete).
+    if (/^\/(adatvedelem|privacy|impresszum|aszf|elallas|adatfeldolgozas)$/.test(pathname)) {
+      const q = new URL(req.url ?? "/", "http://x").searchParams;
+      if (q.get("c") || q.get("l")) {
+        const own = await serveOwnLegalPage(pathname, q);
+        if (own) return send(res, own.status, own.html);
+      }
+    }
     if (pathname === "/adatvedelem" || pathname === "/privacy") {
       return send(res, 200, privacyPage(config.outreachSender));
     }

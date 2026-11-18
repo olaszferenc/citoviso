@@ -58,6 +58,7 @@ import { injectRuntime } from "./runtime.js";
 import { renewalQuoteForLead, type RenewalQuote } from "../payment/renewalQuote.js";
 import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { homeLegalPack, type LegalPack } from "../legalPack.js";
 
 /**
  * Countries selectable at checkout: Hungary first (the pilot market), then the
@@ -368,6 +369,12 @@ export interface PlansEntry {
 /** Optional overrides for the tracked-outreach flow (/p/<token>). */
 export interface ConfiguratorOpts {
   /**
+   * ORSZÁG-RÉTEG 3/7: the legal pack the checkout's wordings and document links come from —
+   * the lodging country's COMPLETE pack. Absent = resolved from the artifact's lead (HU → the
+   * Hungarian pack, i.e. exactly the old wordings).
+   */
+  readonly legalPack?: LegalPack;
+  /**
    * ADR-0443: the pricing region of the lead (orderRegion.ts regionForLead) — every amount
    * of the manifest is in its currency's minor unit. Every product caller passes it (the
    * country-layer guard measures that); absent = a guard's HU fixture.
@@ -470,6 +477,10 @@ export async function buildManifest(
   opts: ConfiguratorOpts = {},
 ): Promise<ConfiguratorManifest> {
   await loadPricing();
+  // ORSZÁG-RÉTEG 3/7: every legal wording below comes from the lodging country's pack (the
+  // Hungarian pack = the old constants verbatim); our document links carry `?c=<CC>` for it.
+  const lp = opts.legalPack ?? homeLegalPack();
+  const withC = (u: string | null): string | null => (u && !lp.home ? `${u}${u.includes("?") ? "&" : "?"}c=${lp.country}` : u);
   // Guard fixtures render without a lead; every product caller passes the lead's region.
   const region = opts.pricingRegion ?? HU_PRICING_REGION;
   assertRegionPriceable(region);
@@ -525,26 +536,26 @@ export async function buildManifest(
     product: { name: leadName },
     // §A single-source: the checkbox label IS the stamped wording (guard finding —
     // the recorded acceptance must equal what the prospect actually saw).
-    photoRightsText: PHOTO_RIGHTS_DECLARATION_V1,
+    photoRightsText: lp.t(PHOTO_RIGHTS_DECLARATION_V1),
     billing: {
       prefill: opts.billingPrefill ?? {},
       countries: BILLING_COUNTRIES,
-      termsUrl: config.termsUrl || null,
+      termsUrl: withC(config.termsUrl || null),
       // Same single-source rule as §A above: what they read is what we stamp.
-      termsText: TERMS_ACCEPTANCE_V1,
-      withdrawalText: WITHDRAWAL_WAIVER_V1,
+      termsText: lp.t(TERMS_ACCEPTANCE_V1),
+      withdrawalText: lp.t(WITHDRAWAL_WAIVER_V1),
       // ADR-0088 ⑨: the mandate wording the buyer ticks IS the wording stamped
       // on the order (single source, same rule as §A/ÁSZF/withdrawal).
-      recurringText: RECURRING_MANDATE_V1,
+      recurringText: lp.t(RECURRING_MANDATE_V1),
       // Visible row labels; the full texts above open in place behind them and
       // remain what we stamp (checkout-fullscreen contract ⑧).
-      withdrawalShort: WITHDRAWAL_WAIVER_SHORT_V1,
-      recurringShort: RECURRING_MANDATE_SHORT_V1,
+      withdrawalShort: lp.t(WITHDRAWAL_WAIVER_SHORT_V1),
+      recurringShort: lp.t(RECURRING_MANDATE_SHORT_V1),
       // ADR-0098: the seller is AAM, so the displayed price carries no VAT. Sent
       // as TEXT rather than hardcoded in the runtime: when the company leaves AAM
       // this line must change with the invoice, not be hunted down in a JS file.
-      vatNote: VAT_NOTE_AAM,
-      vatNoteReverse: VAT_NOTE_REVERSE_CHARGE,
+      vatNote: lp.t(VAT_NOTE_AAM),
+      vatNoteReverse: lp.t(VAT_NOTE_REVERSE_CHARGE),
     },
     domain: {
       sub: subHost,
@@ -575,7 +586,9 @@ export async function buildManifest(
       })(),
       exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
     },
-    ...(opts.trial ? { trial: { ...opts.trial, sub: subHost, clickwrap: TRIAL_CLICKWRAP_V1 } } : {}),
+    ...(opts.trial
+      ? { trial: { ...opts.trial, privacyUrl: withC(opts.trial.privacyUrl) ?? opts.trial.privacyUrl, sub: subHost, clickwrap: lp.t(TRIAL_CLICKWRAP_V1) } }
+      : {}),
     ...(opts.ask ? { ask: opts.ask } : {}),
     ...(opts.plans && opts.plans.list.length >= 2 ? { plans: opts.plans } : {}),
     ...(opts.continuation ? { continuation: opts.continuation } : {}),
@@ -661,7 +674,11 @@ export async function injectConfigurator(
   // sees today's (the portal-sync band, the „a portálon foglalták” nights). The stored
   // file stays as it is; the swap happens here, at serve time, like the overlay itself.
   if (html.includes("data-cit-runtime")) html = await injectRuntime(html);
-  const manifest = await buildManifest(html, artifactId, leadName, opts);
+  // ORSZÁG-RÉTEG 3/7: the lodging country's legal pack. ⛔ A non-HU country without a complete
+  // pack gets NO configurator (the market gate — regionForArtifactOrNull — already holds it).
+  const legalPack = opts.legalPack ?? (await legalPackForArtifact(artifactId));
+  if (!legalPack) throw new Error(`[legal-pack] konfigurátor ${artifactId}: a lead országának jogi csomagja nem teljes`);
+  const manifest = await buildManifest(html, artifactId, leadName, { ...opts, legalPack });
   const manifestTag =
     `<script type="application/json" data-cit-configurator>` +
     jsonForScript(manifest) +
@@ -669,4 +686,15 @@ export async function injectConfigurator(
   const block = manifestTag + (await configuratorBlock());
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);
   return html + "\n" + block; // no </body> — append as a safe fallback
+}
+
+/** ORSZÁG-RÉTEG 3/7: the legal pack of an artifact's lodging (HU / unknown → the Hungarian pack). */
+async function legalPackForArtifact(artifactId: string): Promise<LegalPack | null> {
+  const { db } = await import("../db/client.js");
+  const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  if (!a) return homeLegalPack();
+  const { countryOfLead } = await import("../country.js");
+  const cc = await countryOfLead(a.lead_id);
+  if (!cc || cc === "HU") return homeLegalPack();
+  return (await import("../legalPackCountry.js")).countryLegalPack(cc);
 }

@@ -13,17 +13,31 @@
 // a div; here the viewport IS the window, so the same breakpoints are @media.
 import { mapOutsideScripts } from "./htmlOutsideScripts.js";
 import {
+  legalLocalFor,
+  localValue,
+  NO_LOCAL_ITEMS,
   TENANT_LEGAL_EFFECTIVE_FROM,
   TENANT_LEGAL_MISSING,
   TENANT_LEGAL_VERSION,
   TENANT_PRIVACY_TLDR,
   tenantImprintSections,
   tenantPrivacySections,
+  type CountryLegalLocal,
   type HostingProviderIdentity,
   type TenantLegalBlock,
   type TenantLegalIdentity,
   type TenantLegalSection,
 } from "../legal.js";
+import type { LegalDoc, LegalPack } from "../legalPack.js";
+
+/**
+ * ORSZÁG-RÉTEG 3/7: the country pack's translator for every wording on these pages. The
+ * Hungarian pack is the identity — its pages are the old ones byte for byte; a country pack
+ * throws on a missing unit (LegalPackGap), so a half pack never publishes Hungarian.
+ */
+type Tr = (hu: string) => string;
+const HU_TR: Tr = (s) => s;
+const trOf = (pack?: LegalPack | null): Tr => (pack && !pack.home ? (s) => pack.t(s) : HU_TR);
 import type { Recipe, SiteData } from "./recipe.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { esc } from "./templateKit.js";
@@ -55,20 +69,22 @@ const PAGE_LEAD: Readonly<Record<TenantLegalKind, string>> = {
  * the rule is actually about. Bold + italic + accent reads as "something is wrong"
  * on every skin, including the dark ones where a fixed red would vanish.
  */
-function value(v: string | null): string {
-  return v ? esc(v) : `<em class="cit-lg-missing">${esc(TENANT_LEGAL_MISSING)}</em>`;
+function value(v: string | null, lt: Tr = HU_TR): string {
+  // A published link value (PT complaints book) is a working link, not a bare address.
+  if (v && /^https:\/\/[^\s"<>]+$/.test(v)) return `<a href="${esc(v)}" rel="noopener">${esc(v)}</a>`;
+  return v ? esc(v) : `<em class="cit-lg-missing">${esc(lt(TENANT_LEGAL_MISSING))}</em>`;
 }
 
-function renderBlock(b: TenantLegalBlock): string {
+function renderBlock(b: TenantLegalBlock, lt: Tr = HU_TR): string {
   switch (b.kind) {
     case "p":
-      return `<p>${esc(b.text)}</p>`;
+      return `<p>${esc(lt(b.text))}</p>`;
     case "ul":
-      return `<ul>${b.items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`;
+      return `<ul>${b.items.map((i) => `<li>${esc(lt(i))}</li>`).join("")}</ul>`;
     case "dl":
       return (
         `<dl>` +
-        b.rows.map((r) => `<dt>${esc(r.term)}</dt><dd>${value(r.value)}</dd>`).join("") +
+        b.rows.map((r) => `<dt>${esc(lt(r.term))}</dt><dd>${value(r.value, lt)}</dd>`).join("") +
         `</dl>`
       );
     case "table":
@@ -76,12 +92,12 @@ function renderBlock(b: TenantLegalBlock): string {
       // the 4-column table renders 444px wide on a 390px phone and the last column is
       // silently clipped — measured, and invisible on a screenshot (ADR-0110).
       return (
-        `<table><thead><tr>${b.head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
+        `<table><thead><tr>${b.head.map((h) => `<th>${esc(lt(h))}</th>`).join("")}</tr></thead><tbody>` +
         b.rows
           .map(
             (row) =>
               `<tr>${row
-                .map((cell, i) => `<td data-label="${esc(b.head[i] ?? "")}">${esc(cell)}</td>`)
+                .map((cell, i) => `<td data-label="${esc(lt(b.head[i] ?? ""))}">${esc(lt(cell))}</td>`)
                 .join("")}</tr>`,
           )
           .join("") +
@@ -90,31 +106,31 @@ function renderBlock(b: TenantLegalBlock): string {
   }
 }
 
-function renderSection(s: TenantLegalSection, index: number): string {
+function renderSection(s: TenantLegalSection, index: number, lt: Tr = HU_TR): string {
   // The first section starts open on mobile; on desktop CSS + script keep them all open.
   const open = index === 0 ? " open" : "";
   return (
     `<details class="cit-lg-sec" id="${esc(s.id)}"${open}>` +
     `<summary><span class="cit-lg-num">${index + 1}</span>` +
-    `<span class="cit-lg-label">${esc(s.heading)}</span><span class="cit-lg-chev"></span></summary>` +
-    `<div class="cit-lg-body">${s.blocks.map(renderBlock).join("")}</div>` +
+    `<span class="cit-lg-label">${esc(lt(s.heading))}</span><span class="cit-lg-chev"></span></summary>` +
+    `<div class="cit-lg-body">${s.blocks.map((b) => renderBlock(b, lt)).join("")}</div>` +
     `</details>`
   );
 }
 
 /** Plain-language summary — privacy page only (ADR-0110 ②). */
-function renderTldr(): string {
+function renderTldr(lt: Tr = HU_TR): string {
   return (
-    `<section class="cit-lg-tldr" aria-label="Röviden">` + // i18n-exempt: legal pack (§H.22)
+    `<section class="cit-lg-tldr" aria-label="${lt("Röviden")}">` + // i18n-exempt: legal pack (§H.22)
     `<div class="cit-lg-tldr__head">` +
     `<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" ` +
     `stroke-linecap="round" stroke-linejoin="round">` +
     `<path d="M10 2.2 16.4 4.6v5.1c0 4-2.7 7-6.4 8.1-3.7-1.1-6.4-4.1-6.4-8.1V4.6L10 2.2Z"/>` +
     `<path d="m7.3 10.1 1.9 1.9 3.5-3.7"/></svg>` +
-    `<h2>Röviden</h2></div>` + // i18n-exempt: legal pack (§H.22)
-    `<ul>${TENANT_PRIVACY_TLDR.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` +
-    `<p class="cit-lg-tldr__note">Ez az összefoglaló a tájékozódást segíti; a kötelező ` + // i18n-exempt: legal pack (§H.22)
-    `tartalmat az alábbi részletes szakaszok adják.</p>` +
+    `<h2>${lt("Röviden")}</h2></div>` + // i18n-exempt: legal pack (§H.22)
+    `<ul>${TENANT_PRIVACY_TLDR.map((t) => `<li>${esc(lt(t))}</li>`).join("")}</ul>` +
+    `<p class="cit-lg-tldr__note">${lt("Ez az összefoglaló a tájékozódást segíti; a kötelező " + // i18n-exempt: legal pack (§H.22)
+    "tartalmat az alábbi részletes szakaszok adják.")}</p>` +
     `</section>`
   );
 }
@@ -133,8 +149,27 @@ function renderTldr(): string {
  * tenant who has not filled anything in yet. Name and tax number are optional
  * INSIDE the strip; the two links are not.
  */
-export function renderLegalStrip(who: TenantLegalIdentity): string {
-  const tax = who.taxNumber ? `<span>Adószám: ${esc(who.taxNumber)}</span>` : ""; // i18n-exempt: legal pack (§H.22)
+export function renderLegalStrip(
+  who: TenantLegalIdentity,
+  /** ORSZÁG-RÉTEG 3/7: the tenant country's pack + local items; HU (unchanged) without them. */
+  pack?: LegalPack | null,
+  local: CountryLegalLocal = NO_LOCAL_ITEMS,
+): string {
+  const lt = trOf(pack);
+  const taxLabel = lt(local.taxIdLabel ?? "Adószám"); // i18n-exempt: legal pack (§H.22)
+  const tax = who.taxNumber ? `<span>${esc(taxLabel)}: ${esc(who.taxNumber)}</span>` : "";
+  // The country's registry items that must be visible on EVERY page (IT CIN, PT AL-szám and
+  // the complaints-book link…). None for the Hungarian pack → the strip is the old one.
+  const localItems = local.fields
+    .filter((f) => f.where.includes("strip"))
+    .flatMap((f) => {
+      const v = localValue(who, f);
+      if (!v) return [];
+      return f.kind === "url"
+        ? [`<a href="${esc(v)}" rel="noopener">${esc(lt(f.label))}</a>`]
+        : [`<span>${esc(lt(f.label))}: ${esc(v)}</span>`];
+    })
+    .join("");
   return `
 <style>
   .cit-legal-strip { background: color-mix(in srgb, var(--cit-ink) 92%, var(--cit-accent));
@@ -163,10 +198,10 @@ export function renderLegalStrip(who: TenantLegalIdentity): string {
       </svg>${who.legalName ? esc(who.legalName) : ""}
     </span>
     ${who.legalName && who.taxNumber ? `<span class="cit-legal-strip__sep">·</span>` : ""}
-    ${tax}
+    ${tax}${localItems}
     <span class="cit-legal-strip__links">
-      <a href="${TENANT_LEGAL_PATHS.privacy}">Adatkezelés</a>
-      <a href="${TENANT_LEGAL_PATHS.imprint}">Impresszum</a>
+      <a href="${TENANT_LEGAL_PATHS.privacy}">${lt("Adatkezelés")}</a>
+      <a href="${TENANT_LEGAL_PATHS.imprint}">${lt("Impresszum")}</a>
     </span>
   </div>
 </div>`;
@@ -179,8 +214,13 @@ export function renderLegalStrip(who: TenantLegalIdentity): string {
  * place to change, and template no. 17 gets it for free (ADR-0089: "egy ponton
  * vágunk"). No-op when we hold no legal facts at all.
  */
-export function withLegalStrip(html: string, who: TenantLegalIdentity): string {
-  const strip = renderLegalStrip(who);
+export function withLegalStrip(
+  html: string,
+  who: TenantLegalIdentity,
+  pack?: LegalPack | null,
+  local: CountryLegalLocal = NO_LOCAL_ITEMS,
+): string {
+  const strip = renderLegalStrip(who, pack, local);
   if (!strip) return html;
   return html.includes("</body>") ? html.replace("</body>", `${strip}\n</body>`) : html + strip;
 }
@@ -372,29 +412,39 @@ export function renderTenantLegalPage(opts: {
   readonly host: HostingProviderIdentity;
   /** From the buyer record: a private person owes no registry number or tax number. */
   readonly buyerType?: "individual" | "business" | null;
+  /** ORSZÁG-RÉTEG 3/7: the tenant country's COMPLETE pack; absent/HU = the Hungarian page. */
+  readonly pack?: LegalPack | null;
 }): string {
   const { recipe, data, kind, who, host } = opts;
   const skin = SKINS[recipe.skin] ?? SKINS[Object.keys(SKINS)[0]!]!;
+  const lt = trOf(opts.pack);
+  const home = !opts.pack || opts.pack.home;
+  const local = home ? NO_LOCAL_ITEMS : legalLocalFor(opts.pack!.country);
+  // A country pack translates the wording with the provider's name as a {{host}} slot (the
+  // key may not depend on the env's legal name); filled in after rendering, below.
+  const hostForText = home ? host : { ...host, name: HOST_SLOT };
   const sections =
     kind === "privacy"
-      ? tenantPrivacySections(who, host)
-      : tenantImprintSections(who, host, opts.buyerType ?? "business");
+      ? tenantPrivacySections(who, hostForText)
+      : tenantImprintSections(who, hostForText, opts.buyerType ?? "business", local);
   const other: TenantLegalKind = kind === "privacy" ? "imprint" : "privacy";
-  const lang = data.lang ?? "hu";
+  // The legal page speaks the PACK's language (the country's), not the guest page's.
+  const lang = home ? (data.lang ?? "hu") : opts.pack!.lang;
+  const title = (k: TenantLegalKind) => lt(PAGE_TITLE[k]);
 
   const toc =
-    `<nav class="cit-lg-toc" aria-label="Tartalomjegyzék">` + // i18n-exempt: legal pack (§H.22)
-    `<p class="cit-lg-toc__title">Tartalom</p><ol>` + // i18n-exempt: legal pack (§H.22)
-    sections.map((s) => `<li><a href="#${esc(s.id)}">${esc(s.heading)}</a></li>`).join("") +
+    `<nav class="cit-lg-toc" aria-label="${esc(lt("Tartalomjegyzék"))}">` + // i18n-exempt: legal pack (§H.22)
+    `<p class="cit-lg-toc__title">${esc(lt("Tartalom"))}</p><ol>` + // i18n-exempt: legal pack (§H.22)
+    sections.map((s) => `<li><a href="#${esc(s.id)}">${esc(lt(s.heading))}</a></li>`).join("") +
     `</ol><p class="cit-lg-toc__foot"><a href="${TENANT_LEGAL_PATHS[other]}">` +
-    `${esc(PAGE_TITLE[other])}</a></p></nav>`;
+    `${esc(title(other))}</a></p></nav>`;
 
-  return `<!doctype html>
+  const page = `<!doctype html>
 <html lang="${esc(lang)}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${esc(PAGE_TITLE[kind])} — ${esc(data.name)}</title>
+  <title>${esc(title(kind))} — ${esc(data.name)}</title>
   ${renderSkinFontLinks(skin)}
   <style>
   ${renderSkinVars(skin, data.palette?.accent)}
@@ -405,28 +455,63 @@ ${PAGE_CSS}
   <nav class="cit-lg-nav">
     <div class="cit-lg-nav__inner">
       <a class="cit-lg-brand" href="/">${esc(data.name)}</a>
-      <a class="cit-lg-back" href="/">Vissza a honlapra</a>
+      <a class="cit-lg-back" href="/">${lt("Vissza a honlapra")}</a>
     </div>
   </nav>
   <main class="cit-lg-doc">
-    <p class="cit-lg-crumb"><a href="/">Kezdőlap</a> › ${esc(PAGE_TITLE[kind])}</p>
+    <p class="cit-lg-crumb"><a href="/">${lt("Kezdőlap")}</a> › ${esc(title(kind))}</p>
     ${toc}
     <div class="cit-lg-body-col">
-      <h1 class="cit-lg-title">${esc(PAGE_TITLE[kind])}</h1>
-      <p class="cit-lg-meta">${esc(PAGE_LEAD[kind])}</p>
-      ${kind === "privacy" ? renderTldr() : ""}
-      ${sections.map(renderSection).join("")}
+      <h1 class="cit-lg-title">${esc(title(kind))}</h1>
+      <p class="cit-lg-meta">${esc(lt(PAGE_LEAD[kind]))}</p>
+      ${kind === "privacy" ? renderTldr(lt) : ""}
+      ${sections.map((s, i) => renderSection(s, i, lt)).join("")}
     </div>
   </main>
   <footer class="cit-lg-foot">
     <div class="cit-lg-foot__inner">
       <span>© ${esc(data.name)}</span>
-      <span><a href="${TENANT_LEGAL_PATHS[other]}">${esc(PAGE_TITLE[other])}</a></span>
+      <span><a href="${TENANT_LEGAL_PATHS[other]}">${esc(title(other))}</a></span>
     </div>
   </footer>
-  ${renderLegalStrip(who)}
+  ${renderLegalStrip(who, opts.pack, local)}
   <script>${PAGE_JS}</script>
 </body>
 </html>
 `;
+  return home ? page : page.replaceAll(HOST_SLOT, esc(host.name));
+}
+
+const HOST_SLOT = "{{host}}";
+
+/**
+ * ORSZÁG-RÉTEG 3/7: every wording these pages (and the strip) can print for a tenant of
+ * `country` — what its pack must translate. Collected by RENDERING the pages through a
+ * recording translator over the variants that switch rows on and off (all facts present /
+ * none, business / private person), so a wording added to the renderer can never be missed
+ * by the completeness count.
+ */
+export function tenantLegalPageSources(country: string): [LegalDoc, string][] {
+  const local = legalLocalFor(country);
+  const out: [LegalDoc, string][] = [];
+  const full: TenantLegalIdentity = {
+    legalName: "x", address: "x", taxNumber: "x", regNumber: "x", ntakId: "x", email: "x", phone: "x",
+    local: Object.fromEntries(local.fields.map((f) => [f.id, "x"])),
+  };
+  const empty: TenantLegalIdentity = {
+    legalName: null, address: null, taxNumber: null, regNumber: null, ntakId: null, email: null, phone: null, local: {},
+  };
+  const host: HostingProviderIdentity = { name: "{{host}}", address: null, email: "x", site: "x", phone: null };
+  const recipe = { skin: "" } as unknown as Recipe;
+  const data = { name: "x", lang: "hu" } as unknown as SiteData;
+  const recorder = (doc: LegalDoc): LegalPack => ({
+    country, lang: "hu", home: false, stamp: "", t: (hu) => (out.push([doc, hu]), hu),
+  });
+  for (const who of [full, empty]) {
+    for (const buyerType of ["business", "individual"] as const) {
+      renderTenantLegalPage({ recipe, data, kind: "imprint", who, host, buyerType, pack: recorder("tenant_imprint") });
+      renderTenantLegalPage({ recipe, data, kind: "privacy", who, host, buyerType, pack: recorder("tenant_privacy") });
+    }
+  }
+  return out;
 }
