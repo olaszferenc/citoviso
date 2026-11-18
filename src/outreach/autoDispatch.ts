@@ -162,6 +162,69 @@ export async function requeueDispatch(leadId: string, by: string): Promise<boole
   return Number(r.numUpdatedRows) > 0;
 }
 
+/** The note prefix that marks a RESEND row (requeueResend); the tick reads it to lift the contacted gate. */
+export const RESEND_NOTE_PREFIX = "ÚJRAKÜLDÉS";
+
+/**
+ * ADR-0459 follow-up (owner 2026-11-18, „küldjük az elbukott gmaileseknek”): put an already-SENT
+ * lead back on the go list because its letter is known to have been lost (the main domain's
+ * Gmail spam window, 2026-11-16 11:05 → 11-18 12:30). The prospect's e-mail stamp is lifted so
+ * sendOutreachMail's per-row one-shot opens, the dispatch row goes back to `queued` with its
+ * ORIGINAL queued_at (it sorts before newer leads of the same rank) and a note the tick reads
+ * (RESEND_NOTE_PREFIX → the contacted gate is skipped for this one row). Every other gate — §C,
+ * window, cap, unsubscribe, reply, customer, address one-shot, photo, verdicts — runs again.
+ * Refused when the lead answered, unsubscribed, viewed the plan (a human, not a bot), or is a
+ * customer: those are not "lost" letters.
+ */
+export async function requeueResend(
+  leadId: string,
+  by: string,
+  reason: string,
+): Promise<{ ok: true; prospectId: string; originalSentAt: Date } | { ok: false; reason: string }> {
+  const row = await db
+    .selectFrom("outreach_dispatch")
+    .select(["id", "status", "prospect_id", "note"])
+    .where("lead_id", "=", leadId)
+    .executeTakeFirst();
+  if (!row) return { ok: false, reason: "nincs a kiküldési sorban" };
+  if (row.status !== "sent") return { ok: false, reason: `a sor állapota ${row.status}, nem 'sent'` };
+  if (row.note?.startsWith(RESEND_NOTE_PREFIX)) return { ok: false, reason: "már újraküldésre jelölve" };
+  const p = await db
+    .selectFrom("prospect")
+    .select(["id", "email_sent_at", "unsubscribed_at", "status"])
+    .where("lead_id", "=", leadId)
+    .where("email_sent_at", "is not", null)
+    .where("archived_at", "is", null)
+    .orderBy("email_sent_at", "desc")
+    .executeTakeFirst();
+  if (!p?.email_sent_at) return { ok: false, reason: "nincs kiküldött e-mailje" };
+  if (p.unsubscribed_at) return { ok: false, reason: "leiratkozott" };
+  if (p.status === "order_intent" || p.status === "converted") return { ok: false, reason: `a prospect állapota ${p.status}` };
+  const replied = await db.selectFrom("outreach_reply").select("id").where("lead_id", "=", leadId).executeTakeFirst();
+  if (replied) return { ok: false, reason: "válaszolt" };
+  const viewed = await db
+    .selectFrom("mock_view")
+    .select("id")
+    .where("prospect_id", "=", p.id)
+    .where((eb) => eb.or([eb("device", "is", null), eb("device", "<>", "bot")]))
+    .executeTakeFirst();
+  if (viewed) return { ok: false, reason: "megnézte a tervet — a levél célba ért" };
+  const original = new Date(p.email_sent_at as Date | string);
+  await db.transaction().execute(async (trx) => {
+    await trx.updateTable("prospect").set({ email_sent_at: null }).where("id", "=", p.id).execute();
+    await trx
+      .updateTable("outreach_dispatch")
+      .set({
+        status: "queued",
+        attempts: 0,
+        note: `${RESEND_NOTE_PREFIX} (${reason}; eredeti e-mail ${original.toISOString().slice(0, 16)}; ${by})`.slice(0, 1000),
+      })
+      .where("id", "=", row.id)
+      .execute();
+  });
+  return { ok: true, prospectId: p.id, originalSentAt: original };
+}
+
 export async function cancelDispatch(leadId: string, by: string, reason: string): Promise<boolean> {
   const r = await db
     .updateTable("outreach_dispatch")
@@ -176,8 +239,8 @@ export async function cancelDispatch(leadId: string, by: string, reason: string)
  * Why this lead must not get a FIRST contact anymore, or null. `twin`: the lead itself was not
  * contacted, but a lead sharing its e-mail or phone was (one owner, one outreach) → held.
  */
-async function alreadyContacted(leadId: string): Promise<{ reason: string; twin: boolean } | null> {
-  const p = await db
+async function alreadyContacted(leadId: string, opts: { ignoreOwnStamps?: boolean } = {}): Promise<{ reason: string; twin: boolean } | null> {
+  const p = opts.ignoreOwnStamps ? undefined : await db
     .selectFrom("prospect")
     .select(["id"])
     .where("lead_id", "=", leadId)
@@ -261,7 +324,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   const claimed = await db.transaction().execute(async (trx) => {
     const row = await trx
       .selectFrom("outreach_dispatch")
-      .select(["id", "lead_id", "artifact_id"])
+      .select(["id", "lead_id", "artifact_id", "note"])
       .where("status", "=", "queued")
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
@@ -292,7 +355,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .executeTakeFirst();
     result = answered
       ? { status: "skipped", note: "nem küldjük: a lead már válaszolt vagy leiratkozott (tulaj-szabály 2026-10-26)" }
-      : await dispatchOne(claimed.lead_id, claimed.artifact_id);
+      : await dispatchOne(claimed.lead_id, claimed.artifact_id, { resend: Boolean(claimed.note?.startsWith(RESEND_NOTE_PREFIX)) });
   } catch (e) {
     result = { status: "held", note: `hiba: ${(e as Error).message}`.slice(0, 500) };
   }
@@ -326,8 +389,11 @@ export const EMAIL_UNCHECKED_OK_KEY = "email_unchecked_ok";
 async function dispatchOne(
   leadId: string,
   artifactId: string,
+  opts: { resend?: boolean } = {},
 ): Promise<{ status: "sent" | "held" | "skipped"; note: string; prospectId?: string }> {
-  const contacted = await alreadyContacted(leadId);
+  // A RESEND row (requeueResend) is contacted by definition — its own lost letter is why it is
+  // here — so only the twin half of the gate applies; everything downstream runs unchanged.
+  const contacted = await alreadyContacted(leadId, { ignoreOwnStamps: opts.resend === true });
   // A twin (another lead on the same contact got the outreach) is held: a person decides.
   if (contacted) return { status: contacted.twin ? "held" : "skipped", note: contacted.reason };
 

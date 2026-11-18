@@ -13,6 +13,8 @@
 //        the cold lane's ramp (coldRamp.ts): the day's total climbs from startCap by growth% per
 //        working day up to max; each firing sends its even share; the brake judges yesterday
 //   tsx scripts/outreach-dispatch.mts ramp release | ramp off        # lift the brake's hold / no ramp (static caps)
+//   tsx scripts/outreach-dispatch.mts resend-spam --by=<name> [--dry-run] [--limit=n] [--since=ISO] [--until=ISO]
+//        ADR-0459: the Gmail letters lost in the main domain's spam window go back on the list (requeueResend)
 //   tsx scripts/outreach-dispatch.mts list [--status=held]
 //   tsx scripts/outreach-dispatch.mts attach-second --sent [--dry-run]
 //        owner 2026-10-26: the links the timer already SENT with one plan get the second
@@ -30,10 +32,12 @@ import {
   enqueueDispatch,
   getAutoDispatchSettings,
   requeueDispatch,
+  requeueResend,
   runDispatchTick,
   sentToday,
   setAutoDispatchSettings,
 } from "../src/outreach/autoDispatch.js";
+import { sql } from "kysely";
 import { parseColdRamp, tickAllowance } from "../src/outreach/coldRamp.js";
 import { budapestIsoDay } from "../src/text/budapestTime.js";
 
@@ -150,6 +154,44 @@ async function main(): Promise<void> {
       const leadId = pos[0];
       if (!leadId || !UUID.test(leadId)) throw new Error("requeue <leadId>");
       console.log((await requeueDispatch(leadId, needBy())) ? "OK újra sorban" : "nincs tartott/visszavont sora");
+      return;
+    }
+    case "resend-spam": {
+      // ADR-0459 follow-up: the Gmail recipients whose letter fell into the main domain's spam window
+      // (2026-11-16 11:05 → 11-18 12:30) go back on the go list for the cold lane. Only lost letters:
+      // no human view, no reply, no unsubscribe, not a customer; requeueResend re-checks each one.
+      const by = needBy();
+      const dry = flag("dry-run");
+      const limit = Number(opt("limit") ?? "1000");
+      const since = opt("since") ?? "2026-11-16T11:05:00+01:00";
+      const until = opt("until") ?? "2026-11-18T12:30:00+01:00";
+      const rows = await db
+        .selectFrom("prospect as p")
+        .innerJoin("outreach_dispatch as d", "d.lead_id", "p.lead_id")
+        .innerJoin("lead as l", "l.id", "p.lead_id")
+        .select(["p.id as prospectId", "p.lead_id as leadId", "p.contact_email as email", "p.email_sent_at as sentAt", "l.name as name"])
+        .where("d.status", "=", "sent")
+        .where("p.email_sent_at", ">=", new Date(since))
+        .where("p.email_sent_at", "<=", new Date(until))
+        .where("p.archived_at", "is", null)
+        .where(sql<boolean>`lower(split_part(p.contact_email, '@', 2)) in ('gmail.com', 'googlemail.com')`)
+        .orderBy("p.email_sent_at")
+        .limit(limit)
+        .execute();
+      let ok = 0;
+      let refused = 0;
+      for (const r of rows) {
+        if (dry) {
+          console.log(`DRY ${r.email} · ${r.name} · ${new Date(r.sentAt as Date).toISOString().slice(0, 16)}`);
+          ok++;
+          continue;
+        }
+        const res = await requeueResend(r.leadId, by, "Gmail-spam ablak 11-16 11:05 → 11-18 12:30, citoviso.com");
+        if (res.ok) ok++;
+        else refused++;
+        console.log(res.ok ? `OK újra sorban: ${r.email} · ${r.name}` : `NEM: ${r.email} · ${r.name} — ${res.reason}`);
+      }
+      console.log(`${dry ? "DRY " : ""}összesen: ${ok} sorba, ${refused} elutasítva (${rows.length} jelölt)`);
       return;
     }
     case "cancel": {
