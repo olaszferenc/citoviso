@@ -116,6 +116,24 @@ export interface RateSample {
 }
 
 /**
+ * Pure: the brake judged PER CHANNEL (owner 2026-11-18, „menjen élesre”). A mixed history compared
+ * WhatsApp sends (0 recorded reads — the blue ticks are not read back) with old Viber reads, so the
+ * brake re-tripped minutes after every lift (11-17 09:02 → 09:04). Each channel is now measured only
+ * against itself; the first channel with a verdict trips the brake, its name leading the reason.
+ */
+export function channelBrakeVerdict(
+  samples: readonly (RateSample & { readonly channel: MessengerChannel })[],
+): string | null {
+  const byChannel = new Map<MessengerChannel, RateSample[]>();
+  for (const s of samples) byChannel.set(s.channel, [...(byChannel.get(s.channel) ?? []), s]);
+  for (const [channel, xs] of byChannel) {
+    const v = brakeVerdict(xs);
+    if (v) return `${channel === "whatsapp" ? "WhatsApp" : "Viber"}: ${v}`;
+  }
+  return null;
+}
+
+/**
  * Pure: the brake's verdict on settled sends, oldest first. The last BRAKE_RECENT against
  * all of them: a read or reply rate that fell under HALF of the overall one trips it.
  * The reply rate is judged only once the history holds at least 5 replies (one reply less
@@ -164,7 +182,7 @@ export async function tripBrake(reason: string, now: Date = new Date()): Promise
 async function evaluateRateBrake(now: Date): Promise<void> {
   const rows = await db
     .selectFrom("mms_outbox as o")
-    .select(["o.read_at", "o.prospect_id", "o.sent_at"])
+    .select(["o.read_at", "o.prospect_id", "o.sent_at", "o.channel"])
     .where("o.channel", "in", ["viber", "whatsapp"])
     .where("o.sent_at", "<=", new Date(now.getTime() - BRAKE_SETTLE_MS))
     .orderBy("o.sent_at", "asc")
@@ -174,13 +192,19 @@ async function evaluateRateBrake(now: Date): Promise<void> {
     (
       await db
         .selectFrom("outreach_reply")
-        .select("prospect_id")
+        .select(sql<string>`channel || ':' || prospect_id`.as("k"))
         .where("channel", "in", ["viber", "whatsapp"])
         .where("prospect_id", "is not", null)
         .execute()
-    ).map((r) => r.prospect_id),
+    ).map((r) => r.k),
   );
-  const verdict = brakeVerdict(rows.map((r) => ({ read: !!r.read_at, replied: !!r.prospect_id && replied.has(r.prospect_id) })));
+  const verdict = channelBrakeVerdict(
+    rows.map((r) => ({
+      channel: r.channel as MessengerChannel,
+      read: !!r.read_at,
+      replied: !!r.prospect_id && replied.has(`${r.channel}:${r.prospect_id}`),
+    })),
+  );
   if (verdict) await tripBrake(verdict, now);
 }
 

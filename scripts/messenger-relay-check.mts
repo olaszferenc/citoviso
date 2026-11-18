@@ -26,6 +26,7 @@
 //      channel 'whatsapp' (never the ladder); its failure is final (never an MMS retry, no alert); its
 //      ack runs NO bookkeeping and NO SMS; the Viber row leaves the tab, the WhatsApp row joins it 3 days later
 //   ⑧ brakeVerdict (pure): no verdict under 40; a halved read rate trips; a steady one does not;
+//   ⑧b channelBrakeVerdict: each channel judged against itself only (owner 2026-11-18);
 //      the reply rate is judged only from 5 replies on
 //
 // Usage: npx tsx scripts/messenger-relay-check.mts
@@ -434,6 +435,14 @@ try {
     say(m.brakeVerdict(mk(60, (i) => i % 4 !== 0)) === null, "⑧ egyenletes olvasási arány nem állít le");
     say(m.brakeVerdict(mk(60, () => true, (i) => i < 4)) === null, "⑧ 5 válasz alatt a válasz-arány nem számít");
     say(/válasz-arány/.test(m.brakeVerdict(mk(60, () => true, (i) => i < 40 && i % 5 === 0)) ?? ""), "⑧ a felére esett válasz-arány leállít");
+    // ⑧b Owner 2026-11-18: per channel — WhatsApp (0 reads recorded) is not measured against old Viber reads.
+    const ch = (c: "viber" | "whatsapp", xs: { read: boolean; replied: boolean }[]) => xs.map((x) => ({ ...x, channel: c }));
+    const viberOld = ch("viber", mk(40, (i) => i % 3 === 0));
+    const waNoReads = ch("whatsapp", mk(52, () => false));
+    say(/olvasási/.test(m.brakeVerdict([...viberOld, ...waNoReads]) ?? ""), "⑧b vegyes történetre a régi ítélet leállított (11-17 hiba)");
+    say(m.channelBrakeVerdict([...viberOld, ...waNoReads]) === null, "⑧b csatornánként: a WhatsApp nem a Viberhez mérődik, nincs leállás");
+    const waDrop = ch("whatsapp", mk(60, (i) => (i < 40 ? i % 4 !== 0 : i % 4 === 0)));
+    say(/^WhatsApp: .*olvasási/.test(m.channelBrakeVerdict([...viberOld, ...waDrop]) ?? ""), "⑧b a saját csatornáján felére esett arány leállít, a csatorna neve az okban");
   }
   {
     // ⑭ Owner 2026-11-16 („whatsappon … csak olyan ahol nincs email”): e-mail out → no mobile message.
