@@ -255,11 +255,11 @@ export function buildOutreachEmail(
 
   const html =
     `<!DOCTYPE html><html lang="${opts.lang || "hu"}"><body style="margin:0;padding:0;background:${PAGE_BG}">` +
-    // Hidden preheader (owner, 2026-11-16): the inbox list shows THIS under the subject,
-    // not the first visible line. The zero-width filler keeps the greeting out of the
-    // snippet. Hidden everywhere incl. Outlook (mso-hide).
-    `<div style="display:none;font-size:1px;line-height:1px;max-height:0;overflow:hidden;opacity:0;mso-hide:all;color:${PAGE_BG}">` +
-    `${esc(T(opts.lang, "Elkészült a honlapja, nézze meg!"))}${"&#847;&zwnj;&nbsp;".repeat(60)}</div>` +
+    // Inbox snippet line — VISIBLE, first text of the letter (owner 2026-11-18). The 11-16 hidden preheader
+    // (display:none text + 60 invisible filler chars) coincided with opens falling from 17% to 1–3% (Gmail
+    // spam placement): hidden text is a classic spam signal, so nothing in this letter may be hidden.
+    `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:center;padding:12px 16px 0">` +
+    `${esc(T(opts.lang, "Elkészült a honlapja, nézze meg!"))}</div>` +
     inner +
     `</body></html>`;
 

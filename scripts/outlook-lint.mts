@@ -189,6 +189,10 @@ const LETTERS: readonly { name: string; html: string }[] = [
 ];
 
 const failures = LETTERS.flatMap((l) => run(l.html).map((f) => `${l.name}: ${f}`));
+// Owner 2026-11-18: the cold letter carries NO hidden text. The 11-16 hidden preheader (display:none +
+// 60 invisible filler chars) coincided with opens falling from 17% to 1–3% (spam placement).
+if (/display\s*:\s*none|mso-hide|&zwnj;|&#847;/i.test(html)) failures.push("hideg megkereső levél: rejtett szöveg van benne (display:none / mso-hide / láthatatlan töltelék) — spamjel, tulaj 2026-11-18");
+if (!html.includes("Elkészült a honlapja, nézze meg!")) failures.push("hideg megkereső levél: hiányzik a látható első sor „Elkészült a honlapja, nézze meg!”");
 
 // ── ÖNTESZT: az őrnek pirosra is kell tudnia menni ───────────────────────────
 // Guards that can only pass are decoration. Each mutation reproduces one real
