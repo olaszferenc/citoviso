@@ -320,6 +320,20 @@ try {
   const night = await sendEscalationFollowups(new Date("2026-10-01T03:00:00+02:00"), { sender: fake, onlyProspects: mine });
   check("⑨ éjjel (03:00 Budapest): semmi nem megy ki, a futás halasztást jelez", [sent.length, !!night.deferred, await stamp()], [0, true, null]);
 
+  // ⑨b Owner 2026-11-18: the stop switch holds the letter even inside the window; switched back, it goes.
+  {
+    const { getSetting, setSetting } = await import("../src/console/appSettings.js");
+    const prev = await getSetting("escalation_followup");
+    await setSetting("escalation_followup", JSON.stringify({ enabled: false }));
+    try {
+      const off = await sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine });
+      check("⑨b kikapcsolva (escalation_followup): ablakon belül sem megy ki, halasztást jelez", [sent.length, !!off.deferred, await stamp()], [0, true, null]);
+    } finally {
+      if (prev === null) await db.deleteFrom("app_setting").where("key", "=", "escalation_followup").execute();
+      else await setSetting("escalation_followup", prev);
+    }
+  }
+
   const [r1, r2] = await Promise.all([
     sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine }),
     sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine }),
