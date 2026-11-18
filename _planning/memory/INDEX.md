@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md](2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md) — 2026-11-18 — Portál-feltöltés felmérés + a 368 megnyitó portál-jelenléte
 - [2026-11-17_tervvaltas_csomag_zaras.md](2026-11-17_tervvaltas_csomag_zaras.md) — 2026-11-17 — Tervváltás-csomag zárása (élesítés 22ffe575, deploy-kapu türelem, SUB-ok archiválva)
 - [2026-11-17_orszag_reteg_3_6_mock_nyelv.md](2026-11-17_orszag_reteg_3_6_mock_nyelv.md) — 2026-11-17 — Ország-réteg 3/6: mock és nyelv (SUB `citf44663e7`, koordinátor `cit9b4690e3`)
 - [2026-11-17_orszag_reteg_3_5_kikuldes.md](2026-11-17_orszag_reteg_3_5_kikuldes.md) — 2026-11-17 — Ország-réteg 3/5: kiküldés a lead országában (cit c737a035)

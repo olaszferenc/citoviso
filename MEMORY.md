@@ -7990,6 +7990,7 @@ Stack (MVP): Node/TS, Postgres (RLS+JSONB), Playwright, Claude API; build-vs-buy
 DB-n fut). Szerverek systemd alatt: konzol :4600, publikus :4800 (`tsx watch`, önjavító).
 
 ## Nyitott kérdések (szándékosan elhalasztva a folyamat-modellig)
+- 2026-11-18 · PORTÁL-FELTÖLTÉS FELDERÍTÉS (`cit5926a648`, ADR-0448, a tulaj így zárta): a 368 megnyitó portál-jelenléte kész és elküldve; felajánlva, nem kérve: a 220 Szállás.hu-s megnyitó hirdetés-állapotának felmérése (csak keresésből). Jegyzet `_planning/memory/2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md`.
 - 2026-11-17 · LEMEZ-TAKARÍTÁS CIT (`cita0e87ef5`, OF brief `takaritas-20261116.md`, a tulaj így zárta): (1) tulaj-döntésre vár: kapja-e az MR (`mineral`, 25G a Debian `/`-on) ugyanezt a takarítási briefet; (2) felajánlva, nem kérve: a tele swap (9,8/9,9G) okainak átnézése (a napok óta futó sessionök memóriája). Jegyzet `_planning/memory/2026-11-17_lemez_takaritas_cit.md`.
 - 2026-11-12 · BABA A NYITÓRÉSZBEN (`cit6a02c689`, a tulaj így zárta): (1) a `d652c13d` repó-őr (kurátori kapu + vendég-kritikus `baba_nyitas`) a következő deployjal megy ki; (2) felajánlva, nem kérve: a valódi felszereltség-kiemelések („Kiságy és etetőszék”) és a Relax/Platán gyerekes szövegei maradtak — levétel csak a tulaj szavára.
 - 2026-11-05 · PRÓBÁZÓ ESZKALÁCIÓ (`cit2dea6649`, ADR-0425, élesen e34e4c1b): a 4. napi piros jelzéshez koordinátor-jegy (VPS → dev gép híd, mint a `valasz-watch.py`) még nincs — most csak konzol-jelzés.
