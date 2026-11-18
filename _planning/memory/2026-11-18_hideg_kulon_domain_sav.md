@@ -42,7 +42,14 @@ deploy; `outreach-dispatch.mts ramp 100 --growth=30 --max=3000`; `on`. A fő fá
 
 ## Nyitott
 
-- A 11-16 du.–11-18 közt spambe ment ~480 Gmail-címzett újraküldése az új domainről (a sor mögé; csak aki nem
-  nézte/nem válaszolt/nem iratkozott le) — a `sendOutreachMail` egyszer-küld kapuja miatt külön szkript kell.
+- ~~A spambe ment Gmail-címzettek újraküldése~~ → KÉSZ az este: 40 ment ki 11-18-án 17:47–18:30 között
+  (`/opt/citoviso/resend-gmail.mts`, transient unit, 1 levél/perc), a maradék 437 a `resend-spam` paranccsal a
+  kiküldő sorába került (5 elutasítva: megnézték; ÚJRAKÜLDÉS-jel, `requeueResend`, éles `924374db`,
+  `prod/20261118-1818` — a 18:15-ös idegen hotfix-deploy után újra), holnap 8:00-tól a felfutás
+  keretében (100/nap) mennek, a rangjukon belül elöl. A 11-19-i fék-ítélet kihagyva (`judgedDay=2026-11-19`),
+  mert a 11-18-i küldések zöme a citoviso.com-ról ment spambe — az első valódi ítélet 11-20 reggel.
+- A mai hotfix-tanulság: cherry-pick a main importlistájára épít → a hotfix-ágon ReferenceError élesen
+  (`getAutoDispatchSettings`); a tsc a `scripts/`-et nem fedi. Hotfix után a célszkriptet élesen egyszer kézzel
+  futtatni (`tick`), mielőtt a timer megy.
 - Postmaster Tools a getcitoviso.com-ra; Websupport 300/óra/fiók → napi ~2 700 felett második postafiók.
 - A citoviso.com hírneve: onnan hideg levél nem megy; helyreállás szakértői becslés 5–8 hét.
