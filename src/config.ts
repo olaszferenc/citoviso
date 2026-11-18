@@ -79,6 +79,26 @@ export const config = {
   smtpUrl: env("SMTP_URL"),
   outreachFrom: env("OUTREACH_FROM"),
   /**
+   * The COLD-OUTREACH LANE (owner, 2026-11-18; src/outreach/coldLane.ts has the why): the cold
+   * letter, its non-opener follow-up, the behaviour message and the escalation go out over THIS
+   * transport, from THIS mailbox, DKIM-signed with OUR key (the hosting's "DKIM enabled" switch
+   * signs nothing — measured 2026-11-18), and every link in them starts with `baseUrl`. Customer
+   * mail (login, invoices, booking) stays on SMTP_URL / OUTREACH_FROM. All unset → no lane, the
+   * old single-transport behaviour.
+   */
+  coldOutreach: {
+    /** smtp://user:pass@host:587?requireTLS=true of the cold mailbox. */
+    smtpUrl: env("COLD_OUTREACH_SMTP_URL"),
+    /** `Citoviso <ajanlat@getcitoviso.com>` — a mailbox ON the cold domain (SPF/DKIM/DMARC alignment). */
+    from: env("COLD_OUTREACH_FROM"),
+    /** https://getcitoviso.com — the links' origin; the edge routes it like the platform host. */
+    baseUrl: env("COLD_OUTREACH_BASE_URL"),
+    /** DKIM selector (`cit1`) whose public key sits at <selector>._domainkey.<cold domain>. */
+    dkimSelector: env("COLD_OUTREACH_DKIM_SELECTOR"),
+    /** PEM file of the matching private key (mode 600, outside the repo). */
+    dkimKeyFile: env("COLD_OUTREACH_DKIM_KEY_FILE"),
+  },
+  /**
    * From address for guest booking mail (approved plan 2026-09-06):
    * foglalas@citoviso.com once the Zoho alias exists. MUST be a verified alias of
    * the SMTP account or Zoho rejects the send — empty falls back to OUTREACH_FROM,

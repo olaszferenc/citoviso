@@ -28,6 +28,7 @@ import type { EmailAttachment, EmailMessage } from "./sender.js";
 import { bandBrand } from "./platformLayout.js";
 import { senderSignature, signatureBlock, type SignatureBlock } from "./signature.js";
 import { tagLink, tagLinkInText, type OpenViaTag } from "../outreach/openVia.js";
+import { coldHost } from "../outreach/coldLane.js";
 
 /** CID of the embedded hero screenshot (referenced from the HTML). */
 export const HERO_CID = "hero-terv";
@@ -238,7 +239,8 @@ export function buildOutreachEmail(
 
   const hasShot = Boolean(opts.heroShotPath);
   const brand = bandBrand();
-  const sig = signatureBlock(senderSignature(draft.parts, opts.lang, T(opts.lang, "Üdvözlettel,"), config.outreachSender.title));
+  // The W row names the cold-lane host: a letter from getcitoviso.com mentions ONE domain.
+  const sig = signatureBlock(senderSignature(draft.parts, opts.lang, T(opts.lang, "Üdvözlettel,"), config.outreachSender.title, coldHost()));
   const inner = buildMail(
     hasShot ? `cid:${HERO_CID}` : null,
     draft.parts,
@@ -296,6 +298,8 @@ export function buildOutreachEmail(
   return {
     to,
     audience: "platform",
+    // The cold-outreach lane: own domain, own SMTP, own DKIM (src/outreach/coldLane.ts).
+    lane: "cold",
     subject: draft.subject,
     text: opts.openVia ? tagLinkInText(draft.body, draft.link, opts.openVia) : draft.body,
     html,

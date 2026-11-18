@@ -3,6 +3,7 @@
 // self-serve loop is testable locally with no credentials; 'smtp' sends for real
 // once a sending domain + SMTP account exist (a tulaj-external prerequisite).
 
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import nodemailer from "nodemailer";
@@ -45,9 +46,18 @@ export interface EmailAttachment {
  */
 export type EmailAudience = "platform" | "guest";
 
+/**
+ * Which sending identity carries the message. `cold` = the cold-outreach lane (own domain,
+ * own SMTP, own DKIM — config.coldOutreach, src/outreach/coldLane.ts); absent = the platform
+ * mailbox (customer mail: login, invoices, booking). Set by the letter BUILDERS, never by the
+ * send sites, so a letter cannot leave on the wrong domain by a forgotten flag at one call.
+ */
+export type EmailLane = "cold";
+
 export interface EmailMessage {
   readonly to: string;
   readonly audience: EmailAudience;
+  readonly lane?: EmailLane;
   readonly subject: string;
   /** Plain-text body (always present — the honest fallback). */
   readonly text: string;
@@ -230,6 +240,7 @@ class MockEmailSender implements EmailSender {
       (msg.replyTo ? `Reply-To: ${hv(msg.replyTo)}\n` : "") +
       (bcc ? `Bcc: ${bcc}\n` : "") +
       `X-Citoviso-Audience: ${msg.audience}\n` +
+      (msg.lane ? `X-Citoviso-Lane: ${msg.lane}\n` : "") +
       `Subject: ${hv(msg.subject)}\n` +
       extra +
       attachNote +
@@ -250,6 +261,8 @@ class MockEmailSender implements EmailSender {
 class SmtpEmailSender implements EmailSender {
   private readonly transporter: Transporter;
   private readonly from: string;
+  /** The cold-outreach lane's own transport + From (config.coldOutreach); null = no lane. */
+  private readonly cold: { transporter: Transporter; from: string } | null;
 
   constructor() {
     if (!config.smtpUrl) {
@@ -264,16 +277,43 @@ class SmtpEmailSender implements EmailSender {
     }
     this.transporter = nodemailer.createTransport(config.smtpUrl);
     this.from = config.outreachFrom;
+    this.cold = SmtpEmailSender.coldTransport();
+  }
+
+  /**
+   * The cold lane's transport, DKIM-signed with our own key when configured. Half a lane
+   * (URL without From, selector without key file) fails LOUDLY at construction: a cold letter
+   * silently falling back to the platform mailbox is the very thing the lane exists to prevent.
+   */
+  private static coldTransport(): { transporter: Transporter; from: string } | null {
+    const c = config.coldOutreach;
+    if (!c.smtpUrl && !c.from) return null;
+    if (!c.smtpUrl || !c.from) {
+      throw new Error("COLD_OUTREACH_SMTP_URL and COLD_OUTREACH_FROM must be set together (the cold-outreach lane).");
+    }
+    if (Boolean(c.dkimSelector) !== Boolean(c.dkimKeyFile)) {
+      throw new Error("COLD_OUTREACH_DKIM_SELECTOR and COLD_OUTREACH_DKIM_KEY_FILE must be set together.");
+    }
+    const domainName = bareAddress(c.from).split("@")[1] ?? "";
+    if (!domainName) throw new Error("COLD_OUTREACH_FROM must be a mailbox on the cold domain (user@domain).");
+    const dkim = c.dkimSelector
+      ? { domainName, keySelector: c.dkimSelector, privateKey: readFileSync(c.dkimKeyFile, "utf8") }
+      : undefined;
+    // nodemailer's SMTP transport accepts the connection URL as `url` next to the transport
+    // options — the string form could not carry the DKIM block.
+    const transporter = nodemailer.createTransport({ url: c.smtpUrl, ...(dkim ? { dkim } : {}) } as Parameters<typeof nodemailer.createTransport>[0]);
+    return { transporter, from: c.from };
   }
 
   async send(msg: EmailMessage): Promise<SendResult> {
     const bcc = pilotBcc(msg);
+    const lane = msg.lane === "cold" && this.cold ? this.cold : { transporter: this.transporter, from: this.from };
     // With a fromName only the BARE address may ride along (see bareAddress).
-    const info = await this.transporter
+    const info = await lane.transporter
       .sendMail({
         from: msg.fromName
-          ? { name: msg.fromName, address: bareAddress(msg.fromAddress || this.from) }
-          : msg.fromAddress || this.from,
+          ? { name: msg.fromName, address: bareAddress(msg.fromAddress || lane.from) }
+          : msg.fromAddress || lane.from,
         to: msg.to,
         ...(msg.replyTo ? { replyTo: msg.replyTo } : {}),
         ...(bcc ? { bcc } : {}),
@@ -291,7 +331,7 @@ class SmtpEmailSender implements EmailSender {
         if (e?.code === "EAUTH" || e?.responseCode === 535) noteDeadKey("smtp", `${e.code ?? ""} ${e.responseCode ?? ""} ${e.message ?? ""}`.trim());
         throw e;
       });
-    console.log(`[email:smtp] → ${msg.to} · "${msg.subject}" · ${info.messageId}`);
+    console.log(`[email:smtp${msg.lane === "cold" && this.cold ? ":cold" : ""}] → ${msg.to} · "${msg.subject}" · ${info.messageId}`);
     return { id: info.messageId ?? "smtp-sent", provider: "smtp" };
   }
 }

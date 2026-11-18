@@ -17,6 +17,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { slugify } from "../domains.js";
 import { ensurePreviewLabel, peekPreviewLabel, previewLink } from "./previewLabel.js";
+import { coldLinkBase, coldSenderCompany, coldSenderEmail } from "./coldLane.js";
 import { listProspectPlans } from "./planSet.js";
 import { formatNumber } from "../text/money.js";
 import { smsEncoding, toGsm7 } from "../sms/encoding.js";
@@ -137,10 +138,12 @@ export interface OutreachParts {
  */
 export function senderParts(): { sigName: string; sigCo: string; sigMail: string } {
   const s = config.outreachSender;
+  // On the cold lane the reply address and a host-only company line are the COLD domain's
+  // (coldLane.ts): the letter must not point back at the main domain anywhere.
   return {
     sigName: s.name || "[KÜLDŐ NEVE — OUTREACH_SENDER_NAME]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-    sigCo: s.company || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
-    sigMail: [s.email || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    sigCo: coldSenderCompany() || "[CÉG — OUTREACH_SENDER_COMPANY]", // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
+    sigMail: [coldSenderEmail() || "[E-MAIL — OUTREACH_SENDER_EMAIL]", s.phone].filter(Boolean).join(" · "), // i18n-exempt: konfig-hiba jelölő, nem vevő-szöveg (a §C-kapu kidobja)
   };
 }
 
@@ -406,7 +409,9 @@ export function formatHuf(n: number): string {
  * from real data + config; the §C gate (outreachCheck) judges the result.
  */
 export function renderDraft(d: DraftInput): OutreachDraft {
-  const base = config.publicBaseUrl.replace(/\/+$/, "");
+  // The cold lane's own domain when configured (coldLane.ts), else PUBLIC_BASE_URL. The SMS
+  // half (smsDraftParts) keeps the platform link: the modem channel has no mail reputation.
+  const base = coldLinkBase();
   // The link carries a READABLE slug before the token (/p/<slug>/<token>). A bare
   // random token from an unknown sender reads exactly like a phishing link — the
   // strongest trust signal we can put in a cold mail is the recipient seeing their

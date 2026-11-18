@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-18_hideg_kulon_domain_sav.md](2026-11-18_hideg_kulon_domain_sav.md) — 2026-11-18 — Hideg megkeresés külön domainről: getcitoviso.com sáv, felfutás, fék (ADR-XXXX)
 - [2026-11-16_tervvalto_admin_kinezet.md](2026-11-16_tervvalto_admin_kinezet.md) — 2026-11-16 — Tervváltó a tenant-adminban: „Kinézet” lap (tervvaltas E, ADR-0451)
 - [2026-11-16_proba_rendeles_nezett_terv.md](2026-11-16_proba_rendeles_nezett_terv.md) — 2026-11-16 — Próba és rendelés a nézett / futó tervhez kötve (tervvaltas A, ADR-0449)
 - [2026-11-16_p_lap_vegleges.md](2026-11-16_p_lap_vegleges.md) — 2026-11-16 · A /p lap végleges elrendezése megépült (tervvaltas F, ADR-0453)

@@ -292,7 +292,10 @@ if (!SELF_TEST) {
       check("⑤ első kör: nincs „Utánkövető levél” forrás", !first?.visits.some((v) => v.openSource === "followup"));
       check("⑤ újrakeresés: a lead benne van, a küldés ideje a levélé", !!re && re.sentAt.getTime() === at.getTime(), `${re?.sentAt.toISOString()} vs ${at.toISOString()}`);
       check("⑤ újrakeresés: csak a levél utáni megnyitás, „followup” biztos forrással", re?.visits.length === 1 && re.visits[0]!.openSource === "followup" && re.visits[0]!.openSourceSure === true, JSON.stringify(re?.visits.map((v) => v.openSource)));
-      const cell = foldFollowupCell(re ? [re] : [], reportPeriod("0", null, null, WEEKDAY));
+      // The letter's sent_at is the REAL clock (now()), so the "today" period must be anchored on the
+      // real clock too — anchored on WEEKDAY (10:00) the period ended at 10:00 and every run after
+      // that hour on 2026-11-18 saw an empty tile (measured: red on origin/main at 16:40).
+      const cell = foldFollowupCell(re ? [re] : [], reportPeriod("0", null, null, new Date()));
       check("⑤ irányítópult Újrakeresés csempe: 1 kapta, 1 megnyitotta", cell.got === 1 && cell.opened === 1, JSON.stringify(cell));
       const others = (await loadProspectFacts("re")).filter((p) => prospects.includes(p.id) && p.id !== target.prospectId);
       check("⑤ újrakeresés: levél nélküli lead nincs a körben", others.length === 0, String(others.length));

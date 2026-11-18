@@ -34,6 +34,8 @@ import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { normalizePhone } from "../text/phone.js";
 import type { QualifiedLead } from "../scraper/types.js";
+import { applyColdBrake, parseColdRamp, rampCapOn, type ColdRamp } from "./coldRamp.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
 
 /**
  * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
@@ -69,6 +71,12 @@ export interface AutoDispatchSettings {
   readonly enabled: boolean;
   /** Leads contacted per Budapest day by the timer (e-mail and/or pair counts as one). */
   readonly dailyCap: number;
+  /**
+   * The cold lane's ramp (coldRamp.ts, owner 2026-11-18): while set, the day's total is bounded by
+   * the ramp's cap, each timer firing sends only its even share of the remainder, and the brake
+   * judges yesterday before the first send.
+   */
+  readonly ramp?: ColdRamp | null;
 }
 
 export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
@@ -81,9 +89,11 @@ export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
     return { enabled: false, dailyCap: DEFAULT_DAILY_CAP };
   }
   const cap = Number(parsed.dailyCap);
+  const ramp = parseColdRamp(parsed.ramp);
   return {
     enabled: parsed.enabled === true,
     dailyCap: Number.isInteger(cap) && cap >= 0 ? cap : DEFAULT_DAILY_CAP,
+    ...(ramp ? { ramp } : {}),
   };
 }
 
@@ -233,12 +243,18 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     .where("last_attempt_at", "<", new Date(now.getTime() - 30 * 60_000))
     .execute();
 
-  const settings = await getAutoDispatchSettings();
+  let settings = await getAutoDispatchSettings();
   if (!settings.enabled && !opts.force) return { kind: "off" };
   const windowBlock = mockOutreachWindowBlocks(now);
   if (windowBlock) return { kind: "window", reason: windowBlock };
+  if (settings.ramp) {
+    // The brake first (once a day, before the first send); the ramp's cap then replaces the static one.
+    settings = await applyColdBrake(now, settings, setAutoDispatchSettings);
+    if (!settings.enabled && !opts.force) return { kind: "off" };
+  }
+  const cap = settings.ramp ? rampCapOn(settings.ramp, budapestIsoDay(now)) : settings.dailyCap;
   const sent = await sentToday();
-  if (sent >= settings.dailyCap) return { kind: "cap", sent, cap: settings.dailyCap };
+  if (sent >= cap) return { kind: "cap", sent, cap };
 
   // Claim the best-placed queued row (DISPATCH_PRIORITY: no own site first, ADR-0409), the oldest
   // within its rank; an overlapping tick finds nothing (SKIP LOCKED + status flip).
@@ -432,6 +448,8 @@ export interface DispatchStatus {
   readonly settings: AutoDispatchSettings;
   readonly sentToday: number;
   readonly counts: Readonly<Record<string, number>>;
+  /** The cold ramp's day (coldRamp.ts): today's ceiling, the day's total, a brake hold if any. */
+  readonly ramp?: { readonly capToday: number; readonly sentToday: number; readonly holdCap: number | null };
 }
 
 export async function dispatchStatus(): Promise<DispatchStatus> {
@@ -440,10 +458,13 @@ export async function dispatchStatus(): Promise<DispatchStatus> {
     .select(["status", (eb) => eb.fn.countAll<string>().as("n")])
     .groupBy("status")
     .execute();
+  const settings = await getAutoDispatchSettings();
+  const sent = await sentToday();
   return {
-    settings: await getAutoDispatchSettings(),
-    sentToday: await sentToday(),
+    settings,
+    sentToday: sent,
     counts: Object.fromEntries(rows.map((r) => [r.status, Number(r.n)])),
+    ...(settings.ramp ? { ramp: { capToday: rampCapOn(settings.ramp, budapestIsoDay(new Date())), sentToday: sent, holdCap: settings.ramp.holdCap ?? null } } : {}),
   };
 }
 

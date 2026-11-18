@@ -9,6 +9,10 @@
 //   tsx scripts/outreach-dispatch.mts cancel <leadId> --by=<name> --reason="…"
 //   tsx scripts/outreach-dispatch.mts on|off
 //   tsx scripts/outreach-dispatch.mts cap <n>
+//   tsx scripts/outreach-dispatch.mts ramp <startCap> [--growth=30] [--max=3000] [--start=YYYY-MM-DD]
+//        the cold lane's ramp (coldRamp.ts): the day's total climbs from startCap by growth% per
+//        working day up to max; each firing sends its even share; the brake judges yesterday
+//   tsx scripts/outreach-dispatch.mts ramp release | ramp off        # lift the brake's hold / no ramp (static caps)
 //   tsx scripts/outreach-dispatch.mts list [--status=held]
 //   tsx scripts/outreach-dispatch.mts attach-second --sent [--dry-run]
 //        owner 2026-10-26: the links the timer already SENT with one plan get the second
@@ -26,8 +30,11 @@ import {
   enqueueDispatch,
   requeueDispatch,
   runDispatchTick,
+  sentToday,
   setAutoDispatchSettings,
 } from "../src/outreach/autoDispatch.js";
+import { parseColdRamp, tickAllowance } from "../src/outreach/coldRamp.js";
+import { budapestIsoDay } from "../src/text/budapestTime.js";
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -56,13 +63,47 @@ async function main(): Promise<void> {
       // tick — the modem queue paces the SMS/MMS half by itself. The tick drains back-to-back
       // until cap/empty/window/off, but stops within DRAIN_BUDGET_MS so the oneshot unit stays
       // under its TimeoutStartSec=600; the next timer firing carries on.
+      // With a cold RAMP (coldRamp.ts, owner 2026-11-18) a firing sends only its even share of
+      // the day's remainder, a few seconds apart — the volume spreads over the whole window.
       const started = Date.now();
+      const settings = await getAutoDispatchSettings();
+      const allowance = settings.ramp ? tickAllowance(now, settings.ramp, await sentToday()) : Number.POSITIVE_INFINITY;
+      let done = 0;
       for (;;) {
         const at = nowArg ? now : new Date();
+        if (done >= allowance) {
+          console.log(`outreach-dispatch @ ${at.toISOString()}: {"kind":"paced","sent":${done},"allowance":${allowance}}`);
+          return;
+        }
         const r = await runDispatchTick(at, { force: flag("force") });
         console.log(`outreach-dispatch @ ${at.toISOString()}: ${JSON.stringify(r)}`);
         if (r.kind !== "done" || nowArg || Date.now() - started > DRAIN_BUDGET_MS) return;
+        if (r.status === "sent") done++;
+        if (settings.ramp) await new Promise((res) => setTimeout(res, 3000 + Math.floor(Math.random() * 6000)));
       }
+    }
+    case "ramp": {
+      // ramp <startCap> [--growth=30] [--max=3000] [--start=YYYY-MM-DD] | ramp off | ramp release
+      const sub = pos[0];
+      if (sub === "off") {
+        console.log(JSON.stringify(await setAutoDispatchSettings({ ramp: null })));
+        return;
+      }
+      if (sub === "release") {
+        const cur = await getAutoDispatchSettings();
+        if (!cur.ramp) throw new Error("nincs felfutás beállítva");
+        console.log(JSON.stringify(await setAutoDispatchSettings({ ramp: { ...cur.ramp, holdCap: null } })));
+        return;
+      }
+      const startCap = Number(sub);
+      const growthPct = Number(opt("growth") ?? "30");
+      const maxCap = Number(opt("max") ?? "3000");
+      const startDay = opt("start") ?? budapestIsoDay(new Date());
+      if (!Number.isInteger(startCap) || startCap < 1) throw new Error("ramp <induló napi darab ≥ 1> [--growth=%] [--max=n] [--start=YYYY-MM-DD] | off | release");
+      const ramp = parseColdRamp({ startDay, startCap, growthPct, maxCap });
+      if (!ramp) throw new Error("hibás felfutás: growth ≥ 0, max ≥ induló, start = ÉÉÉÉ-HH-NN");
+      console.log(JSON.stringify(await setAutoDispatchSettings({ ramp })));
+      return;
     }
     case "status": {
       console.log(JSON.stringify(await dispatchStatus(), null, 2));
@@ -164,7 +205,7 @@ async function main(): Promise<void> {
       return;
     }
     default:
-      throw new Error("parancs: tick | status | add | import | requeue | cancel | on | off | cap | list | attach-second");
+      throw new Error("parancs: tick | status | add | import | requeue | cancel | on | off | cap | ramp | list | attach-second");
   }
 }
 
