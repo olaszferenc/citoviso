@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-hideg-megkereses-kulon-domain-sav.md) — A hideg megkeresés KÜLÖN domainről megy (getcitoviso.com), saját SMTP-vel és DKIM-mel, felfutással és fékkel
 - [ADR-0458](decisions/0458-orszag-reteg-3-7-a-jogi-csomag-orszagonkent-az.md) — Ország-réteg 3/7: a jogi csomag országonként, az ország nyelvén — a piac-kapu a csomag teljességét nézi
 - [ADR-0457](decisions/0457-orszag-reteg-3-6-a-mock-a-lead-orszaganak.md) — Ország-réteg 3/6: a mock a lead országának nyelvén, írásával és szabályaival készül — magyar maradvány = TARTVA
 - [ADR-0456](decisions/0456-orszag-reteg-3-5-a-hideg-megkereses-a-lead.md) — Ország-réteg 3/5: a hideg megkeresés a lead országának nyelvén, ablakában, csatornáján és kvótájával megy — hiányzó nyelvnél TARTVA

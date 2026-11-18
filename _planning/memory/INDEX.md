@@ -8,6 +8,7 @@
 
 - [2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md](2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md) — 2026-11-18 — Portál-feltöltés felmérés + a 368 megnyitó portál-jelenléte
 - [2026-11-18_orszag_reteg_jogi_csomag.md](2026-11-18_orszag_reteg_jogi_csomag.md) — 2026-11-18 — Ország-réteg 3/7: jogi csomag országonként (ADR-0458)
+- [2026-11-18_hideg_kulon_domain_sav.md](2026-11-18_hideg_kulon_domain_sav.md) — 2026-11-18 — Hideg megkeresés külön domainről: getcitoviso.com sáv, felfutás, fék (ADR-XXXX)
 - [2026-11-17_tervvaltas_csomag_zaras.md](2026-11-17_tervvaltas_csomag_zaras.md) — 2026-11-17 — Tervváltás-csomag zárása (élesítés 22ffe575, deploy-kapu türelem, SUB-ok archiválva)
 - [2026-11-17_orszag_reteg_3_6_mock_nyelv.md](2026-11-17_orszag_reteg_3_6_mock_nyelv.md) — 2026-11-17 — Ország-réteg 3/6: mock és nyelv (SUB `citf44663e7`, koordinátor `cit9b4690e3`)
 - [2026-11-17_orszag_reteg_3_5_kikuldes.md](2026-11-17_orszag_reteg_3_5_kikuldes.md) — 2026-11-17 — Ország-réteg 3/5: kiküldés a lead országában (cit c737a035)

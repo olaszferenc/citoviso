@@ -20,6 +20,7 @@
 // (2) scripts/outreach-link-host-check.mts, which measures the PRODUCTION env.
 
 import { config } from "../config.js";
+import { coldLinkBase, coldSenderEmail } from "./coldLane.js";
 
 export interface LinkHostVerdict {
   /** Host of the links the letter carries (no port). */
@@ -68,8 +69,10 @@ function domainOfEmail(addr: string): string {
  * `[HIÁNYZÓ PUBLIC_BASE_URL]` fails §C.1/LINK, an empty sender fails §C.2.
  */
 export function checkOutreachLinkHost(baseUrl?: string): LinkHostVerdict | null {
-  const base = (baseUrl ?? config.publicBaseUrl ?? "").trim();
-  const sender = (config.outreachSender.email || config.outreachFrom || "").trim();
+  // The cold lane moves BOTH sides together (coldLane.ts): links on the cold domain, signed
+  // from the cold mailbox — so the comparison stays "is this us" for that domain too.
+  const base = (baseUrl ?? coldLinkBase() ?? "").trim();
+  const sender = (coldSenderEmail() || config.outreachFrom || "").trim();
   const linkHost = hostOfUrl(base);
   const senderDomain = domainOfEmail(sender);
   if (!linkHost || !senderDomain) return null;

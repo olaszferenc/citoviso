@@ -35,6 +35,8 @@ import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { allCountriesSync, countryConfigSync, countryOf, countryOfLeads, type CountryConfig } from "../country.js";
 import type { QualifiedLead } from "../scraper/types.js";
+import { applyColdBrake, parseColdRamp, rampCapOn, type ColdRamp } from "./coldRamp.js";
+import { budapestIsoDay } from "../text/budapestTime.js";
 
 /**
  * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
@@ -77,6 +79,12 @@ export interface AutoDispatchSettings {
   readonly dailyCap: number;
   /** ORSZÁG-RÉTEG 3/5: per-country caps (ISO-2 → leads per that country's day); absent = the row's daily_quota. */
   readonly countryCaps?: Readonly<Record<string, number>>;
+  /**
+   * The cold lane's ramp (coldRamp.ts, owner 2026-11-18): while set, the day's TOTAL (all countries)
+   * is bounded by the ramp's cap, the home country's cap is lifted to it, each timer firing sends
+   * only its even share of the remainder, and the brake judges yesterday before the first send.
+   */
+  readonly ramp?: ColdRamp | null;
 }
 
 export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
@@ -92,10 +100,12 @@ export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
   const caps = Object.entries((parsed.countryCaps ?? {}) as Record<string, unknown>).filter(
     (e): e is [string, number] => /^[A-Z]{2}$/.test(e[0]) && Number.isInteger(e[1]) && (e[1] as number) >= 0,
   );
+  const ramp = parseColdRamp(parsed.ramp);
   return {
     enabled: parsed.enabled === true,
     dailyCap: Number.isInteger(cap) && cap >= 0 ? cap : DEFAULT_DAILY_CAP,
     ...(caps.length ? { countryCaps: Object.fromEntries(caps) } : {}),
+    ...(ramp ? { ramp } : {}),
   };
 }
 
@@ -263,6 +273,11 @@ async function openCountries(
   const open = new Set<string>();
   let homeWindow: string | null = null;
   let homeCap: { sent: number; cap: number } | null = null;
+  // The ramp governs the home market's cap (the operator's static 40 would stall the climb);
+  // the day's total stays bounded by the ramp in runDispatchTick.
+  const capSettings = settings.ramp
+    ? { ...settings, dailyCap: Math.max(settings.dailyCap, rampCapOn(settings.ramp, budapestIsoDay(now))) }
+    : settings;
   for (const cfg of allCountriesSync()) {
     const home = cfg.iso2 === DISPATCH_HOME_COUNTRY;
     const w = outreachWindowBlocksIn(now, cfg);
@@ -270,7 +285,7 @@ async function openCountries(
       if (home) homeWindow = w;
       continue;
     }
-    const cap = dailyCapFor(cfg, settings, DISPATCH_HOME_COUNTRY);
+    const cap = dailyCapFor(cfg, capSettings, DISPATCH_HOME_COUNTRY);
     const sent = await sentTodayIn(cfg);
     if (sent >= cap) {
       if (home) homeCap = { sent, cap };
@@ -298,8 +313,16 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     .where("last_attempt_at", "<", new Date(now.getTime() - 30 * 60_000))
     .execute();
 
-  const settings = await getAutoDispatchSettings();
+  let settings = await getAutoDispatchSettings();
   if (!settings.enabled && !opts.force) return { kind: "off" };
+  if (settings.ramp) {
+    // The brake first (once a day, before the first send), then the day's total against the ramp.
+    settings = await applyColdBrake(now, settings, setAutoDispatchSettings);
+    if (!settings.enabled && !opts.force) return { kind: "off" };
+    const cap = rampCapOn(settings.ramp!, budapestIsoDay(now));
+    const sent = await sentToday();
+    if (sent >= cap) return { kind: "cap", sent, cap };
+  }
   // ORSZÁG-RÉTEG 3/5: the window and the cap are the LEAD's country's (zone, working days, its
   // own counter). Nothing open anywhere → the home country's reason, as before.
   const { open, homeWindow, homeCap } = await openCountries(now, settings);
@@ -520,6 +543,8 @@ export interface DispatchStatus {
   readonly counts: Readonly<Record<string, number>>;
   /** ORSZÁG-RÉTEG 3/5: per country — sent today (its own day) against its own cap. */
   readonly byCountry: ReadonlyArray<{ readonly country: string; readonly sentToday: number; readonly cap: number }>;
+  /** The cold ramp's day (coldRamp.ts): today's ceiling, the day's total, a brake hold if any. */
+  readonly ramp?: { readonly capToday: number; readonly sentToday: number; readonly holdCap: number | null };
 }
 
 export async function dispatchStatus(): Promise<DispatchStatus> {
@@ -533,11 +558,13 @@ export async function dispatchStatus(): Promise<DispatchStatus> {
   for (const cfg of allCountriesSync()) {
     byCountry.push({ country: cfg.iso2, sentToday: await sentTodayIn(cfg), cap: dailyCapFor(cfg, settings, DISPATCH_HOME_COUNTRY) });
   }
+  const sent = await sentToday();
   return {
     settings,
-    sentToday: await sentToday(),
+    sentToday: sent,
     counts: Object.fromEntries(rows.map((r) => [r.status, Number(r.n)])),
     byCountry,
+    ...(settings.ramp ? { ramp: { capToday: rampCapOn(settings.ramp, budapestIsoDay(new Date())), sentToday: sent, holdCap: settings.ramp.holdCap ?? null } } : {}),
   };
 }
 

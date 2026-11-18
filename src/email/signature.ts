@@ -112,13 +112,13 @@ export function signatureText(i: SignatureInput): string {
 }
 
 /** The team reading: "A Citoviso csapata" + the service line. */
-export function teamSignature(lang: string | undefined, email: string, regards: string | null): SignatureInput {
+export function teamSignature(lang: string | undefined, email: string, regards: string | null, web = "citoviso.com"): SignatureInput {
   return {
     lang,
     regards,
     name: T(lang, "A Citoviso csapata"),
     role: T(lang, "Honlap és online láthatóság"),
-    web: "citoviso.com",
+    web,
     email,
     phone: "",
   };
@@ -128,19 +128,22 @@ export function teamSignature(lang: string | undefined, email: string, regards: 
  * The outreach/trial sender (senderParts(): sigName, sigCo, sigMail = "email · phone").
  * A brand-only sender name ("Citoviso") reads as the TEAM signature; a person's name
  * gets the configured title (OUTREACH_SENDER_TITLE) and the brand as its role line.
+ * `webDefault` is the W row when the company line is not a host — the cold letter passes the
+ * cold-lane host (src/outreach/coldLane.ts), everything else the platform domain.
  */
 export function senderSignature(
   parts: { readonly sigName: string; readonly sigCo: string; readonly sigMail: string },
   lang: string | undefined,
   regards: string | null,
   title: string | undefined,
+  webDefault = "citoviso.com",
 ): SignatureInput {
   const [email = "", phone = ""] = parts.sigMail.split(" · ").map((s) => s.trim());
   const web = /^[\w.-]+\.[a-z]{2,}$/i.test(parts.sigCo.replace(/^https?:\/\//, "").replace(/\/+$/, ""))
     ? parts.sigCo
-    : "citoviso.com";
+    : webDefault;
   const person = personalSenderName(parts.sigName);
-  if (!person) return { ...teamSignature(lang, email, regards), phone };
+  if (!person) return { ...teamSignature(lang, email, regards, web), phone };
   return {
     lang,
     regards,
@@ -158,7 +161,8 @@ export function helperSignature(
   lang: string | undefined,
   email: string,
   regards: string | null,
+  web = "citoviso.com",
 ): SignatureInput {
-  if (!helperName) return teamSignature(lang, email, regards);
-  return { lang, regards, name: helperName, role: T(lang, "Citoviso ügyfélsegítő"), web: "citoviso.com", email, phone: "" };
+  if (!helperName) return teamSignature(lang, email, regards, web);
+  return { lang, regards, name: helperName, role: T(lang, "Citoviso ügyfélsegítő"), web, email, phone: "" };
 }

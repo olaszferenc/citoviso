@@ -23,6 +23,7 @@ import { smsEncoding, toGsm7 } from "../sms/encoding.js";
 import { esc, mailButton, mailNote, mailPara, platformMail } from "../email/platformLayout.js";
 import type { EmailMessage } from "../email/sender.js";
 import { helperSignature, signatureBlock } from "../email/signature.js";
+import { coldHost } from "./coldLane.js";
 
 export type BehaviorTrigger = "return" | "price" | "start";
 
@@ -215,7 +216,8 @@ export function buildBehaviorMail(input: BehaviorMailInput): BehaviorMail {
     `${greeting}\n\n${para}\n\n${button}: ${link}\n\n${bye}\n${sig}\n\n` +
     `---\n${unsubTxt} ${input.unsubscribeLink}\n${legal} ${input.privacyLink}\n${input.identity}\n`;
   // ADR-0444: the approved variant-A signature block (src/email/signature.ts).
-  const sigBlock = signatureBlock(helperSignature(input.helperName, lang, config.supportEmail, bye));
+  // The W row names the cold-lane host — this letter leaves on the cold lane (coldLane.ts).
+  const sigBlock = signatureBlock(helperSignature(input.helperName, lang, config.supportEmail, bye, coldHost()));
   const mail = platformMail({
     to: input.to,
     subject,
@@ -241,7 +243,7 @@ export function buildBehaviorMail(input: BehaviorMailInput): BehaviorMail {
     ? { "List-Unsubscribe": `<${input.unsubscribeLink}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
     : undefined;
   return {
-    message: { ...mail, fromName: input.fromName, ...(headers ? { headers } : {}) },
+    message: { ...mail, lane: "cold", fromName: input.fromName, ...(headers ? { headers } : {}) },
     letter: { subject, body, link, unsubscribeLink: input.unsubscribeLink, privacyLink: input.privacyLink, parts: { identity: input.identity } },
     trigger,
   };

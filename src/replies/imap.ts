@@ -16,7 +16,20 @@ export interface ImapCreds {
 /** Same rule as registryConfirmWatch.ts: the sending Zoho account IS the mailbox (smtppro → imappro). */
 export function imapCreds(): ImapCreds | null {
   const explicit = process.env.REPLIES_IMAP_URL || process.env.REGISTRY_IMAP_URL;
-  const raw = explicit || config.smtpUrl;
+  return credsFromUrl(explicit || config.smtpUrl, Boolean(explicit));
+}
+
+/**
+ * The COLD lane's mailbox (src/outreach/coldLane.ts): replies to the cold letter land where it
+ * was sent from — ajanlat@getcitoviso.com on the hosting's IMAP. COLD_REPLIES_IMAP_URL names it
+ * outright; else the lane's SMTP URL with its host read as the IMAP host (smtp. → imap.).
+ */
+export function coldImapCreds(): ImapCreds | null {
+  const explicit = process.env.COLD_REPLIES_IMAP_URL;
+  return credsFromUrl(explicit || config.coldOutreach.smtpUrl, Boolean(explicit));
+}
+
+function credsFromUrl(raw: string | undefined, explicit: boolean): ImapCreds | null {
   if (!raw) return null;
   try {
     const u = new URL(raw);

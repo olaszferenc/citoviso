@@ -341,6 +341,8 @@ export function buildNonOpenerEmail(
   return {
     to,
     audience: "platform",
+    // Second cold touch → the cold-outreach lane, like the first letter (src/outreach/coldLane.ts).
+    lane: "cold",
     fromName: letter.fromName,
     subject: letter.subject,
     text: letter.body,

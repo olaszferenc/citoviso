@@ -29,7 +29,7 @@ import os from "node:os";
 import path from "node:path";
 import { config } from "../src/config.js";
 import { assembleInbox, oursBefore, readInbox, readSent } from "../src/replies/gammu.js";
-import { ImapReader, imapCreds, imapDate, imapQuote, notAReply, parseInternalDate } from "../src/replies/imap.js";
+import { coldImapCreds, ImapReader, imapCreds, imapDate, imapQuote, notAReply, parseInternalDate, type ImapCreds } from "../src/replies/imap.js";
 import { parseMail, stripQuoted } from "../src/replies/mime.js";
 
 const args = process.argv.slice(2);
@@ -251,13 +251,9 @@ async function sentFolder(imap: ImapReader): Promise<string> {
   return all.find((f) => /\\Sent\b/i.test(f.flags))?.name ?? SENT_FALLBACK;
 }
 
-async function collectEmail(): Promise<void> {
-  const creds = imapCreds();
-  if (!creds) {
-    console.log("[replies-email] nincs IMAP-hitelesítő (REPLIES_IMAP_URL / SMTP_URL) — nincs teendő.");
-    return;
-  }
-  const file = path.join(STATE_DIR, "citoviso-replies-email.json");
+/** One mailbox, one state file: the platform mailbox and the cold lane's each keep their own UIDs. */
+async function collectEmail(creds: ImapCreds, stateName: string): Promise<void> {
+  const file = path.join(STATE_DIR, stateName);
   const state = loadState<EmailState>(file, { uidValidity: 0, lastUid: 0, pending: [] });
   const imap = new ImapReader(creds);
   await imap.open();
@@ -337,7 +333,14 @@ async function collectEmail(): Promise<void> {
 
 try {
   if (MODE === "sms") await collectSms();
-  else await collectEmail();
+  else {
+    const creds = imapCreds();
+    if (!creds) console.log("[replies-email] nincs IMAP-hitelesítő (REPLIES_IMAP_URL / SMTP_URL) — nincs teendő.");
+    else await collectEmail(creds, "citoviso-replies-email.json");
+    // The cold lane's mailbox (ADR-XXXX): replies to getcitoviso.com letters land there.
+    const cold = coldImapCreds();
+    if (cold) await collectEmail(cold, "citoviso-replies-email-cold.json");
+  }
 } catch (err) {
   // Network / mailbox trouble: one line, the next tick retries (the state did not move).
   console.error(`[replies-${MODE}] hiba (a következő kör újrapróbálja): ${(err as Error).message}`);
