@@ -40,6 +40,12 @@ const FORBIDDEN: readonly [RegExp, string][] = [
 
 /** The rights declaration itself — the owner's final ruling, not a pressure sentence. */
 const EXEMPT = new Set(["src/legal.ts", "scripts/own-photo-pressure-check.mts"]);
+/**
+ * Country legal packs (ADR-0458): keyed by the full Hungarian legal unit from src/legal.ts, so the
+ * rights declaration reappears there verbatim as a key plus its translation — same text, not a
+ * pressure sentence.
+ */
+const EXEMPT_RE = /^src\/i18n\/babel\/legal\/[A-Z]{2}\.json$/;
 
 function walk(dir: string, keep: (p: string) => boolean, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -103,7 +109,7 @@ const files = [
 let bad = 0;
 for (const f of files) {
   const rel = relative(ROOT, f);
-  if (EXEMPT.has(rel)) continue;
+  if (EXEMPT.has(rel) || EXEMPT_RE.test(rel)) continue;
   for (const h of hits(readFileSync(f, "utf8"))) {
     bad++;
     console.error(`  ${rel}:${h.line} — ${h.why}\n      ${h.text}`);
