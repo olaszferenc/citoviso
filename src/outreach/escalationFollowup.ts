@@ -12,6 +12,7 @@
 // the page it links to must not disagree (§I).
 
 import { db } from "../db/client.js";
+import { getSetting } from "../console/appSettings.js";
 import {
   claimFollowup,
   escalationFollowupsDue,
@@ -74,12 +75,27 @@ export function deadlineText(d: Date, lang: string): string {
  * `onlyProspects` are for the guard only: the dev DB is shared, and a guard run must
  * neither mail nor claim another thread's offers. Product code passes neither.
  */
+export const ESCALATION_FOLLOWUP_KEY = "escalation_followup";
+
+export async function escalationFollowupEnabled(): Promise<boolean> {
+  try {
+    const raw = await getSetting(ESCALATION_FOLLOWUP_KEY);
+    return !raw || (JSON.parse(raw) as { enabled?: unknown } | null)?.enabled !== false;
+  } catch {
+    return true;
+  }
+}
+
 export async function sendEscalationFollowups(
   now: Date = new Date(),
   opts: { readonly sender?: EmailSender; readonly onlyProspects?: ReadonlySet<string> } = {},
 ): Promise<FollowupRunResult> {
   const blocked = followupWindowBlocks(now);
   if (blocked) return { sent: 0, skipped: 0, deferred: blocked };
+  // Owner 2026-11-18 („az újramegkereső email se menjen ki”): a stop switch, app_setting
+  // 'escalation_followup' = {"enabled":false}. Missing / unreadable = ON (the row predates it).
+  // It stops only this follow-up LETTER — the on-page offer keeps running.
+  if (!(await escalationFollowupEnabled())) return { sent: 0, skipped: 0, deferred: "kikapcsolva (escalation_followup)" };
   const sender = opts.sender ?? getEmailSender();
   const due = (await escalationFollowupsDue(now)).filter(
     (f) => !opts.onlyProspects || opts.onlyProspects.has(f.prospectId),
