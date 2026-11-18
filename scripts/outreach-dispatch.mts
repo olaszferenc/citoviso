@@ -28,6 +28,7 @@ import {
   dispatchStatus,
   attachSecondPlan,
   enqueueDispatch,
+  getAutoDispatchSettings,
   requeueDispatch,
   runDispatchTick,
   sentToday,
