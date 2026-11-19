@@ -5,7 +5,8 @@
 //   ① the lead image of the town's Wikipedia article (the language of the lead's country, then
 //      English), when it is a landscape JPEG photo of ≥ 1200 px under a free licence;
 //   ② else the Wikidata image (P18) of the same town;
-//   ③ else the first such Commons photo geotagged around the town centre (geosearch).
+//   ③ else the nearest such Commons photo geotagged around the town centre (geosearch) whose title,
+//      description or categories NAME the town — a nearer photo of the next village is skipped (2026-11-19).
 // A namesake article (a disambiguation page, or one farther than 25 km from the lead) is skipped;
 // so is any file whose name says lodging, interior, statue or portrait (it would pass for the lodging).
 // A coat of arms, map, flag, locator or any SVG/PNG is no town photo and is skipped. The picture
@@ -30,7 +31,7 @@ const NOT_A_PHOTO = /c[ií]mer|coat[ _-]?of[ _-]?arms|wappen|herb|zászl|flag|ma
 
 const memo = new Map<string, TownPhoto | null>();
 
-interface CommonsInfo {
+export interface CommonsInfo {
   readonly title: string;
   readonly width: number;
   readonly height: number;
@@ -158,7 +159,50 @@ async function wikidataImage(qid: string): Promise<string | null> {
   return j?.claims?.P18?.[0]?.mainsnak?.datavalue?.value ?? null;
 }
 
-/** Commons photos taken around the town centre, the ones naming the town first, then nearest. */
+const fold = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** The name forms of `city` to look for: as given, before a comma („Pécsley, Klára-puszta”), and
+ * without a trailing street or house number („Mátraderecske Arany János utca 66”, „Budapest 36”). */
+export function cityNames(city: string): string[] {
+  const c = city.trim();
+  const out = new Set<string>([c, c.split(",")[0]!.trim()]);
+  out.add(c.replace(/\s+\S+(?:\s+\S+)?\s+(?:utca|út|útja|tér|köz|sor|sétány|dűlő|puszta)\b.*$/i, "").replace(/\s+\d.*$/, "").trim());
+  return [...out].filter((n) => n.length >= 2).map(fold);
+}
+
+/** True when `text` names the town: the name starts a word (Recsk ≠ Mátra·derecske); a long name may
+ * carry any Hungarian ending („Ordacsehiben”), a short one (≤ 4 letters) only a usual one („tési”). */
+export function namesTown(text: string, city: string): boolean {
+  const t = fold(text);
+  return cityNames(city).some((n) => {
+    const esc = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const tail = n.length <= 4 ? "(?:i|ben|en|on|ön|re|ről|rol|nél|nel|hez|ig|beli)?(?![a-z])" : "";
+    return new RegExp(`(?:^|[^a-z])${esc}${tail}`).test(t);
+  });
+}
+
+/** A geosearch hit is the town's photo only when the file NAMES the town — in its title, description,
+ * object name or categories. A nearer photo of the next village is no photo of this one (2026-11-19:
+ * Ordacsehi got Lengyeltóti, Jásd Szápár, Tés Bakonynána, credited as the lead's own town). */
+export function geoHitNamesTown(info: CommonsInfo, city: string): boolean {
+  const m = info.extmetadata ?? {};
+  const text = [info.title.replace(/^(?:File|Fájl):/i, ""), m.ImageDescription?.value, m.ObjectName?.value, m.Categories?.value]
+    .map((v) => plain(v))
+    .join(" | ");
+  return namesTown(text, city);
+}
+
+/** The first usable geosearch hit that names the town (nearest first), or null. */
+export function pickGeoPhoto(pages: readonly CommonsInfo[], city: string): TownPhoto | null {
+  for (const p of pages) {
+    if (!geoHitNamesTown(p, city)) continue;
+    const t = townPhotoFromInfo(p, city);
+    if (t) return t;
+  }
+  return null;
+}
+
+/** Commons photos taken around the town centre, nearest first — only the ones naming the town. */
 async function fromCommonsGeo(city: string, at: GeoPoint): Promise<TownPhoto | null> {
   const url =
     `https://commons.wikimedia.org/w/api.php?action=query&generator=geosearch&ggsnamespace=6` +
@@ -166,18 +210,10 @@ async function fromCommonsGeo(city: string, at: GeoPoint): Promise<TownPhoto | n
   const j = (await getJson(url)) as {
     query?: { pages?: { title: string; index?: number; imageinfo?: Omit<CommonsInfo, "title">[] }[] };
   } | null;
-  const fold = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const named = (t: string) => fold(t).includes(fold(city));
-  const pages = [...(j?.query?.pages ?? [])].sort(
-    (a, b) => Number(named(b.title)) - Number(named(a.title)) || (a.index ?? 0) - (b.index ?? 0),
-  );
-  for (const p of pages) {
-    const ii = p.imageinfo?.[0];
-    if (!ii) continue;
-    const t = townPhotoFromInfo({ title: p.title, ...ii }, city);
-    if (t) return t;
-  }
-  return null;
+  const pages = [...(j?.query?.pages ?? [])]
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .flatMap((p) => (p.imageinfo?.[0] ? [{ title: p.title, ...p.imageinfo[0] }] : []));
+  return pickGeoPhoto(pages, city);
 }
 
 /** The Wikipedia language editions to ask for a town in `country` (ISO-2). */

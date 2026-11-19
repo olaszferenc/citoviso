@@ -24,6 +24,7 @@ import sharp from "sharp";
 import type { Photo, Recipe, SiteData } from "../src/engine/recipe.js";
 import { isLiveSafePhoto, applyLivePhotoPolicy } from "../src/engine/photoPolicy.js";
 import { renderSite } from "../src/engine/render.js";
+import { namesTown, pickGeoPhoto, type CommonsInfo } from "../src/generator/townPhoto.js";
 import {
   STOCK_GALLERY_MIN,
   isStockBytes,
@@ -280,6 +281,34 @@ console.log("⑩ the replaced (watermarked) set stays on the uploader's blocklis
   const retired = m.retired ?? [];
   check("a manifest őrzi a lecserélt fájlok ujjlenyomatát", retired.length > 0, retired.length);
   check("egy lecserélt fájl dHash-e tiltott", retired.length > 0 && isStockDhash(retired[0]!.dhash));
+}
+
+console.log("⑪ the geosearch town photo must NAME the lead's town — never the next village (2026-11-19)");
+{
+  const hit = (title: string, meta: Record<string, string> = {}): CommonsInfo => ({
+    title: `File:${title}`,
+    width: 1920,
+    height: 1080,
+    mime: "image/jpeg",
+    thumburl: `https://upload.wikimedia.org/wikipedia/commons/thumb/x/xx/${encodeURIComponent(title)}/1600px-x.jpg`,
+    descriptionurl: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(title)}`,
+    extmetadata: { LicenseShortName: { value: "CC BY-SA 4.0" }, Artist: { value: "Teszt" }, ...Object.fromEntries(Object.entries(meta).map(([k, v]) => [k, { value: v }])) },
+  });
+  // The three measured cases: the nearest geotagged photo named the NEXT village.
+  check("Ordacsehi: a lengyeltóti fotó nem az övé", pickGeoPhoto([hit("Lengyeltóti, 8693 Hungary - panoramio.jpg", { Categories: "Lengyeltóti" })], "Ordacsehi") === null);
+  check("Jásd: a szápári fotó nem az övé", pickGeoPhoto([hit("Szápár, Veszprém County.jpg", { ImageDescription: "Szápár látképe" })], "Jásd") === null);
+  check("Tés: a bakonynánai fotó nem az övé", pickGeoPhoto([hit("Bakonynána, Hungary - panoramio (5).jpg")], "Tés") === null);
+  // …and the town's own photo, even farther down the list, is taken.
+  const ord = pickGeoPhoto([hit("Lengyeltóti, 8693 Hungary - panoramio.jpg"), hit("Ordacsehi, református templom.jpg")], "Ordacsehi");
+  check("Ordacsehi: a saját nevét viselő fotó jön a szomszédé helyett", (ord?.pageUrl ?? "").includes("Ordacsehi"), ord?.pageUrl);
+  check("Jásd: a leírásban nevezett fotó elfogadva", pickGeoPhoto([hit("DSC_0412.jpg", { ImageDescription: "A jásdi Szent Anna-kápolna" })], "Jásd") !== null);
+  check("Tés: a kategóriában nevezett fotó elfogadva", pickGeoPhoto([hit("IMG_2201.jpg", { Categories: "Tés|Windmills in Veszprém County" })], "Tés") !== null);
+  check("Tés: „tési” (melléknév) a leírásban elfogadva", namesTown("A tési szélmalmok", "Tés"));
+  check("Tés: a „teszt” szó nem a település", !namesTown("teszt kép", "Tés"));
+  check("Recsk nem illeszkedik Mátraderecskére (szó eleje)", !namesTown("Mátraderecske, főtér", "Recsk") && !namesTown("Recsk BZmot 335", "Mátraderecske"));
+  check("hosszú név ragozva elfogadva („Ordacsehiben”)", namesTown("Nyár Ordacsehiben", "Ordacsehi"));
+  check("utcás település-mező: „Mátraderecske Arany János utca 66”", namesTown("Mátraderecske látkép", "Mátraderecske Arany János utca 66"));
+  check("vesszős település-mező: „Pécsley, Klára-puszta”", namesTown("Pécsley, református templom", "Pécsley, Klára-puszta") && !namesTown("Pécsely, templom", "Pécsley, Klára-puszta"));
 }
 
 console.log(failed ? `\n✗ ${failed} hiba` : "\n✓ stock-fill-check: minden rendben");
