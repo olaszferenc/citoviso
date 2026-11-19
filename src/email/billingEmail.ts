@@ -10,7 +10,9 @@
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
 import { formatDay } from "../text/day.js";
-import { formatMoney } from "../text/money.js";
+// ORSZÁG-RÉTEG 3/9 (Elek HR): every amount here is a MINOR-unit integer of its currency (ADR-0443 —
+// order.price / subscription); formatMinor IS formatMoney for HUF, and writes cents as cents for EUR.
+import { formatMinor } from "../text/money.js";
 import { mailButton, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailMessage } from "./sender.js";
 
@@ -75,7 +77,7 @@ export function buildRenewalPreNoticeEmail(
   const subject = T(lang, "Előfizetése hamarosan megújul — {site}", { site: siteName });
   const lines = [
     T(lang, "Honlap-előfizetése {date} napon újul meg.", { date: formatDay(dueDate, lang) }),
-    T(lang, "A megújulás díja: {amount}.", { amount: formatMoney(amount, currency, lang) }),
+    T(lang, "A megújulás díja: {amount}.", { amount: formatMinor(amount, currency, lang) }),
     autoCharge
       ? T(lang, "A díjat a megújulás napján automatikusan levonjuk a bankkártyájáról — nincs teendője. A számlát e-mailben küldjük.")
       : T(lang, "A fizetési linket a megújulás napján küldjük — addig nincs teendője."),
@@ -120,7 +122,7 @@ export function buildRenewalChargeEmail(input: BillingChargeMail): EmailMessage 
       )
     : null;
   const lines = [
-    T(lang, "Honlap-előfizetésének megújítása esedékes: {amount}.", { amount: formatMoney(amount, currency, lang) }),
+    T(lang, "Honlap-előfizetésének megújítása esedékes: {amount}.", { amount: formatMinor(amount, currency, lang) }),
     ...(failedLine ? [failedLine] : []),
     period,
     payButton(payUrl, pay),
@@ -151,7 +153,7 @@ export function buildRenewalReminderEmail(input: BillingReminderMail): EmailMess
   const subject = T(lang, "Emlékeztető: rendezetlen honlapdíj — {site}", { site: siteName });
   const pay = T(lang, "Díj rendezése");
   const lines = [
-    T(lang, "Előfizetésének díja ({amount}) még nem érkezett meg.", { amount: formatMoney(amount, currency, lang) }),
+    T(lang, "Előfizetésének díja ({amount}) még nem érkezett meg.", { amount: formatMinor(amount, currency, lang) }),
     T(lang, "Kérjük, rendezze {date} napig — ezután a honlapot átmenetileg fel kell függesztenünk.", { date: formatDay(freezeDate, lang) }),
     payButton(payUrl, pay),
     T(lang, "Ha időközben már fizetett, ezt a levelet tekintse tárgytalannak."),
@@ -174,7 +176,7 @@ export function buildRenewalFinalWarningEmail(input: BillingReminderMail): Email
   });
   const pay = T(lang, "Díj rendezése");
   const lines = [
-    T(lang, "Előfizetésének díja ({amount}) továbbra is rendezetlen.", { amount: formatMoney(amount, currency, lang) }),
+    T(lang, "Előfizetésének díja ({amount}) továbbra is rendezetlen.", { amount: formatMinor(amount, currency, lang) }),
     T(lang, "{date} napon a honlapot felfüggesztjük: látogatói addig nem érik el, amíg a díj be nem érkezik.", { date: formatDay(freezeDate, lang) }),
     payButton(payUrl, pay),
     T(lang, "Fizetés után a honlap automatikusan, azonnal visszakapcsol."),
@@ -213,7 +215,7 @@ export function buildSiteFrozenEmail(input: BillingChargeMail): EmailMessage {
   const subject = T(lang, "Honlapja felfüggesztve — {site}", { site: siteName });
   const pay = T(lang, "Díj rendezése és visszakapcsolás");
   const lines = [
-    T(lang, "A rendezetlen díj ({amount}) miatt honlapját átmenetileg felfüggesztettük.", { amount: formatMoney(amount, currency, lang) }),
+    T(lang, "A rendezetlen díj ({amount}) miatt honlapját átmenetileg felfüggesztettük.", { amount: formatMinor(amount, currency, lang) }),
     // ⚠️ This QUOTES the guest page. When the guest wording changed (ADR-0157)
     //    the quote became false — the owner was told their visitors read a
     //    sentence that no longer exists. A quote is a consumer of its source.
@@ -249,7 +251,7 @@ export function buildSiteRestoredEmail(input: {
   const { to, siteName, amount, currency, siteUrl, lang } = input;
   const subject = T(lang, "Honlapja újra elérhető — {site}", { site: siteName });
   const lines = [
-    T(lang, "A díjat ({amount}) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.", { amount: formatMoney(amount, currency, lang) }),
+    T(lang, "A díjat ({amount}) megkaptuk, ezért honlapját azonnal visszakapcsoltuk — látogatói ismét elérik, változatlan tartalommal.", { amount: formatMinor(amount, currency, lang) }),
     T(lang, "Ezzel a felfüggesztésről szóló korábbi értesítésünk tárgytalan."),
     ...(siteUrl ? [payButton(siteUrl, T(lang, "Megnézem a honlapomat"))] : []),
     T(lang, "Az automatikus kártyaterhelés a következő fordulónaptól újra él."),
@@ -371,7 +373,7 @@ export function buildPaymentReceivedEmail(input: {
   const { to, siteName, amount, currency, ref, lang } = input;
   const subject = T(lang, "Fizetését megkaptuk — {site}", { site: siteName });
   const lines = [
-    T(lang, "Köszönjük, {amount} összegű fizetését megkaptuk (hivatkozás: {ref}).", { amount: formatMoney(amount, currency, lang), ref }),
+    T(lang, "Köszönjük, {amount} összegű fizetését megkaptuk (hivatkozás: {ref}).", { amount: formatMinor(amount, currency, lang), ref }),
     T(lang, "A számlát hamarosan, külön levélben küldjük — Önnek ezzel nincs teendője."),
   ];
   return billingMail({ to, lang, subject, siteName, text: lines.join("\n\n") + "\n", lines });

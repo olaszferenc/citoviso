@@ -205,8 +205,9 @@ function moneyTokens(s: string): string[] {
 }
 
 for (const [currency, want] of [
-  ["HUF", `${formatMoney(AMOUNT, "HUF")}`],
-  ["EUR", `${formatMoney(AMOUNT, "EUR")}`],
+  // The letters take MINOR units (ADR-0443; 3/9 Elek HR: the EUR letters read cents as euros).
+  ["HUF", `${formatMinor(AMOUNT, "HUF")}`],
+  ["EUR", `${formatMinor(AMOUNT, "EUR")}`],
 ] as [string, string][]) {
   const letters = lettersFor(currency);
   const spellings = new Map<string, string[]>();

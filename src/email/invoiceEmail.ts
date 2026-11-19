@@ -10,7 +10,7 @@
 // expires (or needs a login) is the classic way to make a bizonylat unusable.
 
 import { T } from "../i18n/mail.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor } from "../text/money.js";
 import { invoiceItemLabel, type InvoiceItemKey } from "../billing/invoiceItem.js";
 import { esc, mailButton, mailDetails, mailGreeting, mailNote, mailPara, platformMail } from "./platformLayout.js";
 import type { EmailAttachment, EmailMessage } from "./sender.js";
@@ -56,8 +56,10 @@ export interface InvoiceEmailInput {
 // The invoice mail was the ONE letter that already wrote "Ft" while the six
 // dunning letters wrote "HUF" for the same charge — it was right, but alone.
 // Now it is right from the same rule as the rest (text/money.ts).
+// ORSZÁG-RÉTEG 3/9 (Elek HR): the amounts are MINOR-unit integers of the currency (ADR-0443) —
+// formatMoney read 2694 euro cents as „2 694 €”. formatMinor IS formatMoney for HUF (0 digits).
 function money(amount: number, currency: string, lang?: string): string {
-  return formatMoney(amount, currency, lang);
+  return formatMinor(amount, currency, lang);
 }
 
 export function buildInvoiceEmail(input: InvoiceEmailInput): EmailMessage {

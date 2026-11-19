@@ -253,6 +253,16 @@ try {
     check("kitöltve: az OIB és a határozat száma látszik, hiány nincs", full.includes("12345678903") && full.includes("UP/I-335-02/26-01/123") && missFull.length === 0, `hiány: ${missFull.join(", ")} · jelölő: ${(full.match(/cit-lg-missing/g) ?? []).length}`);
   }
 
+  // ── ⑦b the invoice mail (Elek HR 2nd round: „2 694 €” for 26,94 €) ───────────────────────
+  {
+    const { buildInvoiceEmail } = await import("../src/email/invoiceEmail.js");
+    const m = buildInvoiceEmail({ to: "elek@citoviso.com", buyerName: "Ivan Babić", invoiceNumber: "T-1", gross: 2694, currency: "EUR", period: "monthly", lang: "hr", domainFee: 256 } as never);
+    const txt = (m as { text?: string }).text ?? "";
+    check("számlalevél: az összeg centből (26,94 €, a domain 2,56 €), nem százszoros", txt.includes("26,94") && txt.includes("2,56") && !/2\s?694\s?€/.test(txt), txt.slice(0, 300));
+    const hu = buildInvoiceEmail({ to: "a@b.hu", buyerName: "Teszt", invoiceNumber: "T-2", gross: 4880, currency: "HUF", period: "monthly", lang: "hu" } as never);
+    check("számlalevél HU: forint egészben, ahogy eddig", ((hu as { text?: string }).text ?? "").includes("4 880 Ft"), ((hu as { text?: string }).text ?? "").slice(0, 300));
+  }
+
   // ── ⑧ HU unchanged ──────────────────────────────────────────────────────────────────────
   console.log("⑧ HU változatlan");
   check("HU sor bitre azonos", (await huRow()) === huBefore);
