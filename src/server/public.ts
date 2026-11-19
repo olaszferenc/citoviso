@@ -566,7 +566,7 @@ async function serveHomepage(
   }
   const rendered = await withAssetVersions(await renderHomepage(html, req.headers, url.searchParams.get("region")));
   // Installable citoviso.com app (2026-11-19, src/ui/pwa.ts).
-  send(res, 200, withPwaHead(rendered));
+  send(res, 200, withPwaHead(rendered, "public"));
 }
 
 /** Serve the generated preview HTML for a request token. */
@@ -4678,7 +4678,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         res,
         200,
         // The installed citoviso.com app must stay in its window across the login (src/ui/pwa.ts).
-        withPwaHead(loginPage(undefined, consoleLoginUrl(req), loginLang, safeAdminNext(url.searchParams.get("next")))),
+        withPwaHead(loginPage(undefined, consoleLoginUrl(req), loginLang, safeAdminNext(url.searchParams.get("next"))), "public"),
       );
     }
     // Elek T-3: "Elfelejtett jelszó?" — the self-service request form.

@@ -53,20 +53,28 @@ export function pwaManifest(app: PwaApp): Record<string, unknown> {
   };
 }
 
-/** The tags every in-scope page carries in its <head>. */
-export function pwaHead(): string {
+/**
+ * The tags every in-scope page carries in its <head>. iOS (Safari "Add to Home Screen") reads the
+ * manifest's `display` but takes the icon from apple-touch-icon (opaque, 180 px — transparent
+ * corners turn black) and the label from apple-mobile-web-app-title (else the page <title>,
+ * e.g. "Belépés — Citoviso konzol").
+ */
+export function pwaHead(app: PwaApp): string {
   return (
     `<link rel="manifest" href="/manifest.webmanifest">` +
     `<meta name="theme-color" content="${PWA_BG}">` +
-    `<link rel="apple-touch-icon" href="/pwa/icon-192.png">` +
+    `<link rel="apple-touch-icon" sizes="180x180" href="/pwa/apple-touch-icon.png">` +
+    `<meta name="apple-mobile-web-app-title" content="${app === "console" ? "Konzol" : "Citoviso"}">` +
+    `<meta name="apple-mobile-web-app-capable" content="yes">` +
+    `<meta name="mobile-web-app-capable" content="yes">` +
     `<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>`
   );
 }
 
 /** Insert pwaHead() before </head> of a full HTML document (no-op if there is no </head>). */
-export function withPwaHead(html: string): string {
+export function withPwaHead(html: string, app: PwaApp): string {
   const i = html.search(/<\/head>/i);
-  return i < 0 ? html : html.slice(0, i) + pwaHead() + html.slice(i);
+  return i < 0 ? html : html.slice(0, i) + pwaHead(app) + html.slice(i);
 }
 
 const OFFLINE_HTML =
@@ -97,6 +105,7 @@ const ICON_FILES: Record<string, string> = {
   "/pwa/icon-192.png": "icon-192.png",
   "/pwa/icon-512.png": "icon-512.png",
   "/pwa/icon-maskable-512.png": "icon-maskable-512.png",
+  "/pwa/apple-touch-icon.png": "apple-touch-icon.png",
 };
 
 /**
