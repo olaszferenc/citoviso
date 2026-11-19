@@ -44,7 +44,7 @@ import { plannedSiteSlug } from "../conversion/provision.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { collectFallbacks, missingPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
 import { getEscalationConfig, legacyOutreachPercent } from "../payment/offers.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
@@ -612,7 +612,7 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   if (lang !== DEFAULT_LANG) {
     // Measured, never provisioned (no AI spend from a campaign run): a half-translated
     // letter reads as a scam, so a gap means no letter.
-    const missing = (await missingPackStrings(lang)).length;
+    const missing = (await missingBuyerPackStrings(lang)).length;
     if (missing > 0) return { kind: "skipped", reason: `${lang} nyelvi csomagból ${missing} string hiányzik` }; // i18n-exempt: operátori CLI-kimenet
   }
   // §C gate on the text that goes out — the cold letter's own judge (CheckableLetter).

@@ -2644,48 +2644,60 @@ await shootConsole(
   settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
   conOut("console-settings"),
 );
-// ADR-0111 markets panel. The fixture deliberately shows BOTH states — an open home
-// market with its decision line, and a closed one with the (collapsed) opening form —
-// because the guide explains exactly that difference.
-await shootConsole(
-  settingsPage(
-    { username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" },
-    null,
-    { phone: "", email: "", envPhone: "" },
-    null,
-    [
-      {
-        country: "HU",
-        approved: true,
-        approvedBy: "system",
-        approvedAt: new Date("2026-09-08T10:04:00Z"),
-        note: "Hazai piac: a teljes jogi csomag magyar jogra készült.",
-        home: true,
-        log: [],
-      },
-      {
-        country: "AT",
-        approved: false,
-        approvedBy: null,
-        approvedAt: null,
-        note: null,
-        home: false,
-        log: [
-          {
-            action: "revoke",
-            actor: "olaszferenc",
-            reason: "osztrák jogi csomag felülvizsgálat alatt",
-            at: new Date("2026-09-08T09:30:00Z"),
-          },
-        ],
-      },
-    ],
-    null,
-  ),
-  conOut("console-markets"),
-  undefined,
-  ".panel:nth-of-type(3)",
-);
+// ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the „Országok” lap — the matrix (HU open, BG half done, HR met
+// but without a row) and the BG editor at its „Megnyitás” step (the readiness list + the shut
+// approve button). Fixture readiness: the guide explains exactly these states.
+{
+  const { countriesPage } = await import("../src/console/countryViews.js");
+  const { blankDraft } = await import("../src/countryRules.js");
+  type RdItem = { key: string; state: "ok" | "bad" | "warn"; gating: boolean; title: string; detail: string; pct?: number };
+  const rd = (items: RdItem[], approved: boolean) => {
+    const complete = items.every((i) => !i.gating || i.state !== "bad");
+    return { country: "", hasRow: true, items, complete, approved, open: approved && complete, reasons: [], legal: null };
+  };
+  const huItems: RdItem[] = [
+    { key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" },
+    { key: "prices", state: "ok", gating: true, title: "Ársor és fizetés", detail: "„hu” ár-régió teljes, HUF — a(z) barion fogadja" },
+    { key: "babel", state: "ok", gating: true, title: "Nyelvi csomag (Bábel)", detail: "magyar — a forrásnyelv, nincs mit fordítani" },
+    { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "hazai csomag — a forrás maga" },
+    { key: "holidays", state: "warn", gating: false, title: "Ünnepnapok", detail: "nincs megadva — ma a válasz csak hétvégén áll" },
+    { key: "channel", state: "ok", gating: true, title: "Kiküldési csatorna", detail: "e-mail + sms, mms, viber, whatsapp" },
+  ];
+  const bgItems: RdItem[] = [
+    { key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" },
+    { key: "prices", state: "bad", gating: true, title: "Ársor és fizetés", detail: "ár-régió „global”: hiányzó modulár: gallery, rooms, amenities, pricing" },
+    { key: "babel", state: "bad", gating: true, title: "Nyelvi csomag (Bábel)", detail: "bg: 3 978 / 4 000 vevő-oldali felirat lefordítva — Bábelre vár", pct: 99 },
+    { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "mind a 227 egység bg nyelven" },
+    { key: "holidays", state: "ok", gating: true, title: "Ünnepnapok", detail: "12 nap, 2026 és 2027 lefedve" },
+    { key: "channel", state: "ok", gating: true, title: "Kiküldési csatorna", detail: "e-mail — a csak mobilszámos lead TARTVA (nincs mobil-csatorna)" },
+  ];
+  const hrItems: RdItem[] = [
+    { key: "data", state: "bad", gating: true, title: "Ország-adatok", detail: "nincs ország-sor — vedd fel az országot" },
+    { key: "prices", state: "bad", gating: true, title: "Ársor és fizetés", detail: "nincs ország-sor" },
+    { key: "babel", state: "ok", gating: true, title: "Nyelvi csomag (Bábel)", detail: "hr: mind a 4 000 vevő-oldali felirat lefordítva" },
+    { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "mind a 227 egység hr nyelven" },
+    { key: "holidays", state: "bad", gating: true, title: "Ünnepnapok", detail: "nincs megadva" },
+    { key: "channel", state: "bad", gating: true, title: "Kiküldési csatorna", detail: "nincs e-mail csatorna — a megkeresés nem tud kimenni" },
+  ];
+  const noMarket = { approved: false, approvedBy: null, approvedAt: null, note: null, log: [] };
+  const huMarket = { approved: true, approvedBy: "system", approvedAt: new Date("2026-09-08T12:04:00Z"), note: "Hazai piac: a teljes jogi csomag magyar jogra készült.", log: [] };
+  const list = [
+    { iso: "HU", name: "Magyarország", lang: "hu", currency: "HUF", timeZone: "Europe/Budapest", hasRow: true, home: true, readiness: rd(huItems, true), market: huMarket },
+    { iso: "BG", name: "Bulgária", lang: "bg", currency: "EUR", timeZone: "Europe/Sofia", hasRow: true, home: false, readiness: rd(bgItems, false), market: noMarket },
+    { iso: "HR", name: "", lang: "", currency: "", timeZone: "", hasRow: false, home: false, readiness: rd(hrItems, false), market: noMarket },
+  ];
+  await shootConsole(countriesPage({ list, editor: null, notice: null } as never), conOut("console-countries"));
+  const bg = { ...blankDraft("BG"), name: "Bulgária", pricingRegion: "global", publicHolidays: ["01-01", "03-03", "05-01"] };
+  const editor = {
+    iso: "BG", isNew: false, draft: bg, errors: {}, touched: [], readiness: rd(bgItems, false), step: "open", sub: "identity",
+    dirty: false, home: false, market: noMarket, regions: [{ region: "hu", currency: "HUF", complete: true }, { region: "global", currency: "EUR", complete: false }],
+    providers: ["barion"], now: new Date("2026-11-19T10:00:00Z"),
+  };
+  await shootConsole(
+    countriesPage({ list, editor, notice: null } as never),
+    conOut("console-countries").replace(/screen\.png$/, "open-step.png"),
+  );
+}
 // Test-log journal — rendered from the real FK-000 smoke scenario so the guide
 // image regenerates together with the scenario it documents.
 {

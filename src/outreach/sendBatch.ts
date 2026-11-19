@@ -30,7 +30,7 @@ import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { ensureLanguagePack, missingPackStrings } from "../i18n/packs.js";
+import { ensureLanguagePack, missingBuyerPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { countryConfigSync } from "../country.js";
 import { babelHoldReason, outreachWindowBlocksIn } from "./countryOutreach.js";
@@ -297,7 +297,7 @@ export async function describeMailSendability(prospectId: string): Promise<MailS
  * so a SCREEN can ask the very same question the button answers. The only difference
  * is the language-pack step — `ensureLanguagePack` would pay an AI call and write the
  * DB, which a GET render must never do; in probe mode the gap is MEASURED instead
- * (missingPackStrings), so the probe is never more permissive than the real send. Use
+ * (missingBuyerPackStrings — the buyer-side measure the readiness reads), so the probe is never more permissive than the real send. Use
  * with `dryRun`, or nothing will stop it from actually sending.
  */
 export async function sendOutreachMail(
@@ -412,8 +412,8 @@ export async function sendOutreachMail(
     // STRICTER of the two — it reports a gap the send would have filled — so the probe
     // can never claim sendable where the send would refuse.
     const missing = opts.probe
-      ? (await missingPackStrings(d.lang)).length
-      : (await ensureLanguagePack(d.lang)).missing;
+      ? (await missingBuyerPackStrings(d.lang)).length
+      : (await ensureLanguagePack(d.lang), (await missingBuyerPackStrings(d.lang)).length);
     if (missing > 0) {
       return {
         ...base,

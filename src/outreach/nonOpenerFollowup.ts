@@ -39,7 +39,7 @@ import { recipientKey } from "../email/address.js";
 import { buildNonOpenerEmail, renderNonOpenerLetter, type NonOpenerLetter } from "../email/nonOpenerEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { collectFallbacks, missingPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { normalizePhone } from "../text/phone.js";
 import { buildDraftForProspect } from "./draft.js";
@@ -372,7 +372,7 @@ export async function sendNonOpenerFollowup(c: NonOpenerCandidate, deps: NonOpen
   if ("error" in built) return { kind: "skipped", reason: built.error };
   if (built.lang !== DEFAULT_LANG) {
     // A half-translated letter reads as a scam — a gap means no letter (no AI spend here).
-    const missing = (await missingPackStrings(built.lang)).length;
+    const missing = (await missingBuyerPackStrings(built.lang)).length;
     if (missing > 0) return { kind: "skipped", reason: `${built.lang} nyelvi csomagból ${missing} string hiányzik` }; // i18n-exempt: operátori kimenet
   }
   const gate = checkOutreachDraft(built.gate, c.leadName, built.lang, built.market);

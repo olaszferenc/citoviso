@@ -87,9 +87,15 @@ await sql`
     search_keywords, '[]'::jsonb, own_site_tlds, search_lang, ${XX}, browser_locale, accept_language,
     dial_code, trunk_prefix, mobile_prefixes, phone_plan, phone_nsn_min, phone_nsn_max,
     outreach_channels, send_window_from, send_window_to, daily_quota, invoice_lang, ${XX}, payment_provider,
-    tourist_tax_model, public_holidays
+    tourist_tax_model, '["01-01"]'::jsonb
   from country where iso2 = 'HU'`.execute(db);
 await refreshCountries();
+// ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the gate is approval + the country's READINESS (countryReadiness):
+// besides the legal pack, a non-HU country needs holidays (the copy above lists one every-year
+// day — HU's empty list is only a warning for HU itself) and an invoiceable (EU) code — the
+// throwaway user-assigned code is declared EU for THIS process (a test-only switch the readiness
+// honours for XA…XZ only; country-layer-check ⑪ keeps it out of .env).
+process.env.CIT_READINESS_EU_FIXTURE = XX;
 try {
   check("ismeretlen ország nincs jóváhagyva", !(await isMarketApproved(XX)));
   check("indoklás nélkül NEM nyílik meg", !(await approveMarket({ country: XX, actor: "teszt", reason: "" })));

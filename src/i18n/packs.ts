@@ -189,6 +189,48 @@ export async function missingPackStrings(lang: string): Promise<string[]> {
   return catalog.filter((s) => !existing[s]);
 }
 
+const CONTEXT_PATH = path.resolve(HERE, "catalog-context.json");
+let buyerCatalogCache: string[] | null = null;
+
+/**
+ * ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the part of the catalog a BUYER-side reader can meet — every
+ * string whose surface (catalog-context.json, extract-i18n) is anything but the operator
+ * console alone: the lead's page and letter, the SMS, the guest site, the tenant admin. A
+ * console-only string never reaches a lead or a buyer, so it does not hold a country back
+ * (the console stays Hungarian for the operator). A string with no context entry COUNTS
+ * (unknown audience = assume a buyer sees it). This is the ONE language-completeness measure:
+ * the country readiness (src/countryReadiness.ts) and both cold-outreach send gates read it.
+ */
+export async function buyerCatalog(): Promise<string[]> {
+  if (buyerCatalogCache) return buyerCatalogCache;
+  const catalog = await loadCatalog();
+  let ctx: Record<string, string> = {};
+  try {
+    ctx = JSON.parse(await readFile(CONTEXT_PATH, "utf8")) as Record<string, string>;
+  } catch {
+    console.error("[i18n] HIÁNYZÓ catalog-context.json — a vevő-oldali mérés a teljes katalógust nézi (npx tsx scripts/extract-i18n.mts)");
+  }
+  buyerCatalogCache = catalog.filter((s) => (ctx[s] ?? "") !== "konzol");
+  return buyerCatalogCache;
+}
+
+/**
+ * Which BUYER-side strings `lang` is missing (read-only; Hungarian → none).
+ * Default: the pack in the DB right now — what a render would use (the send gates measure
+ * this, after their own provisioning where they do it). `withSeed`: the DB pack with Bábel's
+ * committed seed overlaid by the rule ensureLanguagePack applies — what the pack IS once
+ * provisioned (boot top-up, the next send); the readiness screen reads that, because it never
+ * writes and must not show a gap the next provisioning closes by itself.
+ */
+export async function missingBuyerPackStrings(lang: string, opts: { withSeed?: boolean } = {}): Promise<string[]> {
+  if (lang === DEFAULT_LANG) return [];
+  const scope = await buyerCatalog();
+  if (!scope.length) return [];
+  const pack = (await loadPack(lang)) ?? {};
+  const have = opts.withSeed ? applyBabelSeed(lang, pack, await loadCatalog()).merged : pack;
+  return scope.filter((s) => !have[s]);
+}
+
 /**
  * Bring the language pack for `lang` up to what Bábel has COMMITTED — the ADR-0036
  * automation hook. Bábel's seed (UI strings + help entries) is applied to the DB and the

@@ -37,7 +37,7 @@ import {
 } from "./mockVerdictGate.js";
 import { db } from "../db/client.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { ensureLanguagePack } from "../i18n/packs.js";
+import { ensureLanguagePack, missingBuyerPackStrings } from "../i18n/packs.js";
 import { normalizePhone, sendSms } from "../sms/sender.js";
 import { isMobileE164In, normalizePhoneIn } from "../text/phoneCountry.js";
 import { countryConfigSync } from "../country.js";
@@ -236,8 +236,10 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   // ADR-0070 §3 — LANGUAGE gate: a half-translated cold message reads as a scam.
   // ORSZÁG-RÉTEG 3/5: TARTVA „Bábelre vár” — never a Hungarian fallback (owner 2026-11-17).
   if (d.lang !== DEFAULT_LANG) {
-    const pack = await ensureLanguagePack(d.lang);
-    if (pack.missing > 0) return no(babelHoldReason(d.lang, pack.missing));
+    // ORSZÁG-RÉTEG 3/8: the buyer-side measure (i18n/packs.ts) — the readiness reads the same.
+    await ensureLanguagePack(d.lang);
+    const missing = (await missingBuyerPackStrings(d.lang)).length;
+    if (missing > 0) return no(babelHoldReason(d.lang, missing));
   }
 
   // ORSZÁG-RÉTEG 3/5: the CHANNEL is the lead's country's. The pair rides the local modem (a

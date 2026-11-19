@@ -46,6 +46,11 @@ const BARION: ProviderCaps = {
 
 const PROVIDERS: Readonly<Record<string, ProviderCaps>> = { barion: BARION };
 
+/** Every provider an adapter exists for (the console's „Fizetési szolgáltató” choice). */
+export function paymentProviderIds(): readonly string[] {
+  return Object.keys(PROVIDERS);
+}
+
 /** The provider's capability row, or null for a name no adapter exists for. */
 export function providerCaps(provider: string | null | undefined): ProviderCaps | null {
   return PROVIDERS[String(provider ?? "").trim().toLowerCase()] ?? null;
@@ -102,11 +107,13 @@ export function marketOpenGaps(
   deps: {
     readonly row: (iso: string) => { readonly paymentProvider: string; readonly currency: string; readonly pricingRegion: string } | null;
     readonly regionGaps: (region: string) => string[];
+    /** Is the country invoiceable (EU)? Default: billing/taxCounters isTaxableBuyerCountry. */
+    readonly isEu?: (iso: string) => boolean;
   },
 ): string[] {
   // A non-EU buyer is not invoiceable in this round (the accountant has not ruled on it):
   // such a market does not open, so the pay-link gate (ADR-0111) keeps refusing it.
-  const nonEu = isTaxableBuyerCountry(country) ? [] : ["nem EU-s ország — a számlázása ebben a körben nem megoldott (ADR-0443)"];
+  const nonEu = (deps.isEu ?? isTaxableBuyerCountry)(country) ? [] : ["nem EU-s ország — a számlázása ebben a körben nem megoldott (ADR-0443)"];
   const row = deps.row(country);
   if (!row) return [...nonEu, "nincs ország-sor (ADR-0437 ③)"];
   return [...nonEu, ...marketPaymentGaps(row), ...deps.regionGaps(row.pricingRegion).map((g) => `ár-régió „${row.pricingRegion}”: ${g}`)];

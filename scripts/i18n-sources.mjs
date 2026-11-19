@@ -189,6 +189,10 @@ export const I18N_SOURCES = [
   // a per-ACCOUNT setting (migration 0037), not a market parameter. Two operators
   // with different languages share one console and one dataset.
   "src/console/views.ts",
+  // ORSZÁG-RÉTEG 3/8: the „Országok” lap + the country-row rules and readiness texts.
+  "src/console/countryViews.ts",
+  "src/countryRules.ts",
+  "src/countryReadiness.ts",
   "src/console/reportViews.ts",
   // Lead-list column labels + column meanings moved OUT of views.ts into the shared
   // registry — a copy-bearing file that must be listed here, or every header and

@@ -76,7 +76,9 @@ import { chromium, type Browser, type Page } from "playwright-core";
 import { config } from "../src/config.js";
 import { db } from "../src/db/client.js";
 import { installPack, tSync } from "../src/i18n/packs.js";
-import { leadPage, outreachDraftPage, settingsPage } from "../src/console/views.js";
+import { leadPage, outreachDraftPage } from "../src/console/views.js";
+import { countriesPage, type CountryEditor } from "../src/console/countryViews.js";
+import { blankDraft } from "../src/countryRules.js";
 import { documentNewPage, documentsPage, partnerPage } from "../src/console/partnerViews.js";
 import { runWithConsoleLang, setConsoleLang } from "../src/console/i18nCtx.js";
 import type { LeadDetail, ProspectView } from "../src/console/data.js";
@@ -275,29 +277,35 @@ const DOC_FORM_OPTS = {
  * Egy NYITOTT és egy ZÁRT piac kell: a „Lezárás" és a „Megnyitás" ág KÜLÖN
  * placeholderrel él, és mindkettő törött volt. A leiratkozás-visszavonás pedig
  * csak akkor renderelődik, ha a prospect TÉNYLEG leiratkozott. */
-const MARKETS = [
-  { country: "PL", approved: true, approvedBy: "or", approvedAt: new Date("2026-09-01T00:00:00Z"), note: null, home: false, log: [] },
-  { country: "SK", approved: false, approvedBy: null, approvedAt: null, note: null, home: false, log: [] },
-] as never;
+// ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the market forms moved from /settings to the „Országok” lap —
+// an OPEN country (the revoke form) and a READY, not yet approved one (the approve form).
+const READY = {
+  country: "PL", hasRow: true, complete: true, approved: false, open: false, reasons: [], legal: null,
+  items: [{ key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" }],
+};
+function countryEditorFixture(approved: boolean): CountryEditor {
+  return {
+    iso: "PL", isNew: false, draft: blankDraft("PL"), errors: {}, touched: [], step: "open", sub: "identity",
+    readiness: { ...READY, approved, open: approved } as never,
+    dirty: false, home: false, regions: [{ region: "global", currency: "EUR", complete: true }], providers: ["barion"],
+    now: new Date("2026-11-19T10:00:00Z"),
+    market: approved
+      ? { approved: true, approvedBy: "or", approvedAt: new Date("2026-09-01T00:00:00Z"), note: null, log: [] }
+      : { approved: false, approvedBy: null, approvedAt: null, note: null, log: [] },
+  };
+}
 
 const PROSPECT_OPTOUT = { ...PROSPECT, unsubscribedAt: "2026-09-10T08:00:00.000Z" } as unknown as ProspectView;
 
-type SurfaceId = "lead" | "leadOptout" | "draft" | "draftSent" | "docs" | "partnerDocs" | "docNew" | "settings";
+type SurfaceId = "lead" | "leadOptout" | "draft" | "draftSent" | "docs" | "partnerDocs" | "docNew" | "countriesOpen" | "countriesReady";
 
 function render(surface: SurfaceId, lang: string): string {
   return runWithConsoleLang(() => {
     setConsoleLang(lang);
     if (surface === "lead") return leadPage(LEAD, { running: false }, null, [], [], [PROSPECT]);
     if (surface === "leadOptout") return leadPage(LEAD, { running: false }, null, [], [], [PROSPECT_OPTOUT]);
-    if (surface === "settings") {
-      return settingsPage(
-        { username: "or", displayName: "Őr", role: "admin" },
-        null,
-        { phone: "", email: "", envPhone: "" },
-        null,
-        MARKETS,
-        null,
-      );
+    if (surface === "countriesOpen" || surface === "countriesReady") {
+      return countriesPage({ list: [], editor: countryEditorFixture(surface === "countriesOpen"), notice: null });
     }
     // A globális bizonylat-lap az EGYETLEN, ahol a `#docf` oszlop-szűrő űrlap létezik —
     // a partner-fülön szándékosan csak feliratok állnak, ott a két fül-szűrő a saját
@@ -405,13 +413,13 @@ const TARGETS: readonly Target[] = [
   // fordítás idézőjelet tartalmaz, ami `esc()` nélkül LEZÁRJA az attribútumot: a példa
   // eltűnik, és 5–7 szemét-attribútum keletkezik. Mérve a javítás előtt és után.
   {
-    surface: "settings", what: "piac LEZÁRÁSA — indoklás-placeholder",
-    sel: 'form[action="/settings/markets"] input[name="reason"]', kind: "placeholder",
+    surface: "countriesOpen", what: "piac LEZÁRÁSA — indoklás-placeholder",
+    sel: 'form[action="/settings/markets"] textarea[name="reason"]', kind: "placeholder",
     huSource: "Miért zárjuk le? (pl. „a lengyel opt-in szabályozás felülvizsgálat alatt”)",
   },
   {
-    surface: "settings", what: "piac MEGNYITÁSA — indoklás-placeholder",
-    sel: 'details:has(form[action="/settings/markets"] input[value="approve"]) input[name="reason"]',
+    surface: "countriesReady", what: "piac MEGNYITÁSA — indoklás-placeholder",
+    sel: 'form[action="/settings/markets"]:has(input[value="approve"]) textarea[name="reason"]',
     kind: "placeholder",
     huSource: "Mire hivatkozva? (pl. „lengyel jogi csomag 1.0, ügyvédi felülvizsgálat 2026-10-01”)",
   },
@@ -477,7 +485,7 @@ async function measure(page: Page, t: Target, lang: string): Promise<Outcome> {
     const r = (await page.evaluate(
       `(function(){var e=document.querySelector(${JSON.stringify(t.sel)});
          if(!e) return null;
-         var KNOWN=["type","name","required","minlength","placeholder","class","id","style","value"];
+         var KNOWN=["type","name","required","minlength","placeholder","class","id","style","value","rows","disabled"];
          var junk=Array.prototype.map.call(e.attributes,function(a){return a.name;})
            .filter(function(n){return KNOWN.indexOf(n)<0;});
          return { ph: e.getAttribute("placeholder"), junk: junk.length };})()`,
@@ -604,7 +612,7 @@ async function runLang(browser: Browser, lang: string): Promise<number> {
   console.log(`\n── nyelv: ${label}${selftest ? "  [RÉGI KEZELŐ — bukást várunk]" : ""}`);
   let measured = 0;
 
-  for (const surface of ["lead", "leadOptout", "draft", "draftSent", "docs", "partnerDocs", "docNew", "settings"] as const) {
+  for (const surface of ["lead", "leadOptout", "draft", "draftSent", "docs", "partnerDocs", "docNew", "countriesOpen", "countriesReady"] as const) {
     const targets = TARGETS.filter((t) => t.surface === surface);
     if (!targets.length) continue;
     let html = render(surface, lang);

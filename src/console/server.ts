@@ -218,9 +218,7 @@ import {
   createPricingRegion,
   hasPricingRegion,
   newRegionErrors,
-  regionPriceGaps,
 } from "../pricing.js";
-import { marketOpenGaps } from "../payment/providers.js";
 import { a60Csv, a60Summary, parseA60Period } from "../billing/a60.js";
 import { countryConfigSync, countryOf, countryOfLead } from "../country.js";
 import { consumerAdrValue, homeLegalPack, legalTextForLang, type LegalPack } from "../legalPack.js";
@@ -369,17 +367,31 @@ function consoleAudience(path: string): PageAudience {
 import { config, isLegalEntityComplete } from "../config.js";
 import { prettyPhone } from "../text/phone.js";
 import { leadEmails } from "../email/leadEmails.js";
-import {
-  approveMarket,
-  encounteredCountries,
-  HOME_MARKET,
-  listMarkets,
-  marketGate,
-  marketLog,
-  normalizeCountryCode,
-  revokeMarket,
-} from "../markets.js";
+import { approveMarket, marketGate, normalizeCountryCode, revokeMarket } from "../markets.js";
 import { getSetting, setSetting } from "./appSettings.js";
+import { countryReadiness } from "../countryReadiness.js";
+import { draftFromForm } from "../countryRules.js";
+import { saveCountry } from "../countryStore.js";
+import { buildEditor, countryList } from "./countryData.js";
+import {
+  COUNTRY_STEPS,
+  COUNTRY_SUBS,
+  countriesPage,
+  editorFragments,
+  placeOfFirstError,
+  type CountryEditor,
+  type CountryStep,
+  type CountrySub,
+} from "./countryViews.js";
+
+/** A ?step= / form step value → a known step (anything else: the first). */
+function parseCountryStep(v: string | null): CountryStep {
+  return (COUNTRY_STEPS as readonly string[]).includes(v ?? "") ? (v as CountryStep) : "data";
+}
+/** A ?sub= value → a known data sub-tab. */
+function parseCountrySub(v: string | null): CountrySub {
+  return (COUNTRY_SUBS as readonly string[]).includes(v ?? "") ? (v as CountrySub) : "identity";
+}
 import { db } from "../db/client.js";
 import { curatePage, layout, leadPage, leadsPage, tenantAdminPage, scrapePage } from "./views.js";
 import type { PhotoGateView } from "./views.js";
@@ -2277,71 +2289,116 @@ async function handle(
       email: (await getSetting("alert_email")) ?? "",
       envPhone: config.ownerAlertPhone ?? "",
     };
-    const mk = url.searchParams.get("mk");
-    const marketNotice = mk ? { ok: mk.startsWith("ok:"), text: mk.replace(/^(ok|hiba):/, "") } : null;
-    // ADR-0111: every country we have MET (scrape area or buyer) shows up here, even
-    // without a market row — otherwise the Polish lead that just arrived would stay
-    // invisible until an operator wondered why nothing could be sent to it.
-    const known = await encounteredCountries();
-    await loadPricing();
-    const rows = await listMarkets();
-    const byCountry = new Map(rows.map((r) => [r.country, r]));
-    const markets = await Promise.all(
-      known.map(async (country) => {
-        const r = byCountry.get(country);
-        return {
-          country,
-          approved: r?.approved ?? false,
-          approvedBy: r?.approvedBy ?? null,
-          approvedAt: r?.approvedAt ?? null,
-          note: r?.note ?? null,
-          home: country === HOME_MARKET,
-          log: await marketLog(country),
-          // ADR-0443: why the money path keeps this market shut (shown instead of „Megnyitás”).
-          openGaps: marketOpenGaps(country, { row: countryConfigSync, regionGaps: regionPriceGaps }),
-        };
-      }),
-    );
-    return send(res, 200, settingsPage(op, notice, alerts, alertNotice, markets, marketNotice));
+    // ADR-0111 → ORSZÁG-RÉTEG 3/8: the markets panel moved to the „Országok” lap (/countries).
+    return send(res, 200, settingsPage(op, notice, alerts, alertNotice));
   }
   // POST /settings/markets — open or close a market (ADR-0111). The reason is
   // MANDATORY here too, not only in the browser: without it nothing changes and no
   // log row is written, so a rejected attempt cannot look like a decision. The actor
-  // is the signed-in operator, never a form field.
+  // is the signed-in operator, never a form field. ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the forms
+  // live on the „Országok” lap now, and an approval needs the country's readiness COMPLETE
+  // (src/countryReadiness.ts — the same function the market gate reads; it includes the
+  // ADR-0443 money path), checked here again whatever the browser showed.
   if (method === "POST" && path === "/settings/markets") {
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const form = await readBody(req);
-    const country = (form.get("country") ?? "").trim();
+    const country = (form.get("country") ?? "").trim().toUpperCase();
     const action = (form.get("action") ?? "").trim();
     const reason = (form.get("reason") ?? "").trim();
-    if (reason.length < 3) {
-      return redirect(
-        res,
-        `/settings?mk=${encodeURIComponent("hiba:Az indoklás kötelező (min. 3 karakter) — nem történt változás.")}`,
-      );
-    }
+    const lang = consoleLang();
+    const back = (msg: string): void =>
+      redirect(res, `/countries?${/^[A-Z]{2}$/.test(country) ? `iso=${encodeURIComponent(country)}&step=open&` : ""}mk=${encodeURIComponent(msg)}`);
+    if (reason.length < 3) return back(`hiba:${T(lang, "Az indoklás kötelező (min. 3 karakter) — nem történt változás.")}`);
     const decision = { country, actor: op.username, reason };
-    // ADR-0443: a market whose money path cannot work does not open (fail closed) — its
-    // currency is not taken by its payment provider, or its pricing region cannot price.
     if (action === "approve") {
-      await loadPricing(true);
-      const gaps = marketOpenGaps(country.toUpperCase(), { row: countryConfigSync, regionGaps: regionPriceGaps });
-      if (gaps.length) {
-        return redirect(res, `/settings?mk=${encodeURIComponent(`hiba:${country} nem nyitható: ${gaps.join("; ")}`)}`);
+      const ready = await countryReadiness(country, { lang });
+      if (!ready.complete) {
+        const missing = ready.items.filter((i) => i.gating && i.state === "bad").map((i) => `${i.title}: ${i.detail}`);
+        return back(`hiba:${T(lang, "{iso} nem nyitható: {why}", { iso: country, why: missing.join("; ") })}`);
       }
     }
-    const ok =
-      action === "approve" ? await approveMarket(decision) : await revokeMarket(decision);
-    const label = action === "approve" ? "megnyitva" : "lezárva";
-    return redirect(
-      res,
-      `/settings?mk=${encodeURIComponent(
-        ok
-          ? `ok:${country} ${label}.`
-          : `hiba:${country} — a művelet nem hajtható végre (ismeretlen ország, hiányzó indoklás, vagy a hazai piac nem zárható le).`,
-      )}`,
+    const ok = action === "approve" ? await approveMarket(decision) : await revokeMarket(decision);
+    return back(
+      ok
+        ? `ok:${action === "approve" ? T(lang, "{iso} megnyitva.", { iso: country }) : T(lang, "{iso} lezárva.", { iso: country })}`
+        : `hiba:${T(lang, "{iso} — a művelet nem hajtható végre (ismeretlen ország, hiányzó indoklás, vagy a hazai piac nem zárható le).", { iso: country })}`,
     );
+  }
+  // GET /countries — the „Országok” lap (ORSZÁG-RÉTEG 3/8, ADR-XXXX): the opening matrix,
+  // a country's editor at a step (?iso=XX&step=…), or a new country's (?new=XX).
+  if (method === "GET" && path === "/countries") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const lang = consoleLang();
+    const mk = url.searchParams.get("mk");
+    const notice = mk ? { ok: mk.startsWith("ok:"), text: mk.replace(/^(ok|hiba):/, "") } : null;
+    const step = parseCountryStep(url.searchParams.get("step"));
+    const sub = parseCountrySub(url.searchParams.get("sub"));
+    const rawNew = url.searchParams.get("new");
+    let editor: CountryEditor | null = null;
+    let newErr = "";
+    if (rawNew !== null) {
+      const cc = rawNew.trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(cc)) newErr = T(lang, "Két betű, ISO 3166-1 (pl. HR, RO, PL).");
+      else if (countryConfigSync(cc)) return redirect(res, `/countries?iso=${cc}&step=data`);
+      else editor = await buildEditor({ lang, iso: cc, isNew: true, step: "data", sub: "identity" });
+    } else {
+      const iso = (url.searchParams.get("iso") ?? "").trim().toUpperCase();
+      if (iso) {
+        editor = await buildEditor({ lang, iso, isNew: false, step, sub });
+        if (!editor) return redirect(res, `/countries?new=${encodeURIComponent(iso)}`);
+      }
+    }
+    const list = await countryList(lang);
+    return send(res, 200, countriesPage({ list, editor, notice, newIso: rawNew ?? "", newErr }));
+  }
+  // POST /countries/check — the live check of the open editor: the unsaved form → field
+  // errors + the re-rendered readiness fragments (JSON). Writes nothing.
+  if (method === "POST" && path === "/countries/check") {
+    const op = await currentOperator(req);
+    if (!op) return send(res, 401, JSON.stringify({ error: "login" }), "application/json");
+    const lang = consoleLang();
+    const form = await readBody(req);
+    const isNew = form.get("isNew") === "1";
+    const draft = draftFromForm(form);
+    if (!/^[A-Z]{2}$/.test(draft.iso2)) return send(res, 400, JSON.stringify({ error: "iso" }), "application/json");
+    const editor = await buildEditor({
+      lang,
+      iso: draft.iso2,
+      isNew,
+      draft,
+      touched: form.getAll("_touched"),
+      step: parseCountryStep(form.get("step")),
+      sub: parseCountrySub(form.get("sub")),
+      dirty: form.get("_dirty") === "1",
+    });
+    if (!editor) return send(res, 404, JSON.stringify({ error: "country" }), "application/json");
+    const entry = (await countryList(lang, { iso: draft.iso2, draft })).find((e) => e.iso === draft.iso2) ?? null;
+    return send(res, 200, JSON.stringify(editorFragments(editor, entry)), "application/json");
+  }
+  // POST /countries/save — write the row (validated by the same rules; nothing on error).
+  if (method === "POST" && path === "/countries/save") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const lang = consoleLang();
+    const form = await readBody(req);
+    const isNew = form.get("isNew") === "1";
+    const draft = draftFromForm(form);
+    const step = parseCountryStep(form.get("step"));
+    const saved = /^[A-Z]{2}$/.test(draft.iso2) ? await saveCountry(draft, { isNew, lang }) : { ok: false, errors: { iso2: "—" } };
+    if (saved.ok) {
+      console.log(`[console] ország mentve: ${draft.iso2} (${isNew ? "új" : "módosítás"}) — ${op.username}`);
+      const msg = isNew ? T(lang, "{iso} felvéve.", { iso: draft.iso2 }) : T(lang, "{iso} mentve.", { iso: draft.iso2 });
+      return redirect(res, `/countries?iso=${encodeURIComponent(draft.iso2)}&step=${step}&mk=${encodeURIComponent(`ok:${msg}`)}`);
+    }
+    const place = placeOfFirstError(saved.errors);
+    const editor = /^[A-Z]{2}$/.test(draft.iso2)
+      ? await buildEditor({ lang, iso: draft.iso2, isNew, draft, touched: "all", step: place?.step ?? step, sub: place?.sub ?? parseCountrySub(form.get("sub")), dirty: true })
+      : null;
+    const n = Object.keys(saved.errors).length;
+    const list = await countryList(lang);
+    return send(res, 422, countriesPage({ list, editor, notice: { ok: false, text: T(lang, "{n} mező javítandó — nem mentettem.", { n }) } }));
   }
   // POST /settings/alerts — AAM-cap alert recipients (ADR-0098/c). Empty field
   // clears the DB row: phone falls back to OWNER_ALERT_PHONE, email turns off.

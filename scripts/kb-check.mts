@@ -129,6 +129,10 @@ const VIEW_GROUPS = {
     // ORSZÁG-RÉTEG 3/7 (ADR-0458): the unsubscribe page's wording („Leiratkozom”…) moved into
     // the legal pack — its source lives HERE, prospectNotice.ts only prints it.
     "src/legal.ts",
+    // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the „Országok” lap (frozen plan design-refs/console/orszagok/) —
+    // its labels live in its own view file, the readiness item titles in the readiness module.
+    "src/console/countryViews.ts",
+    "src/countryReadiness.ts",
     // ADR-0336: the scout worksheet (/scout) — its labels („Felvétel”, „Csempe lezárása” …)
     // live in its own view file, so the handbook quotes THEM.
     "src/console/scoutViews.ts",
@@ -155,6 +159,7 @@ const REQUIRED_ANCHORS: Record<Audience, readonly string[]> = {
     "console.outreach_draft",
     "console.test_log",
     "console.scout",
+    "console.countries",
   ],
 };
 const REQUIRED_FIELDS = ["id", "title", "audience", "category", "anchors", "updated"];

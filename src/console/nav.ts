@@ -178,7 +178,11 @@ export function navTree(lang = "hu"): readonly NavNode[] {
       icon: "settings",
       role: T(lang, "Fiók, jelszó, működési beállítások."),
       href: `${HUB_PREFIX}system`,
-      children: [{ kind: "leaf", id: "settings", label: T(lang, "Beállítások"), href: "/settings" }],
+      children: [
+        { kind: "leaf", id: "settings", label: T(lang, "Beállítások"), href: "/settings" },
+        // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): country master data + opening readiness + market gate.
+        { kind: "leaf", id: "countries", label: T(lang, "Országok"), href: "/countries" },
+      ],
     },
     { kind: "leaf", id: "help", label: T(lang, "Súgó"), icon: "help", href: "/help" },
   ];

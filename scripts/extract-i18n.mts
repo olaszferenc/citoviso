@@ -58,6 +58,15 @@ async function tsFilesUnder(dir: string): Promise<string[]> {
  */
 export function surfaceOf(rel: string): string {
   const base = path.basename(rel);
+  // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): two files sit in the "wrong" folder for their audience. The
+  // prospect frame and the plan switcher are served BY the console but read by the LEAD
+  // (magázó: „Miért kaptam?”, „Ez még nem élő oldal.”); the mock photo check lives under
+  // outreach but speaks to the OPERATOR (tegező: „Generáld újra a mockot”). The buyer-side
+  // language measure (src/i18n/packs.ts buyerCatalog) and Bábel's exports read these tags.
+  if (rel === "src/console/prospectNotice.ts" || rel === "src/console/planSwitcher.ts") return "megkereses";
+  if (rel === "src/outreach/mockPhotoHealth.ts") return "konzol";
+  // The country-row rules and the readiness texts speak only on the „Országok” lap (operator).
+  if (rel === "src/countryRules.ts" || rel === "src/countryReadiness.ts") return "konzol";
   if (rel.startsWith("src/console/") || rel === "src/auth/operatorAuth.ts") return "konzol";
   if (/sms/i.test(base) || rel.startsWith("src/sms/")) return "sms";
   if (rel.startsWith("src/outreach/")) return "megkereses";
@@ -77,6 +86,17 @@ export function surfaceOf(rel: string): string {
     return "admin";
   return "egyeb";
 }
+
+/** Buyer-side strings inside src/console/views.ts (Bábel ticket 37db994c, 2026-11-18). */
+const BUYER_STRINGS_IN_CONSOLE: readonly string[] = [
+  "5. Az Ön jogai.",
+  "A honlapja már az Öné, ezért most nem indítottunk fizetést és nem terheltük meg a kártyáját.",
+  "Az Ön oldala: {name}",
+  "Erre a második terhelésre nem állítottunk ki számlát. Munkatársunk értesítést kapott, és felveszi Önnel a kapcsolatot a visszautalásról.",
+  "Ez a fizetés egy már rendezett rendelésre érkezett — valószínűleg két ablakban nyitotta meg a fizetést. Az első fizetése érvényes, a honlapja az Öné.",
+  "Ha Ön a megrendelőnk",
+  "Nem indítottunk fizetést, és nem terheltük meg a kártyáját. Szóltunk a kollégánknak, aki felveszi Önnel a kapcsolatot.",
+];
 
 async function main(): Promise<void> {
   // SOURCES still carries the non-src entries (client runtime JS); everything
@@ -141,6 +161,11 @@ async function main(): Promise<void> {
       add(JSON.parse(`"${m[1]}"`));
     }
   }
+  // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): buyer-facing strings rendered from the console's big view
+  // module (the pay-result page, the lead's own-page alt text, the prospect privacy notice) —
+  // the file is mostly operator text, so these few are named one by one. Only strings the
+  // harvest actually found are tagged (a renamed source string drops out, never invents one).
+  for (const hu of BUYER_STRINGS_IN_CONSOLE) if (found.has(hu)) note(hu, "honlap");
   const catalog = [...found].sort((a, b) => a.localeCompare(b, "hu"));
   const out = path.join(ROOT, "src/i18n/catalog.json");
   const next = JSON.stringify(catalog, null, 2) + "\n";

@@ -127,6 +127,13 @@ await refreshCountries();
 // ORSZÁG-RÉTEG 3/7: the market gate opens only on a COMPLETE legal pack — a marker FIXTURE (never a
 // translation, never the API) stands in for Bábel's, so this run measures what it always measured.
 await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", RO: "ro" });
+// ORSZÁG-RÉTEG 3/8: the gate is approval + READINESS — the synthetic rows get holidays and a
+// complete buyer-side MARKER pack (scratch DB, never a translation), the price sheets come below.
+{
+  const { makeCountryReady } = await import("./lib/country-ready-fixture.mts");
+  await makeCountryReady("CZ", "cs");
+  await makeCountryReady("RO", "ro");
+}
 
 // Regions + absolute prices in their own currency (minor units: 249,90 Kč = 24990).
 for (const [region, cur] of [["cz", "CZK"], ["ro", "RON"]] as const) {
@@ -170,12 +177,19 @@ const parent = await createFixtureParent(db as never, "moneye2e");
 async function lead(country: string, name: string): Promise<{ leadId: string; artifactId: string }> {
   const l = await db
     .insertInto("lead")
-    .values({ scrape_run_id: parent.runId, name, qualification: "no_site", raw: JSON.stringify({ country }) })
+    // The OBJECT, not JSON.stringify(): a pre-encoded string lands in the jsonb column as a
+    // JSON STRING ("{\"country\":\"CZ\"}"), raw.country is then undefined and countryOf() falls
+    // back to the scrape area's HU — the pay page came out hu-HU instead of cs-CZ (red on clean
+    // main since 2026-11-18, ország-réteg 3/7 zárójelentés).
+    .values({ scrape_run_id: parent.runId, name, qualification: "no_site", raw: { country } as never })
     .returning("id")
     .executeTakeFirstOrThrow();
   const a = await db
     .insertInto("mock_artifact")
-    .values({ lead_id: l.id, path: null, status: "approved", inputs: JSON.stringify({ guard: "money-path-e2e" }) })
+    // The mock's language is the lead's country's (ADR-0457 — a real non-HU mock carries it in
+    // siteData.lang). Without it langForLead() reads the artifact first and defaults to "hu",
+    // so the Czech buyer's pay page came out hu-HU even with the country right.
+    .values({ lead_id: l.id, path: null, status: "approved", inputs: JSON.stringify({ guard: "money-path-e2e", siteData: { lang: country === "CZ" ? "cs" : country === "RO" ? "ro" : "hu" } }) })
     .returning("id")
     .executeTakeFirstOrThrow();
   return { leadId: l.id, artifactId: a.id };

@@ -701,110 +701,17 @@ export interface AlertSettingsView {
 }
 
 
-/** ADR-0111: one market row — status, who opened it, and the way to change that. */
-export interface MarketView {
-  readonly country: string;
-  readonly approved: boolean;
-  readonly approvedBy: string | null;
-  readonly approvedAt: Date | null;
-  readonly note: string | null;
-  /** True for the home market: its pack is the product's foundation, not a decision here. */
-  readonly home: boolean;
-  readonly log: readonly { action: string; actor: string; reason: string; at: Date }[];
-  /** ADR-0443: why the market cannot open (payment provider / currency / price sheet / non-EU);
-   *  empty or absent = it may. Computed by the server (payment/providers.ts marketOpenGaps). */
-  readonly openGaps?: readonly string[];
-}
-
 /**
- * ADR-0111 — the markets panel.
- *
- * Follows the APPROVED opt-out-revocation pattern exactly: the action sits behind a
- * closed <details> (opening a market is not a stray click), the reason is mandatory
- * and server-enforced, and the decision log stays visible on the row — otherwise
- * "why is Poland open?" is unanswerable without the database.
+ * ADR-0111 → ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the markets panel MOVED to the „Országok” lap
+ * (/countries), where each country's opening readiness stands next to its approve / revoke
+ * action. Settings keeps a pointer, so an operator who looks for it here finds it.
  */
-function marketsPanel(markets: readonly MarketView[], notice: { ok: boolean; text: string } | null): string {
+function marketsPointer(): string {
   const lang = consoleLang();
-  // ADR-0443: a market whose money path cannot work (no country row, a currency its payment
-  // provider does not take, an incomplete price sheet) shows WHY instead of the open action.
-  const moneyGaps = (country: string): readonly string[] => markets.find((x) => x.country === country)?.openGaps ?? [];
-  const fmt = (d: Date | null): string =>
-    d ? new Date(d).toISOString().slice(0, 16).replace("T", " ") : "—";
-
-  const rows = markets
-    .map((m) => {
-      const log = m.log.length
-        ? `<ul class="mkt-log">${m.log
-            .map(
-              (l) =>
-                `<li><span class="mut small">${esc(fmt(l.at))} · ${esc(l.actor)} · ` +
-                `${esc(l.action === "approve" ? T(lang, "megnyitva") : T(lang, "lezárva"))}</span> — ${esc(l.reason)}</li>`,
-            )
-            .join("")}</ul>`
-        : "";
-      const action = m.home
-        ? `<p class="mut small" style="margin:6px 0 0">${T(lang, "Hazai piac — a teljes jogi csomag erre készült; innen nem zárható le.")}</p>`
-        : m.approved
-          ? `<details class="mkt-act">
-              <summary>${T(lang, "Piac lezárása ▸")}</summary>
-              <p class="mut small" style="margin:6px 0">${T(lang, "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti.")}</p>
-              <form method="post" action="/settings/markets" class="mkt-form">
-                <input type="hidden" name="country" value="${esc(m.country)}">
-                <input type="hidden" name="action" value="revoke">
-                ${/* ⛔⛔ MÉRVE 2026-09-15: ez a három indoklás-placeholder `esc()` NÉLKÜL ment
-                      az attribútumba. A MAGYAR forrásban nincs `"`, A FORDÍTÁSBAN VAN — az
-                      `en`/`it` csomag idézőjellel adja vissza a PÉLDÁT, az pedig lezárja az
-                      attribútumot: mérve `placeholder` → „On what basis? (e.g. " (a példa
-                      ELTŰNIK), plusz 6 szemét-attribútum. A `name`/`required`/`minlength`
-                      csak azért él, mert MEGELŐZI. Mindhárom hely KÖTELEZŐ, NAPLÓZOTT
-                      indoklás jogilag érzékeny műveletnél (piac-kapu, opt-out visszavonás),
-                      tehát épp az az útmutatás vész el, ami megmondja, mit írjon a kezelő.
-                      Őr: scripts/dialog-fires-check.mts (a placeholder csonkolatlansága). */ ""}
-                <input type="text" name="reason" required minlength="3"
-                  placeholder="${esc(T(lang, "Miért zárjuk le? (pl. „a lengyel opt-in szabályozás felülvizsgálat alatt”)"))}">
-                <button type="submit">${T(lang, "Lezárás")}</button>
-              </form>
-            </details>`
-          : moneyGaps(m.country).length
-            ? `<p class="ob-law" role="status"><b>${T(lang, "Nem nyitható:")}</b> ${esc(moneyGaps(m.country).join(" · "))}</p>`
-            : `<details class="mkt-act">
-              <summary>${T(lang, "Piac megnyitása ▸")}</summary>
-              <p class="ob-law">${T(lang, "A megnyitás felelősségvállalás: kijelented, hogy ennek az országnak a jogi csomagja (ÁSZF, elállás, adatkezelés, megkeresési szabályok) kész és felülvizsgált. Amíg zárva van, erre az országra nem megy hideg megkeresés, nem adható ki fizetési link és nem élesíthető oldal.")}</p>
-              <form method="post" action="/settings/markets" class="mkt-form">
-                <input type="hidden" name="country" value="${esc(m.country)}">
-                <input type="hidden" name="action" value="approve">
-                <input type="text" name="reason" required minlength="3"
-                  placeholder="${esc(T(lang, "Mire hivatkozva? (pl. „lengyel jogi csomag 1.0, ügyvédi felülvizsgálat 2026-10-01”)"))}">
-                <button type="submit">${T(lang, "Megnyitás")}</button>
-              </form>
-            </details>`;
-      return `<div class="mkt-row">
-        <div class="row" style="justify-content:space-between;align-items:baseline;gap:10px">
-          <strong>${esc(m.country)}</strong>
-          <span class="pill ${m.approved ? "approved" : "rejected"}">${
-            m.approved ? T(lang, "nyitva") : T(lang, "zárva")
-          }</span>
-        </div>
-        ${
-          m.approved
-            ? `<p class="mut small" style="margin:4px 0 0">${T(lang, "Megnyitotta: {who} · {when}", {
-                who: m.approvedBy ?? "—",
-                when: fmt(m.approvedAt),
-              })}${m.note ? ` — ${esc(m.note)}` : ""}</p>`
-            : ""
-        }
-        ${action}
-        ${log}
-      </div>`;
-    })
-    .join("");
-
   return `<div class="panel" style="max-width:560px">
-      <h2>${T(lang, "Piacok — jogi csomag")} ${helpLink("console.markets")}</h2>
-      <p class="mut small" style="margin:0 0 10px">${T(lang, "Egy ország akkor nyitott, ha a jogi csomagja kész. Zárt piacra nem megy hideg megkeresés, nem adható ki fizetési link, és nem élesíthető oldal — a mock és a mintaoldal viszont szabadon készül. A lista azokat az országokat mutatja, amelyekkel már találkoztunk (scrape-terület vagy vevő).")}</p>
-      ${notice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}
-      ${rows}
+      <h2>${T(lang, "Piacok — jogi csomag")} ${helpLink("console.countries")}</h2>
+      <p class="mut small" style="margin:0 0 10px">${T(lang, "A piacok megnyitása és lezárása az Országok lapra költözött: ott látod országonként, mi hiányzik még a nyitáshoz, és ott a jóváhagyás gombja is — az csak teljes országnál él.")}</p>
+      <a class="btn" href="/countries">${T(lang, "Országok lap ›")}</a>
     </div>`;
 }
 
@@ -813,9 +720,6 @@ export function settingsPage(
   notice: { ok: boolean; text: string } | null = null,
   alerts: AlertSettingsView = { phone: "", email: "", envPhone: "" },
   alertNotice: { ok: boolean; text: string } | null = null,
-  /** ADR-0111: markets + the flash of the last decision. */
-  markets: readonly MarketView[] = [],
-  marketNotice: { ok: boolean; text: string } | null = null,
 ): string {
   const lang = consoleLang();
   const body = `
@@ -843,7 +747,7 @@ export function settingsPage(
         <button type="submit">${T(lang, "Riasztási címzettek mentése")}</button>
       </form>
     </div>
-    ${markets.length ? marketsPanel(markets, marketNotice) : ""}
+    ${marketsPointer()}
     <div class="panel" style="max-width:560px">
       <h2>${T(lang, "Jelszó módosítása")}</h2>
       ${notice ? `<div class="row" style="margin:0 0 10px"><span class="pill ${notice.ok ? "approved" : "rejected"}">${esc(notice.text)}</span></div>` : ""}

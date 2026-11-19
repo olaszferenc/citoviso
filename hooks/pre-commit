@@ -293,7 +293,7 @@ fi
 # böngészőben méri, hogy a kérdés tényleg lefut-e. Piros önteszttel (9 bukás, megnevezett
 # nyelveken). ⚠️ DB-t igényel (a csomagok ott élnek).
 if [ -f scripts/dialog-fires-check.mts ] && \
-   changed_files | grep -qE '^(src/console/(views|partnerViews)\.ts|scripts/dialog-fires-check\.mts)'; then
+   changed_files | grep -qE '^(src/console/(views|partnerViews|countryViews)\.ts|scripts/dialog-fires-check\.mts)'; then
   echo "[pre-commit] dialog-fires (lefut-e a megerősítés MINDEN nyelven)…"
   npx tsx scripts/dialog-fires-check.mts >"$GATE_LOG" || gate_failed
 fi
@@ -1243,7 +1243,7 @@ fi
 # kivételét is: egy piac lezárása nem teheti fizetésképtelenné a meglévő ügyfelet.
 # DB kell hozzá, ezért csak az érintett fájlok változásakor fut.
 if [ -f scripts/market-gate-check.mts ] && \
-   changed_files | grep -qE '^(src/markets\.ts|src/payment/service\.ts|src/outreach/|src/console/server\.ts|migrations/)|^scripts/market-gate-check'; then
+   changed_files | grep -qE '^(src/markets\.ts|src/countryReadiness\.ts|src/countryRules\.ts|src/payment/service\.ts|src/outreach/|src/console/server\.ts|migrations/)|^scripts/market-gate-check'; then
   echo "[pre-commit] market-gate-check (ADR-0111: piac-kapuk)…"
   npx tsx scripts/market-gate-check.mts >"$GATE_LOG" || gate_failed
 fi
@@ -3933,7 +3933,8 @@ fi
 #     Csak olvas (country tábla + forrás), ~3 mp.
 #     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
 if [ -f scripts/country-layer-check.mts ] && \
-   changed_files | grep -qE '^src/(country|pricing)\.ts$|^src/text/(phone|phoneCountry|zoneTime)\.ts$|^src/scraper/|^src/scout/rules\.ts$|^src/i18n/(lang|mail)\.ts$|^src/outreach/(draft|autoDispatch)\.ts$|^src/sms/sendWindow\.ts$|^src/trial/start\.ts$|^src/intake/mockRequest\.ts$|^src/generator/generateEngine\.ts$|^migrations/|^scripts/country-layer-check\.mts$|^src/conversion/provision\.ts$|^src/tenant/(bookingSetup|moduleSetup|modules|wallet|multilangCard|contact|siteCountry)\.ts$|^src/server/(bookingSetupViews|setupSteps|setupWizard|adminViews|moduleConfigViews|contactViews|offerViews|bookingViews)\.ts$|^src/booking/requests\.ts$|^assets/runtime/cit-(booking-setup|runtime)\.js$|^src/email/activationEmail\.ts$|^src/payment/activationMail\.ts$|^src/console/(partnerProfileViews|partnerProfile|partnerData|views)\.ts$|^src/text/(currencyName|legacyCurrency)\.ts$|^src/i18n/script\.ts$|^src/text/translit\.ts$|^src/domains\.ts$|^src/engine/(fontScripts|render|skins|copywriter|moduleSections)\.ts$|^src/generator/(marketCheck|brief|recopy|mockLanguage|townPhoto|copyCurator|runtime)\.ts$|^src/outreach/(letterCritic|mockVerdictGate|nonOpenerFollowup|behaviorMessage|escalationFollowup|trialCampaign|sendBatch|sendOutreachSms)\.ts$|^src/events/gates\.ts$|^src/payment/service\.ts$|^src/console/server\.ts$|^src/booking/(enquiry|syncMail)\.ts$|^scripts/rerender-mock\.mts$'; then
+   changed_files | grep -qE '^src/(country|pricing)\.ts$|^src/text/(phone|phoneCountry|zoneTime)\.ts$|^src/scraper/|^src/scout/rules\.ts$|^src/i18n/(lang|mail)\.ts$|^src/outreach/(draft|autoDispatch)\.ts$|^src/sms/sendWindow\.ts$|^src/trial/start\.ts$|^src/intake/mockRequest\.ts$|^src/generator/generateEngine\.ts$|^migrations/|^scripts/country-layer-check\.mts$|^src/conversion/provision\.ts$|^src/tenant/(bookingSetup|moduleSetup|modules|wallet|multilangCard|contact|siteCountry)\.ts$|^src/server/(bookingSetupViews|setupSteps|setupWizard|adminViews|moduleConfigViews|contactViews|offerViews|bookingViews)\.ts$|^src/booking/requests\.ts$|^assets/runtime/cit-(booking-setup|runtime)\.js$|^src/email/activationEmail\.ts$|^src/payment/activationMail\.ts$|^src/console/(partnerProfileViews|partnerProfile|partnerData|views)\.ts$|^src/text/(currencyName|legacyCurrency)\.ts$|^src/i18n/script\.ts$|^src/text/translit\.ts$|^src/domains\.ts$|^src/engine/(fontScripts|render|skins|copywriter|moduleSections)\.ts$|^src/generator/(marketCheck|brief|recopy|mockLanguage|townPhoto|copyCurator|runtime)\.ts$|^src/outreach/(letterCritic|mockVerdictGate|nonOpenerFollowup|behaviorMessage|escalationFollowup|trialCampaign|sendBatch|sendOutreachSms)\.ts$|^src/events/gates\.ts$|^src/payment/service\.ts$|^src/console/server\.ts$|^src/booking/(enquiry|syncMail)\.ts$|^scripts/rerender-mock\.mts$|^src/(countryReadiness|countryRules|countryStore|markets|legalPack|legalPackCountry)\.ts$|^src/i18n/(packs\.ts|catalog-context\.json)$|^src/console/(countryViews|countryData|nav)\.ts$|^src/payment/providers\.ts$'; then
+  # Ország-réteg 3/8 (country-layer-check ⑫): the ONE readiness function, its readers (gate, approve, lap, send gates) and the buyer-side measure.
   # Ország-réteg 3/2 (country-layer-check ⑥): the owner/guest/partner surfaces are in the pattern too (no burned HUF / hu-HU / " Ft").
   # Ország-réteg 3/6 (country-layer-check ⑩): the mock's script/fonts/slug/prompts/language gate and the follow-ups' files.
   echo "[pre-commit] country-layer-check (ADR-0437: ország-réteg — HU-sor, zárt ismeretlen ország, nincs beégetés)…"

@@ -57,6 +57,13 @@
 //      first-round countries' local items are defined; and the Hungarian pages / strip /
 //      stamped wordings are the old ones byte for byte.
 //
+//   ⑫ ORSZÁG-RÉTEG 3/8 — NYITÁS ELŐTTI TELJESSÉG (ADR-XXXX): ONE completeness function
+//      (src/countryReadiness.ts) — the market gate decides from it, the approve action re-checks
+//      it, the „Országok” lap draws from it, the money-path gap list and the buyer-side language
+//      measure have no second reader / no full-catalogue twin; HU is complete and open with its
+//      empty holiday list as a non-gating warning; the row rules (EUR for the euro area, the
+//      holiday coverage, the calendar check) behave; the buyer scope follows the surface tags.
+//
 //   npx tsx scripts/country-layer-check.mts
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -595,7 +602,7 @@ SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file}
     "a mobil-csatorna az ország-sorból (modem-pár kapu, a szám a lead országában)",
     /const pairBlock = modemPairBlocks\(cc\)/.test(sms) && /normalizePhoneIn\(d\.phone, cc\)/.test(sms) && /isMobileE164In\(to, cc\)/.test(sms),
   );
-  check("hiányzó nyelvi csomag = TARTVA „Bábelre vár” (levél, mobil)", /babelHoldReason\(d\.lang, missing\)/.test(batch) && /babelHoldReason\(d\.lang, pack\.missing\)/.test(sms));
+  check("hiányzó nyelvi csomag = TARTVA „Bábelre vár” (levél, mobil)", /babelHoldReason\(d\.lang, missing\)/.test(batch) && /babelHoldReason\(d\.lang, missing\)/.test(sms));
   check(
     "a kvóta országonként (saját nap, saját számláló), a sor az országot nézi",
     /dailyCapFor\(cfg, settings, DISPATCH_HOME_COUNTRY\)/.test(auto) && /countryOfLeads\(rows\.map/.test(auto) && /country: known\?\.iso2 \?\? iso/.test(auto),
@@ -797,10 +804,13 @@ console.log("\n⑪ jogi csomag (ország-réteg 3/7)");
 
   // ── a piac-kapu nem kerülhető meg ──
   const readers = execFileSync("git", ["grep", "-l", "legal_status", "--", "src"], { encoding: "utf8" }).split("\n").filter(Boolean)
-    .filter((f) => !["src/markets.ts", "src/db/schema.ts"].includes(f));
-  check("a market.legal_status-t csak a markets.ts olvassa", readers.length === 0, readers.join(", "));
+    // ORSZÁG-RÉTEG 3/8: the approval is read by the ONE readiness function the gate decides from.
+    .filter((f) => !["src/markets.ts", "src/countryReadiness.ts", "src/db/schema.ts"].includes(f));
+  check("a market.legal_status-t csak a markets.ts és a teljesség-függvény olvassa", readers.length === 0, readers.join(", "));
   const mk = src("src/markets.ts");
-  check("isMarketApproved = jóváhagyás ÉS teljes csomag", /return \(await marketGate\(country\)\)\.open;/.test(mk) && /open: approved && pack\.complete/.test(mk));
+  // ORSZÁG-RÉTEG 3/8: the gate is approval AND the whole readiness (which includes the pack) — ⑫ below.
+  check("isMarketApproved = jóváhagyás ÉS teljes csomag (a teljesség része)", /return \(await marketGate\(country\)\)\.open;/.test(mk) &&
+    /const r = await countryReadiness\(country\);/.test(mk) && /legalPackStatus\(cc, cfg\?\.defaultLang/.test(src("src/countryReadiness.ts")));
   const con = src("src/console/server.ts");
   check("konfigurátor (minden belépő) a piac-kaput olvassa; a rendelés a csomagot",
     /const gate = await marketGate\(/.test(con.slice(con.indexOf("async function regionForArtifactOrNull"))) &&
@@ -808,7 +818,8 @@ console.log("\n⑪ jogi csomag (ország-réteg 3/7)");
   check("próba, fizetési link, élesítés: isMarketApproved", /isMarketApproved\(leadCountry\)/.test(src("src/trial/start.ts")) &&
     (src("src/payment/service.ts").match(/isMarketApproved\(/g) ?? []).length >= 2);
   const envText = existsSync(".env") ? src(".env") : "";
-  check("a teszt-kapcsolók (CIT_LEGAL_LOCAL_FIXTURE, CIT_LEGAL_PACK_DIR) nincsenek a .env-ben", !/^\s*CIT_LEGAL_(LOCAL_FIXTURE|PACK_DIR)\s*=/m.test(envText));
+  check("a teszt-kapcsolók (CIT_LEGAL_LOCAL_FIXTURE, CIT_LEGAL_PACK_DIR, CIT_READINESS_EU_FIXTURE) nincsenek a .env-ben",
+    !/^\s*CIT_(LEGAL_(LOCAL_FIXTURE|PACK_DIR)|READINESS_EU_FIXTURE)\s*=/m.test(envText));
   const st = await lp.legalPackStatus("XQ", "xq");
   check("csomag nélküli ország: hiányos, okkal", !st.complete && st.reasons.length > 0);
   const empty = { country: "XQ", lang: "xq", home: false, stamp: "XQ/xq/x", t: (hu: string): string => { throw new lp.LegalPackGap("XQ", hu); } };
@@ -835,6 +846,52 @@ console.log("\n⑪ jogi csomag (ország-réteg 3/7)");
   check("HU sáv: csomaggal = a régi", renderLegalStrip(who) === renderLegalStrip(who, home));
   check("HU bélyeg-szövegek: a csomag a forrást adja", [legal.TERMS_ACCEPTANCE_V1, legal.WITHDRAWAL_WAIVER_V1, legal.RECURRING_MANDATE_V1, legal.PHOTO_RIGHTS_DECLARATION_V1, legal.TRIAL_CLICKWRAP_V1].every((t) => home.t(t) === t));
   check("HU jogi mondatok a megkeresésben: a forrás", lp.legalTextForLang("hu", legal.OUTREACH_LEGAL_BASIS_V1) === legal.OUTREACH_LEGAL_BASIS_V1 && lp.legalTextForLang(undefined, legal.OUTREACH_LETTER_LEGAL_V1) === legal.OUTREACH_LETTER_LEGAL_V1);
+}
+
+console.log("\n⑫ nyitás előtti teljesség (ország-réteg 3/8)");
+{
+  const src = (f: string): string => readFileSync(f, "utf8");
+  const rd = await import("../src/countryReadiness.js");
+  const rules = await import("../src/countryRules.js");
+  const packs = await import("../src/i18n/packs.js");
+  const grepL = (pat: string): string[] =>
+    execFileSync("git", ["grep", "-l", "-E", pat, "--", "src"], { encoding: "utf8" }).split("\n").filter(Boolean);
+
+  // ── EGY teljesség-logika, minden kapu ezt olvassa ──
+  const mk = src("src/markets.ts");
+  check("a piac-kapu (marketGate) a teljesség-függvényből dönt", /const r = await countryReadiness\(country\);/.test(mk) && /open: r\.open,/.test(mk));
+  check("nyitva = jóváhagyva ÉS teljes", /open: approved && complete,/.test(src("src/countryReadiness.ts")));
+  const moneyReaders = grepL("marketOpenGaps\\(").filter((f) => !["src/countryReadiness.ts", "src/payment/providers.ts"].includes(f));
+  check("a pénz-út hiánylistáját (marketOpenGaps) csak a teljesség olvassa", moneyReaders.length === 0, moneyReaders.join(", "));
+  const fullCatalogGates = grepL("missingPackStrings\\(").filter((f) => f.startsWith("src/outreach/") || f.startsWith("src/console/"));
+  check("a megkeresés-kapuk a vevő-oldali mérést olvassák (nincs teljes-katalógus kapu)", fullCatalogGates.length === 0, fullCatalogGates.join(", "));
+  const buyerReaders = ["src/outreach/sendBatch.ts", "src/outreach/sendOutreachSms.ts", "src/outreach/nonOpenerFollowup.ts", "src/outreach/trialCampaign.ts", "src/outreach/behaviorMessage.ts", "src/countryReadiness.ts"];
+  check("…és mind ugyanazt a függvényt (missingBuyerPackStrings)", buyerReaders.every((f) => /missingBuyerPackStrings\(/.test(src(f))), buyerReaders.filter((f) => !/missingBuyerPackStrings\(/.test(src(f))).join(", "));
+  const con = src("src/console/server.ts");
+  const mkRoute = con.slice(con.indexOf('path === "/settings/markets"'), con.indexOf('path === "/countries"'));
+  check("a jóváhagyás a szerveren is a teljességet nézi", /const ready = await countryReadiness\(country, \{ lang \}\);/.test(mkRoute) && /if \(!ready\.complete\)/.test(mkRoute));
+  check("az Országok lap a teljesség-függvényből rajzol", /countryReadiness\(iso, /.test(src("src/console/countryData.ts")) && /countryReadiness\(draft\.iso2/.test(src("src/console/countryData.ts")));
+  check("a lap a menüben (Rendszer › Országok)", /href: "\/countries"/.test(src("src/console/nav.ts")) && /path === "\/countries"/.test(con));
+  check("a régi /settings piac-panel helyén mutató van, nem második jóváhagyó", !/function marketsPanel\(/.test(src("src/console/views.ts")) && /function marketsPointer\(/.test(src("src/console/views.ts")));
+
+  // ── viselkedés ──
+  const hu = await rd.countryReadiness("HU");
+  check("HU: teljes, a kapu nyitva (bitre a régi)", hu.complete && hu.open, hu.reasons.join(" · "));
+  check("HU: az üres ünnepnap-lista figyelmeztetés, nem zár", hu.items.some((i) => i.key === "holidays" && i.state === "warn" && !i.gating));
+  const xq = await rd.countryReadiness("XQ");
+  check("ismeretlen ország (sor nélkül): nem teljes, zárva", !xq.complete && !xq.open && !xq.hasRow);
+  const bg = rules.blankDraft("BG");
+  check("új BG sor: EUR (euróövezet 2026-01-01 óta)", bg.currency === "EUR");
+  const ctx = { lang: "hu", regions: ["hu", "global"], providers: ["barion"] };
+  check("BG BGN-nel: pénznem-hiba", !!rules.validateCountryDraft({ ...bg, currency: "BGN" }, ctx).currency);
+  const huErr = rules.validateCountryDraft(rules.draftFromConfig(countryConfigSync("HU")!), ctx);
+  check("a HU sor a szabályok szerint hibátlan", Object.keys(huErr).length === 0, JSON.stringify(huErr));
+  check("ünnepnap-lefedés: MM-DD minden évet fed; mozgó ünnep évenként kell",
+    rules.holidayYearCovered(["01-01"], 2027) && rules.holidayYearCovered(["01-01", "2026-04-06"], 2026) && !rules.holidayYearCovered(["01-01", "2026-04-06"], 2027));
+  check("dátum-szabály: 02-29 évenként jó, 2026-02-29 nem", rules.validHoliday("02-29") && !rules.validHoliday("2026-02-29") && !rules.validHoliday("13-01"));
+  const scope = new Set(await packs.buyerCatalog());
+  check("vevő-oldali mérés: a lead-lap („Miért kaptam?”) benne, az operátori mock-ellenőrzés („Generáld újra…”) nem",
+    scope.has("Miért kaptam?") && ![...scope].some((s) => s.includes("Generáld újra a mockot")));
 }
 
 await db.destroy();

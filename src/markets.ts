@@ -6,7 +6,7 @@
 // pack, never because a lookup happened to return nothing.
 import { sql } from "kysely";
 import { db } from "./db/client.js";
-import { countryLegalStatus } from "./legalPackCountry.js";
+import { countryReadiness, type CountryReadiness } from "./countryReadiness.js";
 
 /** Our home market: the entire legal pack (ÁSZF, elállás, DPA, tenant pages) is HU law. */
 export const HOME_MARKET = "HU";
@@ -31,16 +31,18 @@ export function normalizeCountryCode(raw: string | null | undefined): string | n
 }
 
 /**
- * Is this country's market OPEN — its legal pack approved AND complete?
+ * Is this country's market OPEN — approved by the owner AND ready (complete)?
  *
  * A null/unknown country is NOT approved. That is deliberate: "we do not know where
  * this customer is" is not a reason to publish a Hungarian imprint in their name.
  *
- * ORSZÁG-RÉTEG 3/7 (ADR-0458): an owner's approval no longer opens a country on its own —
- * the country's legal pack must also be COMPLETE in the country's language (every text Bábel
- * translated, the local-item schema defined; src/legalPack.ts). This is the ONE gate every
- * caller reads (cold outreach, trial start, pay-link, go-live, configurator), so an
- * incomplete pack shuts all of them at once; `marketGate()` says why.
+ * ORSZÁG-RÉTEG 3/7 (ADR-0458): an owner's approval no longer opens a country on its own.
+ * ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the condition is the country's NYITÁS ELŐTTI TELJESSÉG —
+ * src/countryReadiness.ts, the ONE completeness function (a valid row, a price sheet its
+ * payment provider can charge, the buyer-side language pack, the legal pack in the country's
+ * language, the holidays of this year and the next, an e-mail channel). This is the ONE gate
+ * every caller reads (cold outreach, trial start, pay-link, go-live, configurator), so a
+ * missing condition shuts all of them at once; `marketGate()` says why.
  */
 export async function isMarketApproved(country: string | null | undefined): Promise<boolean> {
   return (await marketGate(country)).open;
@@ -53,23 +55,26 @@ export interface MarketGateVerdict {
   readonly approved: boolean;
   /** The country's legal pack is complete in its language (ország-réteg 3/7). */
   readonly packComplete: boolean;
+  /** Every readiness condition holds (ország-réteg 3/8). */
+  readonly complete: boolean;
   /** Hungarian operator text — why it is shut (empty when open). */
   readonly reasons: readonly string[];
+  /** The full readiness the verdict was read from (the „Országok” lap shows it). */
+  readonly readiness: CountryReadiness;
 }
 
-/** The market gate with its reasons — what the console's country/market lists show. */
+/** The market gate with its reasons — what the console's country lists show. */
 export async function marketGate(country: string | null | undefined): Promise<MarketGateVerdict> {
-  const cc = normalizeCountryCode(country);
-  if (!cc) return { country: null, open: false, approved: false, packComplete: false, reasons: ["ismeretlen ország"] };
-  const row = await db
-    .selectFrom("market")
-    .select("legal_status")
-    .where("country", "=", cc)
-    .executeTakeFirst();
-  const approved = row?.legal_status === "approved";
-  const pack = await countryLegalStatus(cc);
-  const reasons = [...(approved ? [] : ["a piacot a tulaj még nem nyitotta meg"]), ...pack.reasons];
-  return { country: cc, open: approved && pack.complete, approved, packComplete: pack.complete, reasons };
+  const r = await countryReadiness(country);
+  return {
+    country: r.country,
+    open: r.open,
+    approved: r.approved,
+    packComplete: r.legal?.complete ?? false,
+    complete: r.complete,
+    reasons: r.reasons,
+    readiness: r,
+  };
 }
 
 /** Every known market, home first, then alphabetically — the console list. */

@@ -115,6 +115,14 @@ for (const cc of ["HU", "IT", "BG", "PT"]) {
   await db.insertInto("market").values({ country: cc, legal_status: "approved", approved_by: "e2e", note: "legal-pack-e2e" } as never)
     .onConflict((oc) => oc.column("country").doUpdateSet({ legal_status: "approved" } as never)).execute();
 }
+// ORSZÁG-RÉTEG 3/8: the gate is approval + READINESS — everything but the legal pack is made
+// ready by fixtures (the EUR price sheet, holidays, a buyer-side MARKER pack; scratch DB, never a
+// translation), so this run keeps measuring the LEGAL pack's effect on the gate.
+{
+  const { completePriceSheet, makeCountryReady } = await import("./lib/country-ready-fixture.mts");
+  await completePriceSheet("global");
+  for (const [cc, lang] of [["IT", "it"], ["BG", "bg"], ["PT", "pt"]] as const) await makeCountryReady(cc, lang);
+}
 
 const parent = await createFixtureParent(db as never, "legalpacke2e");
 async function artifactFor(name: string, country: string): Promise<string> {
