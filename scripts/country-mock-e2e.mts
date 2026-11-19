@@ -2,19 +2,19 @@
 // shared dev DB, never production). No AI call (no API key: the curator path writes the words,
 // as Poe does), no network (fenced), nothing is sent.
 //
-// Three markets: HU (the home row, unchanged), CZ (cs, CZK, a Czech pack fixture) and BG (bg,
-// Cyrillic, NO Bulgarian pack — Bábel has not translated it). Walked:
+// Four markets: HU (the home row, unchanged), CZ (cs, CZK, a Czech pack fixture), BG (bg,
+// Cyrillic — Bábel's bg seed is complete since 2026-11-18) and RO (ro — NO pack, no seed). Walked:
 //   ① the Bulgarian mock: its Cyrillic copy stays Cyrillic (a mixed-script word is aligned TO
 //      Cyrillic), the web fonts carry Cyrillic (subset in the URL, no Cyrillic-less family), the
-//      file name is transliterated, no Hungarian tourist-tax rule, no Balaton — and with no
-//      Bulgarian pack the page is HELD („Bábelre vár”): the language gate flags it, the send gate
-//      blocks it and no acknowledgement clears it;
+//      file name is transliterated, no Hungarian tourist-tax rule, no Balaton, and Bábel's seed
+//      passes the language gate; the Romanian mock (no ro pack) is HELD („Bábelre vár”): the
+//      language gate flags it, the send gate blocks it and no acknowledgement clears it;
 //   ② the same mock with a complete Bulgarian pack fixture: the gate passes, and no Hungarian
 //      catalog string is left in the page's visible text;
 //   ③ the domain suggestion: from the lead country's endings — `.bg` first, never `.hu` /
 //      `…szallas.hu`, even on a market that only carries the Hungarian default ending;
 //   ④ the Czech mock: Czech pack → the gate passes, `.cz` suggested, Czech date and number form;
-//   ⑤ a follow-up to the Bulgarian lead with the pack missing: HELD (the non-opener letter's §C
+//   ⑤ a follow-up to the Romanian lead with the pack missing: HELD (the non-opener letter's §C
 //      gate reads its Hungarian fallbacks; the send path skips it);
 //   ⑥ HU: the measured render is byte for byte the old render, no language key, the font URL and
 //      the lookalike scrub as before.
@@ -110,15 +110,18 @@ async function addCountry(r: { iso: string; name: string; lang: string; tz: stri
 }
 await addCountry({ iso: "CZ", name: "Csehország (e2e)", lang: "cs", tz: "Europe/Prague", currency: "CZK", region: "cz", dial: "420", trunk: "", tlds: ["cz", "com"] });
 await addCountry({ iso: "BG", name: "Bulgária (e2e)", lang: "bg", tz: "Europe/Sofia", currency: "EUR", region: "bg", dial: "359", trunk: "0", tlds: ["bg", "com"] });
+// A language Bábel has NOT translated (no ro pack, no seed) — the hold is measured on it.
+await addCountry({ iso: "RO", name: "Románia (e2e)", lang: "ro", tz: "Europe/Bucharest", currency: "EUR", region: "bg", dial: "40", trunk: "0", tlds: ["ro", "com"] });
 await refreshCountries();
 // ORSZÁG-RÉTEG 3/7: the market gate opens only on a COMPLETE legal pack — a marker FIXTURE (never a
 // translation, never the API) stands in for Bábel's, so this run measures what it always measured.
-await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", BG: "bg" });
+await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", BG: "bg", RO: "ro" });
 const HU = countryConfigSync("HU")!;
 const CZ = countryConfigSync("CZ")!;
 const BG = countryConfigSync("BG")!;
-check("a három sor betöltve (HU, CZ, BG)", !!HU && !!CZ && !!BG);
-for (const cc of ["HU", "CZ", "BG"]) {
+const RO = countryConfigSync("RO")!;
+check("a négy sor betöltve (HU, CZ, BG, RO)", !!HU && !!CZ && !!BG && !!RO);
+for (const cc of ["HU", "CZ", "BG", "RO"]) {
   await db.insertInto("market").values({ country: cc, legal_status: "approved" } as never)
     .onConflict((oc) => oc.column("country").doUpdateSet({ legal_status: "approved" } as never)).execute();
 }
@@ -154,6 +157,7 @@ async function lead(name: string, raw: Record<string, unknown>): Promise<string>
 }
 const bgId = await lead("Къща Роза", { country: "BG", city: "Банско", lat: 41.838, lon: 23.488, email: "roza@example.bg" });
 const czId = await lead("Chalupa Na Vršku", { country: "CZ", city: "Lipno", lat: 48.633, lon: 14.216, email: "chalupa@example.cz" });
+const roId = await lead("Pensiunea Trandafir", { country: "RO", city: "Sinaia", lat: 45.35, lon: 25.55, email: "trandafir@example.ro" });
 const huId = await lead("Rózsakert Vendégház", { country: "HU", city: "Tihany", lat: 46.913, lon: 17.889, email: "rozsakert@example.hu" });
 
 // The curator's words (Poe's path: no AI). The Bulgarian text carries ONE mixed-script word
@@ -172,6 +176,14 @@ const czCopy = {
     tagline: "Rodinná chalupa se zahradou u Lipenského jezera",
     intro: "Chalupa Na Vršku je rodinné ubytování v Lipně. Pokoje jsou útulné a zahrada je večer klidná.",
     highlights: ["Zahrada k odpočinku", "Blízko k jezeru", "Rodinné přivítání"],
+  },
+};
+const roCopy = {
+  fields: {
+    "hero.lead": "Pensiune liniștită în Sinaia, aproape de pârtie",
+    tagline: "Pensiune de familie cu grădină în Sinaia",
+    intro: "Pensiunea Trandafir este o casă de oaspeți de familie în Sinaia. Camerele sunt calde, iar grădina este liniștită seara.",
+    highlights: ["Grădină pentru odihnă", "Aproape de telegondolă", "Primire de familie"],
   },
 };
 const huCopy = {
@@ -202,7 +214,7 @@ const fontUrl = (html: string): string => /https:\/\/fonts\.googleapis\.com\/css
 const families = (url: string): string[] => [...url.matchAll(/family=([^:&]+)/g)].map((m) => decodeURIComponent(m[1]!.replace(/\+/g, " ")));
 
 // ── ① the Bulgarian mock, no Bulgarian pack ───────────────────────────────────────────────
-console.log("① bolgár mock, bolgár csomag nélkül: cirill marad, betű cirill, átírt név, TARTVA");
+console.log("① bolgár mock (Bábel-mag): cirill marad, betű cirill, átírt név; román mock csomag nélkül: TARTVA");
 const bg = await gen(bgId, bgCopy);
 const bgData = bg.inputs.siteData as { lang?: string; tagline?: string; intro?: string };
 check("a lap nyelve bolgár", bgData.lang === "bg", String(bgData.lang));
@@ -215,12 +227,15 @@ check("a fájlnév átírt, nem üres („mock-kashta-roza-…”)", /^mock-kash
 const bgVisible = visibleText(bg.html);
 check("nincs magyar IFA-szabály és nincs Balaton a lapon", !/idegenforgalmi|IFA\b|Balaton/i.test(bgVisible) && !bg.html.includes("data-cit-ifa=\""),
   [...bgVisible.matchAll(/.{0,60}(?:idegenforgalmi|IFA\b|Balaton).{0,60}/gi)].map((m) => m[0]).slice(0, 3).join(" | ") || "data-cit-ifa");
-check("a nyelvi kapu FLAG: a hiányzó bolgár csomag mérve", bg.inputs.langVerdict === "flag" && Array.isArray(bg.inputs.langUntranslated) && (bg.inputs.langUntranslated as string[]).length > 0, String(bg.inputs.langReason));
-const bgBlock = blockingVerdicts(bg.inputs);
-const langBlock = bgBlock.find((b) => b.key === "langVerdict");
+check("a Bábel-maggal a bolgár nyelvi kapu PASS", bg.inputs.langVerdict === "pass", String(bg.inputs.langReason));
+const ro = await gen(roId, roCopy);
+check("a román lap nyelve román", (ro.inputs.siteData as { lang?: string }).lang === "ro");
+check("a nyelvi kapu FLAG: a hiányzó román csomag mérve", ro.inputs.langVerdict === "flag" && Array.isArray(ro.inputs.langUntranslated) && (ro.inputs.langUntranslated as string[]).length > 0, String(ro.inputs.langReason));
+const roBlock = blockingVerdicts(ro.inputs);
+const langBlock = roBlock.find((b) => b.key === "langVerdict");
 check("a küldés-kapu TARTJA („Bábelre vár”), és megerősítéssel sem oldható",
-  !!langBlock && /Bábelre vár/.test(verdictReasonLine(langBlock)) && !ackCoversVerdicts({ at: "", by: "op", reason: "x", verdicts: Object.fromEntries(bgBlock.map((b) => [b.key, b.value])) }, bgBlock),
-  bgBlock.map(verdictReasonLine).join(" | "));
+  !!langBlock && /Bábelre vár/.test(verdictReasonLine(langBlock)) && !ackCoversVerdicts({ at: "", by: "op", reason: "x", verdicts: Object.fromEntries(roBlock.map((b) => [b.key, b.value])) }, roBlock),
+  roBlock.map(verdictReasonLine).join(" | "));
 
 // ── ② the same page with a complete Bulgarian pack fixture ───────────────────────────────
 console.log("② ugyanez teljes bolgár csomaggal: a kapu átenged, magyar felirat nem marad");
@@ -255,28 +270,24 @@ check(".cz javaslat elöl, nincs .hu", sugCz[0]?.endsWith(".cz") === true && sug
 check("cseh dátum és szám (a foglalási levelek formázója)", formatDay("2026-12-01", "cs") === new Intl.DateTimeFormat("cs", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" }).format(new Date("2026-12-01T00:00:00Z")) && formatDay("2026-12-01", "cs") !== formatDay("2026-12-01", "hu") && dateLocale("cs") === "cs", formatDay("2026-12-01", "cs"));
 check("a cseh ország pénzneme CZK (a lap árai ebben)", CZ.currency === "CZK" && pricing.offeredTlds("cz").length === 3);
 
-// ── ⑤ a follow-up to the Bulgarian lead with the pack missing ─────────────────────────────
-console.log("⑤ követő levél a bolgár leadnek hiányos csomaggal: TARTVA");
+// ── ⑤ a follow-up to the Romanian lead (no ro pack) ───────────────────────────────────────
+console.log("⑤ követő levél a román leadnek csomag nélkül: TARTVA");
 {
-  const partial = { ...bgPack };
-  delete partial["Tisztelt {name}!"];
-  installPack("bg", partial);
-  await db.updateTable("language_pack").set({ strings: JSON.stringify(partial) } as never).where("lang", "=", "bg").execute();
-  const art = await db.selectFrom("mock_artifact").select("id").where("lead_id", "=", bgId).executeTakeFirstOrThrow();
+  const art = await db.selectFrom("mock_artifact").select("id").where("lead_id", "=", roId).executeTakeFirstOrThrow();
   await db.updateTable("mock_artifact").set({ status: "approved" } as never).where("id", "=", art.id).execute();
   const p = await db.insertInto("prospect")
-    .values({ lead_id: bgId, token: `mocke2e${Date.now().toString(36)}bg`, mock_artifact_id: art.id, contact_email: "roza@example.bg" } as never)
+    .values({ lead_id: roId, token: `mocke2e${Date.now().toString(36)}ro`, mock_artifact_id: art.id, contact_email: "trandafir@example.ro" } as never)
     .returning("id").executeTakeFirstOrThrow();
-  const cand = { leadId: bgId, leadName: "Къща Роза", prospectId: p.id, artifactId: art.id, address: "roza@example.bg", addressKey: "roza@example.bg", segment: "nincs_honlap", lastTouch: new Date(), excluded: null };
+  const cand = { leadId: roId, leadName: "Pensiunea Trandafir", prospectId: p.id, artifactId: art.id, address: "trandafir@example.ro", addressKey: "trandafir@example.ro", segment: "nincs_honlap", lastTouch: new Date(), excluded: null };
   const built = await buildNonOpenerLetterFor(cand, { dryRun: true, senderName: "Teszt Elek" });
   if ("error" in built) {
     check("a nem-nyitó levél előáll", false, built.error);
   } else {
-    check("a levél nyelve a bolgár, és a render mérte a magyar fallbacket", built.lang === "bg" && (built.gate.untranslated ?? []).includes("Tisztelt {name}!"), JSON.stringify(built.gate.untranslated?.slice(0, 3)));
+    check("a levél nyelve a román, és a render mérte a magyar fallbacket", built.lang === "ro" && (built.gate.untranslated ?? []).includes("Tisztelt {name}!"), JSON.stringify(built.gate.untranslated?.slice(0, 3)));
     const g = checkOutreachDraft(built.gate, cand.leadName, built.lang, built.market);
     check("a §C-kapu NYELV-okkal tartja", g.verdict === "FLAG" && g.reasons.some((r) => r.startsWith("NYELV")), g.reasons.join(" | "));
   }
-  const out = await sendNonOpenerFollowup(cand, { dryRun: true, offline: true, senderName: "Teszt Elek", onlyLeads: [bgId] });
+  const out = await sendNonOpenerFollowup(cand, { dryRun: true, offline: true, senderName: "Teszt Elek", onlyLeads: [roId] });
   check("a küldés-út kihagyja (TARTVA), nem megy ki magyarul", out.kind === "skipped", JSON.stringify(out));
 }
 
