@@ -25,6 +25,8 @@ import { DEFAULT_LANG } from "../i18n/lang.js";
 import { formatMinor } from "../text/money.js";
 import { NO_PACKAGE_PRICE, type OutreachDraft } from "./draft.js";
 import { T } from "../i18n/mail.js";
+import { OUTREACH_LETTER_LEGAL_V1 } from "../legal.js";
+import { legalTextForLang } from "../legalPack.js";
 import { gsm7FoldableLang } from "./countryOutreach.js";
 
 /** ADR-0111: a market decision as the synchronous gate sees it. */
@@ -626,10 +628,10 @@ function foreignGateMarks(lang: string): { identity: string; legal: string; fram
   const framing = [...new Set([mail, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
   return {
     identity: longest(T(lang, "A megkeresés küldője: {who}", v)).toLowerCase(),
-    legal: T(
-      lang,
-      "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:",
-    ).toLowerCase(),
+    // ORSZÁG-RÉTEG 3/9: the letter takes its legal line from the COUNTRY LEGAL PACK (draft.ts →
+    // legalTextForLang), so the gate looks for that same sentence — a UI-catalog copy could
+    // differ from what the letter says (it/hr had none: the gate expected Hungarian there).
+    legal: legalTextForLang(lang, OUTREACH_LETTER_LEGAL_V1).toLowerCase(),
     framing,
   };
 }
