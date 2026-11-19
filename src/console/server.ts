@@ -431,6 +431,7 @@ import { MULTILANG_TIERS } from "../modules.js";
 import { prepareRenderLang, T } from "../i18n/mail.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { faviconSvg } from "../ui/brand.js";
+import { servePwa } from "../ui/pwa.js";
 import { readServableMock } from "../generator/modelHtml.js";
 import {
   fetchPhoto,
@@ -1728,6 +1729,9 @@ async function handle(
       return send(res, 404, "not found", "text/plain; charset=utf-8");
     }
   }
+  // Installable console app (2026-11-19, src/ui/pwa.ts): manifest, service worker, icons.
+  // BEFORE the auth gate — Chrome fetches the manifest and its icons without cookies.
+  if (await servePwa("console", method, path, res)) return;
   // ── Design core static files (ADR-0021: one central CSS for all surfaces). ──
   //
   // ⛔ `runtime` IS BENNE (2026-09-15, ADR-0172): a süti-sáv stíluslapja és
