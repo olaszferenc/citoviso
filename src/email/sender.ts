@@ -299,9 +299,12 @@ class SmtpEmailSender implements EmailSender {
     const dkim = c.dkimSelector
       ? { domainName, keySelector: c.dkimSelector, privateKey: readFileSync(c.dkimKeyFile, "utf8") }
       : undefined;
-    // nodemailer's SMTP transport accepts the connection URL as `url` next to the transport
-    // options — the string form could not carry the DKIM block.
-    const transporter = nodemailer.createTransport({ url: c.smtpUrl, ...(dkim ? { dkim } : {}) } as Parameters<typeof nodemailer.createTransport>[0]);
+    // ⛔ NOT `createTransport({ url, dkim })`: when the object carries `url`, nodemailer (9.x,
+    // lib/nodemailer.js) replaces the WHOLE object with the parsed URL and silently drops every
+    // sibling key — the DKIM block included. Measured 2026-11-19: every cold letter of 11-18/19
+    // left prod UNSIGNED (no DKIM-Signature in the bounced originals). The DKIM block rides as a
+    // message DEFAULT instead (second argument), which the Mailer applies to every send.
+    const transporter = nodemailer.createTransport(c.smtpUrl, dkim ? { dkim } : undefined);
     return { transporter, from: c.from };
   }
 
