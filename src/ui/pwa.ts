@@ -21,6 +21,7 @@
 import { readFile } from "node:fs/promises";
 import type http from "node:http";
 import path from "node:path";
+import { jsonForScript } from "../text/jsonForScript.js";
 
 export type PwaApp = "console" | "public";
 
@@ -81,7 +82,7 @@ const OFFLINE_HTML =
 /** The service worker. Caches nothing; only a failed GET navigation gets the offline page. */
 export const PWA_SW_JS =
   `// Citoviso PWA service worker (src/ui/pwa.ts). Caches NOTHING — live data only.\n` +
-  `const OFFLINE = ${JSON.stringify(OFFLINE_HTML)};\n` +
+  `const OFFLINE = ${jsonForScript(OFFLINE_HTML)};\n` +
   `self.addEventListener("install", () => self.skipWaiting());\n` +
   `self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));\n` +
   `self.addEventListener("fetch", (e) => {\n` +
