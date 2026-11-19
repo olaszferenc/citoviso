@@ -3,15 +3,17 @@
 // 'mock', the network is fenced, and every send call below is either refused by a gate (the point
 // of the test) or a dry run.
 //
-// Three markets: HU (the home row, unchanged), CZ (cs, Europe/Prague, CZK, Czech public holidays,
-// channels e-mail + Viber only — NO MMS+SMS) and BG (bg, Europe/Sofia, Cyrillic, NO language pack).
+// Four markets: HU (the home row, unchanged), CZ (cs, Europe/Prague, CZK, Czech public holidays,
+// channels e-mail + Viber only — NO MMS+SMS), BG (bg, Europe/Sofia, Cyrillic; Bábel's bg seed is
+// complete since 2026-11-18) and RO (ro — a language with NO pack and no seed).
 // Walked:
 //   ① the Czech letter is Czech (the country's language even when the mock says otherwise), its
 //      price is in CZK, every text part is translated, and the §C gate reads its translated
 //      elements; ONE missing Czech string → the gate holds the whole letter (owner 2026-11-17);
 //   ② the window is the lead's: open on a Prague weekday morning, shut on a Czech holiday (while
-//      Budapest is open); the dispatcher claims the Czech lead only inside the Prague window;
-//   ③ a Bulgarian lead with no Bulgarian pack: HELD „Bábelre vár” on the mail and the mobile —
+//      Budapest is open); the row's send window narrows the owner's hours (never widens them);
+//      the dispatcher claims the Czech lead only inside the Prague window;
+//   ③ a Romanian lead with no Romanian pack: HELD „Bábelre vár” on the mail and the mobile —
 //      nothing goes out in Hungarian, nothing is stamped;
 //   ④ a Czech mobile-only lead whose country does not enable MMS+SMS: HELD on the pair and the
 //      cold SMS — no SMS instead, no row for the Hungarian modem;
@@ -118,15 +120,23 @@ await addCountry({
   mobiles: ["87", "88", "89", "98"], nsn: [8, 9], holidays: ["01-01", "03-03", "05-01", "05-06", "05-24", "09-06", "09-22", "12-24", "12-25", "12-26"],
   channels: ["email", "sms", "mms"], quota: 5,
 });
+// ③ needs a language Bábel has NOT translated: since 2026-11-18 the bg seed is complete (the
+// Bulgarian letter is no longer held), so the hold is measured on Romanian — no ro pack, no seed.
+await addCountry({
+  iso: "RO", name: "Románia (e2e)", lang: "ro", tz: "Europe/Bucharest", currency: "EUR", region: "global", dial: "40", trunk: "0",
+  mobiles: ["72", "73", "74", "75", "76", "77", "78"], nsn: [9, 9], holidays: ["01-01", "01-02", "01-24", "05-01", "06-01", "08-15", "11-30", "12-01", "12-25", "12-26"],
+  channels: ["email", "sms", "mms"], quota: 5,
+});
 await refreshCountries();
 // ORSZÁG-RÉTEG 3/7: the market gate opens only on a COMPLETE legal pack — a marker FIXTURE (never a
 // translation, never the API) stands in for Bábel's, so this run measures what it always measured.
-await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", BG: "bg" });
+await (await import("./lib/legal-pack-fixture.mts")).installLegalPackFixture({ CZ: "cs", BG: "bg", RO: "ro" });
 const HU = countryConfigSync("HU")!;
 const CZ = countryConfigSync("CZ")!;
 const BG = countryConfigSync("BG")!;
-check("a három sor betöltve (HU, CZ, BG)", !!HU && !!CZ && !!BG);
-for (const cc of ["HU", "CZ", "BG"]) {
+const RO = countryConfigSync("RO")!;
+check("a négy sor betöltve (HU, CZ, BG, RO)", !!HU && !!CZ && !!BG && !!RO);
+for (const cc of ["HU", "CZ", "BG", "RO"]) {
   await db.insertInto("market").values({ country: cc, legal_status: "approved" } as never)
     .onConflict((oc) => oc.column("country").doUpdateSet({ legal_status: "approved" } as never)).execute();
 }
@@ -178,11 +188,13 @@ const huLead = await lead("Rózsakert Vendégház", { country: "HU", city: "Tiha
 const czLead = await lead("Chalupa Na Vršku", { country: "CZ", city: "Lipno", phone: "+420 777 123 456", email: "chalupa@example.cz" });
 const czMob = await lead("Penzion U Lesa", { country: "CZ", city: "Krumlov", phone: "777 222 333" });
 const bgLead = await lead("Къща Роза", { country: "BG", city: "Банско", phone: "0888 123 456", email: "roza@example.bg" });
+const roLead = await lead("Pensiunea Trandafir", { country: "RO", city: "Sinaia", phone: "0722 123 456", email: "trandafir@example.ro" });
 const pHu = await prospect(huLead, "rozsakert@example.hu");
 // The Czech mock says German: the letter must still be Czech (the COUNTRY's language).
 const pCz = await prospect(czLead, "chalupa@example.cz", "de");
 const pCzMob = await prospect(czMob, null);
 const pBg = await prospect(bgLead, "roza@example.bg");
+const pRo = await prospect(roLead, "trandafir@example.ro");
 
 // ── ① the Czech letter ────────────────────────────────────────────────────────────────────
 console.log("① cseh levél: csehül, CZK-val, minden szövegrész lefordítva");
@@ -221,6 +233,16 @@ check("prágai 7:30 → zárva", outreachWindowBlocksIn(pragueWed0730, CZ) !== n
 check("cseh ünnepnap (11-17) 10:00 → zárva, közben Budapesten nyitva", outreachWindowBlocksIn(pragueHoliday, CZ) !== null && mockOutreachWindowBlocks(pragueHoliday) === null);
 const sofia0830 = new Date("2026-11-18T06:30:00Z"); // 08:30 Sofia = 07:30 Budapest
 check("szófiai 8:30 (budapesti 7:30) → a bolgár ablak nyitva, a magyar zárva", outreachWindowBlocksIn(sofia0830, BG) === null && mockOutreachWindowBlocks(sofia0830) !== null);
+{
+  // The row's send window (send_window_from/to, local hours) ∩ the owner's MOCK_OUTREACH_WINDOW.
+  const narrow = { ...CZ, sendWindowFrom: 10, sendWindowTo: 12 };
+  check("a sor küldési ablaka szűkít: prágai 8:30 → zárva, ha a sor 10–12", outreachWindowBlocksIn(pragueWed0830, narrow) !== null);
+  check("… prágai 10:30 → nyitva", outreachWindowBlocksIn(new Date("2026-11-18T09:30:00Z"), narrow) === null);
+  const wide = { ...CZ, sendWindowFrom: 6, sendWindowTo: 22 };
+  check("a sor nem tágít: 6–22 mellett is zárva prágai 7:30-kor", outreachWindowBlocksIn(pragueWed0730, wide) !== null);
+  const none = { ...CZ, sendWindowFrom: 20, sendWindowTo: 23 };
+  check("át nem fedő ablak: soha nem indul, látható okkal", /nem fedi egymást/.test(outreachWindowBlocksIn(pragueWed0830, none) ?? ""));
+}
 await setAutoDispatchSettings({ enabled: true, dailyCap: 40 });
 await db.insertInto("outreach_dispatch").values({ lead_id: czLead, artifact_id: pCz.art, queued_by: "e2e" } as never).execute();
 {
@@ -232,19 +254,22 @@ await db.insertInto("outreach_dispatch").values({ lead_id: czLead, artifact_id: 
   check("… és a kép nélküli fixture-mock nem megy ki (tartva, okkal) — semmi nem küldődött", row.status === "held" && !!row.note, JSON.stringify(row));
 }
 
-// ── ③ Bulgarian, no pack ──────────────────────────────────────────────────────────────────
-console.log("③ bolgár lead bolgár csomag nélkül: TARTVA „Bábelre vár”");
+// ── ③ a language with no pack (Romanian) ──────────────────────────────────────────────────
+console.log("③ román lead román csomag nélkül: TARTVA „Bábelre vár”");
+const dRo = await buildDraftForProspect(pRo.id, { reserveLabel: false });
+check("a levél nyelve ro (az ország nyelve)", dRo?.lang === "ro");
+check("a render mérte a magyar fallbacket (nem üres)", (dRo?.draft.untranslated ?? []).length > 0);
+const gRo = dRo ? checkOutreachDraft(dRo.draft, dRo.input.leadName, dRo.lang, dRo.market) : null;
+check("a §C-kapu tartja (NYELV … Bábelre vár)", !!gRo && gRo.verdict === "FLAG" && gRo.reasons.some((r) => /^NYELV: \d+ szövegrész nincs ro nyelven \(Bábelre vár\)/.test(r)), gRo?.reasons.join(" | "));
+const mRo = await sendOutreachMail(pRo.id);
+check("a levél-küldés: kihagyva „Bábelre vár” okkal", mRo.outcome.kind === "skipped" && /Bábelre vár/.test(mRo.outcome.reason), JSON.stringify(mRo.outcome));
+const gmRo = await mobileOutreachGates(pRo.id);
+check("a mobil-kapu: tartva „Bábelre vár” okkal", !gmRo.ok && /Bábelre vár/.test(gmRo.message), JSON.stringify(gmRo));
+const stRo = await db.selectFrom("prospect").select(["email_sent_at", "sms_sent_at", "mms_sent_at", "sent_at"]).where("id", "=", pRo.id).executeTakeFirstOrThrow();
+check("semmi nem ment ki (nincs bélyeg)", !stRo.email_sent_at && !stRo.sms_sent_at && !stRo.mms_sent_at && !stRo.sent_at);
+// The Bulgarian letter: Bábel's seed is complete, so it is written in Bulgarian, no fallback.
 const dBg = await buildDraftForProspect(pBg.id, { reserveLabel: false });
-check("a levél nyelve bg (az ország nyelve)", dBg?.lang === "bg");
-check("a render mérte a magyar fallbacket (nem üres)", (dBg?.draft.untranslated ?? []).length > 0);
-const gBg = dBg ? checkOutreachDraft(dBg.draft, dBg.input.leadName, dBg.lang, dBg.market) : null;
-check("a §C-kapu tartja (NYELV … Bábelre vár)", !!gBg && gBg.verdict === "FLAG" && gBg.reasons.some((r) => /^NYELV: \d+ szövegrész nincs bg nyelven \(Bábelre vár\)/.test(r)));
-const mBg = await sendOutreachMail(pBg.id);
-check("a levél-küldés: kihagyva „Bábelre vár” okkal", mBg.outcome.kind === "skipped" && /Bábelre vár/.test(mBg.outcome.reason), JSON.stringify(mBg.outcome));
-const gmBg = await mobileOutreachGates(pBg.id);
-check("a mobil-kapu: tartva „Bábelre vár” okkal", !gmBg.ok && /Bábelre vár/.test(gmBg.message), JSON.stringify(gmBg));
-const stBg = await db.selectFrom("prospect").select(["email_sent_at", "sms_sent_at", "mms_sent_at", "sent_at"]).where("id", "=", pBg.id).executeTakeFirstOrThrow();
-check("semmi nem ment ki (nincs bélyeg)", !stBg.email_sent_at && !stBg.sms_sent_at && !stBg.mms_sent_at && !stBg.sent_at);
+check("a bolgár levél bolgárul, magyar maradék nélkül (Bábel-mag)", dBg?.lang === "bg" && (dBg?.draft.untranslated ?? ["?"]).length === 0, JSON.stringify(dBg?.draft.untranslated?.slice(0, 3)));
 
 // ── ④ Czech mobile-only, channel not enabled ──────────────────────────────────────────────
 console.log("④ cseh csak-mobilos lead, MMS+SMS nincs engedélyezve: TARTVA");

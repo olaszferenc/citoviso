@@ -10,8 +10,11 @@
 //     whose country has no usable mobile channel is HELD with a visible reason, never moved to a
 //     bare SMS (owner rule: „MMS helyett SMS TILOS”), never sent from the Hungarian modem SIM as
 //     an international MMS (docs/mms-send.md: the modem is one Hungarian SIM, ~90 s per message);
-//   · the window — Mon–Fri, MOCK_OUTREACH_WINDOW hours, in the lead's zone, not on the row's
-//     public holidays; an unknown country cannot be scheduled (fail closed);
+//   · the window — Mon–Fri, in the lead's zone, not on the row's public holidays, between the
+//     hours of the row's send window (send_window_from/to, local time) INTERSECTED with the
+//     owner's MOCK_OUTREACH_WINDOW (ADR-XXXX: the owner's 8–17 stays the ceiling; a row can only
+//     narrow it — HU's 8–20 contains it, so HU is unchanged); an unknown country cannot be
+//     scheduled (fail closed);
 //   · the language — the country's default language and nothing else (owner 2026-11-17); a pack
 //     with a single missing outreach string HOLDS the whole outreach („Bábelre vár”).
 //
@@ -24,7 +27,7 @@
 // Pure over the loaded country snapshot (countryConfigSync); no database, no send.
 import type { CountryConfig } from "../country.js";
 import { huArticleLower } from "../hu.js";
-import { answerWindowOpenIn, nextAnswerWindowStartIn } from "../crm/countryClock.js";
+import { answerWindowOpenIn, nextAnswerWindowStartIn, type WindowHours } from "../crm/countryClock.js";
 import { MOCK_OUTREACH_WINDOW, SEND_WINDOW_TZ, mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { isMobileE164In, normalizePhoneIn } from "../text/phoneCountry.js";
 import { hhmmIn } from "../text/zoneTime.js";
@@ -80,14 +83,37 @@ export function anyMobileChannel(cfg: CountryConfig | null): boolean {
   return !modemPairBlocks(cfg) || !messengerBlocks(cfg, "viber") || !messengerBlocks(cfg, "whatsapp");
 }
 
-/** The HU row's clock IS the Budapest-only window: same zone, no holidays (ADR-0455 ⑩). */
-function isBudapestClock(cfg: Pick<CountryConfig, "timeZone" | "publicHolidays">): boolean {
-  return cfg.timeZone === SEND_WINDOW_TZ && cfg.publicHolidays.length === 0;
+/**
+ * The local hours a cold outreach to the country may start in: the row's send window
+ * (send_window_from/to) ∩ the owner's MOCK_OUTREACH_WINDOW. The row narrows, never widens the
+ * owner's rule. An empty intersection (from ≥ to) = never.
+ */
+export function outreachHoursOf(cfg: Pick<CountryConfig, "sendWindowFrom" | "sendWindowTo">): WindowHours {
+  const rowFrom = Number.isInteger(cfg.sendWindowFrom) ? cfg.sendWindowFrom : MOCK_OUTREACH_WINDOW.fromHour;
+  const rowTo = Number.isInteger(cfg.sendWindowTo) ? cfg.sendWindowTo : MOCK_OUTREACH_WINDOW.toHour;
+  return {
+    fromHour: Math.max(MOCK_OUTREACH_WINDOW.fromHour, rowFrom),
+    toHour: Math.min(MOCK_OUTREACH_WINDOW.toHour, rowTo),
+  };
 }
 
-/** Is the mock-outreach window open at `now` in the lead's zone, on its calendar? */
+/**
+ * The HU row's clock IS the Budapest-only window: same zone, no holidays (ADR-0455 ⑩), and a
+ * send window that does not narrow the owner's hours (HU row: 8–20 ⊇ 8–16/17).
+ */
+function isBudapestClock(cfg: Pick<CountryConfig, "timeZone" | "publicHolidays" | "sendWindowFrom" | "sendWindowTo">): boolean {
+  const h = outreachHoursOf(cfg);
+  return (
+    cfg.timeZone === SEND_WINDOW_TZ &&
+    cfg.publicHolidays.length === 0 &&
+    h.fromHour === MOCK_OUTREACH_WINDOW.fromHour &&
+    h.toHour === MOCK_OUTREACH_WINDOW.toHour
+  );
+}
+
+/** Is the mock-outreach window open at `now` in the lead's zone, on its calendar, in its hours? */
 export function outreachWindowOpenIn(now: Date, cfg: CountryConfig | null): boolean {
-  return !!cfg && answerWindowOpenIn(now, cfg);
+  return !!cfg && answerWindowOpenIn(now, cfg, outreachHoursOf(cfg));
 }
 
 /**
@@ -98,10 +124,14 @@ export function outreachWindowOpenIn(now: Date, cfg: CountryConfig | null): bool
 export function outreachWindowBlocksIn(now: Date, cfg: CountryConfig | null): string | null {
   if (!cfg) return "a lead országa nincs az ország-rétegben — a megkeresés nem ütemezhető (zárva)"; // i18n-exempt: operátori ok, sosem éri el a leadet
   if (isBudapestClock(cfg)) return mockOutreachWindowBlocks(now);
-  if (answerWindowOpenIn(now, cfg)) return null;
+  const hours = outreachHoursOf(cfg);
+  const { fromHour, toHour } = hours;
+  if (fromHour >= toHour) {
+    return `${cfg.name} küldési ablaka (${cfg.sendWindowFrom}:00–${cfg.sendWindowTo}:00) és a megkeresési ablak (${MOCK_OUTREACH_WINDOW.fromHour}:00–${MOCK_OUTREACH_WINDOW.toHour}:00) nem fedi egymást — a megkeresés nem ütemezhető`; // i18n-exempt: operátori ok, sosem éri el a leadet
+  }
+  if (answerWindowOpenIn(now, cfg, hours)) return null;
   const hhmm = hhmmIn(now, cfg.timeZone);
-  const next = nextAnswerWindowStartIn(now, cfg);
-  const { fromHour, toHour } = MOCK_OUTREACH_WINDOW;
+  const next = nextAnswerWindowStartIn(now, cfg, hours);
   return `mock-megkeresés csak ${cfg.name} munkanapjain ${fromHour}:00–${toHour}:00 (${cfg.timeZone}) között megy ki (ott most ${hhmm}) — legközelebb ${next.toISOString()}`; // i18n-exempt: operátori ok, sosem éri el a leadet
 }
 

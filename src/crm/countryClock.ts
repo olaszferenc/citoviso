@@ -18,6 +18,12 @@ import type { CountryConfig } from "../country.js";
 
 export type ClockRules = Pick<CountryConfig, "timeZone" | "publicHolidays">;
 
+/** The local hours of a window (from inclusive, to exclusive). Default: MOCK_OUTREACH_WINDOW. */
+export interface WindowHours {
+  readonly fromHour: number;
+  readonly toHour: number;
+}
+
 /** 0 = Sunday … 6 = Saturday, of a calendar day "YYYY-MM-DD" (no zone involved). */
 function weekdayOfIsoDay(isoDay: string): number {
   return new Date(`${isoDay}T12:00:00Z`).getUTCDay();
@@ -34,21 +40,27 @@ export function isWorkingDay(isoDay: string, rules: ClockRules): boolean {
   return wd !== 0 && wd !== 6 && !isHolidayDay(isoDay, rules.publicHolidays);
 }
 
-/** The answer window at `now`, in the lead's zone, on the lead's calendar. */
-export function answerWindowOpenIn(now: Date, rules: ClockRules): boolean {
+/**
+ * The answer window at `now`, in the lead's zone, on the lead's calendar. `hours` narrows the
+ * hours (the cold outreach passes the row's send window ∩ the owner's — countryOutreach.ts);
+ * omitted = MOCK_OUTREACH_WINDOW, as before.
+ */
+export function answerWindowOpenIn(now: Date, rules: ClockRules, hours: WindowHours = MOCK_OUTREACH_WINDOW): boolean {
+  if (hours.fromHour >= hours.toHour) return false;
   if (!isWorkingDay(isoDayIn(now, rules.timeZone), rules)) return false;
   const m = minutesIn(now, rules.timeZone);
-  return m >= MOCK_OUTREACH_WINDOW.fromHour * 60 && m < MOCK_OUTREACH_WINDOW.toHour * 60;
+  return m >= hours.fromHour * 60 && m < hours.toHour * 60;
 }
 
 /** The next moment the answer window opens in the lead's zone; `now` itself when it is open. */
-export function nextAnswerWindowStartIn(now: Date, rules: ClockRules): Date {
-  if (answerWindowOpenIn(now, rules)) return now;
+export function nextAnswerWindowStartIn(now: Date, rules: ClockRules, hours: WindowHours = MOCK_OUTREACH_WINDOW): Date {
+  if (answerWindowOpenIn(now, rules, hours)) return now;
+  if (hours.fromHour >= hours.toHour) return now;
   const today = isoDayIn(now, rules.timeZone);
   // 14 days: a long holiday run (Christmas + a weekend) still finds its first working day.
   for (let k = 0; k <= 14; k++) {
     const day = addIsoDays(today, k);
-    const start = new Date(midnightIn(day, rules.timeZone).getTime() + MOCK_OUTREACH_WINDOW.fromHour * 3_600_000);
+    const start = new Date(midnightIn(day, rules.timeZone).getTime() + hours.fromHour * 3_600_000);
     if (start.getTime() > now.getTime() && isWorkingDay(day, rules)) return start;
   }
   return now;
