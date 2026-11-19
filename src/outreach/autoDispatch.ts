@@ -203,7 +203,7 @@ export async function requeueResend(
   if (row.note?.startsWith(RESEND_NOTE_PREFIX)) return { ok: false, reason: "már újraküldésre jelölve" };
   const p = await db
     .selectFrom("prospect")
-    .select(["id", "email_sent_at", "unsubscribed_at", "status"])
+    .select(["id", "email_sent_at", "sms_sent_at", "mms_sent_at", "sent_at", "unsubscribed_at", "status"])
     .where("lead_id", "=", leadId)
     .where("email_sent_at", "is not", null)
     .where("archived_at", "is", null)
@@ -222,8 +222,24 @@ export async function requeueResend(
     .executeTakeFirst();
   if (viewed) return { ok: false, reason: "megnézte a tervet — a levél célba ért" };
   const original = new Date(p.email_sent_at as Date | string);
+  // The lost letter was no touch: when it was the prospect's ONLY channel (no SMS/MMS stamp, no
+  // messenger send), the shared first-touch stamp (`sent_at`, H1 funnel base, ADR-0082) is lifted
+  // too, so the resend becomes the first touch — otherwise the funnel report dates the lead by a
+  // letter nobody saw and never shows the resend (owner 2026-11-19: „nem mutat a report ma
+  // kiküldött linket”).
+  const messengerSent = await db
+    .selectFrom("mms_outbox")
+    .select("id")
+    .where("prospect_id", "=", p.id)
+    .where("status", "=", "sent")
+    .executeTakeFirst();
+  const onlyTouch = p.sms_sent_at == null && p.mms_sent_at == null && !messengerSent;
   await db.transaction().execute(async (trx) => {
-    await trx.updateTable("prospect").set({ email_sent_at: null }).where("id", "=", p.id).execute();
+    await trx
+      .updateTable("prospect")
+      .set({ email_sent_at: null, ...(onlyTouch ? { sent_at: null } : {}) })
+      .where("id", "=", p.id)
+      .execute();
     await trx
       .updateTable("outreach_dispatch")
       .set({
