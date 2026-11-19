@@ -57,7 +57,7 @@
 //      first-round countries' local items are defined; and the Hungarian pages / strip /
 //      stamped wordings are the old ones byte for byte.
 //
-//   ⑫ ORSZÁG-RÉTEG 3/8 — NYITÁS ELŐTTI TELJESSÉG (ADR-XXXX): ONE completeness function
+//   ⑫ ORSZÁG-RÉTEG 3/8 — NYITÁS ELŐTTI TELJESSÉG (ADR-0460): ONE completeness function
 //      (src/countryReadiness.ts) — the market gate decides from it, the approve action re-checks
 //      it, the „Országok” lap draws from it, the money-path gap list and the buyer-side language
 //      measure have no second reader / no full-catalogue twin; HU is complete and open with its

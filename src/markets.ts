@@ -37,7 +37,7 @@ export function normalizeCountryCode(raw: string | null | undefined): string | n
  * this customer is" is not a reason to publish a Hungarian imprint in their name.
  *
  * ORSZÁG-RÉTEG 3/7 (ADR-0458): an owner's approval no longer opens a country on its own.
- * ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the condition is the country's NYITÁS ELŐTTI TELJESSÉG —
+ * ORSZÁG-RÉTEG 3/8 (ADR-0460): the condition is the country's NYITÁS ELŐTTI TELJESSÉG —
  * src/countryReadiness.ts, the ONE completeness function (a valid row, a price sheet its
  * payment provider can charge, the buyer-side language pack, the legal pack in the country's
  * language, the holidays of this year and the next, an e-mail channel). This is the ONE gate

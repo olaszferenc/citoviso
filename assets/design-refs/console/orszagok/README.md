@@ -48,7 +48,7 @@ a konzolon akarja kezelni, és egy helyen látni, mi hiányzik még egy ország 
    2026-01-01 óta).
 10. **Ikonok inline SVG-k, színek csak `--citui-*` tokenekből.** Nincs emoji.
 
-## A megvalósítás (ország-réteg 3/8, ADR-XXXX)
+## A megvalósítás (ország-réteg 3/8, ADR-0460)
 
 - Lap: `src/console/countryViews.ts` (szerver-renderelt, minden szöveg `T()`), adatai:
   `src/console/countryData.ts`, útvonalak: `GET /countries`, `POST /countries/check` (élő

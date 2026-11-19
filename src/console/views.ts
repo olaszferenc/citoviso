@@ -702,7 +702,7 @@ export interface AlertSettingsView {
 
 
 /**
- * ADR-0111 → ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the markets panel MOVED to the „Országok” lap
+ * ADR-0111 → ORSZÁG-RÉTEG 3/8 (ADR-0460): the markets panel MOVED to the „Országok” lap
  * (/countries), where each country's opening readiness stands next to its approve / revoke
  * action. Settings keeps a pointer, so an operator who looks for it here finds it.
  */

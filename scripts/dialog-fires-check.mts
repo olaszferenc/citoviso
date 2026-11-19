@@ -277,7 +277,7 @@ const DOC_FORM_OPTS = {
  * Egy NYITOTT és egy ZÁRT piac kell: a „Lezárás" és a „Megnyitás" ág KÜLÖN
  * placeholderrel él, és mindkettő törött volt. A leiratkozás-visszavonás pedig
  * csak akkor renderelődik, ha a prospect TÉNYLEG leiratkozott. */
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the market forms moved from /settings to the „Országok” lap —
+// ORSZÁG-RÉTEG 3/8 (ADR-0460): the market forms moved from /settings to the „Országok” lap —
 // an OPEN country (the revoke form) and a READY, not yet approved one (the approve form).
 const READY = {
   country: "PL", hasRow: true, complete: true, approved: false, open: false, reasons: [], legal: null,

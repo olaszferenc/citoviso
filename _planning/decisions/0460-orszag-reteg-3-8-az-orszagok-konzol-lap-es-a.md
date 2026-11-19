@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/8: az „Országok” konzol-lap és a NYITÁS ELŐTTI TELJESSÉG — egy függvény, minden kapu ezt olvassa
+## ADR-0460 — Ország-réteg 3/8: az „Országok” konzol-lap és a NYITÁS ELŐTTI TELJESSÉG — egy függvény, minden kapu ezt olvassa
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-18 „ok mehet” a briefre, 2026-11-19 a B terv — „nyitás-mátrix” — jóváhagyva;
 brief `orszag-reteg-3h-orszagok-lap-20261118.md`, koordinátor `cit9b4690e3`) ·

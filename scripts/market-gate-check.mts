@@ -90,7 +90,7 @@ await sql`
     tourist_tax_model, '["01-01"]'::jsonb
   from country where iso2 = 'HU'`.execute(db);
 await refreshCountries();
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the gate is approval + the country's READINESS (countryReadiness):
+// ORSZÁG-RÉTEG 3/8 (ADR-0460): the gate is approval + the country's READINESS (countryReadiness):
 // besides the legal pack, a non-HU country needs holidays (the copy above lists one every-year
 // day — HU's empty list is only a warning for HU itself) and an invoiceable (EU) code — the
 // throwaway user-assigned code is declared EU for THIS process (a test-only switch the readiness

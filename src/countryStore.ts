@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) — writing a country row from the console's „Országok” lap.
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) — writing a country row from the console's „Országok” lap.
 //
 // The row is validated by the SAME rules the lap checks live (countryRules.ts), then written
 // in one statement and the in-process snapshot (country.ts) is re-read, so the next request

@@ -1,6 +1,6 @@
 # 2026-11-19 · Ország-réteg 3/8 — az „Országok” konzol-lap és a nyitás előtti teljesség
 
-Brief: `~/rc-briefs/orszag-reteg-3h-orszagok-lap-20261118.md` · koordinátor `cit9b4690e3` · session `cita2cb36f4` · ADR-XXXX.
+Brief: `~/rc-briefs/orszag-reteg-3h-orszagok-lap-20261118.md` · koordinátor `cit9b4690e3` · session `cita2cb36f4` · ADR-0460.
 
 ## Elvégezve
 - TERV-KAPU: két mock (A lista+szerkesztő, B nyitás-mátrix) → a tulaj a **B**-t választotta (2026-11-19). Befagyasztva:

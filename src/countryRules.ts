@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) — the RULES of a country row, in one place: what each field
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) — the RULES of a country row, in one place: what each field
 // accepts (the console's „Országok” lap validates live with these, its save refuses on them,
 // and the readiness item „Ország-adatok” counts them), the defaults a NEW row starts from, and
 // the holiday-coverage rule the readiness and the holiday editor share.

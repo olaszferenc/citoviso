@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) — NYITÁS ELŐTTI TELJESSÉG: is a country ready to OPEN, and if
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) — NYITÁS ELŐTTI TELJESSÉG: is a country ready to OPEN, and if
 // not, what is missing? ONE function, read by:
 //   · the market gate (src/markets.ts marketGate → every cold-outreach, trial, pay-link,
 //     go-live and configurator entry): a market is open = the owner approved it AND it is

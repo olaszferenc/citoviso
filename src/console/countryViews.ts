@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) — the console's „Országok” lap: one row per country (the
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) — the console's „Országok” lap: one row per country (the
 // `country` table, ADR-0437), its NYITÁS ELŐTTI TELJESSÉG (src/countryReadiness.ts) and the
 // market gate's approve / revoke (ADR-0111 — moved here from the old /settings „Piacok” panel).
 //

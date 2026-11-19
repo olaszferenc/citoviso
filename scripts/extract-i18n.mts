@@ -58,7 +58,7 @@ async function tsFilesUnder(dir: string): Promise<string[]> {
  */
 export function surfaceOf(rel: string): string {
   const base = path.basename(rel);
-  // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): two files sit in the "wrong" folder for their audience. The
+  // ORSZÁG-RÉTEG 3/8 (ADR-0460): two files sit in the "wrong" folder for their audience. The
   // prospect frame and the plan switcher are served BY the console but read by the LEAD
   // (magázó: „Miért kaptam?”, „Ez még nem élő oldal.”); the mock photo check lives under
   // outreach but speaks to the OPERATOR (tegező: „Generáld újra a mockot”). The buyer-side
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
       add(JSON.parse(`"${m[1]}"`));
     }
   }
-  // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): buyer-facing strings rendered from the console's big view
+  // ORSZÁG-RÉTEG 3/8 (ADR-0460): buyer-facing strings rendered from the console's big view
   // module (the pay-result page, the lead's own-page alt text, the prospect privacy notice) —
   // the file is mostly operator text, so these few are named one by one. Only strings the
   // harvest actually found are tagged (a renamed source string drops out, never invents one).

@@ -2295,7 +2295,7 @@ async function handle(
   // POST /settings/markets — open or close a market (ADR-0111). The reason is
   // MANDATORY here too, not only in the browser: without it nothing changes and no
   // log row is written, so a rejected attempt cannot look like a decision. The actor
-  // is the signed-in operator, never a form field. ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the forms
+  // is the signed-in operator, never a form field. ORSZÁG-RÉTEG 3/8 (ADR-0460): the forms
   // live on the „Országok” lap now, and an approval needs the country's readiness COMPLETE
   // (src/countryReadiness.ts — the same function the market gate reads; it includes the
   // ADR-0443 money path), checked here again whatever the browser showed.
@@ -2325,7 +2325,7 @@ async function handle(
         : `hiba:${T(lang, "{iso} — a művelet nem hajtható végre (ismeretlen ország, hiányzó indoklás, vagy a hazai piac nem zárható le).", { iso: country })}`,
     );
   }
-  // GET /countries — the „Országok” lap (ORSZÁG-RÉTEG 3/8, ADR-XXXX): the opening matrix,
+  // GET /countries — the „Országok” lap (ORSZÁG-RÉTEG 3/8, ADR-0460): the opening matrix,
   // a country's editor at a step (?iso=XX&step=…), or a new country's (?new=XX).
   if (method === "GET" && path === "/countries") {
     const op = await currentOperator(req);

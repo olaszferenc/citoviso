@@ -2644,7 +2644,7 @@ await shootConsole(
   settingsPage({ username: "olaszferenc", displayName: "Olasz Ferenc", role: "admin" }),
   conOut("console-settings"),
 );
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the „Országok” lap — the matrix (HU open, BG half done, HR met
+// ORSZÁG-RÉTEG 3/8 (ADR-0460): the „Országok” lap — the matrix (HU open, BG half done, HR met
 // but without a row) and the BG editor at its „Megnyitás” step (the readiness list + the shut
 // approve button). Fixture readiness: the guide explains exactly these states.
 {

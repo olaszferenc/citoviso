@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) — the data of the „Országok” lap: the country list (every row of
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) — the data of the „Országok” lap: the country list (every row of
 // the `country` table + every country we have MET without a row yet — ADR-0111 kept that from
 // the old markets panel), each with its readiness and market decision, and the editor state of
 // the open country. The readiness itself is src/countryReadiness.ts; nothing is computed here.

@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) — TEST FIXTURE: make a synthetic country READY for the market gate
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) — TEST FIXTURE: make a synthetic country READY for the market gate
 // (src/countryReadiness.ts) in a SCRATCH database, so a test that opens a foreign market keeps
 // measuring what it always measured. ⛔ NOT a translation and never the API: the language pack
 // gets MARKER strings (‹lang› + the Hungarian with its vowels broken) for the buyer-side strings

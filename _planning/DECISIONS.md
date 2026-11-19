@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-orszag-reteg-3-8-orszagok-lap-es-nyitas-elotti-teljesseg.md) — Ország-réteg 3/8: az „Országok” konzol-lap és a NYITÁS ELŐTTI TELJESSÉG — egy függvény, minden kapu ezt olvassa
+- [ADR-0460](decisions/0460-orszag-reteg-3-8-az-orszagok-konzol-lap-es-a.md) — Ország-réteg 3/8: az „Országok” konzol-lap és a NYITÁS ELŐTTI TELJESSÉG — egy függvény, minden kapu ezt olvassa
 - [ADR-0459](decisions/0459-a-hideg-megkereses-kulon-domainrol-megy.md) — A hideg megkeresés KÜLÖN domainről megy (getcitoviso.com), saját SMTP-vel és DKIM-mel, felfutással és fékkel
 - [ADR-0458](decisions/0458-orszag-reteg-3-7-a-jogi-csomag-orszagonkent-az.md) — Ország-réteg 3/7: a jogi csomag országonként, az ország nyelvén — a piac-kapu a csomag teljességét nézi
 - [ADR-0457](decisions/0457-orszag-reteg-3-6-a-mock-a-lead-orszaganak.md) — Ország-réteg 3/6: a mock a lead országának nyelvén, írásával és szabályaival készül — magyar maradvány = TARTVA

@@ -180,7 +180,7 @@ export function navTree(lang = "hu"): readonly NavNode[] {
       href: `${HUB_PREFIX}system`,
       children: [
         { kind: "leaf", id: "settings", label: T(lang, "Beállítások"), href: "/settings" },
-        // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): country master data + opening readiness + market gate.
+        // ORSZÁG-RÉTEG 3/8 (ADR-0460): country master data + opening readiness + market gate.
         { kind: "leaf", id: "countries", label: T(lang, "Országok"), href: "/countries" },
       ],
     },

@@ -129,7 +129,7 @@ const VIEW_GROUPS = {
     // ORSZÁG-RÉTEG 3/7 (ADR-0458): the unsubscribe page's wording („Leiratkozom”…) moved into
     // the legal pack — its source lives HERE, prospectNotice.ts only prints it.
     "src/legal.ts",
-    // ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the „Országok” lap (frozen plan design-refs/console/orszagok/) —
+    // ORSZÁG-RÉTEG 3/8 (ADR-0460): the „Országok” lap (frozen plan design-refs/console/orszagok/) —
     // its labels live in its own view file, the readiness item titles in the readiness module.
     "src/console/countryViews.ts",
     "src/countryReadiness.ts",

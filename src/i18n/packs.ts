@@ -193,7 +193,7 @@ const CONTEXT_PATH = path.resolve(HERE, "catalog-context.json");
 let buyerCatalogCache: string[] | null = null;
 
 /**
- * ORSZÁG-RÉTEG 3/8 (ADR-XXXX): the part of the catalog a BUYER-side reader can meet — every
+ * ORSZÁG-RÉTEG 3/8 (ADR-0460): the part of the catalog a BUYER-side reader can meet — every
  * string whose surface (catalog-context.json, extract-i18n) is anything but the operator
  * console alone: the lead's page and letter, the SMS, the guest site, the tenant admin. A
  * console-only string never reaches a lead or a buyer, so it does not hold a country back

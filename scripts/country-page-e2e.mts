@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/8 (ADR-XXXX) ACCEPTANCE — the console's „Országok” lap, in a SCRATCH database
+// ORSZÁG-RÉTEG 3/8 (ADR-0460) ACCEPTANCE — the console's „Országok” lap, in a SCRATCH database
 // (never the shared dev DB, never production). Nothing is sent, nothing is translated: the
 // language pack and the price sheet that complete the country are FIXTURES written into the
 // scratch DB (marker strings, never a translation), the network is fenced.
