@@ -122,8 +122,8 @@ def viber_age_days(seen, today=None):
 
 def presence_whatsapp(ph):
     sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"https://wa.me/{ph}", "-p", "com.whatsapp")
-    x, r = wait_for(lambda x: "yes" if "com.whatsapp:id/conversation_contact_name" in x else
-                    ("no" if re.search(r"nincsen regisztrálva a WhatsApp|nem használja a WhatsAppot|not on WhatsApp", x) else None))
+    x, r = wait_for(lambda x: None if wa_dismiss_overlays(x) else ("yes" if "com.whatsapp:id/conversation_contact_name" in x else
+                    ("no" if re.search(r"nincsen regisztrálva a WhatsApp|nem használja a WhatsAppot|not on WhatsApp", x) else None)))
     if r == "no":
         a11y("click", "android:id/button1")
     home()
@@ -206,10 +206,19 @@ def send_whatsapp(ph, uri, text):
         raise Fail("whatsapp: media preview did not open")
     if not a11y("click", "com.whatsapp:id/send"):
         raise Fail("whatsapp: send click failed")
-    x, ok = wait_for(lambda x: "com.whatsapp:id/conversation_contact_name" in x and "com.whatsapp:id/status" in x, tries=12)
+    x, ok = wait_for(lambda x: None if wa_dismiss_overlays(x) else ("com.whatsapp:id/conversation_contact_name" in x and "com.whatsapp:id/status" in x), tries=12)
     if not ok:
         raise Fail("whatsapp: sent message not visible in chat")
     home()
+
+
+def wa_dismiss_overlays(x):
+    """2026-11-19: WhatsApp's "Eltűnő üzenetek bekapcsolva ebben a csevegésben" info sheet covers the
+    chat (seen on +36 30 314 5583); close it. True = something was closed."""
+    if "Eltűnő üzenetek" in x and 'text="OK"' in x:
+        a11y("click", "~OK")
+        return True
+    return False
 
 
 def viber_dismiss_overlays(x):
@@ -308,7 +317,7 @@ def send_text(ph, channel, text):
     """A plain text into an existing chat (ADR-0430: the operator's answer to a messenger reply)."""
     if channel == "whatsapp":
         sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"https://wa.me/{ph}", "-p", "com.whatsapp")
-        x, ok = wait_for(lambda x: "com.whatsapp:id/entry" in x or RESTRICTED_RX.search(x))
+        x, ok = wait_for(lambda x: None if wa_dismiss_overlays(x) else ("com.whatsapp:id/entry" in x or RESTRICTED_RX.search(x)))
         if not ok or RESTRICTED_RX.search(x):
             raise Fail("whatsapp: chat did not open")
         if not a11y("settext", "com.whatsapp:id/entry", text):
@@ -359,7 +368,9 @@ def send_mms(ph, uri, text):
 
 
 # A banned/limited account shows one of these instead of the chat (WhatsApp, Viber; HU + EN).
-RESTRICTED_RX = re.compile(r"nem használhatja a WhatsAppot|fiókod(at)? (le|ki)tiltott|korlátoz|nem tudsz új csevegést|"
+# 2026-11-19: no bare "korlátoz" — WhatsApp's "Eltűnő üzenetek" info sheet says "…tudják ezt korlátozni",
+# and that tripped the messenger brake on 11-18 12:16 (a false restriction).
+RESTRICTED_RX = re.compile(r"nem használhatja a WhatsAppot|fiókod(at)? (le|ki)tiltott|fiókod korlátozva|nem tudsz új csevegést|"
                            r"is banned|account (is )?(banned|restricted)|deaktivál", re.I)
 
 
@@ -403,7 +414,7 @@ def status(ph, channel):
     and the texts of incoming bubbles visible on screen."""
     if channel == "whatsapp":
         sh("am", "start", "-a", "android.intent.action.VIEW", "-d", f"https://wa.me/{ph}", "-p", "com.whatsapp")
-        x, _ = wait_for(lambda x: "com.whatsapp:id/conversation_contact_name" in x or RESTRICTED_RX.search(x))
+        x, _ = wait_for(lambda x: None if wa_dismiss_overlays(x) else ("com.whatsapp:id/conversation_contact_name" in x or RESTRICTED_RX.search(x)))
         if RESTRICTED_RX.search(x):
             home()
             return {"restricted": True}
