@@ -592,7 +592,7 @@ export function layout(title: string, body: string, opts: LayoutOpts = {}): stri
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
 <link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">
-<link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}</head>`;
+<link rel="stylesheet" href="/assets/ui/citui-console-table.css?v=${ASSET_V}">${opts.head ?? ""}${chrome && opts.shell !== "bare" ? pwaHead() : ""}</head>`;
   if (opts.shell === "bare") return `${head}<body class="paypage">${body}</body></html>`;
   if (!chrome) {
     // Prospect/tenant-facing page inside the console server: brand only, no operator menu.
@@ -652,7 +652,7 @@ export function operatorLoginPage(error: string | null = null, publicLoginUrl = 
 <title>${T(lang, "Belépés — Citoviso konzol")}</title>
 <link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/ui/citui.css?v=${ASSET_V}">
-<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS(lang)}</head>
+<link rel="stylesheet" href="/assets/ui/citui-console.css?v=${ASSET_V}">${PW_TOGGLE_JS(lang)}${pwaHead()}</head>
 <body class="con"><div class="con-login"><div class="box">
 ${BRAND}
 <h1>${T(lang, "Belső konzol — munkatársi belépés")}</h1>
@@ -687,7 +687,8 @@ export function operatorLoginHelpPage(publicLoginUrl = ""): string {
       <p style="margin-top:14px"><a href="/login">${T(lang, "← Vissza a belépéshez")}</a>
         ${publicLoginUrl ? ` · <a href="${esc(publicLoginUrl)}">${T(lang, "Ügyfél-belépés ▸")}</a>` : ""}</p>
     </div>`;
-  return layout(T(lang, "Elfelejtett jelszó"), body, { chrome: false });
+  // The installed console app opens here from the login page — it must stay in the app window.
+  return layout(T(lang, "Elfelejtett jelszó"), body, { chrome: false, head: pwaHead() });
 }
 
 /** Operator settings: account info + password change. */
@@ -9234,6 +9235,9 @@ export function prospectActivityPage(a: ProspectActivity): string {
 import type { ScrapeJobState } from "./scrapeJob.js";
 import type { FunnelReport, FunnelCounts, ScrapeRunView } from "./data.js";
 import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
+// Installable console app (2026-11-19): manifest + theme-color + SW registration on the
+// operator pages and the operator login (scope "/" on admin.citoviso.com).
+import { pwaHead } from "../ui/pwa.js";
 
 /** The operator's wall clock. The PRODUCTION machine runs on UTC (timedatectl:
  *  "Local time: … UTC"), so a bare toLocaleString() printed 6:49:59 for a scrape

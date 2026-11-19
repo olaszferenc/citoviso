@@ -270,6 +270,7 @@ import { brakeKey, RequestBrake } from "./requestBrake.js";
 import { crossOriginRefusal } from "./originGuard.js";
 import { sendAccountActionMail, storedCardLabel } from "../payment/accountMail.js";
 import { faviconSvg } from "../ui/brand.js";
+import { servePwa, withPwaHead } from "../ui/pwa.js";
 import { renderHomepage } from "./homepage.js";
 import {
   getCurrency,
@@ -563,7 +564,8 @@ async function serveHomepage(
     return send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
   }
   const rendered = await withAssetVersions(await renderHomepage(html, req.headers, url.searchParams.get("region")));
-  send(res, 200, rendered);
+  // Installable citoviso.com app (2026-11-19, src/ui/pwa.ts).
+  send(res, 200, withPwaHead(rendered));
 }
 
 /** Serve the generated preview HTML for a request token. */
@@ -656,6 +658,13 @@ async function resolveAliasSite(label: string): Promise<TenantHostSite | null> {
 function aliasRedirectHost(site: TenantHostSite): string | null {
   if (site.customDomain && !isMockDomainProvisioning()) return site.customDomain;
   return site.slug ? `${site.slug}.${PLATFORM_DOMAIN}` : null;
+}
+
+/** A *.citoviso.com subdomain other than www/admin — a tenant's or a lead's preview host. */
+function isTenantishHost(req: http.IncomingMessage): boolean {
+  const host = String(req.headers.host ?? "").split(":")[0]!.toLowerCase();
+  if (!host.endsWith(`.${PLATFORM_DOMAIN}`)) return false;
+  return host !== `www.${PLATFORM_DOMAIN}` && host !== `admin.${PLATFORM_DOMAIN}`;
 }
 
 /**
@@ -2610,6 +2619,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   // the marketing homepage. Only 'live' sites resolve — a provisioned (paid-for
   // but private) site stays token-only, keeping the ADR-0014 state machine intact.
   const tenantSite = await resolveTenantSite(req);
+  // Installable citoviso.com app (2026-11-19, src/ui/pwa.ts): manifest, service worker, icons —
+  // on platform hosts only. A tenant's site (its subdomain or own domain) is NOT our app.
+  if (!tenantSite && !isTenantishHost(req) && (await servePwa("public", req.method ?? "GET", pathname, res))) return;
   // ADR-0356: a former slug answers GET/HEAD with a 301 to the current address — path and
   // query kept, so a token link from an old mail lands on the same handler on the new host.
   // A POST is NOT redirected (a 301 turns it into a GET, and a GET never decides): it is
@@ -4656,7 +4668,8 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       return send(
         res,
         200,
-        loginPage(undefined, consoleLoginUrl(req), loginLang, safeAdminNext(url.searchParams.get("next"))),
+        // The installed citoviso.com app must stay in its window across the login (src/ui/pwa.ts).
+        withPwaHead(loginPage(undefined, consoleLoginUrl(req), loginLang, safeAdminNext(url.searchParams.get("next")))),
       );
     }
     // Elek T-3: "Elfelejtett jelszó?" — the self-service request form.
