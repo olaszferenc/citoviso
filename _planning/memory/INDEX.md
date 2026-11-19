@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-11-19_orszag_reteg_3_8_orszagok_lap.md](2026-11-19_orszag_reteg_3_8_orszagok_lap.md) — 2026-11-19 · Ország-réteg 3/8 — az „Országok” konzol-lap és a nyitás előtti teljesség
+- [2026-11-19_hideg_sav_dkim_javitas.md](2026-11-19_hideg_sav_dkim_javitas.md) — 2026-11-19 — Hideg sáv: miért nem nyitják a megkereséseket — DKIM-javítás (cit327a964e)
 - [2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md](2026-11-18_portal_feltoltes_felmeres_es_jelenlet.md) — 2026-11-18 — Portál-feltöltés felmérés + a 368 megnyitó portál-jelenléte
 - [2026-11-18_orszag_reteg_jogi_csomag.md](2026-11-18_orszag_reteg_jogi_csomag.md) — 2026-11-18 — Ország-réteg 3/7: jogi csomag országonként (ADR-0458)
 - [2026-11-18_hideg_kulon_domain_sav.md](2026-11-18_hideg_kulon_domain_sav.md) — 2026-11-18 — Hideg megkeresés külön domainről: getcitoviso.com sáv, felfutás, fék (ADR-0459)
