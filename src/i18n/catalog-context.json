@@ -69,7 +69,7 @@
 "„{name}” most nem látszik az oldalán. Az előfizetése és a beállításai megmaradnak.":"admin",
 "„{name}” most nem rendelhető, ezért nem szerepel itt.":"admin",
 "„{name}” újra látszik az oldalán.":"admin",
-"„{region}” ár-régió teljes, {ccy} — a(z) {provider} fogadja":"konzol",
+"„{region}” ár-régió teljes, {ccy} — a fizetési szolgáltató ({provider}) fogadja":"konzol",
 "„Csatlakozás egy másik webhelyhez” (Connect to another website) → illessze be a 2. lépés linkjét, nevezze el, majd „Naptár hozzáadása”.":"admin",
 "„csomagban” = a csomag tartalma, külön havidíj nincs; „havidíj” = külön fizeti; „kivásárolta” = kilépéskor megvette.":"konzol",
 "„Elakadt” — külön kategória a riportban":"konzol",

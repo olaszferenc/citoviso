@@ -70,7 +70,7 @@
   "„{name}” most nem látszik az oldalán. Az előfizetése és a beállításai megmaradnak.",
   "„{name}” most nem rendelhető, ezért nem szerepel itt.",
   "„{name}” újra látszik az oldalán.",
-  "„{region}” ár-régió teljes, {ccy} — a(z) {provider} fogadja",
+  "„{region}” ár-régió teljes, {ccy} — a fizetési szolgáltató ({provider}) fogadja",
   "„Csatlakozás egy másik webhelyhez” (Connect to another website) → illessze be a 2. lépés linkjét, nevezze el, majd „Naptár hozzáadása”.",
   "„csomagban” = a csomag tartalma, külön havidíj nincs; „havidíj” = külön fizeti; „kivásárolta” = kilépéskor megvette.",
   "„Elakadt” — külön kategória a riportban",

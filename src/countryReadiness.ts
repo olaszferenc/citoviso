@@ -154,7 +154,7 @@ export async function countryReadiness(country: string | null | undefined, opts:
     state: money.length ? "bad" : "ok",
     detail: money.length
       ? money.join(" · ")
-      : T(lang, "„{region}” ár-régió teljes, {ccy} — a(z) {provider} fogadja", {
+      : T(lang, "„{region}” ár-régió teljes, {ccy} — a fizetési szolgáltató ({provider}) fogadja", {
           region: cfg!.pricingRegion,
           ccy: cfg!.currency,
           provider: cfg!.paymentProvider,

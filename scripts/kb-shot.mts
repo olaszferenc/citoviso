@@ -2657,7 +2657,7 @@ await shootConsole(
   };
   const huItems: RdItem[] = [
     { key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" },
-    { key: "prices", state: "ok", gating: true, title: "Ársor és fizetés", detail: "„hu” ár-régió teljes, HUF — a(z) barion fogadja" },
+    { key: "prices", state: "ok", gating: true, title: "Ársor és fizetés", detail: "„hu” ár-régió teljes, HUF — a fizetési szolgáltató (barion) fogadja" },
     { key: "babel", state: "ok", gating: true, title: "Nyelvi csomag (Bábel)", detail: "magyar — a forrásnyelv, nincs mit fordítani" },
     { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "hazai csomag — a forrás maga" },
     { key: "holidays", state: "warn", gating: false, title: "Ünnepnapok", detail: "nincs megadva — ma a válasz csak hétvégén áll" },
