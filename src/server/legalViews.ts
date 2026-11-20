@@ -214,8 +214,13 @@ export function privacyPageFor(pack?: LegalPack): string {
   const ph = Object.fromEntries(SENDER_KEYS.map((k) => [k, LEGAL_PLACEHOLDER(`sender_${k}`)])) as typeof config.outreachSender;
   const html = runWithConsoleLang(() => privacyPage(ph));
   const sender = config.outreachSender as unknown as Record<string, string>;
+  // ORSZÁG-RÉTEG 3/9 (Elek HR): the country pack only knows the controller line WITH a phone
+  // (the Hungarian page drops the clause when the sender has none). The company phone stays on
+  // the legal pages (45/2014. Korm. r. 11. §, MEMORY 2026-11-13), so it stands in for an empty
+  // sender phone instead of the loud „[ — ]” marker; the marker remains for a truly missing fact.
+  const fact = (k: (typeof SENDER_KEYS)[number]): string => sender[k] || (k === "phone" ? config.legalEntity.phone : "") || "";
   const values = Object.fromEntries(
-    SENDER_KEYS.map((k) => [`sender_${k}`, sender[k] ? esc(sender[k]) : COUNTRY_FILL_ME]),
+    SENDER_KEYS.map((k) => [`sender_${k}`, fact(k) ? esc(fact(k)) : COUNTRY_FILL_ME]),
   );
   return withCountryLinks(translateLegalHtml(html, pack, values), pack.country);
 }
