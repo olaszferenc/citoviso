@@ -7,7 +7,7 @@
 //
 // ⛔ EQUIVALENCE, NOT A SHORTCUT. One tick does what the console's send-all does, in the same
 // order, with the same functions: photo gate → createProspect → guard/Vera confirm check →
-// sendOutreachMail → startOutreachPair → activity log. Every send gate (unsubscribe, one-shot,
+// sendOutreachMail → activity log (no mobile pair since 2026-11-20). Every send gate (unsubscribe, one-shot,
 // address lock, §C, language pack, photo health, verdicts, weekday 9–16 window) re-runs inside
 // those functions. What the console solves with a human click (a confirmable guard finding, a
 // photo-gate acknowledgement, a pending Vera review) the timer NEVER acknowledges: the row
@@ -26,7 +26,6 @@ import { logLeadActivity, SYSTEM_ACTOR } from "../console/leadActivity.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, reviewOf, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
-import { startOutreachPair } from "./sendOutreachPair.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
@@ -449,17 +448,16 @@ async function dispatchOne(
           ? `e-mail nem ment: ${mail.outcome.reason}`
           : "e-mail: dry-run";
   // Owner 2026-11-16: e-mail out → no mobile message (WhatsApp / Viber / MMS) for this lead.
-  const pair = mail.outcome.kind === "sent"
-    ? { ok: false as const, message: "e-mail kiment, ezért mobilüzenet nem megy (tulaj 2026-11-16)" }
-    : await startOutreachPair(prospectId);
-  const pairNote = pair.ok ? `mobil-pár: ${pair.message}` : `mobil-pár nem ment: ${pair.message}`;
-  const note = `${mailNote} · ${pairNote}`;
-
-  if (mail.outcome.kind === "sent" || pair.ok) {
-    await logLeadActivity({ leadId, tab: "ls-outreach", action: "prospect.send_all", actor: SYSTEM_ACTOR, subjectId: prospectId });
-    return { status: "sent", note, prospectId };
+  // Owner 2026-11-20 („Email cím nélkül nem küldünk ki. Sms mms nem megy ki”, then „egyetértek”): when
+  // the e-mail did not go out (no address, or a guard refused it) NO mobile pair is started either —
+  // the row is held, so it neither counts as sent nor eats a slot of the day's cap. Measured 11-20:
+  // 6 guard-refused e-mails were marked 'sent' because only an MMS (never delivered, cap 0) was queued.
+  if (mail.outcome.kind !== "sent") {
+    return { status: "held", note: `${mailNote} · mobilüzenet nem indul: e-mail nélkül nem küldünk (tulaj 2026-11-20)`, prospectId };
   }
-  return { status: "held", note, prospectId };
+  const note = `${mailNote} · mobil-pár nem ment: e-mail kiment, ezért mobilüzenet nem megy (tulaj 2026-11-16)`;
+  await logLeadActivity({ leadId, tab: "ls-outreach", action: "prospect.send_all", actor: SYSTEM_ACTOR, subjectId: prospectId });
+  return { status: "sent", note, prospectId };
 }
 
 /**

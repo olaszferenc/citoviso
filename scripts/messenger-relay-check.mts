@@ -449,7 +449,9 @@ try {
     const rq = await readFile(path.resolve("src/mms/relayQueue.ts"), "utf8");
     const ad = await readFile(path.resolve("src/outreach/autoDispatch.ts"), "utf8");
     say(/pe\.id = mms_outbox\.prospect_id and pe\.email_sent_at is not null/.test(rq), "⑭ a relay nem adja ki annak a leadnek a mobilüzenetét, akinek az e-mail kiment");
-    say(/mail\.outcome\.kind === "sent"\s*\?\s*\{ ok: false/.test(ad), "⑭ az automata e-mail után nem indít mobil-párt");
+    // Owner 2026-11-20 („Email cím nélkül nem küldünk ki. Sms mms nem megy ki”): the automat starts no mobile pair at all.
+    say(!/startOutreachPair/.test(ad), "⑭ az automata semmikor nem indít mobil-párt (tulaj 2026-11-20)");
+    say(/if \(mail\.outcome\.kind !== "sent"\) \{\s*return \{ status: "held"/.test(ad), "⑭ ki nem ment e-mail → a sor TARTVA (nem 'sent', nem eszi a keretet)");
     say(!/csak azon megy, e-mail nem/.test(ad), "⑭ a 11-11-i „Viber/WhatsApp van → e-mail nem” szabály kivezetve");
   }
 } catch (e) {
