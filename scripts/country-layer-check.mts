@@ -376,7 +376,7 @@ const SURFACE_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> 
   { file: "src/tenant/moduleSetup.ts", frag: 'T(lang, "{p} Ft/hó"', why: "a forint-ág régi modulár-mondata bájtra" },
   { file: "assets/runtime/cit-runtime.js", frag: 's.currency || "HUF"', why: "a pénznem nélküli RÉGI foglalási nyugta (a böngésző nem importálja a LEGACY_CURRENCY-t)" },
   { file: "assets/runtime/cit-runtime.js", frag: '.currency || "HUF")', why: "ugyanaz (régi, pénznem nélküli ár-válasz)" },
-  { file: "assets/runtime/cit-runtime.js", frag: 'return { currency: "HUF", unit: "per_night"', why: "a mock minta-ára (jelölten „Minta-ár”); országfüggő minta-ár a következő kör kozmetikai tétele" },
+  { file: "assets/runtime/cit-runtime.js", frag: 'slot.getAttribute("data-cit-currency") || "HUF"', why: "a mock minta-ára (jelölten „Minta-ár”) a lap pénznemében (3/9, data-cit-currency); attribútum nélkül a magyar minta bájtra" },
   { file: "src/console/partnerProfileViews.ts", frag: 'new Intl.DateTimeFormat("hu-HU"', why: "operátori konzol (magyar nyelvű belső felület), nem partnernek menő szöveg" },
   { file: "src/console/partnerData.ts", frag: '.where("currency", "=", "HUF")', why: "AAM/A60 számláló: a forint itt az ADÓ pénzneme (Áfa tv.)" },
   { file: "src/console/partnerData.ts", frag: '.where("currency", "!=", "HUF")', why: "ugyanaz (a nem forintos számlák MNB-árfolyamon forintra számolva)" },

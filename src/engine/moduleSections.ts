@@ -327,6 +327,11 @@ function money(amount: number, currency?: string, lang?: string): string {
 }
 
 /** ADR-0378: a meal plan's name in the page's language (literal keys for the catalogue). */
+/** ORSZÁG-RÉTEG 3/9: the sample widget's currency on a foreign mock; HU pages carry none (unchanged). */
+function demoCurrencyAttr(d: SiteData): string {
+  return d.currency && /^[A-Z]{3}$/.test(d.currency) && d.currency !== "HUF" ? ` data-cit-currency="${esc(d.currency)}"` : "";
+}
+
 function mealName(d: SiteData, id: "none" | "bb" | "hb" | "fb"): string {
   return id === "bb"
     ? T(d, "Reggeli")
@@ -1322,10 +1327,12 @@ function bookingSectionBlock(d: SiteData, opts: { sample?: boolean } = {}): stri
       : b
         ? ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(b.units))}"` +
           ` data-cit-min-nights="${b.minNights}" data-cit-max-nights="${b.maxNights}"` +
-          ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"`
+          ` data-cit-horizon="${b.horizonMonths}" data-cit-lead-days="${b.leadTimeDays}"` +
+          demoCurrencyAttr(d)
         : ` data-cit-demo="1" data-cit-units="${esc(JSON.stringify(demoUnits))}"` +
           ` data-cit-min-nights="1" data-cit-max-nights="30"` +
-          ` data-cit-horizon="12" data-cit-lead-days="0"`;
+          ` data-cit-horizon="12" data-cit-lead-days="0"` +
+          demoCurrencyAttr(d);
   const fallback = email
     ? `<p class="cit-modsec__note" style="margin:0 0 12px">${T(d, "Küldjön foglalási kérést — a szállásadó visszaigazolja.")}</p>` +
       `<a class="cit-btn" href="mailto:${esc(email)}">${T(d, "Foglalási kérés küldése")}</a>`

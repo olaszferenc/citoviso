@@ -775,6 +775,15 @@
       return k ? tr("{n} fő, ebből {k} gyermek").replace("{n}", g).replace("{k}", k) : tr("{n} fő").replace("{n}", g);
     }
     function huDay(iso) {
+      /* ORSZÁG-RÉTEG 3/9 (Elek HR): a foreign page writes the day in ITS language's order
+       * („20. 11. 2026.” in hr); Hungarian keeps its own spelling byte for byte. */
+      var dl = document.documentElement.lang || "hu";
+      if (dl !== "hu" && !/^hu-/.test(dl)) {
+        try {
+          return new Intl.DateTimeFormat(dl, { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" })
+            .format(new Date(iso.slice(0, 10) + "T00:00:00Z"));
+        } catch (e) { /* unknown locale: the Hungarian spelling below */ }
+      }
       return iso.slice(0, 4) + ". " + iso.slice(5, 7) + ". " + iso.slice(8, 10) + ".";
     }
     function receiptHtml(s) {
@@ -920,10 +929,16 @@
      *  figure per unit, so switching units visibly changes the price. §B.17 / ADR-0061: this
      *  is NOT a claim about the property — renderQuote labels it "minta-ár" at the box, at
      *  the total and in a sentence that says the live page shows the owner's own list. */
+    /* ORSZÁG-RÉTEG 3/9 (Elek HR): the sample is in the PAGE's currency (data-cit-currency, the
+     * lead country's — set by the generator on a foreign mock), with a round figure that is
+     * plausible in it; no attribute = the Hungarian sample, byte for byte. */
+    var demoCcy = (slot.getAttribute("data-cit-currency") || "HUF").toUpperCase();
+    var DEMO_SAMPLE = { HUF: [24000, 4000], EUR: [60, 10], CZK: [1500, 250], PLN: [260, 40], RON: [300, 50], BGN: [120, 20] };
     function demoPricing(unitId) {
       var idx = 0;
       units.forEach(function (u, i) { if (u.id === unitId) idx = i; });
-      return { currency: "HUF", unit: "per_night", rows: [{ base: true, amount: 24000 + idx * 4000 }] };
+      var s = DEMO_SAMPLE[demoCcy] || DEMO_SAMPLE.EUR;
+      return { currency: demoCcy, unit: "per_night", rows: [{ base: true, amount: s[0] + idx * s[1] }] };
     }
     /* ADR-0393: every room's calendar and price list, then the guest-facing calendar: a
      * night is closed only when NO room is free. */

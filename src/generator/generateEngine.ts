@@ -644,7 +644,7 @@ async function generateEngineMockInner(
   if (market) market = subordinateToCriticInputs(market, criticInputs, marketSource);
 
   const baseSiteData: SiteData = {
-    ...(lang !== DEFAULT_LANG ? { lang } : {}),
+    ...(lang !== DEFAULT_LANG ? { lang, ...(countryConfigSync(leadCountry)?.currency ? { currency: countryConfigSync(leadCountry)!.currency } : {}) } : {}),
     ...leadToSiteData(lead, {
       copy: brief
         ? {

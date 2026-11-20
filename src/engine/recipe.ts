@@ -271,6 +271,9 @@ export interface SiteData {
    *  region country at generation time and persisted — the live re-render renders the same
    *  language (mock=live). Absent → Hungarian. */
   readonly lang?: string;
+  /** ORSZÁG-RÉTEG 3/9: the lead country's currency (ISO 4217) on a FOREIGN mock — the sample
+   *  booking widget prices its „minta-ár” in it. Absent → Hungarian (HUF), as before. */
+  readonly currency?: string;
   readonly name: string;
   readonly tagline: string;
   readonly intro: string;
