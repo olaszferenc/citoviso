@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/9 (ADR-XXXX) ACCEPTANCE — THE FIRST COUNTRY: CROATIA, in a SCRATCH database (never
+// ORSZÁG-RÉTEG 3/9 (ADR-0461) ACCEPTANCE — THE FIRST COUNTRY: CROATIA, in a SCRATCH database (never
 // the shared dev DB, never production). No AI call, no network (fenced), nothing is sent.
 //
 // The HR row is migration 0142's real master data; Bábel's hr UI seed and HR legal pack are the

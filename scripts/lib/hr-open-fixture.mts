@@ -1,4 +1,4 @@
-// ORSZÁG-RÉTEG 3/9 (ADR-XXXX) — TEST FIXTURE: open the Croatian market in a SCRATCH database.
+// ORSZÁG-RÉTEG 3/9 (ADR-0461) — TEST FIXTURE: open the Croatian market in a SCRATCH database.
 //
 // The HR row itself comes from migration 0142 (real master data). What a scratch run adds here is
 // ONLY what the owner will do himself on the console, and only as a TEST AID:

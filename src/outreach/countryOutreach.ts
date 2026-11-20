@@ -12,7 +12,7 @@
 //     an international MMS (docs/mms-send.md: the modem is one Hungarian SIM, ~90 s per message);
 //   · the window — Mon–Fri, in the lead's zone, not on the row's public holidays, between the
 //     hours of the row's send window (send_window_from/to, local time) INTERSECTED with the
-//     owner's MOCK_OUTREACH_WINDOW (ADR-XXXX: the owner's 8–17 stays the ceiling; a row can only
+//     owner's MOCK_OUTREACH_WINDOW (ADR-0461: the owner's 8–17 stays the ceiling; a row can only
 //     narrow it — HU's 8–20 contains it, so HU is unchanged); an unknown country cannot be
 //     scheduled (fail closed);
 //   · the language — the country's default language and nothing else (owner 2026-11-17); a pack

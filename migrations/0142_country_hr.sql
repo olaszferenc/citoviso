@@ -1,4 +1,4 @@
--- 0142 ORSZÁG-RÉTEG 3/9 — AZ ELSŐ ORSZÁG: HORVÁTORSZÁG (ADR-XXXX).
+-- 0142 ORSZÁG-RÉTEG 3/9 — AZ ELSŐ ORSZÁG: HORVÁTORSZÁG (ADR-0461).
 --
 -- ① The HR country row with its real master data (ADR-0437: a new country = a new row, no code):
 --    EUR (euro area since 2023-01-01), Croatian, Europe/Zagreb, +385 / trunk 0, mobile 91 92 95 97

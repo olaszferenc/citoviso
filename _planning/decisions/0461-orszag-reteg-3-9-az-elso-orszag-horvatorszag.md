@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/9: az első ország, Horvátország — ország-sor migrációban, a küldési ablak a sorból, a §C-kapu a jogi csomagból
+## ADR-0461 — Ország-réteg 3/9: az első ország, Horvátország — ország-sor migrációban, a küldési ablak a sorból, a §C-kapu a jogi csomagból
 
 **Státusz:** ELFOGADVA (tulaj-döntések 2026-11-19 a koordinátoron át, brief
 `orszag-reteg-3i-horvat-nyitas-elek-20261119.md`, koordinátor `cit9b4690e3`) ·

@@ -1,6 +1,6 @@
 # 2026-11-19 — Ország-réteg 3/9: Horvátország nyitás-kész (scratch DB) + Elek három szerepben
 
-Brief: `~/rc-briefs/orszag-reteg-3i-horvat-nyitas-elek-20261119.md` · session `citc6bc0387` · koordinátor `cit9b4690e3` · ADR-XXXX.
+Brief: `~/rc-briefs/orszag-reteg-3i-horvat-nyitas-elek-20261119.md` · session `citc6bc0387` · koordinátor `cit9b4690e3` · ADR-0461.
 
 ## Elvégezve
 - **HR ország-sor** migrációban (`migrations/0142_country_hr.sql`): EUR, hr, Europe/Zagreb, +385/0, mobil 91 92 95 97 98 99,

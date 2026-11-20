@@ -1649,7 +1649,7 @@ async function regionForArtifactOrNull(artifactId: string): Promise<string | nul
   }
   try {
     const m = await regionForLead(a.lead_id);
-    // ORSZÁG-RÉTEG 3/9 (ADR-XXXX): the browser cart formats MINOR units since 3/2 (7303b48f —
+    // ORSZÁG-RÉTEG 3/9 (ADR-0461): the browser cart formats MINOR units since 3/2 (7303b48f —
     // cit-configurator.js fmt → CitMoney.formatMinor, the Barion Pixel through pxAmt), so a
     // currency with minor digits (EUR, CZK…) gets its cart like HUF. The 3/1 stopgap that
     // withheld it (ADR-0443) outlived its patch and left every euro market without an order entry.
