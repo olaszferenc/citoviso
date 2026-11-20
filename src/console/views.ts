@@ -270,6 +270,12 @@ export interface LayoutOpts {
   readonly active?: string;
   /** false → prospect/tenant-facing page: brand only, NO internal menu. */
   readonly chrome?: boolean;
+  /**
+   * ORSZÁG-RÉTEG 3/9 (Elek HR): the language of a BUYER-facing page (with `chrome: false`) — its
+   * `<html lang>` (the consent bar speaks it, server/consent.ts) and a `<title>` without the
+   * Hungarian console suffix. Absent or "hu" → the page is byte for byte what it was.
+   */
+  readonly lang?: string;
   /** Extra markup injected into <head> (e.g. a map library's stylesheet). */
   readonly head?: string;
   /**
@@ -581,12 +587,16 @@ function frame(title: string, body: string, active: string | undefined, lang: st
 export function layout(title: string, body: string, opts: LayoutOpts = {}): string {
   // ADR-0067 ③: the request's language, from the operator's account. One line per
   // view function instead of a parameter threaded through ~53 signatures.
-  const lang = consoleLang();
   const chrome = opts.chrome !== false;
+  const buyerLang = !chrome && opts.lang && /^[a-z]{2,3}$/.test(opts.lang) && opts.lang !== "hu" ? opts.lang : null;
+  const lang = buyerLang ?? consoleLang();
+  const titleTag = buyerLang
+    ? `<title>${title ? `${esc(title)} — ` : ""}Citoviso</title>`
+    : `<title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>`;
   const head =
     `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} — ${T(lang, "Citoviso konzol")}</title>${THEME_BOOT}
+${titleTag}${THEME_BOOT}
 <link rel="icon" href="/favicon.ico" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">

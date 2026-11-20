@@ -224,7 +224,7 @@ import { countryConfigSync, countryOf, countryOfLead } from "../country.js";
 import { consumerAdrValue, homeLegalPack, legalTextForLang, type LegalPack } from "../legalPack.js";
 import { UNSUBSCRIBE_TEXT_V1 } from "../legal.js";
 import { countryLegalPack } from "../legalPackCountry.js";
-import { formatMinor, majorToMinor, minorDigits } from "../text/money.js";
+import { formatMinor, majorToMinor } from "../text/money.js";
 import { OrderRegionError, regionForCountry, regionForLead, type OrderMoney } from "../payment/orderRegion.js";
 import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
@@ -1649,14 +1649,10 @@ async function regionForArtifactOrNull(artifactId: string): Promise<string | nul
   }
   try {
     const m = await regionForLead(a.lead_id);
-    // ⛔ TEMPORARY (ADR-0443): the browser cart still formats whole units — its minor-unit
-    // patch is parked (~/rc-briefs/orszag-reteg-3a-cit-configurator-minor-unit.patch) behind
-    // the known mock-trial-overlay ⑪ gate. Until it lands, a currency WITH minor digits
-    // (EUR, CZK…) gets no cart at all rather than a cart showing 100× the price.
-    if ((minorDigits(m.currency) ?? 0) !== 0) {
-      console.warn(`[console] konfigurátor: a(z) ${m.currency} kliens-formázása még nincs bent — rendelés-belépő nélkül`);
-      return null;
-    }
+    // ORSZÁG-RÉTEG 3/9 (ADR-XXXX): the browser cart formats MINOR units since 3/2 (7303b48f —
+    // cit-configurator.js fmt → CitMoney.formatMinor, the Barion Pixel through pxAmt), so a
+    // currency with minor digits (EUR, CZK…) gets its cart like HUF. The 3/1 stopgap that
+    // withheld it (ADR-0443) outlived its patch and left every euro market without an order entry.
     return m.region;
   } catch (e) {
     if (e instanceof OrderRegionError) {
@@ -1680,7 +1676,7 @@ function unsubscribedPage(token: string, lang: string): string {
       `<div class="panel" style="max-width:480px;margin:48px auto;text-align:center">` +
         `<h2>${L(UNSUBSCRIBE_TEXT_V1.doneHeading)}</h2><p class="mut">${L(UNSUBSCRIBE_TEXT_V1.done)}</p>` +
         `${feedbackFormHtml(token, "unsubscribe", lang)}</div>`,
-      { chrome: false },
+      { chrome: false, lang },
     );
   }
   return layout(
@@ -4201,7 +4197,7 @@ async function handle(
     // megerősítő lap egyetlen gombbal; a tett a POST (lent).
     // ORSZÁG-RÉTEG 3/5: the page in the lead's page language (the mock's), Hungarian without one.
     const unsubLang = (await getProspectByToken(unsubMatch[1]).catch(() => null))?.lang ?? undefined;
-    return send(res, 200, layout(legalTextForLang(unsubLang, UNSUBSCRIBE_TEXT_V1.title), unsubscribeConfirmBody(unsubMatch[1], unsubLang), { chrome: false }));
+    return send(res, 200, layout(legalTextForLang(unsubLang, UNSUBSCRIBE_TEXT_V1.title), unsubscribeConfirmBody(unsubMatch[1], unsubLang), { chrome: false, lang: unsubLang }));
   }
   if (method === "POST" && unsubMatch) {
     // RFC 8058 one-click (List-Unsubscribe-Post) ÉS a megerősítő lap gombja — mindkettő
@@ -4327,7 +4323,7 @@ async function handle(
     return send(
       res,
       200,
-      layout("Köszönjük", feedbackDoneHtml(lang, skip, { token: pFeedbackMatch[1], source: isFeedbackSource(src) ? src : null }), { chrome: false }),
+      layout(lang === "hu" ? "Köszönjük" : "", feedbackDoneHtml(lang, skip, { token: pFeedbackMatch[1], source: isFeedbackSource(src) ? src : null }), { chrome: false, lang }),
     );
   }
   // GET /p/:token/why — the reminder mail's "Nem aktuális?" link. SHOWS the question and
@@ -4342,9 +4338,9 @@ async function handle(
     // tapped answer — shown pre-selected; the GET still records nothing.
     if (url.searchParams.get("forras") === "proba") {
       const pre = trialWhyPreselect(url.searchParams.get("ok"));
-      return send(res, 200, layout("Mi tartja vissza?", feedbackTrialWhyPageBody(pWhyMatch[1], lang, pre), { chrome: false }));
+      return send(res, 200, layout(lang === "hu" ? "Mi tartja vissza?" : T(lang, "Mi tartja vissza?"), feedbackTrialWhyPageBody(pWhyMatch[1], lang, pre), { chrome: false, lang }));
     }
-    return send(res, 200, layout("Nem aktuális?", feedbackWhyPageBody(pWhyMatch[1], lang), { chrome: false }));
+    return send(res, 200, layout(lang === "hu" ? "Nem aktuális?" : T(lang, "Nem aktuális?"), feedbackWhyPageBody(pWhyMatch[1], lang), { chrome: false, lang }));
   }
   // POST /p/:token/event — engagement/configurator event beacon.
   const pEventMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/event$/.exec(pPath);
