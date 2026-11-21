@@ -29,7 +29,7 @@ amíg van élő kulcs, az fut.)
    - A lekérdezések sorban futnak, köztük legalább 3 mp szünettel.
    - Bot-ellenőrzés vagy tiltás után a backend 60 percig szünetel, ezt hangosan naplózza; a hívó addig üres eredményt kap.
      Tiltásnak számít, ha az oldal elhagyja a startpage.com-ot, vagy 403-at ad.
-4. **Kapcsoló:** `WEB_SEARCH_BROWSER=off` kikapcsolja. Ehhez Chromium kell (`CHROMIUM_PATH`, élesen `/usr/bin/chromium` megvan).
+4. **Kapcsoló: alapból KI** (koordinátor, 2026-11-22). Csak `WEB_SEARCH_BROWSER=on` kapcsolja be; a dev `.env`-ben be van kapcsolva, élesen nincs, ezért ott nem indul Chromium, amíg a Hetzner-IP-ről nincs mérés. Ehhez Chromium kell (`CHROMIUM_PATH`, élesen `/usr/bin/chromium` megvan).
 
 ### Következmények
 
@@ -38,8 +38,8 @@ amíg van élő kulcs, az fut.)
   Nem helyettesíti a Brave-et. A saját-honlap kapu 200 leades összevetésében 100 Brave-VAN-ból 23-at NINCS-nek ítélt,
   ezért ott a böngészős ítélet csak VAN_HONLAP lehet.
 
-- **Élesen is fut**, ha kimegy: a konzol reenrich és rescrape-photos gombja, a scrape-gyerekfolyamat, valamint a
-  `citoviso-events(-pending)` timer (5 percenként) éri el. Ezek élesítés után a halott Brave-kulcs mellett Chromiumot indítanak
+- **Élesen alapból KI**; ha valaki bekapcsolja, ezek érik el: a konzol reenrich és rescrape-photos gombja, a scrape-gyerekfolyamat, valamint a
+  `citoviso-events(-pending)` timer (5 percenként) éri el. Bekapcsolva ezek a halott Brave-kulcs mellett Chromiumot indítanának
   (az éles gépen 3,7G RAM van). A Startpage viselkedését a Hetzner-IP-ről élesítés előtt külön meg kell mérni.
   Ha ott blokkol, a backend csak szünetel, hibát nem okoz.
 - A saját-honlap kapu (`~/rc-briefs/uj-lanc/honlapcheck/`, nem a repó része) ugyanezt a motort használja

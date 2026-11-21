@@ -430,8 +430,10 @@ export const config = {
    *  the next one when the current key is out of credit (402), rejected (401/403) or
    *  over its quota (429 with an exhausted window), and retries the same query. */
   /** Keyless browser web search (ADR-0463): the fallback when no Brave key is usable —
-   *  headless Chromium on a public results page (Startpage). "off" disables it. */
-  webSearchBrowser: env("WEB_SEARCH_BROWSER", "on"),
+   *  headless Chromium on a public results page (Startpage). OFF unless WEB_SEARCH_BROWSER=on
+   *  (coordinator 2026-11-22): prod must not start Chromium from the events timer / console
+   *  buttons on the 3.7G VPS until Startpage is measured from the Hetzner IP. Dev .env sets "on". */
+  webSearchBrowser: env("WEB_SEARCH_BROWSER", "off"),
   braveApiKeys: [
     env("BRAVE_API_KEY"),
     ...Array.from({ length: 8 }, (_, i) => env(`BRAVE_API_KEY_${i + 2}`)),

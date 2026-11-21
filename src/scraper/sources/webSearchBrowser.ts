@@ -35,9 +35,9 @@ function acceptLanguage(searchLang: string): string {
   return l === "en" ? "en;q=0.9" : `${l};q=0.9,en;q=0.5`;
 }
 
-/** Enabled unless WEB_SEARCH_BROWSER=off; needs a Chromium binary. */
+/** Enabled only with WEB_SEARCH_BROWSER=on (default off, see config); needs a Chromium binary. */
 export function browserSearchEnabled(): boolean {
-  return config.webSearchBrowser !== "off" && config.chromiumPath !== "";
+  return config.webSearchBrowser === "on" && config.chromiumPath !== "";
 }
 
 type Browser = import("playwright-core").Browser;
