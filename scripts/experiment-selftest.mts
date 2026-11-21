@@ -5,8 +5,8 @@
 //   ① the split is deterministic from its seed, sums to 1, and favours the better arm;
 //   ② the floor: every enabled variant keeps ≥ floorPct of the cap (exploration never stops);
 //   ③ the pick: the variant furthest below its share of today's cap; a non-applicable one never;
-//   ④ the guard: ≥ minSends and unsubscribe > unsubMax, or a complaint → disable; the control is
-//      exempt (the sending path never sees `guardVerdict` on a control — runGuard alerts only);
+//   ④ the guard: ≥ minSends and unsubscribe > the control's rate + unsubMargin (no baseline below
+//      minSends control letters), or a complaint → disable; the control only alerts (controlAlertVerdict);
 //   ⑤ the open classifier: Gmail proxy = open, Apple prefetch ≠ open, bots excluded;
 //   ⑥ the letter: today's letter is unchanged with no options; the remote hero drops the CID
 //      attachment; the plain layout has no price box / button; the first line and the From name
@@ -20,6 +20,7 @@ import {
   allocateDimension,
   applyFloor,
   guardVerdict,
+  controlAlertVerdict,
   pickVariant,
   renderTemplate,
   rngOf,
@@ -96,10 +97,16 @@ console.log("③ választás");
 console.log("④ őr");
 {
   const cfg = DEFAULT_EXPERIMENT;
-  check("100 levél, 1 leiratkozás (1%) → kikapcsol", guardVerdict({ sends: 100, unsubs: 1, complaints: 0 }, cfg) !== null);
-  check("99 levél, 5 leiratkozás → még nem ítél (min. 100)", guardVerdict({ sends: 99, unsubs: 5, complaints: 0 }, cfg) === null);
-  check("400 levél, 2 leiratkozás (0,5%) → marad (nem > 0,5%)", guardVerdict({ sends: 400, unsubs: 2, complaints: 0 }, cfg) === null);
-  check("1 panasz-jel → kikapcsol, levélszámtól függetlenül", guardVerdict({ sends: 3, unsubs: 0, complaints: 1 }, cfg) !== null);
+  const ctl = { sends: 1000, unsubs: 12, complaints: 0 }; // the measured 1.2% baseline
+  check("relatív: 100 levél, 1 leiratkozás (1%) a 1,2%-os kontroll mellett → marad", guardVerdict({ sends: 100, unsubs: 1, complaints: 0 }, cfg, ctl) === null);
+  check("relatív: 200 levél, 4 leiratkozás (2%) > 1,2% + 0,5 pont → kikapcsol", guardVerdict({ sends: 200, unsubs: 4, complaints: 0 }, cfg, ctl) !== null);
+  check("relatív: 1000 levél, 17 (1,7%) = határ → marad (nem nagyobb)", guardVerdict({ sends: 1000, unsubs: 17, complaints: 0 }, cfg, ctl) === null);
+  check("99 levél, 5 leiratkozás → még nem ítél (min. 100)", guardVerdict({ sends: 99, unsubs: 5, complaints: 0 }, cfg, ctl) === null);
+  check("a kontrollnak <100 levele van → a leiratkozás-szabály nem ítél", guardVerdict({ sends: 300, unsubs: 30, complaints: 0 }, cfg, { sends: 50, unsubs: 0, complaints: 0 }) === null);
+  check("kontroll-adat nélkül → nem ítél", guardVerdict({ sends: 300, unsubs: 30, complaints: 0 }, cfg, null) === null);
+  check("1 panasz-jel → kikapcsol, levélszámtól és kontrolltól függetlenül", guardVerdict({ sends: 3, unsubs: 0, complaints: 1 }, cfg, null) !== null);
+  check("kontroll 1,2% → nem riaszt (riasztás > 2%)", controlAlertVerdict(ctl, cfg) === null);
+  check("kontroll 2,5% → riaszt", controlAlertVerdict({ sends: 400, unsubs: 10, complaints: 0 }, cfg) !== null);
   check("panasz-minta: „ez spam, ne zaklassanak”", COMPLAINT_PATTERN.test("Ez spam, ne zaklassanak"));
   check("panasz-minta nem jelez egy sima elutasításra", !COMPLAINT_PATTERN.test("Köszönöm, nem érdekel, van honlapunk."));
 }

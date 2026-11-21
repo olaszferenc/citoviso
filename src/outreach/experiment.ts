@@ -13,9 +13,12 @@
 //   is reported apart, it does not steer;
 //   floor: every enabled variant gets ≥ floorPct of the cap (exploration never stops);
 //   each send then takes the variant furthest below its share of today's cap.
-// Guard (once a day, before the split): ≥ minSends letters and unsubscribe rate > unsubMax, or a
-// complaint-worded reply → the variant is DISABLED, logged and the house is alerted. The control
-// is never disabled by the machine — it is the letter the owner already runs; it alerts only.
+// Guard (once a day, before the split): ≥ minSends letters and an unsubscribe rate above the
+// CONTROL's own rate + unsubMargin (coordinator 2026-11-21: relative, because the measured baseline
+// is 1.2% — an absolute 0.5% would drop every candidate), or a complaint-worded reply → the variant
+// is DISABLED, logged and the house is alerted. Until the control itself has minSends letters the
+// unsubscribe rule does not judge (no baseline). The control is never disabled by the machine — it
+// is the letter the owner already runs; it alerts only (complaint, or above controlAlertMax).
 //
 // ⛔ No variant bypasses a gate: the send path judges the FINISHED letter (subject + the visible
 // first line + the body) with the §C gate after the variant is applied, and falls back to the
@@ -43,11 +46,13 @@ export interface ExperimentSettings {
   readonly floorPct: number;
   /** The guard judges a variant only after this many letters. */
   readonly minSends: number;
-  /** Unsubscribe rate above which the guard disables a variant (0.005 = 0.5 %). */
-  readonly unsubMax: number;
+  /** A variant is disabled when its unsubscribe rate exceeds the control's by more than this (0.005 = 0.5 point). */
+  readonly unsubMargin: number;
+  /** The control alerts (never disabled) above this absolute unsubscribe rate (0.02 = 2 %; measured baseline 1.2 %). */
+  readonly controlAlertMax: number;
 }
 
-export const DEFAULT_EXPERIMENT: ExperimentSettings = { floorPct: 10, minSends: 100, unsubMax: 0.005 };
+export const DEFAULT_EXPERIMENT: ExperimentSettings = { floorPct: 10, minSends: 100, unsubMargin: 0.005, controlAlertMax: 0.02 };
 
 /** The day's split, stored once per Budapest day. */
 export interface DailyPlan {
@@ -206,11 +211,30 @@ export interface GuardInput {
   readonly complaints: number;
 }
 
-/** The guard's verdict on one variant: the reason to disable it, or null. */
-export function guardVerdict(s: GuardInput, cfg: ExperimentSettings): string | null {
+const pct2 = (x: number): string => `${(x * 100).toFixed(2)}%`;
+
+/**
+ * The guard's verdict on one NON-control variant: the reason to disable it, or null.
+ * `control` = the same dimension's control numbers (the baseline); without ≥ minSends control
+ * letters the unsubscribe rule does not judge.
+ */
+export function guardVerdict(s: GuardInput, cfg: ExperimentSettings, control: GuardInput | null): string | null {
   if (s.complaints > 0) return `panasz-jel a válaszokban (${s.complaints})`;
-  if (s.sends >= cfg.minSends && s.unsubs / s.sends > cfg.unsubMax) {
-    return `leiratkozás ${((s.unsubs / s.sends) * 100).toFixed(2)}% > ${(cfg.unsubMax * 100).toFixed(2)}% (${s.unsubs}/${s.sends})`;
+  if (s.sends < cfg.minSends || !control || control.sends < cfg.minSends) return null;
+  const base = control.unsubs / control.sends;
+  const limit = base + cfg.unsubMargin;
+  const rate = s.unsubs / s.sends;
+  if (rate > limit + 1e-12) {
+    return `leiratkozás ${pct2(rate)} > kontroll ${pct2(base)} + ${(cfg.unsubMargin * 100).toFixed(2)} pont (${s.unsubs}/${s.sends})`;
+  }
+  return null;
+}
+
+/** The control's alert (it is never disabled): a complaint, or an absolute rate above controlAlertMax. */
+export function controlAlertVerdict(s: GuardInput, cfg: ExperimentSettings): string | null {
+  if (s.complaints > 0) return `panasz-jel a válaszokban (${s.complaints})`;
+  if (s.sends >= cfg.minSends && s.unsubs / s.sends > cfg.controlAlertMax) {
+    return `leiratkozás ${pct2(s.unsubs / s.sends)} > ${pct2(cfg.controlAlertMax)} (${s.unsubs}/${s.sends})`;
   }
   return null;
 }
@@ -256,7 +280,8 @@ export async function getExperimentSettings(): Promise<ExperimentSettings & { pl
   return {
     floorPct: num(s.floorPct, DEFAULT_EXPERIMENT.floorPct, (n) => n >= 0 && n <= 50),
     minSends: num(s.minSends, DEFAULT_EXPERIMENT.minSends, (n) => Number.isInteger(n) && n >= 1),
-    unsubMax: num(s.unsubMax, DEFAULT_EXPERIMENT.unsubMax, (n) => n > 0 && n < 1),
+    unsubMargin: num(s.unsubMargin, DEFAULT_EXPERIMENT.unsubMargin, (n) => n >= 0 && n < 1),
+    controlAlertMax: num(s.controlAlertMax, DEFAULT_EXPERIMENT.controlAlertMax, (n) => n > 0 && n < 1),
     ...(s.plan ? { plan: s.plan } : {}),
   };
 }
@@ -380,7 +405,9 @@ async function runGuard(catalog: readonly CatalogRow[], stats: readonly VariantS
     if (!v.enabled) continue;
     const s = stats.find((x) => x.dimension === v.dimension && x.key === v.key);
     if (!s) continue;
-    const reason = guardVerdict(s, cfg);
+    const ctl = catalog.find((x) => x.dimension === v.dimension && x.isControl);
+    const ctlStats = ctl ? stats.find((x) => x.dimension === v.dimension && x.key === ctl.key) ?? null : null;
+    const reason = v.isControl ? controlAlertVerdict(s, cfg) : guardVerdict(s, cfg, ctlStats);
     if (!reason) continue;
     if (v.isControl) {
       const tag = `${v.dimension}:${v.key}:${day}`;
@@ -391,7 +418,7 @@ async function runGuard(catalog: readonly CatalogRow[], stats: readonly VariantS
       await alertHouse({
         tag: "experiment-guard",
         subject: `Kísérlet-őr: a mai levél (${v.dimension}) átlépte a küszöböt — ${reason}`,
-        text: `A kísérlet-motor őre a KONTROLL változatnál (a ma kimenő levél, dimenzió: ${v.dimension}) jelez: ${reason}. A kontrollt a gép nem kapcsolja ki, ez döntés a tulajnak/koordinátornak (küszöb: app_setting outreach_experiment.unsubMax).`,
+        text: `A kísérlet-motor őre a KONTROLL változatnál (a ma kimenő levél, dimenzió: ${v.dimension}) jelez: ${reason}. A kontrollt a gép nem kapcsolja ki, ez döntés a tulajnak/koordinátornak (küszöb: app_setting outreach_experiment.controlAlertMax).`,
         sms: false,
       });
       continue;

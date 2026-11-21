@@ -41,6 +41,11 @@ kattintott) nem választható szét, és minden szöveg-ötlet tulaj-kör maradt
    nincs) esetén a változat `enabled=false` lesz, `disabled_reason`-nel, napló és `alertHouse` levél.
    **A kontrollt a gép nem kapcsolja ki**, csak riaszt, naponta egyszer: a kontroll a tulaj által
    már futtatott levél, és ha egy dimenzió kiürülne, az megállítaná a kiküldést.
+   **Módosítás 2026-11-21 (koordinátor `citb64f0ed0`, üzemi döntés):** a küszöb RELATÍV: a változat
+   akkor esik ki, ha ≥100 levél után a leiratkozása > a dimenzió kontrolljának aránya + 0,5 pont
+   (`unsubMargin`); amíg a kontrollnak nincs 100 levele, a leiratkozás-szabály nem ítél. A kontroll
+   panasznál vagy 2% fölött (`controlAlertMax`) riaszt. Ok: a mért alapszint 1,2%, az abszolút 0,5%
+   minden jelöltet kiejtett volna.
 5. **Kapuk.** A §C-kapu kétszer fut: a kontroll piszkozatán (minden pozitív kötelem, mint név,
    keretezés, leiratkozás, azonosítás, a szövegből teljesüljön), majd a KÉSZ levélen (változat-tárgy
    + látható első sor + törzs), ami elkapja, amit a változat szövege hozzátenne (pl. „élő már a
@@ -67,8 +72,5 @@ leállítása = minden nem-kontroll sor `enabled=false`. Önteszt: `scripts/expe
 
 ### Nyitott (koordinátor/tulaj)
 
-- A 0,5%-os leiratkozási küszöb a mért 1,2%-os alapszint alatt van: a kontroll 100 levél után
-  szinte biztosan jelezni fog, és az első jelölt is könnyen kiesik. A küszöb állítható
-  (`outreach_experiment.unsubMax`).
 - A Riport „Kísérletek” panel és a hétfői összefoglaló-sor: §2b terv (3 változat), jóváhagyásig
   nincs felület-kód.
