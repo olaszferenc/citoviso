@@ -2298,6 +2298,43 @@ export interface OutreachReplyPollTable {
   checked_at: Timestamp;
 }
 
+// --- Experiment engine (migration 0143) — the cold letter's variants and its opens. ---
+
+export type ExperimentDimension = "subject" | "first_line" | "sender" | "body_style" | "image";
+
+/** 0143: the cold letter's variant catalog; the control row of a dimension is today's letter (no text). */
+export interface OutreachVariantTable {
+  dimension: ExperimentDimension;
+  key: string;
+  label: string;
+  /** Wording with {name} / {city} placeholders (subject, first_line); null = control / structural. */
+  template: string | null;
+  is_control: Generated<boolean>;
+  enabled: Generated<boolean>;
+  disabled_reason: string | null;
+  disabled_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+}
+
+/** 0143: which variant of each dimension a cold letter went out with (one letter per prospect). */
+export interface OutreachSendVariantTable {
+  prospect_id: string;
+  dimension: ExperimentDimension;
+  variant_key: string;
+  /** The letter's send instant (the e-mail claim's `now`), written by the send path. */
+  sent_at: Timestamp;
+}
+
+/** 0143: one fetch of the cold letter's hero image (mail open without a pixel); no raw UA / IP. */
+export interface EmailOpenTable {
+  id: Generated<string>;
+  prospect_id: string;
+  at: Generated<Timestamp>;
+  kind: "open" | "proxy_prefetch" | "bot";
+  client: string;
+  own: Generated<boolean>;
+}
+
 export interface Database {
   messenger_presence: MessengerPresenceTable;
   region: RegionTable;
@@ -2332,6 +2369,9 @@ export interface Database {
   behavior_message: BehaviorMessageTable;
   nonopener_followup: NonopenerFollowupTable;
   outreach_dispatch: OutreachDispatchTable;
+  outreach_variant: OutreachVariantTable;
+  outreach_send_variant: OutreachSendVariantTable;
+  email_open: EmailOpenTable;
   subscription: SubscriptionTable;
   dunning_event: DunningEventTable;
   sms_outbox: SmsOutboxTable;

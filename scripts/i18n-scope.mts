@@ -45,6 +45,11 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // errors and logs (a fatal boot error, a progress line) — none reaches a customer.
   "src/country.ts": "operátori hiba-/naplószöveg (az ország-réteg nem olvasható) — vevőhöz nem jut",
   "src/scraper/enrichGeo.ts": "operátori napló (Nominatim-dúsítás folyamatjelzése) — vevőhöz nem jut",
+  // ADR-XXXX kísérlet-motor: the Hungarian literals are the guard's house alert (alertHouse → the
+  // operator's mailbox) and logs. The variant WORDING a lead reads is not in this file: it is the
+  // catalog row (outreach_variant.template), used for Hungarian letters ONLY (assignVariants gives a
+  // foreign letter the control), and the sender variant is the configured person name + the brand.
+  "src/outreach/experiment.ts": "operátori riasztás/napló (kísérlet-őr) — a vevő-szöveg a katalógusból jön, csak magyar levélre",
   // ORSZÁG-RÉTEG 3/7 (ADR-0458): the market gate's REASONS (why a country is shut) are operator
   // text — the console log and the coming „Országok” lap; the legal pack's own texts live in the
   // country packs (legalPack.ts), never in these lines. None reaches a customer.

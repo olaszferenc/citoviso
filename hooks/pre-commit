@@ -1844,6 +1844,15 @@ if [ -f scripts/outreach-letter-truth-check.mts ] && \
   echo "[pre-commit] outreach-letter-truth-check (a megkereső levél minden ága igaz és emberi)…"
   npx tsx scripts/outreach-letter-truth-check.mts >"$GATE_LOG" || gate_failed
 fi
+# KÍSÉRLET-MOTOR (ADR kísérlet-motor, brief kiserlet-motor-20261121): a hideg levél változat-osztása
+# (Thompson + 10% padló, determinisztikus magból), a változat-választás, az őr (leiratkozás/panasz),
+# a levélnyitás-osztályozás (Gmail-proxy = nyitás, Apple-előtöltés ≠ nyitás, bot kizárva), a levél
+# változatai (távoli kép, sima törzs, első sor, feladó-név) és a §C-kapu a KÉSZ levélen. ~3 s.
+if [ -f scripts/experiment-selftest.mts ] && \
+   changed_files | grep -qE '^src/outreach/(experiment|emailOpen|sendBatch|outreachCheck|draft)\.ts$|^src/email/outreachEmail\.ts$|^src/console/prospectPath\.ts$|^src/analytics/userAgent\.ts$|^migrations/0143_|^scripts/experiment-selftest\.mts$'; then
+  echo "[pre-commit] experiment-selftest (kísérlet-motor: osztás, padló, őr, levélnyitás, változatok)…"
+  npx tsx scripts/experiment-selftest.mts >"$GATE_LOG" || gate_failed
+fi
 # SAJÁT-FOTÓ NYOMÁS (tulaj-döntés 2026-10-02, Elek L1 ⑤): a vevő a képekről nyilatkozott
 # (src/legal.ts) — semmilyen felület/levél/KB/kontraktus nem kötheti az élesítést saját fotóhoz,
 # és nem sürgethet cserét („Cserélje sajátra”, „jogtiszta fotói kellenek”). MINDIG fut (szöveg-őr,

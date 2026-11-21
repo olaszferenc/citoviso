@@ -36,6 +36,7 @@ import { allCountriesSync, countryConfigSync, countryOf, countryOfLeads, type Co
 import type { QualifiedLead } from "../scraper/types.js";
 import { applyColdBrake, parseColdRamp, rampCapOn, type ColdRamp } from "./coldRamp.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
+import { ensureDailyPlan } from "./experiment.js";
 
 /**
  * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
@@ -409,6 +410,13 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     if (homeCap) return { kind: "cap", ...homeCap };
     return { kind: "window", reason: "egyik ország küldési ablaka sincs nyitva, vagy mindegyik napi kvótája betelt" }; // i18n-exempt: operátori ok, sosem éri el a leadet
   }
+
+  // KÍSÉRLET-MOTOR (experiment.ts): the day's split of the cap among the enabled variants — the
+  // guard runs and the split is computed on the first tick of the day; later ticks refresh the cap.
+  // A failure never stops the send (the letter then goes out as the control).
+  await ensureDailyPlan(now, settings.ramp ? rampCapOn(settings.ramp, budapestIsoDay(now)) : settings.dailyCap).catch((e) =>
+    console.error(`[experiment] napi osztás hiba: ${(e as Error).message}`),
+  );
 
   // Claim the best-placed queued row (DISPATCH_PRIORITY: no own site first, ADR-0409), the oldest
   // within its rank, among the leads of an OPEN country — the order holds within each country. A

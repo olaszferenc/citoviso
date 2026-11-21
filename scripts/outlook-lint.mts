@@ -117,6 +117,15 @@ const html = buildOutreachEmail(draft, "teszt@example.com", {
 const LETTERS: readonly { name: string; html: string }[] = [
   { name: "hideg megkereső levél (ADR-0101)", html },
   {
+    // Kísérlet-motor `body_style: plain` + távoli hős-kép (src/outreach/experiment.ts, emailOpen.ts).
+    name: "hideg megkereső levél — sima változat, távoli képpel (kísérlet-motor)",
+    html: buildOutreachEmail(draft, "teszt@example.com", {
+      lang,
+      bodyStyle: "plain",
+      heroUrl: "https://getcitoviso.com/p/00000000000000000000/kep.jpg",
+    }).html as string,
+  },
+  {
     name: "havi forgalmi levél (ADR-0108)",
     html:
       buildTrafficEmail({

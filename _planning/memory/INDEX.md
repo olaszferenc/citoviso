@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-21_kiserlet_motor.md](2026-11-21_kiserlet_motor.md) — 2026-11-21 — Kísérlet-motor a hideg megkereséshez (citbeaa9a26)
 - [2026-11-20_konverzios_gepezet_otletek.md](2026-11-20_konverzios_gepezet_otletek.md) — 2026-11-20 — Konverziós gépezet: ötlet-anyag + friss éles tölcsér (citb64f0ed0)
 - [2026-11-19_orszag_reteg_3_9_horvat_nyitas.md](2026-11-19_orszag_reteg_3_9_horvat_nyitas.md) — 2026-11-19 — Ország-réteg 3/9: Horvátország nyitás-kész (scratch DB) + Elek három szerepben
 - [2026-11-19_orszag_reteg_3_8_orszagok_lap.md](2026-11-19_orszag_reteg_3_8_orszagok_lap.md) — 2026-11-19 · Ország-réteg 3/8 — az „Országok” konzol-lap és a nyitás előtti teljesség
