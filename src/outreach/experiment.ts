@@ -1,5 +1,5 @@
 // KÍSÉRLET-MOTOR — the cold letter's variants, chosen by Thompson sampling
-// (ADR-XXXX kiserlet-motor-hideg-megkereses, brief kiserlet-motor-20261121 ①③).
+// (ADR-0462 kiserlet-motor-hideg-megkereses, brief kiserlet-motor-20261121 ①③).
 //
 // Every cold letter carries ONE variant of each dimension (subject · first_line · sender ·
 // body_style · image), recorded per prospect in `outreach_send_variant`. The catalog is

@@ -1,4 +1,4 @@
-// MAIL OPEN WITHOUT A PIXEL (ADR-XXXX kiserlet-motor-hideg-megkereses, brief kiserlet-motor-20261121 ②).
+// MAIL OPEN WITHOUT A PIXEL (ADR-0462 kiserlet-motor-hideg-megkereses, brief kiserlet-motor-20261121 ②).
 //
 // Until now the cold letter's hero screenshot rode CID-inline (553 KB per letter) and nothing
 // measured whether the letter was opened at all (`src/email/sender.ts`: "no open-tracking") —

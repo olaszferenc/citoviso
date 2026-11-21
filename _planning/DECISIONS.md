@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-kiserlet-motor-hideg-megkereses.md) — Kísérlet-motor a hideg megkereséshez: változat-címke, levélnyitás-mérés pixel nélkül, gépi keret-osztás
+- [ADR-0462](decisions/0462-kiserlet-motor-a-hideg-megkereseshez-valtozat.md) — Kísérlet-motor a hideg megkereséshez: változat-címke, levélnyitás-mérés pixel nélkül, gépi keret-osztás
 - [ADR-0461](decisions/0461-orszag-reteg-3-9-az-elso-orszag-horvatorszag.md) — Ország-réteg 3/9: az első ország, Horvátország — ország-sor migrációban, a küldési ablak a sorból, a §C-kapu a jogi csomagból
 - [ADR-0460](decisions/0460-orszag-reteg-3-8-az-orszagok-konzol-lap-es-a.md) — Ország-réteg 3/8: az „Országok” konzol-lap és a NYITÁS ELŐTTI TELJESSÉG — egy függvény, minden kapu ezt olvassa
 - [ADR-0459](decisions/0459-a-hideg-megkereses-kulon-domainrol-megy.md) — A hideg megkeresés KÜLÖN domainről megy (getcitoviso.com), saját SMTP-vel és DKIM-mel, felfutással és fékkel

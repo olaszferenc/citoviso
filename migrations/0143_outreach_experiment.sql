@@ -1,4 +1,4 @@
--- 0143 KÍSÉRLET-MOTOR A HIDEG MEGKERESÉSHEZ (ADR-XXXX kiserlet-motor-hideg-megkereses; brief
+-- 0143 KÍSÉRLET-MOTOR A HIDEG MEGKERESÉSHEZ (ADR-0462 kiserlet-motor-hideg-megkereses; brief
 -- kiserlet-motor-20261121, coordinator citb64f0ed0, owner „Ok jó így” 2026-11-21).
 --
 -- Three tables, all ADDITIVE (shared dev DB — nothing dropped or rewritten):

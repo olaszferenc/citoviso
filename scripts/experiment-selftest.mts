@@ -1,4 +1,4 @@
-// KÍSÉRLET-MOTOR önteszt (ADR-XXXX kiserlet-motor-hideg-megkereses, brief kiserlet-motor-20261121 ⑤).
+// KÍSÉRLET-MOTOR önteszt (ADR-0462 kiserlet-motor-hideg-megkereses, brief kiserlet-motor-20261121 ⑤).
 //
 // Fixes the rules that decide who gets which letter and what counts as an open — so a later
 // tweak cannot quietly reshuffle the split or start counting Apple's prefetch as readers:

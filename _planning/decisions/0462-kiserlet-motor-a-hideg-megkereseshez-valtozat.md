@@ -1,4 +1,4 @@
-## ADR-XXXX — Kísérlet-motor a hideg megkereséshez: változat-címke, levélnyitás-mérés pixel nélkül, gépi keret-osztás
+## ADR-0462 — Kísérlet-motor a hideg megkereséshez: változat-címke, levélnyitás-mérés pixel nélkül, gépi keret-osztás
 
 **Státusz:** ELFOGADVA a motor és a mérés (tulaj „Ok jó így” 2026-11-21, koordinátor `citb64f0ed0`, brief `kiserlet-motor-20261121.md`); a Riport „Kísérletek” panel §2b-terv-körben, jóváhagyásra vár ·
 **Épít:** ADR-0459 (hideg sáv, `coldLinkBase`), ADR-0435 (`open_via`, `?e` jel), ADR-0405 (automata kiküldő), ADR-0322 ③ (nyers UA/referrer nem tárolódik), ADR-0101 (levél-szerkezet, Outlook-őr) ·

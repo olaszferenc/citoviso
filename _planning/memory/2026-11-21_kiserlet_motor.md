@@ -1,6 +1,6 @@
 # 2026-11-21 — Kísérlet-motor a hideg megkereséshez (citbeaa9a26)
 
-**Brief:** `~/rc-briefs/kiserlet-motor-20261121.md` · koordinátor `citb64f0ed0` · ADR-XXXX `kiserlet-motor-hideg-megkereses`
+**Brief:** `~/rc-briefs/kiserlet-motor-20261121.md` · koordinátor `citb64f0ed0` · ADR-0462 `kiserlet-motor-hideg-megkereses`
 
 ## Elvégezve
 - Migráció `0143_outreach_experiment.sql`: `outreach_variant` (katalógus, kontroll + kikapcsolt §3-jelöltek), `outreach_send_variant`, `email_open`. Dev DB-re felvéve.
