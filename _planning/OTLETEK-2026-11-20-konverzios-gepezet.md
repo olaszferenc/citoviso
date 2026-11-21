@@ -32,7 +32,7 @@ Nálunk a **„megnyitás” = a link kattintása** (`mock_view`). A LEVÉL megn
 | leiratkozott | 33 (1,2 %) | 27 | 14 |
 
 **Bontások (összes):**
-- Csatorna-osztály: csak e-mail 1522 → 16,6 % · csak mobil 735 → 17,8 % · **e-mail+mobil 487 → 36,3 %**. A 7 napos minta már szinte csak e-mail (1024/1077).
+- Csatorna-osztály: csak e-mail 1522 → 16,6 % · csak mobil 735 → 17,8 % · **e-mail+mobil 487 → 36,3 %**. A 7 napos minta már szinte csak e-mail (1024/1077). ⚠️ Nem tiszta kísérlet: az e-mail+mobil csoport az, akinek MINDKÉT elérhetősége megvolt (teljesebb adatú lead), nem véletlen kiosztás — a második csatorna hatása ennél kisebb is lehet; a motor (2.1) ezt méri majd tisztán.
 - E-mail cím fajtája: **Gmail 1173 → 28,1 %**, nem-Gmail 836 → **11,8 %** (7 nap: 17,4 % vs 7,1 %). A freemail/t-online/saját domain címzettek a jó hetekben is 2–5 %-on.
 - Mobil-alcsatorna: régi MMS+SMS pár 655 → 18,8 % · WhatsApp 79 → 10,1 % · Viber ~0. MMS/SMS-nek **nincs kézbesítési nyugtája** (0/1174).
 - Szegmens: no_site 1851 → 21,1 % (**3 próba, 1 fizető — minden konverzió innen**) · outdated 698 → 15,5 % · modern 195 → 31,8 % (0 próba: kíváncsi, nem vevő).
@@ -42,8 +42,8 @@ Nálunk a **„megnyitás” = a link kattintása** (`mock_view`). A LEVÉL megn
 - **A 71 válaszból 34 nézés nélkül jött** — a levélre reagálnak (zömmel elutasítva), nem a tervre.
 - A nyitók 80 %-a ≥30 mp-et olvas, 71 % mélyre görget (11-05): **a lap megfog, aki odaér** — de a nézőkből 0,7 % próbál, 0,2 % fizet.
 - A 10-26-i tömeges 2. levél (182 lead): 5 új nyitó, 6 leiratkozás, 0 próba. **Kampány-ízű 2. kör nem megy; a második CSATORNA viszont duplázott.**
-- Mindhárom próbázó/fizető MMS+SMS-en kapta, 16–60 percen belül nyitott, mobilról; a fizető SMS-ben visszahívást kért.
-- Ma egy lead **egy érintést** kap (egy HTML-levél); mobil és a három utánkövetés kikapcsolva (11-18, 11-20).
+- **Fizető: 1** (Duna Vibe House, 11-03: MMS+SMS 09:06 → nyitás 09:22 → SMS-ben visszahívást kért → rendelés 10:15, próba nélkül, 4 957 Ft). **Valós próba: 4** (a 11 `free_trial`-ból 7 teszt): Sáma (MMS, nyitás 25 perc, próba, 0 belépés, lejárt), Marilyn (MMS, 86 perc, 0 belépés, lejárt), Móriczka (MMS 11-05, nyitás 11-07, **próba 11-16 10:33 — 3 perccel a viselkedés-SMS után**, 2 aktivitás), Talentum (csak e-mail 11-13, első nyitás = próba 11-16 08:49, 0 belépés). Tehát az 5 cselekvőből 4 MMS+SMS-en kapta, 1 csak e-mailen; 3 egy órán belül nyitott, 2 napok múlva.
+- **Érintések leadenként (mérve):** a 2745-ből 2140 (78 %) pontosan egyet kapott, 417 kettőt, 122 hármat, 65 négyet. A 11-13 óta kiküldött 1265-ből 1241 (98 %) egyet. **Ma (11-19-től) csak az első levél megy:** `nonopener_followup_daily_cap`=0 (100 ment 11-16…18, utána 4 nézés), `behavior_message` enabled=false (58 ment, utána 9 nézés + 1 próba), `escalation_followup` enabled=false (29 emlékeztető összesen), `mms_daily_cap`=0 (**1036 MMS vár a sorban**, 659 az utolsó 7 napból). `outreach_auto` enabled, holdCap 130.
 
 **Két következtetés, ami az ötletek súlyát adja:** (1) a tulaj állítása igaz — 100-ból 80–88 soha nem nyit —, de a lyuk NEM a tárgysor vagy az óra (azok ±5 pont), hanem a **kézbesítés + az egycsatornásság + a mérés-vakság**; (2) ha a nyitás vissza is áll 25 %-ra, a mai lap-alj ~1 fizető/1000 levél marad — **a lap alját ugyanúgy kell építeni** (§7).
 
@@ -53,7 +53,7 @@ Nálunk a **„megnyitás” = a link kattintása** (`mock_view`). A LEVÉL megn
 
 ## 1. A lead pszichéje — kiből indulunk ki
 
-1–10 szobás vendégház/apartman gazdája, jellemzően 45+, a telefonján él, a portáloktól kapja a vendéget és fizeti a 13–18 % jutalékot. Novemberben nincs vendége és nincs pénznyomása, de ráér (KSH: a magánszállások 44 %-a novemberben nem fogad vendéget). Hetente kap „honlapot készítünk” levelet; a Booking-adathalászat (177 M Ft kár) óta **minden linkes megkeresés gyanús**; az állami „ingyen honlap” voucher azt hagyta benne, hogy **a honlap ingyen jár**.
+Feltevés, nem mérés (ami mért, mellette a forrás): 1–10 szobás vendégház/apartman gazdája, a telefonján él (a nyitások 79 %-a mobilról, 10-11-i mérés), a portáloktól kapja a vendéget és fizeti a 13–18 % jutalékot. Novemberben nincs vendége és nincs pénznyomása, de ráér (KSH: a magánszállások 44 %-a novemberben nem fogad vendéget). Hetente kap „honlapot készítünk” levelet; a Booking-adathalászat (177 M Ft kár) óta **minden linkes megkeresés gyanús**; az állami „ingyen honlap” voucher azt hagyta benne, hogy **a honlap ingyen jár**.
 
 Ami mozgatja — a mért viselkedés sorrendjében:
 1. **Kíváncsiság a saját házára** („mit csináltak az ENYÉMBŐL?”). A nyitók 80 %-a olvas. A tárgy ma ezt nem használja („– kész honlap” = termék, nem az ő háza).
@@ -114,9 +114,9 @@ Ami mozgatja — a mért viselkedés sorrendjében:
 
 ## 4. CSATORNA: MOBIL — hang / SMS / MMS
 
-A mért legerősebb emelő a második csatorna (36 % vs 17 %); mind a 3 konverzió mobilról jött. **Ma a mobil ki van kapcsolva.**
+A mért legerősebb emelő a második csatorna (36 % vs 17 %, a §0 fenntartásával); az 1 fizető és 4 próbázóból 4 MMS+SMS-en kapta a megkeresést. **Ma a mobil áll:** `mms_daily_cap`=0, 1036 MMS vár a sorban.
 
-**4.1 🟢↩️ MMS+SMS az e-mail NEM-nyitóknak, a +4. napon** (nem egyszerre az e-maillel). A kód él (`sendOutreachPair.ts`), kapcsoló `mms_daily_cap`. Ez a 11-20-i „sms mms nem megy ki” döntést fordítja, de **csak ott, ahol az e-mail már elbukott** — és ahol a 3 vevő jött. Napi 360 MMS/modem a plafon.
+**4.1 🟢↩️ MMS+SMS az e-mail NEM-nyitóknak, a +4. napon** (nem egyszerre az e-maillel). A kód él (`sendOutreachPair.ts`), kapcsoló `mms_daily_cap`. Ez a 11-20-i „sms mms nem megy ki” döntést fordítja, de **csak ott, ahol az e-mail már elbukott** — a fizető és 3 próbázó ezen a csatornán jött. Napi 360 MMS/modem a plafon.
 
 **4.2 🔴 GÉPI HÍVÁS — a tulaj ötlete, kidolgozva.**
 Szkript (≤ 20 mp, a te hangoddal felvéve vagy helyi TTS): „Üdvözlöm, {Keresztnév}! Elnézést, hogy géppel beszél. Készítettünk egy honlapot a {szállásnév}-nak, ingyen megnézheti. Ha érdekli, nyomjon meg bármilyen gombot vagy mondja: igen — és SMS-ben küldöm a linket. Nem bankkártyás trükk, semmit nem kérünk. Ha nem érdekli, csak tegye le, megértem.”
@@ -128,7 +128,7 @@ Technika, nulla ember:
 ⚖️ Egy kör a jogi őrrel, nem újratárgyalás: az emberi beavatkozás nélküli hívórendszert az Eht. 162. § külön, hozzájáruláshoz köti (a Grt. jogos-érdek alapja levélre/SMS-re eldöntött). Irány: a hívás **nem ajánlatot ad, hanem engedélyt kér**, minden további az igen-re épül. Pirosnál az SMS-változat marad.
 Mérés: felvette / végighallgatta / igen / letette / visszahívott; csatornajel `?v`.
 
-**4.3 🟢 Viselkedés-üzenet (ADR-0439) vissza és GYORSÍTVA:** ma 20 perc késleltetés; a fizető 16 percen belül nyitott és 3 perc múlva írt. A 2. látogatás / árnézés után **2–5 percen belül**, amíg a telefonján van.
+**4.3 🟢 Viselkedés-üzenet (ADR-0439) vissza és GYORSÍTVA:** 58 ment ki 11-16…18 között → 9 nézés és **1 próba (Móriczka, 3 perccel az SMS után)** — a 4 valós próbából ez az egyetlen, ami egy üzenetünkre indult. Ma 20 perc késleltetés; a fizető 16 percen belül nyitott és 3 perc múlva írt. A 2. látogatás / árnézés után **2–5 percen belül**, amíg a telefonján van.
 
 **4.4 🟡 „Visszahívás-kérés” gomb a lapon → gépi hívás a kolléga nevében.** A fizető pont ezt kérte SMS-ben. A gomb egy időpontot kér, a gép felhívja, lejátssza a 30 mp-es választ a leggyakoribb 8 kérdésre (ADR-0440 kategóriái), és SMS-ben küldi az indító linket. Emberi hívás nincs.
 
@@ -184,7 +184,7 @@ Direkt üzenetet cég nem kezdeményezhet (Messenger/Instagram, platform-szabál
 | +2 | e-mail „Re:” | 2 sor, ugyanabban a szálban (3.10) | 🟡 |
 | +4 | **MMS+SMS** | a kép a telefonon (4.1) | 🟢↩️ |
 | +7 | **gépi hívás** | igen → SMS-link (4.2) | 🔴⚖️ |
-| +14 | e-mail személynévvel | ADR-0442 nem-nyitó levél | 🟢 kapcsoló 0 |
+| +14 | e-mail személynévvel | ADR-0442 nem-nyitó levél (100 ment 11-16…18 → 4 nézés, 4 %: a mai alakjában gyenge, a motorba változatként) | 🟢 kapcsoló 0 |
 | +30 | képeslap / doboz | nyomtatott terv + QR (5.1/5.2) | 🔴 |
 | bármikor | viselkedés-üzenet | 2. látogatás / árnézés után 2–5 perc (4.3) | 🟢 kapcsoló ki |
 
@@ -195,7 +195,7 @@ Direkt üzenetet cég nem kezdeményezhet (Messenger/Instagram, platform-szabál
 **Sorrend:** (1) kísérlet-motor + levélnyitás-mérés (§2) → (2) tárgy/feladó/sima-levél változatok a motorba (§3) → (3) sorozat vissza: Re:, viselkedés-üzenet gyorsítva, ADR-0442; +4 napos MMS a tulaj ↩️-jével → (4) gépi hívás: jogi kör + 50 leades SIP-próba → (5) lap: kalkulátor, „vegye át”, visszatérés-ok → (6) képeslap a top-leadeknek, falu-ütemezés.
 
 **Igen/nem a tulajtól:**
-1. ↩️ MMS+SMS az e-mail-NEM-nyitóknak a +4. napon? (A 11-20-i „sms mms nem megy ki” ezt zárta; a 3 vevő mind innen jött.)
+1. ↩️ MMS+SMS az e-mail-NEM-nyitóknak a +4. napon? (A 11-20-i „sms mms nem megy ki” ezt zárta; a fizető és 3 próbázó ezen a csatornán jött; 1036 MMS vár a sorban.)
 2. ↩️ Esti (18–20) és vasárnap esti küldés egy szeleten, a motor méri?
 3. ↩️ Személynév feladónak a FŐ levélben is?
 4. 🔴 Gépi hívás: jogi kör után SIP-trunk (percdíj) vagy második modem?
