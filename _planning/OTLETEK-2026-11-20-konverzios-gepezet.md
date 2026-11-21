@@ -116,7 +116,7 @@ Ami mozgatja — a mért viselkedés sorrendjében:
 
 A mért legerősebb emelő a második csatorna (36 % vs 17 %, a §0 fenntartásával); az 1 fizető és 4 próbázóból 4 MMS+SMS-en kapta a megkeresést. **Ma a mobil áll:** `mms_daily_cap`=0, 1036 MMS vár a sorban.
 
-**4.1 🟢↩️ MMS+SMS az e-mail NEM-nyitóknak, a +4. napon** (nem egyszerre az e-maillel). A kód él (`sendOutreachPair.ts`), kapcsoló `mms_daily_cap`. Ez a 11-20-i „sms mms nem megy ki” döntést fordítja, de **csak ott, ahol az e-mail már elbukott** — a fizető és 3 próbázó ezen a csatornán jött. Napi 360 MMS/modem a plafon.
+**4.1 ⛔ ELVETVE (tulaj, 11-21): MMS+SMS a nem-nyitóknak.** Költség: MMS 80–135 Ft/db + kísérő SMS 15–30 Ft (11-06-i felmérés) ≈ 110–165 Ft/kontakt; az eddigi 1174 MMS ≈ 130–190 ezer Ft, ebből 1 fizető (4 957 Ft/hó). A tulaj: „kurva drága ilyen megtérülés mellett.” A kód marad, a kapcsoló 0; a sorban álló 1036 MMS nem megy ki.
 
 **4.2 🔴 GÉPI HÍVÁS — a tulaj ötlete, kidolgozva.**
 Szkript (≤ 20 mp, a te hangoddal felvéve vagy helyi TTS): „Üdvözlöm, {Keresztnév}! Elnézést, hogy géppel beszél. Készítettünk egy honlapot a {szállásnév}-nak, ingyen megnézheti. Ha érdekli, nyomjon meg bármilyen gombot vagy mondja: igen — és SMS-ben küldöm a linket. Nem bankkártyás trükk, semmit nem kérünk. Ha nem érdekli, csak tegye le, megértem.”
@@ -140,9 +140,7 @@ Mérés: felvette / végighallgatta / igen / letette / visszahívott; csatornaje
 
 A lead címe ismert és valódi. Itt **nincs spam-szűrő, nincs platform-szabály**, és a kisszállásadó postaládáját senki nem bombázza.
 
-**5.1 🔴 Képeslap a nyomtatott tervvel + QR.** Belföldi díj 305 Ft + nyomtatás, nyomda-API-val (képeslap-szolgáltató), a mock képe az egyik oldalon, QR + 3 sor a másikon. Hideg listán mért válaszarány 2–4 %. A QR a lapra ÉS egy `wa.me`-linkre is vihet (ő kezdeményez → WhatsApp szabályos). A +30. napon a top-leadeknek (no_site, 4,5+).
-
-**5.2 🔴 „Doboz”:** a legértékesebb 50–100 leadnek A4-es nyomtatott terv + egy mondat + QR, borítékban. 600–900 Ft/db. Egy kézbe fogható honlap-terv a konyhaasztalon egészen más súly, mint egy levél. Mérhető: QR-jel.
+**5.1–5.2 ⛔ ELVETVE (tulaj, 11-21): képeslap / doboz.** 400–900 Ft/db a mai megtérülés mellett (1 fizető / 2745 kontakt) nem fér; a fizikai csatornából a 0 Ft-os ötletek maradnak (5.4 falu-ütemezés, 5.5 „mit lát a vendég”, 5.6 közvetítők).
 
 **5.3 🔴 Geo-célzott hirdetés a településre** (Facebook/Google, napi pár száz Ft): „{Falu} szállásadóinak készítettünk honlapterveket” — nem a leadnek, a FALUNAK szól, és a falu-hatást indítja. Fizetős, kicsiben. ↩️ a „fizetős eszköz tilos” szabály e-mailre született; itt a tulaj mondja ki, érvényes-e.
 
@@ -182,71 +180,60 @@ Direkt üzenetet cég nem kezdeményezhet (Messenger/Instagram, platform-szabál
 |---|---|---|---|
 | 0 | e-mail | fő levél (a motor változatai, §3) | él |
 | +2 | e-mail „Re:” | 2 sor, ugyanabban a szálban (3.10) | 🟡 |
-| +4 | **MMS+SMS** | a kép a telefonon (4.1) | 🟢↩️ |
 | +7 | **gépi hívás** | igen → SMS-link (4.2) | 🔴⚖️ |
 | +14 | e-mail személynévvel | ADR-0442 nem-nyitó levél (100 ment 11-16…18 → 4 nézés, 4 %: a mai alakjában gyenge, a motorba változatként) | 🟢 kapcsoló 0 |
-| +30 | képeslap / doboz | nyomtatott terv + QR (5.1/5.2) | 🔴 |
 | bármikor | viselkedés-üzenet | 2. látogatás / árnézés után 2–5 perc (4.3) | 🟢 kapcsoló ki |
 
 ---
 
-## 10. Freemium: az Alap csomag INGYEN aldomainen, bárki vásárolhat — pro-kontra és erőforrás (tulaj kérése, 11-21)
+## 10. Freemium — a tulaj modellje (11-21): 14 napig minden, utána az Alap INGYEN marad citoviso-aldomainen, bármikor vásárolhat
 
-**Mi van ma (mérve, éles):** a próba 14 nap, kártya nélkül, `free_trial` beállítás: `{"days":14,"package":"teljes"}` (ADR-0440 óta a lead által nézett terv csomagjával, ha választott). Lejáratkor a site `suspended` → 503-as fagyasztott lap, admin és adat marad, 90 nap után törlés (élesben még szárazon fut). **Alap csomag** = `gallery` + `enquiry` (érdeklődő űrlap) + `location` (térkép), élő ár 2 780 Ft/hó, **és a .hu domain ma az Alapban van** (élő árlista 11-05). Fizetős modulok az Alapon felül: szobák, felszereltség, USP, vélemények, árak, nyitvatartás, programajánló, **foglalás + iCal**, e-mail, többnyelvűség (egyszeri díj).
+**A tulaj pontosítása (11-21):** nem „örökre ingyen Alap mindenkinek” és nem fagyás, hanem: a lead 14 napig MINDEN funkciót használ; ha lejár, az oldal NEM áll le, hanem **a teljes Alap marad ingyen** `<név>.citoviso.com`-on, és a többit **utána, bármikor** megveheti. **A csomagokat ehhez újra kell gondolni.** Ezt dolgozom ki lent; az ár a tulaj döntése, én a szerkezetet és a mért tényeket adom.
 
-**Mibe kerülne nekünk egy ingyenes aldomain-oldal (mérve):**
-| tétel | érték | forrás |
-|---|---|---|
-| kiszolgálás | `*.citoviso.com` egy nginx-blokk, EGY közös tanúsítvány, Cloudflare wildcard → **0 Ft/oldal** | `deploy/nginx/citoviso.conf`, ADR-0024 |
-| tárhely | 2,5–6 MB/oldal; VPS 30 GB szabad ≈ 10 000 oldal; a flotta VPS-díja €5,49/hó | `_planning/RESEARCH-2026-10-valos-oldal-eroforrasigeny.md` |
-| AI | a mock már legenerálva (átlag $0,11, az utolsó héten 1,3 cent/mock); mockból élő oldal **$0** | ua. + MEMORY 11-06 |
-| .hu domain | 1 990 Ft nettó/év — **ez az egyetlen valódi tétel**, ingyen-ágban NEM adható → az ingyenes = aldomain, a domain marad fizetős (ez az Alap mai tartalmát bontja) | ADR-0360 |
-| programajánló (`poi`) | magányos tenantnál ~650 Ft/hó önköltség — ingyen-ágba nem mehet | memory 09-23 |
-| ember | 0, ha az ingyenes ág ÖNKISZOLGÁLÓ; ha „a kolléga mindent beállít” (11-04 doktrína) az ingyenesre is áll, Neo kapacitása a plafon | |
+**Mi van ma (éles):** `free_trial` = 14 nap, kártya nélkül, Teljes csomag; lejáratkor `suspended` → 503-as fagyasztott lap (ADR-0344), 90 nap után törlés (ADR-0345, élesben szárazon). Alap = `gallery` + `enquiry` + `location`, 2 780 Ft/hó, a .hu domain benne (ADR-0360 szerint csomag-tartalom). 4 valós próbázó: 3 be sem lépett, 2 lejárt és 503-at ad, 0 fizetett.
 
-**Amit a jog nem enged elengedni:** élesre portál-/demó-fotós oldal CSAK a tulaj saját nyilatkozatával mehet (§A.1: saját kép VAGY önnyilatkozat + szavatosság + kártalanítás). **Tehát „ingyen” sem jelent automatikus publikálást:** marad az egy kattintás + click-wrap (ma: `TRIAL_CLICKWRAP_V1`, ÁSZF 1.5). Az ingyenesség NEM a lépést veszi ki, hanem a határidőt és az árat. Minden élő oldal külön jogviszony: impresszum-sáv, adatkezelés, országonként teljes jogi csomag (ADR-0458) — ezer ingyenes oldalnál is.
+**Mit old meg a tulaj modellje a mért gáton:**
+- A lejárat ma **megsemmisíti** a tulaj egyetlen meglévő eszközét (az élő oldalát) — a 2 lejárt próbázó oldala ma 503. A modellben az oldal marad, a Google indexeli, a szállás neve alatt él, a falu látja („Készítette: Citoviso” kredit, ADR-0032).
+- Az upsell a **saját oldalán, a hiány pillanatában** jelenik meg (szezon előtt: foglalás, árak, iCal), nem egy hideg levélben. A modul-státusz csempék (ADR-0429) már tudnak „Hiányzik / Nem kötelező” állapotot — ebből lesz a „zárolt modul, egy kattintásra”.
+- A 14 napos „minden” marad, tehát a próba továbbra is megmutatja a teljes értéket (ADR-0364: azt ígéri, amit ad).
+- **Amit NEM old meg:** az aktiválást. 3/4 próbázó be sem lépett az INGYEN Teljesbe. A modell akkor ér valamit, ha az aktiválás-javítások (7.1 „vegye át”, nulla-beállítás a kolléga által) vele együtt mennek.
 
-**Mit mond az adat arról, hol a gát:**
-- 4 valós próbázó kapott 14 napra INGYEN **Teljes** csomagot: **3 be sem lépett**, 2 lejárt, 0 fizetett. A fizető (Duna Vibe) a próbát kihagyta, rendelt. → **A gát ma nem az ár és nem a határidő, hanem az aktiválás** (belépés, beállítás, bizalom). Az ingyenesség ezt önmagában nem oldja.
-- A nyitók 91 %-a az ár megjelenése ELŐTT esik ki (11-05: 21/235 nyitotta az árpanelt). Az „ingyen” a tölcsér alját változtatja, a tetejét (nyitás) csak a tárgyon keresztül („ingyen honlap, nincs határidő” — a motor méri; az „ingyen” szó spam-jel is).
-- Benchmark: kártya nélküli próba → fizető 18 % (SMB SaaS, önként regisztrálók); freemium ingyenes → fizető „néhány %” (a market.md-ben forrásolt szám nincs). Nálunk a próbát nem a vevő kérte, ezért a regisztrálóra vetített alsó sáv (4–6 %) a reális horgony.
+**Költség nekünk (mérve):** aldomain + tanúsítvány 0 Ft (wildcard, közös cert), tárhely 2,5–6 MB/oldal (30 GB ≈ 10 000 oldal, VPS €5,49/hó), AI a mockból élő oldalig $0 (a mock már kész), ember 0 az ingyenes ágon. **Az egyetlen valódi tétel a .hu domain (1 990 Ft nettó/év)** → az ingyenes Alapban NEM lehet benne; a domain külön fizetős tétel lesz (ez bontja a mai Alap-tartalmat, ADR-0360). Programajánló (`poi`, ~650 Ft/hó önköltség) sem fér az ingyenesbe.
 
-**PRO**
-1. Kiveszi az ár-kifogást és a „mi lesz 14 nap múlva” félelmet; illeszkedik a piaci horgonyhoz (állami voucher = „ingyen honlap”, Szállás.hu = 0 Ft fix, HotelRunner Basic $0, Durable ingyenes aldomain).
-2. **Minden ingyenes oldal élő referencia a faluban** („Ezt az oldalt a Citoviso készítette” lábléc-kredit, ADR-0032) → a falu-hatás (5.4) magától indul; a Google-ban a szállás neve alatt megjelenik egy oldal, ami a mi láthatóság-termékünk első bizonyítéka.
-3. Az upsell a SZÜKSÉG pillanatában történik (szezon előtt foglalás-modul, árak, iCal) — a tulaj saját, már megszokott oldalát bővíti, nem egy idegen ajánlatra mond igent. Váltási költség: az oldal az övé lett.
-4. Határköltség ~0 (fent), a mockba fektetett AI-pénz nem vész el a 90 napos törléssel.
-5. Valós használati adat ezrekről (mit néznek a vendégek, melyik modul hiányzik) → a modul-árazás mérhetővé válik.
-6. Az érdeklődő űrlap (`enquiry`) rajtunk megy át → látjuk a vendég-forgalmat, és ebből lesz a „nézze, 12 érdeklődés jött, foglalás-modullal ezek közvetlen foglalások” üzenet (tényhű, mért).
+**Jogi kapu (nem engedhető el):** élesre portál-/demó-fotós oldal CSAK a tulaj nyilatkozatával (§A.1) → az ingyenes oldal is a tulaj egy kattintása + click-wrap után él, ahogy ma a próba. Ezer ingyenes oldal = ezer impresszum, adatkezelő-viszony, országonként teljes jogi csomag (ADR-0458) — ez üzemeltetési tömeg, nem akadály, de ÁSZF-szakasz kell (ingyenes ág feltételei, szellem-oldal szabály: N hónap belépés és forgalom nélkül → fagy vagy törlés).
 
-**KONTRA**
-1. **Kannibalizál:** az Alap (2 780 Ft) eltűnik mint bevétel; a galéria+űrlap+térkép a kisvendégháznak sokszor „elég” — nincs ok fizetni. Az egyetlen fizető 4 957 Ft-ot fizet (Ajánlott-szintű kosár −25 %): a bevétel a modulokból jönne, amit ma 0 ember vett külön.
-2. **Nem a gátra lő:** 3/4 próbázó az INGYEN Teljes csomagba sem lépett be. Az ingyenesség a „próba-zsákutcát” „ingyen-zsákutcává” nevezi át, ha az aktiválás (7.1 „vegye át”, nulla-beállítás) nem oldódik meg előbb.
-3. **Jogi és üzemeltetési tömeg:** ezer élő oldal = ezer impresszum, adatkezelő-viszony, fotó-nyilatkozat; a portál-fotók tömeges ÉLŐ használata láthatóvá válik a portálok előtt (ma 5 élő oldalnál ez nem téma). Leiratkozás/törlés-kérések, elhagyott oldalak („szellem-oldalak” rossz adattal a szállás neve alatt → a szállásnak árt, nekünk hírnév-kockázat).
-4. **„Ingyen” a hideg levélben** = spam-jel a szűrőnek ÉS gyanú-jel az embernek („mi a trükk?”) — pont az a csoport, amelyik a „nem bankkártyás trükk” mondatot igényli.
-5. Az Alap mai tartalmát (domain benne) szét kell szedni: ingyen = aldomain, domain külön → az árlista és az ÁSZF (ADR-0360) módosul.
-6. A NULLA-HUMÁN doktrína feszül: ha a kolléga az ingyeneseknek is beállít mindent, a kapacitás véges; ha nem, az ingyenes ág önkiszolgáló lesz, amit a célcsoport (3/4 be sem lépett) nem használ.
+### Csomag-újragondolás — javaslat (az árak a tulajé, a szerkezet mért tényekből)
 
-**Erőforrás-igény (kód, a meglévőre építve):** a próba-infra újrahasznosítható: `free_trial` + `trial_grant` + `startTrial`; az ingyenes ág = próba lejárat nélkül (`trial_until` NULL, a `lapseExpiredTrials` és a 90 napos törlés kihagyja), csomag-paraméter `alap` domain nélkül, modulvásárlás a meglévő kosárral. Új: ingyenes-státusz az adminban és a Riportban, upsell-üzenetek (ADR-0417 emlékeztető-lánc mintájára, szezon előtt), ÁSZF-szakasz, szellem-oldal szabály (N hónap belépés és forgalom nélkül → fagy). Nagyságrend: **napok, nem hetek**, mert a tiltó kapuk (jogi csomag, fotó, §C) változatlanok. Infra: semmi 10 000 oldalig.
+| szint | mi van benne | ára | miért ez |
+|---|---|---|---|
+| **Ingyenes** (örökre, `<név>.citoviso.com`) | galéria, érdeklődő űrlap (rajtunk át → mérjük a vendég-forgalmat), térkép, impresszum/jog, „Készítette: Citoviso” kredit, vendég-statisztika | 0 Ft | a mai Alap domain nélkül; költsége ~0; minden ilyen oldal referencia és adat |
+| **Próba** (14 nap) | minden modul | 0 Ft | marad; a végén NEM 503, hanem visszaesés Ingyenesre, a fizetős modulok a saját oldalon „zárolt” jelzéssel |
+| **Saját cím** | .hu/.com domain + TLS + átirányítás | éves díj (önköltség 1 990 Ft nettó) | a bizalmi kapu; az egyetlen tétel, amit az ingyenes nem adhat |
+| **Foglalás** | szobák + árak + online foglalás + iCal-szinkron (+ vélemények) | havi díj, a tulaj dönti | ez váltja ki a portál-jutalékot — ez az egyetlen csomag, aminek a tulaj fejében van ellenértéke (jutalék); ma `booking` 990 + `pricing` 490 + `rooms` 690 + `reviews` 690 modulár |
+| **Teljes** | Foglalás + felszereltség, USP, nyitvatartás, programajánló, e-mail, többnyelv | havi díj | a mai Teljes |
 
-**Köztes változatok, amiket a motor mérhet az „örökre ingyen” helyett:**
-- **A) Fordított próba (reverse trial):** 14 nap Teljes, utána NEM fagy, hanem **visszaesik ingyenes Alapra** aldomainen. Minden meglévő kód, egyetlen pont változik (a lejárat = leminősítés, nem 503). A fizetős modulok hiánya a saját oldalán látszik — ez a legerősebb upsell-pillanat.
-- **B) Ingyen a szezonig:** Alap ingyen a kiküldést követő első szezonnyitásig (pl. április 30.), utána fizetős — határidő van, de a tulaj órájához igazítva.
-- **C) Ingyen aldomain + fizetős domain már az első naptól** (az ingyenes ág egyetlen kézzelfogható upsellje a saját .hu név, 1 990 Ft/év önköltség → akár 3 990 Ft/év áron a bizalmi kapu).
+Szempontok, amiket a tulaj árazása elé teszek: (1) a **Foglalás** csomag havi díja legyen kisebb, mint EGY portál-foglalás jutaléka (Szállás.hu 13 % + áfa egy 2 éjszakás, 15 000 Ft-os foglaláson ≈ 5 000 Ft) — akkor a levél és a lap is ezt mondhatja; (2) **modulonkénti vásárlás marad** a kosárból (ADR-0429 ⑤), de a lap a két csomagot mutatja; (3) a −25 % bemutatkozó kedvezmény (ADR-0286) és az eszkalációs −30 % (ADR-0088) **a Foglalás/Teljes első díjára** vonatkozzon, ne az Alapra (ami ingyen lesz); (4) az éves fizetés „2 hónap ingyen” szabálya (`modules.ts`) marad.
 
-**Ajánlás (mérés-alapú, nem ízlés):** nem „örökre ingyen Alap” első lépésként, hanem **A) fordított próba** a motor egy szeletén, az aktiválás-javításokkal (7.1) együtt. Mérendő 60 napon: visszaesett oldalak száma, belépés, modulvásárlás, domain-vásárlás, leiratkozás, és a hideg levél nyitása „ingyen, határidő nélkül” tárggyal vs a mai. Ha az ingyenes oldalak 60 nap után sem hoznak belépést, az „örökre ingyen” csak a jogi tömeget növelné.
+### Kód-hatás (a meglévőre épül, nagyságrend: napok)
+1. `lapseExpiredTrials` (ADR-0344): `suspended` helyett **leminősítés** — a site `live` marad, a `trial_grant` modulokból csak az ingyenes készlet marad aktív, a domain-ál-modul lekapcsol (aldomainre vissza, 301 nélkül, mert a domain nem is volt az övé a próbában — ellenőrizendő: a próbában jár-e domain ma).
+2. `package_module`: új `free` csomag-sor (gallery, enquiry, location), az Alap megszűnik vagy = free + domain; `/pricing` és a lap csomag-kártyái (ADR-0440 T2) két fizetős csomagot mutatnak.
+3. ADR-0345 törlés: az ingyenes tenantra NEM fut; helyette szellem-oldal szabály (javaslat: 6 hónap belépés ÉS vendég-látogatás nélkül → fagyasztás-értesítő, +30 nap → fagy).
+4. Admin: a zárolt modul csempéje a hiányt és az árat mutatja, egy kattintás a kosárba (ADR-0429 nyilvántartásából, új kód minimális).
+5. Levél/SMS-szövegek: „14 napig minden, utána az alap ingyen marad — nincs határidő, nincs kártya” (§C-kapu, tényhűség: csak azt, ami a lapon is igaz); a lejárat előtti T−3/T−1 levél (ADR-0344 ③) átírva: nem „leáll”, hanem „ennyi marad, ezt veszíti el”.
+6. ÁSZF 1.6: ingyenes ág szakasz; új ADR (XXXX): a próba vége = leminősítés, csomag-létra.
+7. Mérés a Riportban: ingyenes oldalak száma, belépés, vendég-látogatás, modul-/domain-vásárlás ingyenesből, lejárat utáni vásárlás ideje (hány nap/hét múlva).
+
+**Várható hatás, őszintén:** a nyitási arányt közvetlenül nem emeli (az a kézbesítés és a csatorna); a tárgysorban a „nincs határidő, nem kell kártya, az alap ingyen marad” mondat a motorban mérhető. A tölcsér ALJÁN viszont megszünteti a ma mért zsákutcát (próba → 503 → semmi), és minden aktivált lead állandó, mérhető upsell-felületté válik. A kannibalizáció kockázata valós (galéria+űrlap+térkép sokaknak elég) — ezért a Foglalás csomagnak kell a jutalék-ellenértéket hordoznia.
 
 ---
 
 ## 9. Javasolt sorrend és a döntést kérő pontok
 
-**Sorrend:** (1) kísérlet-motor + levélnyitás-mérés (§2) → (2) tárgy/feladó/sima-levél változatok a motorba (§3) → (3) sorozat vissza: Re:, viselkedés-üzenet gyorsítva, ADR-0442; +4 napos MMS a tulaj ↩️-jével → (4) gépi hívás: jogi kör + 50 leades SIP-próba → (5) lap: kalkulátor, „vegye át”, visszatérés-ok → (6) képeslap a top-leadeknek, falu-ütemezés.
+**Sorrend:** (1) kísérlet-motor + levélnyitás-mérés (§2) → (2) tárgy/feladó/sima-levél változatok a motorba (§3) → (3) sorozat vissza: Re:, viselkedés-üzenet gyorsítva, ADR-0442 → (4) **próba vége = leminősítés ingyenes Alapra + csomag-létra (§10)** az aktiválás-javításokkal (7.1) együtt → (5) gépi hívás: jogi kör + 50 leades SIP-próba (~5–10 Ft/hívás becsült percdíjból, az MMS tizede) → (6) lap: kalkulátor, visszatérés-ok; falu-ütemezés.
 
 **Igen/nem a tulajtól:**
-1. ↩️ MMS+SMS az e-mail-NEM-nyitóknak a +4. napon? (A 11-20-i „sms mms nem megy ki” ezt zárta; a fizető és 3 próbázó ezen a csatornán jött; 1036 MMS vár a sorban.)
-2. ↩️ Esti (18–20) és vasárnap esti küldés egy szeleten, a motor méri?
-3. ↩️ Személynév feladónak a FŐ levélben is?
-4. 🔴 Gépi hívás: jogi kör után SIP-trunk (percdíj) vagy második modem?
-5. 🔴 Képeslap/doboz: 305–900 Ft/db a top-leadekre — igen/nem, havi keret?
-6. 🔴 Falu-hirdetés napi pár száz Ft-ért — marad a „fizetős tilos”, vagy itt kivétel?
-7. 🟡 Freemium (§10): **A) fordított próba** (14 nap Teljes → ingyenes Alap aldomainen, nem 503) egy szeleten mérve · **örökre ingyen Alap** mindenkinek · marad a mai 14 nap + fagyás?
+1. ↩️ Esti (18–20) és vasárnap esti küldés egy szeleten, a motor méri?
+2. ↩️ Személynév feladónak a FŐ levélben is?
+3. 🔴⚖️ Gépi hívás: a jogi kör után SIP-trunk (percdíj) vagy második modem — vagy egyik sem?
+4. 🔴 Falu-hirdetés napi pár száz Ft-ért — marad a „fizetős tilos”, vagy itt kivétel?
+5. 🟡 §10 csomag-létra: Ingyenes (aldomain) · Próba 14 nap minden · Saját cím · Foglalás · Teljes — mehet ADR-be és kódba ebben a szerkezetben? Az árakat te adod.
