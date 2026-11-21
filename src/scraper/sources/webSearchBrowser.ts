@@ -1,5 +1,5 @@
 // Keyless web search through a headless browser — the fallback when no Brave key is
-// usable (ADR-XXXX). Both Brave keys hit HTTP 402 on 2026-11-21 and the owner's frame is
+// usable (ADR-0463). Both Brave keys hit HTTP 402 on 2026-11-21 and the owner's frame is
 // "no money": no API credit, no subscription. So the search runs in Chromium against a
 // public results page, the way a person would search.
 //

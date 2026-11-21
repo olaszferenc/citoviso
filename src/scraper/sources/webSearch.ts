@@ -235,7 +235,7 @@ export async function webSearch(
   num: number,
   searchLang: string,
 ): Promise<WebResult[]> {
-  // Order (ADR-XXXX): Brave while a key is usable → keyless browser search → legacy CSE.
+  // Order (ADR-0463): Brave while a key is usable → keyless browser search → legacy CSE.
   // A Brave call that benches its last key (402 = credit gone) falls through to the
   // browser for the SAME query, so the lead's discovery is not silently lost.
   if (braveUsableKeys().length > 0) {

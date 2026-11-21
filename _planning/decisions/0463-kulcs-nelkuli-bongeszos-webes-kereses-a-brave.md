@@ -1,4 +1,4 @@
-## ADR-XXXX — Kulcs nélküli, böngészős webes keresés a Brave után (Startpage, $0)
+## ADR-0463 — Kulcs nélküli, böngészős webes keresés a Brave után (Startpage, $0)
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-22: „a brave kiváltása már most is mehet”, keret: pénzt nem költünk; koordinátor `citb64f0ed0`, brief `brave-kivaltas-20261122.md`) · **Élesítés:** NINCS (külön utasítás) ·
 **Épít:** ADR-0026 (webes keresés egy interfész mögött, Brave elsődleges) — azt nem írja felül, kiegészíti egy harmadik backenddel.
