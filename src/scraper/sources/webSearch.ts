@@ -14,6 +14,7 @@
 import { config } from "../../config.js";
 import { decodeEntities } from "./portals/extract.js";
 import { noteDeadKey } from "../../console/keyDeath.js";
+import { browserSearch, browserSearchEnabled } from "./webSearchBrowser.js";
 
 const CSE_ENDPOINT = "https://www.googleapis.com/customsearch/v1";
 const BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
@@ -206,12 +207,16 @@ async function cseSearch(
 
 /** True when ANY web-search backend is configured (callers can skip the work). */
 export function webSearchAvailable(): boolean {
-  return Boolean(config.braveApiKeys.length > 0 || (config.googleMapsApiKey && config.googleCseId));
+  return Boolean(
+    config.braveApiKeys.length > 0 || browserSearchEnabled() || (config.googleMapsApiKey && config.googleCseId),
+  );
 }
 
-/** Which backend a search would use right now (for operator-facing logs). */
-export function webSearchBackend(): "brave" | "google_cse" | "none" {
-  if (config.braveApiKeys.length > 0) return "brave";
+/** Which backend a search would use right now (for operator-facing logs). A Brave key
+ *  set whose every key is benched (out of credit) reports the next backend in line. */
+export function webSearchBackend(): "brave" | "browser" | "google_cse" | "none" {
+  if (braveUsableKeys().length > 0) return "brave";
+  if (browserSearchEnabled()) return "browser";
   if (config.googleMapsApiKey && config.googleCseId) return "google_cse";
   return "none";
 }
@@ -230,9 +235,14 @@ export async function webSearch(
   num: number,
   searchLang: string,
 ): Promise<WebResult[]> {
-  if (config.braveApiKeys.length > 0) {
-    return braveThrottled(() => braveWithFailover(query, num, searchLang));
+  // Order (ADR-XXXX): Brave while a key is usable → keyless browser search → legacy CSE.
+  // A Brave call that benches its last key (402 = credit gone) falls through to the
+  // browser for the SAME query, so the lead's discovery is not silently lost.
+  if (braveUsableKeys().length > 0) {
+    const results = await braveThrottled(() => braveWithFailover(query, num, searchLang));
+    if (results.length > 0 || braveUsableKeys().length > 0) return results;
   }
+  if (browserSearchEnabled()) return browserSearch(query, num, searchLang);
   // Fall back to the configured CSE credentials so the behaviour always matches
   // webSearchBackend() (callers may pass them explicitly or not at all).
   const key = apiKey || config.googleMapsApiKey;
@@ -240,7 +250,7 @@ export async function webSearch(
   if (key && cx) return cseSearch(query, key, cx, num);
   warnOnce(
     "no-backend",
-    "⛔ WEBES KERESÉS KIKAPCSOLVA: nincs BRAVE_API_KEY (és nincs használható CSE) — " +
+    "⛔ WEBES KERESÉS KIKAPCSOLVA: nincs BRAVE_API_KEY, a böngészős keresés ki van kapcsolva (és nincs használható CSE) — " +
       "a honlap-felderítés és a kontakt-keresés kimarad.",
   );
   return [];

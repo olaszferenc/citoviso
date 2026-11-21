@@ -429,6 +429,9 @@ export const config = {
    *  _3 … (owner 2026-11-08: a spare key "ha a másik kifogyna"). webSearch switches to
    *  the next one when the current key is out of credit (402), rejected (401/403) or
    *  over its quota (429 with an exhausted window), and retries the same query. */
+  /** Keyless browser web search (ADR-XXXX): the fallback when no Brave key is usable —
+   *  headless Chromium on a public results page (Startpage). "off" disables it. */
+  webSearchBrowser: env("WEB_SEARCH_BROWSER", "on"),
   braveApiKeys: [
     env("BRAVE_API_KEY"),
     ...Array.from({ length: 8 }, (_, i) => env(`BRAVE_API_KEY_${i + 2}`)),
