@@ -11,6 +11,8 @@
 //   - Bing (browser and plain HTTP): answers bots with unrelated results — poisoned.
 //   - DuckDuckGo (html/lite/js): "anomaly" challenge from the first query.
 //   - Brave HTML search: HTTP 429 / empty page.
+// Startpage itself is NOT unlimited: ~200 queries in ~2.5 h got the IP bounced to a 403
+// page (2026-11-22). It is a fallback for a few queries, not a bulk engine.
 // So Startpage is the only engine here. A block puts it on a cooldown (callers get an
 // empty result, loudly logged), it is never retried in a tight loop.
 //
@@ -23,7 +25,7 @@ import type { WebResult } from "./webSearch.js";
 
 const MIN_GAP_MS = 3_000;
 const IDLE_CLOSE_MS = 30_000;
-const BLOCK_COOLDOWN_MS = 15 * 60_000;
+const BLOCK_COOLDOWN_MS = 60 * 60_000;
 const UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
@@ -126,7 +128,14 @@ async function startpage(query: string, num: number, searchLang: string): Promis
     rows = rows.filter((r) => r.link !== "").slice(0, num);
     if (rows.length > 0) return rows;
     const html = await page.content().catch(() => "");
-    if (/captcha|blocked/i.test(page.url()) || /verify you are (a )?human|g-recaptcha|hcaptcha/i.test(html)) {
+    // Measured 2026-11-22: after ~200 queries in ~2.5 h Startpage bounced the dev IP to a
+    // 403 page off its own domain. Leaving startpage.com counts as a block, not a timeout.
+    const url = page.url();
+    if (
+      !/^https:\/\/[^/]*startpage\.com\//.test(url) ||
+      /captcha|blocked/i.test(url) ||
+      /verify you are (a )?human|g-recaptcha|hcaptcha|403 Forbidden/i.test(html)
+    ) {
       throw new Error("blocked");
     }
     if (!ready) throw new Error("timeout");

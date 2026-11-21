@@ -27,10 +27,16 @@ amíg van élő kulcs, az fut.)
 3. **Fékek:**
    - Folyamatonként egy böngésző, lustán indul, és 30 mp tétlenség után bezár (a CLI így ki tud lépni, a konzolban sem marad Chromium).
    - A lekérdezések sorban futnak, köztük legalább 3 mp szünettel.
-   - Bot-ellenőrzés után a backend 15 percig szünetel, ezt hangosan naplózza; a hívó addig üres eredményt kap.
+   - Bot-ellenőrzés vagy tiltás után a backend 60 percig szünetel, ezt hangosan naplózza; a hívó addig üres eredményt kap.
+     Tiltásnak számít, ha az oldal elhagyja a startpage.com-ot, vagy 403-at ad.
 4. **Kapcsoló:** `WEB_SEARCH_BROWSER=off` kikapcsolja. Ehhez Chromium kell (`CHROMIUM_PATH`, élesen `/usr/bin/chromium` megvan).
 
 ### Következmények
+
+- **A Startpage nem tömeges motor** (mérve 2026-11-22): ~200 lekérdezés ~2,5 óra alatt, és a dev IP-t egy 403-as,
+  nem a startpage.com-on lévő oldalra irányította. Ez tehát tartalék néhány kérdéshez, amíg a Brave-kulcs ki van merülve.
+  Nem helyettesíti a Brave-et. A saját-honlap kapu 200 leades összevetésében 100 Brave-VAN-ból 23-at NINCS-nek ítélt,
+  ezért ott a böngészős ítélet csak VAN_HONLAP lehet.
 
 - **Élesen is fut**, ha kimegy: a konzol reenrich és rescrape-photos gombja, a scrape-gyerekfolyamat, valamint a
   `citoviso-events(-pending)` timer (5 percenként) éri el. Ezek élesítés után a halott Brave-kulcs mellett Chromiumot indítanak
