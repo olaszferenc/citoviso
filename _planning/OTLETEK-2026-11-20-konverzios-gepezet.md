@@ -190,6 +190,54 @@ Direkt üzenetet cég nem kezdeményezhet (Messenger/Instagram, platform-szabál
 
 ---
 
+## 10. Freemium: az Alap csomag INGYEN aldomainen, bárki vásárolhat — pro-kontra és erőforrás (tulaj kérése, 11-21)
+
+**Mi van ma (mérve, éles):** a próba 14 nap, kártya nélkül, `free_trial` beállítás: `{"days":14,"package":"teljes"}` (ADR-0440 óta a lead által nézett terv csomagjával, ha választott). Lejáratkor a site `suspended` → 503-as fagyasztott lap, admin és adat marad, 90 nap után törlés (élesben még szárazon fut). **Alap csomag** = `gallery` + `enquiry` (érdeklődő űrlap) + `location` (térkép), élő ár 2 780 Ft/hó, **és a .hu domain ma az Alapban van** (élő árlista 11-05). Fizetős modulok az Alapon felül: szobák, felszereltség, USP, vélemények, árak, nyitvatartás, programajánló, **foglalás + iCal**, e-mail, többnyelvűség (egyszeri díj).
+
+**Mibe kerülne nekünk egy ingyenes aldomain-oldal (mérve):**
+| tétel | érték | forrás |
+|---|---|---|
+| kiszolgálás | `*.citoviso.com` egy nginx-blokk, EGY közös tanúsítvány, Cloudflare wildcard → **0 Ft/oldal** | `deploy/nginx/citoviso.conf`, ADR-0024 |
+| tárhely | 2,5–6 MB/oldal; VPS 30 GB szabad ≈ 10 000 oldal; a flotta VPS-díja €5,49/hó | `_planning/RESEARCH-2026-10-valos-oldal-eroforrasigeny.md` |
+| AI | a mock már legenerálva (átlag $0,11, az utolsó héten 1,3 cent/mock); mockból élő oldal **$0** | ua. + MEMORY 11-06 |
+| .hu domain | 1 990 Ft nettó/év — **ez az egyetlen valódi tétel**, ingyen-ágban NEM adható → az ingyenes = aldomain, a domain marad fizetős (ez az Alap mai tartalmát bontja) | ADR-0360 |
+| programajánló (`poi`) | magányos tenantnál ~650 Ft/hó önköltség — ingyen-ágba nem mehet | memory 09-23 |
+| ember | 0, ha az ingyenes ág ÖNKISZOLGÁLÓ; ha „a kolléga mindent beállít” (11-04 doktrína) az ingyenesre is áll, Neo kapacitása a plafon | |
+
+**Amit a jog nem enged elengedni:** élesre portál-/demó-fotós oldal CSAK a tulaj saját nyilatkozatával mehet (§A.1: saját kép VAGY önnyilatkozat + szavatosság + kártalanítás). **Tehát „ingyen” sem jelent automatikus publikálást:** marad az egy kattintás + click-wrap (ma: `TRIAL_CLICKWRAP_V1`, ÁSZF 1.5). Az ingyenesség NEM a lépést veszi ki, hanem a határidőt és az árat. Minden élő oldal külön jogviszony: impresszum-sáv, adatkezelés, országonként teljes jogi csomag (ADR-0458) — ezer ingyenes oldalnál is.
+
+**Mit mond az adat arról, hol a gát:**
+- 4 valós próbázó kapott 14 napra INGYEN **Teljes** csomagot: **3 be sem lépett**, 2 lejárt, 0 fizetett. A fizető (Duna Vibe) a próbát kihagyta, rendelt. → **A gát ma nem az ár és nem a határidő, hanem az aktiválás** (belépés, beállítás, bizalom). Az ingyenesség ezt önmagában nem oldja.
+- A nyitók 91 %-a az ár megjelenése ELŐTT esik ki (11-05: 21/235 nyitotta az árpanelt). Az „ingyen” a tölcsér alját változtatja, a tetejét (nyitás) csak a tárgyon keresztül („ingyen honlap, nincs határidő” — a motor méri; az „ingyen” szó spam-jel is).
+- Benchmark: kártya nélküli próba → fizető 18 % (SMB SaaS, önként regisztrálók); freemium ingyenes → fizető „néhány %” (a market.md-ben forrásolt szám nincs). Nálunk a próbát nem a vevő kérte, ezért a regisztrálóra vetített alsó sáv (4–6 %) a reális horgony.
+
+**PRO**
+1. Kiveszi az ár-kifogást és a „mi lesz 14 nap múlva” félelmet; illeszkedik a piaci horgonyhoz (állami voucher = „ingyen honlap”, Szállás.hu = 0 Ft fix, HotelRunner Basic $0, Durable ingyenes aldomain).
+2. **Minden ingyenes oldal élő referencia a faluban** („Ezt az oldalt a Citoviso készítette” lábléc-kredit, ADR-0032) → a falu-hatás (5.4) magától indul; a Google-ban a szállás neve alatt megjelenik egy oldal, ami a mi láthatóság-termékünk első bizonyítéka.
+3. Az upsell a SZÜKSÉG pillanatában történik (szezon előtt foglalás-modul, árak, iCal) — a tulaj saját, már megszokott oldalát bővíti, nem egy idegen ajánlatra mond igent. Váltási költség: az oldal az övé lett.
+4. Határköltség ~0 (fent), a mockba fektetett AI-pénz nem vész el a 90 napos törléssel.
+5. Valós használati adat ezrekről (mit néznek a vendégek, melyik modul hiányzik) → a modul-árazás mérhetővé válik.
+6. Az érdeklődő űrlap (`enquiry`) rajtunk megy át → látjuk a vendég-forgalmat, és ebből lesz a „nézze, 12 érdeklődés jött, foglalás-modullal ezek közvetlen foglalások” üzenet (tényhű, mért).
+
+**KONTRA**
+1. **Kannibalizál:** az Alap (2 780 Ft) eltűnik mint bevétel; a galéria+űrlap+térkép a kisvendégháznak sokszor „elég” — nincs ok fizetni. Az egyetlen fizető 4 957 Ft-ot fizet (Ajánlott-szintű kosár −25 %): a bevétel a modulokból jönne, amit ma 0 ember vett külön.
+2. **Nem a gátra lő:** 3/4 próbázó az INGYEN Teljes csomagba sem lépett be. Az ingyenesség a „próba-zsákutcát” „ingyen-zsákutcává” nevezi át, ha az aktiválás (7.1 „vegye át”, nulla-beállítás) nem oldódik meg előbb.
+3. **Jogi és üzemeltetési tömeg:** ezer élő oldal = ezer impresszum, adatkezelő-viszony, fotó-nyilatkozat; a portál-fotók tömeges ÉLŐ használata láthatóvá válik a portálok előtt (ma 5 élő oldalnál ez nem téma). Leiratkozás/törlés-kérések, elhagyott oldalak („szellem-oldalak” rossz adattal a szállás neve alatt → a szállásnak árt, nekünk hírnév-kockázat).
+4. **„Ingyen” a hideg levélben** = spam-jel a szűrőnek ÉS gyanú-jel az embernek („mi a trükk?”) — pont az a csoport, amelyik a „nem bankkártyás trükk” mondatot igényli.
+5. Az Alap mai tartalmát (domain benne) szét kell szedni: ingyen = aldomain, domain külön → az árlista és az ÁSZF (ADR-0360) módosul.
+6. A NULLA-HUMÁN doktrína feszül: ha a kolléga az ingyeneseknek is beállít mindent, a kapacitás véges; ha nem, az ingyenes ág önkiszolgáló lesz, amit a célcsoport (3/4 be sem lépett) nem használ.
+
+**Erőforrás-igény (kód, a meglévőre építve):** a próba-infra újrahasznosítható: `free_trial` + `trial_grant` + `startTrial`; az ingyenes ág = próba lejárat nélkül (`trial_until` NULL, a `lapseExpiredTrials` és a 90 napos törlés kihagyja), csomag-paraméter `alap` domain nélkül, modulvásárlás a meglévő kosárral. Új: ingyenes-státusz az adminban és a Riportban, upsell-üzenetek (ADR-0417 emlékeztető-lánc mintájára, szezon előtt), ÁSZF-szakasz, szellem-oldal szabály (N hónap belépés és forgalom nélkül → fagy). Nagyságrend: **napok, nem hetek**, mert a tiltó kapuk (jogi csomag, fotó, §C) változatlanok. Infra: semmi 10 000 oldalig.
+
+**Köztes változatok, amiket a motor mérhet az „örökre ingyen” helyett:**
+- **A) Fordított próba (reverse trial):** 14 nap Teljes, utána NEM fagy, hanem **visszaesik ingyenes Alapra** aldomainen. Minden meglévő kód, egyetlen pont változik (a lejárat = leminősítés, nem 503). A fizetős modulok hiánya a saját oldalán látszik — ez a legerősebb upsell-pillanat.
+- **B) Ingyen a szezonig:** Alap ingyen a kiküldést követő első szezonnyitásig (pl. április 30.), utána fizetős — határidő van, de a tulaj órájához igazítva.
+- **C) Ingyen aldomain + fizetős domain már az első naptól** (az ingyenes ág egyetlen kézzelfogható upsellje a saját .hu név, 1 990 Ft/év önköltség → akár 3 990 Ft/év áron a bizalmi kapu).
+
+**Ajánlás (mérés-alapú, nem ízlés):** nem „örökre ingyen Alap” első lépésként, hanem **A) fordított próba** a motor egy szeletén, az aktiválás-javításokkal (7.1) együtt. Mérendő 60 napon: visszaesett oldalak száma, belépés, modulvásárlás, domain-vásárlás, leiratkozás, és a hideg levél nyitása „ingyen, határidő nélkül” tárggyal vs a mai. Ha az ingyenes oldalak 60 nap után sem hoznak belépést, az „örökre ingyen” csak a jogi tömeget növelné.
+
+---
+
 ## 9. Javasolt sorrend és a döntést kérő pontok
 
 **Sorrend:** (1) kísérlet-motor + levélnyitás-mérés (§2) → (2) tárgy/feladó/sima-levél változatok a motorba (§3) → (3) sorozat vissza: Re:, viselkedés-üzenet gyorsítva, ADR-0442; +4 napos MMS a tulaj ↩️-jével → (4) gépi hívás: jogi kör + 50 leades SIP-próba → (5) lap: kalkulátor, „vegye át”, visszatérés-ok → (6) képeslap a top-leadeknek, falu-ütemezés.
@@ -201,3 +249,4 @@ Direkt üzenetet cég nem kezdeményezhet (Messenger/Instagram, platform-szabál
 4. 🔴 Gépi hívás: jogi kör után SIP-trunk (percdíj) vagy második modem?
 5. 🔴 Képeslap/doboz: 305–900 Ft/db a top-leadekre — igen/nem, havi keret?
 6. 🔴 Falu-hirdetés napi pár száz Ft-ért — marad a „fizetős tilos”, vagy itt kivétel?
+7. 🟡 Freemium (§10): **A) fordított próba** (14 nap Teljes → ingyenes Alap aldomainen, nem 503) egy szeleten mérve · **örökre ingyen Alap** mindenkinek · marad a mai 14 nap + fagyás?
