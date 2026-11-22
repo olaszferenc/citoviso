@@ -11,7 +11,7 @@
 //
 // International input ("+CC…", "00CC…") is the same for every country: phone.ts's rules.
 import type { CountryConfig } from "../country.js";
-import { isHuMobileE164, normalizePhone, prettyPhone } from "./phone.js";
+import { HU_PHONE_TEXT_PATTERN, isHuMobileE164, normalizePhone, prettyPhone, splitPhones } from "./phone.js";
 import { jsonForScript } from "./jsonForScript.js";
 
 export type PhoneRules = Pick<CountryConfig, "dialCode" | "trunkPrefix" | "mobilePrefixes" | "phonePlan" | "phoneNsnMin" | "phoneNsnMax">;
@@ -23,7 +23,13 @@ export function normalizePhoneIn(raw: string, cfg: PhoneRules | null): string | 
   const c = raw.replace(/[\s\-()./]/g, "");
   if (!/^\+?[0-9]{6,15}$/.test(c)) return null;
   const intl = c.startsWith("+") ? c : c.startsWith("00") && c[2] !== "0" ? `+${c.slice(2)}` : null;
-  if (intl) return /^\+[1-9][0-9]{6,14}$/.test(intl) ? intl : null;
+  if (intl) {
+    // "+385 (0)91 …": the trunk prefix written in brackets after the dial code is not part
+    // of the number (nemzetközi A — common on Croatian pages).
+    const t = cfg?.trunkPrefix ? `+${cfg.dialCode}${cfg.trunkPrefix}` : null;
+    const fixed = t && intl.startsWith(t) && /\(\s*0\s*\)/.test(raw) ? `+${cfg!.dialCode}${intl.slice(t.length)}` : intl;
+    return /^\+[1-9][0-9]{6,14}$/.test(fixed) ? fixed : null;
+  }
   if (!cfg) return null;
   // A number already carrying the dial code without "+" ("359888040056").
   let nsn: string | null = null;
@@ -102,4 +108,69 @@ export function phoneRulesJs(cfg: PhoneRules | null): string {
     `function pretty(e){var p='+'+PR.d;if(!e||e.indexOf(p)!==0)return e;var n=e.slice(p.length),g=[],i=0;` +
     `while(n.length-i>4){g.push(n.slice(i,i+3));i+=3}g.push(n.slice(i));return p+' '+g.join(' ')}`
   );
+}
+
+// ── Collection-side helpers (nemzetközi A, ADR-XXXX): the scrapers' Hungarian-only pieces —
+// splitPhones, the digit-key of the de-dup ledgers, the "find a number in page text" regex,
+// the loose mobile test — each with the country row deciding. The 'hu' plan delegates to the
+// exact Hungarian code it replaces, so a Hungarian lead behaves byte-for-byte as before.
+
+/** Every number in a field, E.164, written order, no duplicates (splitPhones for any row). */
+export function splitPhonesIn(raw: string, cfg: PhoneRules | null): string[] {
+  if (cfg?.phonePlan === "hu") return splitPhones(raw);
+  const out: string[] = [];
+  for (const piece of raw.split(/[,;|\n]+|[^\d\s\-()./+]+/)) {
+    if (!/\d/.test(piece)) continue;
+    const one = normalizePhoneIn(piece, cfg);
+    if (one && !out.includes(one)) out.push(one);
+  }
+  return out;
+}
+
+/** The comparable digit key of a number in `cfg`'s country: its national part, whatever
+ *  prefix it was written with (+CC, 00CC, CC, trunk). HU = the ledgers' historic rule. */
+export function phoneKeyIn(v: string, cfg: Pick<PhoneRules, "dialCode" | "trunkPrefix"> | null): string {
+  const d = v.replace(/\D/g, "");
+  const dial = cfg?.dialCode ?? "";
+  if (!dial) return d;
+  if (d.startsWith(`00${dial}`)) return d.slice(2 + dial.length);
+  if (d.startsWith(dial) && d.length >= dial.length + 8) return d.slice(dial.length);
+  if (cfg?.trunkPrefix && d.startsWith(cfg.trunkPrefix)) return d.slice(cfg.trunkPrefix.length);
+  return d;
+}
+
+const escRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * The pattern that FINDS a number of `cfg`'s country in free text (a snippet, a page): an
+ * international prefix (+CC / 00CC) or the trunk prefix, then digit groups. HU = the exact
+ * historic PHONE_RE of enrichWebSearch. What it finds is only a candidate — normalizePhoneIn
+ * decides whether it is a valid number of that plan.
+ */
+export function phoneTextPatternIn(cfg: Pick<PhoneRules, "dialCode" | "trunkPrefix" | "phonePlan"> | null): string {
+  if (!cfg || cfg.phonePlan === "hu") {
+    return HU_PHONE_TEXT_PATTERN;
+  }
+  const pre = [`\\+${cfg.dialCode}`, `00${cfg.dialCode}`, ...(cfg.trunkPrefix ? [escRe(cfg.trunkPrefix)] : [])].join("|");
+  return String.raw`(?<![\d/.])(?:` + pre + String.raw`)[\s/().-]*\d{1,3}[\s/().-]*\d{2,4}[\s/().-]*\d{2,4}(?:[\s/-]?\d{1,4})?(?!\d)`;
+}
+
+/** phoneTextPatternIn as a RegExp (`flags` e.g. "g"). */
+export function phoneTextRegexIn(cfg: Pick<PhoneRules, "dialCode" | "trunkPrefix" | "phonePlan"> | null, flags = ""): RegExp {
+  return new RegExp(phoneTextPatternIn(cfg), flags);
+}
+
+/** Loose mobile test on a number as WRITTEN (any prefix) — HU keeps enrichContact's rule. */
+export function isMobileRawIn(phone: string, cfg: PhoneRules | null): boolean {
+  if (!cfg) return false;
+  if (cfg.phonePlan === "hu") {
+    let d = phone.replace(/\D/g, "");
+    if (d.startsWith("0036")) d = d.slice(4);
+    else if (d.startsWith("36")) d = d.slice(2);
+    else if (d.startsWith("06")) d = d.slice(2);
+    else if (d.startsWith("6") && d.length >= 9) d = d.slice(1);
+    return cfg.mobilePrefixes.includes(d.slice(0, 2));
+  }
+  const e = normalizePhoneIn(phone, cfg);
+  return !!e && isMobileE164In(e, cfg);
 }

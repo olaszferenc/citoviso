@@ -69,6 +69,11 @@ function normalizeOne(raw: string): string | null {
   return null;
 }
 
+/** A Hungarian number in free text (a snippet, a page) — a CANDIDATE for normalizePhone().
+ *  The historic PHONE_RE of the web enricher, verbatim; phoneCountry.phoneTextPatternIn()
+ *  returns it for the 'hu' plan. */
+export const HU_PHONE_TEXT_PATTERN = String.raw`(?<![\d/.])(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}(?!\d)`;
+
 /** Hungarian mobile, in the E.164 form normalizePhone() returns. */
 export function isHuMobileE164(e164: string): boolean {
   return e164.startsWith("+36") && HU_MOBILE.has(e164.slice(3, 5));

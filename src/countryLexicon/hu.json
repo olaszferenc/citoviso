@@ -1,0 +1,43 @@
+{
+  "iso2": "HU",
+  "osmNameTag": "name:hu",
+  "tradeWords": [
+    "szallas", "szallashely", "szallashelyek", "apartman", "apartmanok", "apartmanhaz",
+    "kemping", "camping", "udulo", "vendeghaz", "vendeghazak", "haz", "panzio",
+    "hotel", "tabor", "hely", "ifjusagi", "turistahaz", "motel", "resort", "villa",
+    "vendeglo", "etterem", "szoba", "szobak", "parton", "vadkempingezo",
+    "diakszallas", "kozossegi", "faluhaz", "porta", "birtok", "kiado", "balaton",
+    "wifi"
+  ],
+  "subdivisions": [
+    { "code": "BA", "name": "Baranya" },
+    { "code": "BE", "name": "Békés" },
+    { "code": "BK", "name": "Bács-Kiskun" },
+    { "code": "BU", "name": "Budapest" },
+    { "code": "BZ", "name": "Borsod-Abaúj-Zemplén" },
+    { "code": "CS", "name": "Csongrád-Csanád" },
+    { "code": "FE", "name": "Fejér" },
+    { "code": "GS", "name": "Győr-Moson-Sopron" },
+    { "code": "HB", "name": "Hajdú-Bihar" },
+    { "code": "HE", "name": "Heves" },
+    { "code": "JN", "name": "Jász-Nagykun-Szolnok" },
+    { "code": "KE", "name": "Komárom-Esztergom" },
+    { "code": "NO", "name": "Nógrád" },
+    { "code": "PE", "name": "Pest" },
+    { "code": "SO", "name": "Somogy" },
+    { "code": "SZ", "name": "Szabolcs-Szatmár-Bereg" },
+    { "code": "TO", "name": "Tolna" },
+    { "code": "VA", "name": "Vas" },
+    { "code": "VE", "name": "Veszprém" },
+    { "code": "ZA", "name": "Zala" }
+  ],
+  "contactPaths": ["/kapcsolat", "/elerhetoseg", "/elerhetosegek", "/contact"],
+  "contactWords": ["kapcsolat", "elerhetoseg", "elerhetosegek", "contact"],
+  "phoneLabels": ["Tel", "Telefon", "Mobil", "Mobile", "Phone"],
+  "freemailDomains": [
+    "gmail.com", "googlemail.com", "freemail.hu", "citromail.hu", "t-online.hu", "hotmail.com",
+    "outlook.com", "outlook.hu", "live.com", "yahoo.com", "icloud.com", "gmx.net", "vipmail.hu",
+    "chello.hu", "invitel.hu", "upcmail.hu", "indamail.hu"
+  ],
+  "officialSiteWords": ["hivatalos oldal", "hivatalos honlap", "official website", "official site"]
+}

@@ -1,0 +1,47 @@
+{
+  "iso2": "HR",
+  "osmNameTag": "name:hr",
+  "tradeWords": [
+    "smjestaj", "privatni", "apartman", "apartmani", "apartmana", "apartment", "apartments",
+    "apartmenti", "soba", "sobe", "rooms", "room", "zimmer", "kuca", "kuce", "odmor", "holiday",
+    "home", "house", "vila", "villa", "villas", "pansion", "pension", "hotel", "hoteli", "hostel",
+    "motel", "kamp", "camp", "camping", "kampiraliste", "odmoriste", "mobilne", "kucice",
+    "mobile", "homes", "studio", "studios", "guesthouse", "guest", "rezidencija", "residence",
+    "resort", "obiteljski", "seoski", "turizam", "agroturizam", "opg", "bed", "breakfast",
+    "lux", "luxury", "more", "sea", "view", "beach", "plaza", "wifi", "ferienwohnung",
+    "appartamenti", "camere", "i", "and", "the", "doo", "d.o.o", "obrt"
+  ],
+  "subdivisions": [
+    { "code": "01", "name": "Zagrebačka županija" },
+    { "code": "02", "name": "Krapinsko-zagorska županija" },
+    { "code": "03", "name": "Sisačko-moslavačka županija" },
+    { "code": "04", "name": "Karlovačka županija" },
+    { "code": "05", "name": "Varaždinska županija" },
+    { "code": "06", "name": "Koprivničko-križevačka županija" },
+    { "code": "07", "name": "Bjelovarsko-bilogorska županija" },
+    { "code": "08", "name": "Primorsko-goranska županija" },
+    { "code": "09", "name": "Ličko-senjska županija" },
+    { "code": "10", "name": "Virovitičko-podravska županija" },
+    { "code": "11", "name": "Požeško-slavonska županija" },
+    { "code": "12", "name": "Brodsko-posavska županija" },
+    { "code": "13", "name": "Zadarska županija" },
+    { "code": "14", "name": "Osječko-baranjska županija" },
+    { "code": "15", "name": "Šibensko-kninska županija" },
+    { "code": "16", "name": "Vukovarsko-srijemska županija" },
+    { "code": "17", "name": "Splitsko-dalmatinska županija" },
+    { "code": "18", "name": "Istarska županija" },
+    { "code": "19", "name": "Dubrovačko-neretvanska županija" },
+    { "code": "20", "name": "Međimurska županija" },
+    { "code": "21", "name": "Grad Zagreb" }
+  ],
+  "contactPaths": ["/kontakt", "/kontakti", "/hr/kontakt", "/contact", "/en/contact"],
+  "contactWords": ["kontakt", "kontakti", "kontaktirajte nas", "contact"],
+  "phoneLabels": ["Tel", "Telefon", "Mob", "Mobitel", "GSM", "Phone", "Mobile"],
+  "freemailDomains": [
+    "gmail.com", "googlemail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com", "icloud.com",
+    "gmx.net", "gmx.de", "net.hr", "inet.hr", "vip.hr", "optinet.hr", "globalnet.hr", "t-com.hr",
+    "email.t-com.hr", "zg.t-com.hr", "st.t-com.hr", "ri.t-com.hr", "os.t-com.hr", "du.t-com.hr",
+    "zd.t-com.hr", "pu.t-com.hr", "sk.t-com.hr", "ka.t-com.hr", "vz.t-com.hr", "si.t-com.hr", "hi.t-com.hr"
+  ],
+  "officialSiteWords": ["sluzbena stranica", "sluzbene stranice", "official website", "official site"]
+}
