@@ -1,6 +1,6 @@
 # 2026-11-22 — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin, üzem országfüggően
 
-SUB `cit5664e772`, koordinátor `cit9b4690e3`, brief `~/rc-briefs/nemzetkozi-C-konverzio-uzem-20261122.md`, ADR-XXXX.
+SUB `cit5664e772`, koordinátor `cit9b4690e3`, brief `~/rc-briefs/nemzetkozi-C-konverzio-uzem-20261122.md`, ADR-0468.
 
 ## Elvégzett munka
 - `0150`: IT/ES/PT/FR/BG ország-sor (valós master-adat, csak e-mail, IFA `none`, ünnepnapok 2026+2027) + ár-réteg (HR-másolat, .com), piac zárva.

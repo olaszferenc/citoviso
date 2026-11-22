@@ -1,4 +1,4 @@
-## ADR-XXXX — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin és üzem országfüggően + öt új ország
+## ADR-0468 — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin és üzem országfüggően + öt új ország
 
 **Státusz:** ELFOGADVA (tulaj-jóváhagyás 2026-11-22 a koordinátoron át, `cit9b4690e3`; brief
 `nemzetkozi-C-konverzio-uzem-20261122.md`, SUB `cit5664e772`) · **Épít:** ADR-0437, ADR-0443, ADR-0457,
