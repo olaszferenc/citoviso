@@ -1,4 +1,4 @@
-## ADR-XXXX — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban) felület-kapu kivétellel
+## ADR-0469 — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban) felület-kapu kivétellel
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-22 a koordinátoron át, `cit9b4690e3`; MEMORY „TULAJ-DÖNTÉSEK (nemzetközi C után)” (2))
 · **Épít:** ADR-0468 (Nemzetközi C), ADR-0464 ③ (`hungarianRoomName` minta), ADR-0361 (iCal-szinkron).

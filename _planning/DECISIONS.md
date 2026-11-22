@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-nemzetkozi-c-ket-nem-hu-felulet-kivetellel.md) — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban) felület-kapu kivétellel
+- [ADR-0469](decisions/0469-nemzetkozi-c-a-ket-nem-magyar-felulet.md) — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban) felület-kapu kivétellel
 - [ADR-0468](decisions/0468-nemzetkozi-c-konverzio-fizetes-szamla-domain.md) — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin és üzem országfüggően + öt új ország
 - [ADR-0467](decisions/0467-nemzetkozi-a-a-lead-gyujtes-orszagfuggo.md) — Nemzetközi A: a lead-gyűjtés országfüggő — országszótár (adatfájl) + országfüggő telefon a gyűjtő kódban és a láncban
 - [ADR-0466](decisions/0466-nemzetkozi-b-utankovetes-valasz-elutasito-es.md) — Nemzetközi B: utánkövetés, válasz, elutasító és kiküldési sor a lead országában

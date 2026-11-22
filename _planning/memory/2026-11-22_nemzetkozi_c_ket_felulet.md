@@ -1,7 +1,7 @@
 # 2026-11-22 — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban)
 
 **Session:** `cit269660c7` (SUB, koordinátor `cit9b4690e3`), brief `~/rc-briefs/nemzetkozi-c-felulet-land-20261122.md`.
-**ADR:** ADR-XXXX (tulaj felület-kapu kivétel, minta nélkül).
+**ADR:** ADR-0469 (tulaj felület-kapu kivétel, minta nélkül).
 
 ## Elvégezve
 - A C SUB visszatartott patche (`~/rc-briefs/nemzetkozi-c-felulet/full-context.patch`) átdolgozva a mai mainre: a
