@@ -38,6 +38,10 @@ export async function seedHrTestPrices(): Promise<{ base: number; modules: numbe
   const pricing = await import("../../src/pricing.ts");
   const { MODULE_CATALOG, MULTILANG_TIERS } = await import("../../src/modules.ts");
   await pricing.loadPricing(true);
+  // 3/10: since migration 0149 the 'hr' layer is REAL (the owner's one-time euro copy of the live HU
+  // packages, .com) — a migrated scratch DB already carries it, and the fixture never overwrites it.
+  const hrNow = pricing.pricingRegions().find((s) => s.region === "hr");
+  if (hrNow && hrNow.baseMonthly > 0) return { base: hrNow.baseMonthly, modules: hrNow.modulePrices.size };
   const hu = pricing.pricingRegions().find((s) => s.region === "hu");
   if (!hu) throw new Error("hr-open-fixture: nincs 'hu' ár-régió a scratch DB-ben");
   if (!pricing.pricingRegions().some((s) => s.region === "hr")) await pricing.createPricingRegion("hr", "EUR");

@@ -39,7 +39,7 @@ nélkül. A végződés neve (.hu, .eu …) a beállításból jön, nem fix sz�
 4. **Minden névjavaslat sora kiírja a díját** az aktuális összeállítással: **„benne a csomagban”**,
    vagy a végződés havidíja („+1 200 Ft/hó”). Ez minden piac-állapotban látszik.
 5. **Összegzés-sor**: ha a platform-cím van kiválasztva, de az összeállítás hordozza az ingyen
-   címet: **„saját {tld} cím választható — 0 Ft”**. Saját cím választásakor a meglévő bontás-sor
+   címet: **„saját {tld} cím választható — {p}”** (a `{p}` a nulla a piac pénznemében: HU „0 Ft”, HR „0 €” — 3/10b, tulaj-kivétel 2026-11-22). Saját cím választásakor a meglévő bontás-sor
    marad („saját cím: a csomag része · 12 hó hűségidő”). Helye a meglévő bontás-soré: a
    fizetés-lépés összegzése. (A vázlat az 1. lépés lábléc-sorába tette; az élő 1. lépés lábléce
    egyetlen sor — csomag-váltó, végösszeg, „Tovább” —, a 2026-09-26-i mérés óta szándékosan szűk.)

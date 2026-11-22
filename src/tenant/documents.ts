@@ -169,6 +169,8 @@ export interface TenantAgreementView {
   readonly text: string | null;
   /** key/value rows; the keys are stable, the view localizes them. */
   readonly facts: readonly { readonly key: string; readonly value: string }[];
+  /** 3/10 (Elek HR: „Naknada: 975”): the order's currency — the view formats the price in it. */
+  readonly currency?: string;
 }
 
 /**
@@ -187,6 +189,7 @@ export async function listTenantAgreements(tenantId: string): Promise<TenantAgre
       "order_intent.submitted_at as submittedAt",
       "order_intent.price as price",
       "order_intent.billing_period as billingPeriod",
+      "order_intent.currency as currency",
       "order_intent.domain_name as domainName",
       "order_intent.commitment_months as commitmentMonths",
       "order_intent.photo_rights_declared_at as photoAt",
@@ -230,6 +233,7 @@ export async function listTenantAgreements(tenantId: string): Promise<TenantAgre
           { key: "domain", value: o.domainName ?? "" },
           { key: "commitment", value: o.commitmentMonths === null ? "" : String(o.commitmentMonths) },
         ].filter((f) => f.value !== ""),
+        ...(o.currency ? { currency: String(o.currency) } : {}),
       });
     }
     if (o.termsAt) {

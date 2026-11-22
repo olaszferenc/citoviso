@@ -1974,7 +1974,7 @@
       stEl.innerHTML =
         '<span class="cit-cfg-dok">' + I.check + esc(addrCand.availability === "free" ? tr("szabad") : tr("ellenőrizzük")) + "</span>" +
         (fee === 0
-          ? '<span class="cit-cfg-dok">' + esc(tr("benne a csomagban · 0 Ft")) + "</span>"
+          ? '<span class="cit-cfg-dok">' + esc(tr("benne a csomagban · {p}").replace("{p}", fmt(0))) /* 3/10: „0 Ft” on a euro page */ + "</span>"
           : '<span class="cit-cfg-dfee">+' + esc(fmt(fee)) + esc(tr("/hó")) + "</span>");
     } else {
       nameEl.textContent = "";
@@ -2008,7 +2008,7 @@
     var noFloor = !(DOM.minPackageMonthly > 0);
     var buyout = DOM.buyoutPrice > 0 ? fmt(DOM.buyoutPrice) : null;
     var rows = [
-      [tr("Díj"), inc ? tr("a csomag része (0 Ft)") : fmt(outside) + tr("/hó")],
+      [tr("Díj"), inc ? tr("a csomag része ({p})").replace("{p}", fmt(0)) : fmt(outside) + tr("/hó")],
       [tr("Hűségidő"), tr("{months} hónap").replace("{months}", months)],
       [tr("Utána"), tr("a név vételár nélkül az Öné, ha lemond")],
       [
@@ -2069,7 +2069,7 @@
       '<div class="cit-cfg-dedit" hidden>' +
       '<div class="cit-cfg-own__row">' +
       '<input class="cit-cfg-own__in" type="text" spellcheck="false" autocapitalize="off" ' +
-      'autocorrect="off" inputmode="url" placeholder="pelda.hu" aria-label="' + tr("Saját domain név") + '">' +
+      'autocorrect="off" inputmode="url" placeholder="' + esc(tr("pelda") + ((DOM && DOM.tlds && DOM.tlds[0] && DOM.tlds[0].tld) || ".hu")) + '" aria-label="' + tr("Saját domain név") + '">' +
       '<button class="cit-cfg-own__btn" type="button">' + tr("Ellenőrzés") + "</button>" +
       "</div>" +
       '<p class="cit-cfg-own__status" aria-live="polite"></p>' +
@@ -4099,7 +4099,7 @@
       // own address free — the footer says so (it is a choice left on the table, not a charge).
       sumEl.innerHTML +=
         '<span class="cit-cfg-domfee cit-cfg-domfee--inc">' +
-        esc(tr("saját {tld} cím választható — 0 Ft").replace("{tld}", freePkgTlds().join("/"))) +
+        esc(tr("saját {tld} cím választható — {p}").replace("{tld}", freePkgTlds().join("/")).replace("{p}", fmt(0))) +
         "</span>";
     }
     refreshDomainTerms();

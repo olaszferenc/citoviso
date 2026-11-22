@@ -20,7 +20,8 @@ export async function makeCountryReady(iso: string, lang: string): Promise<void>
   const scope = await packs.buyerCatalog();
   const have = (await packs.loadPack(lang)) ?? {};
   const merged: Record<string, string> = { ...have };
-  for (const hu of scope) merged[hu] ??= `‹${lang}› ${hu.replace(/[aáeéiíoóöőuúüű]/gi, "·")}`;
+  // The {placeholder} tokens stay intact (3/10: „{·ff·rPr·c·}” never got its value in a test world).
+  for (const hu of scope) merged[hu] ??= `‹${lang}› ${hu.split(/(\{[a-zA-Z0-9_]+\})/).map((part) => (/^\{[a-zA-Z0-9_]+\}$/.test(part) ? part : part.replace(/[aáeéiíoóöőuúüű]/gi, "·"))).join("")}`;
   await db
     .insertInto("language_pack")
     .values({ lang, strings: JSON.stringify(merged), status: "generated" } as never)

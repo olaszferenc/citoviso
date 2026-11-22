@@ -45,6 +45,8 @@ export interface HrWorld {
   readonly token: string;
   readonly mockPath: string;
   readonly letterPath: string | null;
+  /** 3/10: the personal letter for this lead, rendered (not sent). */
+  readonly personalLetterPath: string | null;
   readonly opCookie: string;
   close(): Promise<void>;
 }
@@ -132,6 +134,22 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   const { mintOperatorCookieValue } = await import("../../src/auth/operatorAuth.ts");
 
   await refreshCountries();
+  // 3/10: the production package composition and off-sale list (read 2026-11-22: the own domain is
+  // Alap content, e-mail and newsletter off sale) — the scratch DB mirrors what a buyer sees there.
+  // GLOBAL settings, scratch only (assertScratchDb in the fixture guards the database name).
+  const { assertScratchDb } = await import("./hr-open-fixture.mts");
+  assertScratchDb();
+  const PROD_TIERS: Record<string, string> = {
+    domain: "alap", enquiry: "alap", gallery: "alap", location: "alap",
+    amenities: "ajanlott", reviews: "ajanlott", rooms: "ajanlott", usp: "ajanlott",
+    booking: "teljes", email: "teljes", hours: "teljes", poi: "teljes", pricing: "teljes",
+  };
+  for (const [module_id, tier] of Object.entries(PROD_TIERS)) {
+    await db.insertInto("package_module").values({ module_id, tier } as never).onConflict((oc) => oc.column("module_id").doUpdateSet({ tier } as never)).execute();
+  }
+  await db.insertInto("app_setting").values({ key: "module_sales_disabled", value: JSON.stringify(["newsletter", "email"]) } as never)
+    .onConflict((oc) => oc.column("key").doUpdateSet({ value: JSON.stringify(["newsletter", "email"]) } as never)).execute();
+  await db.updateTable("pricing_config").set({ domain_free_in_package: true } as never).where("region", "=", "hu").execute();
   await seedHrTestPrices();
   await markMissingHrStrings();
   await approveHr();
@@ -184,6 +202,29 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
     console.warn(`[hr-world] a hideg levél NEM ment ki: ${JSON.stringify(sent.outcome)}`);
   }
 
+  // 3/10: the PERSONAL letter (experimentCopy.ts) for this HR lead, RENDERED — never sent: whether
+  // a non-Hungarian lead gets it is the conversion session's experiment order (assignVariants), and
+  // the world does not touch it. Same parts and HTML builder the send path uses.
+  let personalLetterPath: string | null = null;
+  try {
+    const { buildDraftForProspect } = await import("../../src/outreach/draft.ts");
+    const { personalParts, composePersonalBody, priceSentence } = await import("../../src/outreach/experimentCopy.ts");
+    const { buildOutreachEmail } = await import("../../src/email/outreachEmail.ts");
+    const dr = await buildDraftForProspect(p.id, { reserveLabel: false });
+    if (dr) {
+      const links = { cta: dr.draft.link, unsub: dr.draft.unsubscribeLink, privacy: dr.draft.privacyLink, ...(dr.draft.whyLink ? { why: dr.draft.whyLink } : {}) };
+      const parts = personalParts(dr.input, dr.draft, priceSentence(dr.lang, dr.draft.parts.priceOffer, dr.market.country), "Elek (Citoviso)");
+      const draft = { ...dr.draft, parts, body: composePersonalBody(parts, links, dr.lang) };
+      const msg = buildOutreachEmail(draft, "elek@citoviso.com", { lang: dr.lang, bodyStyle: "personal", noImage: true });
+      personalLetterPath = path.resolve(REPO, "outbox", `personal-${token}.html`);
+      const { mkdirSync, writeFileSync } = await import("node:fs");
+      mkdirSync(path.dirname(personalLetterPath), { recursive: true });
+      writeFileSync(personalLetterPath, `<!-- Subject: ${draft.subject} -->\n${(msg as { html?: string }).html ?? ""}\n<!-- TEXT -->\n<pre>${draft.body}</pre>`);
+    }
+  } catch (e) {
+    console.warn(`[hr-world] a személyes levél nem renderelhető: ${(e as Error).message}`);
+  }
+
   let frontServer: http.Server | null = null;
   if (front) {
     frontServer = http.createServer((req, res) => {
@@ -215,6 +256,7 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
     token,
     mockPath,
     letterPath,
+    personalLetterPath,
     opCookie: mintOperatorCookieValue(op.id),
     async close() {
       for (const s of [consoleServer, publicServer, frontServer]) {
@@ -227,6 +269,7 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
       const shots = path.resolve(REPO, "sites", "_outreach-shots");
       if (existsSync(shots)) for (const f of readdirSync(shots)) if (f.startsWith(gen.artifactId)) rmSync(path.join(shots, f), { force: true });
       if (letterPath && existsSync(letterPath)) rmSync(letterPath, { force: true });
+      if (personalLetterPath && existsSync(personalLetterPath)) rmSync(personalLetterPath, { force: true });
       await parent.drop();
       await db.destroy().catch(() => {});
     },

@@ -5389,6 +5389,7 @@ export interface DocumentsAdminData {
     readonly year: string;
     readonly text: string | null;
     readonly facts: readonly { readonly key: string; readonly value: string }[];
+    readonly currency?: string;
   }[];
   /** Which sub-list is open: 'szamlak' | 'szerzodesek'. */
   readonly sub: string;
@@ -5425,6 +5426,15 @@ function agreementFactLabel(key: string, lang: string): string {
       : key === "domain"
         ? T(lang, "Webcím")
         : T(lang, "Hűségidő");
+}
+
+/** 3/10 (Elek HR: „monthly”, „975”, „1” on the contract card): the stored value in the reader's
+ *  form — the period word, the price in the order's currency (minor units), the commitment in months. */
+function agreementFactValue(key: string, value: string, currency: string | undefined, lang: string): string {
+  if (key === "billingPeriod") return value === "annual" ? T(lang, "Éves") : value === "monthly" ? T(lang, "Havi") : value;
+  if (key === "price" && /^\d+$/.test(value)) return formatMinor(Number(value), currency ?? LEGACY_CURRENCY, lang);
+  if (key === "commitment" && /^\d+$/.test(value)) return T(lang, "{n} hónap", { n: Number(value) });
+  return value;
 }
 
 /** Exported for scripts/admin-list-labels-check.mts: the guard measures the
@@ -5607,7 +5617,7 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
             a.facts
               .map(
                 (f) =>
-                  `<dt>${esc(agreementFactLabel(f.key, lang))}</dt><dd>${esc(f.value)}</dd>`,
+                  `<dt>${esc(agreementFactLabel(f.key, lang))}</dt><dd>${esc(agreementFactValue(f.key, f.value, a.currency, lang))}</dd>`,
               )
               .join("") +
             `</dl>`

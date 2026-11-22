@@ -60,11 +60,11 @@ try {
   const { PRESETS } = await import("../src/modules.js");
   const mods = PRESETS.find((x) => x.id === "ajanlott")!.modules;
   const list = computeMonthly(mods, "hr");
-  const fee = domainFeeForCycle(1, "hr", { domain: "apartmanilavanda.hr", modules: mods, disabled: new Set() } as never);
+  const fee = domainFeeForCycle(1, "hr", { domain: "apartmanilavanda.com", modules: mods, disabled: new Set() } as never);
   const expect = applyOffer(list, { percent: pct }) + fee;
   const outboxBefore = new Set((await import("node:fs")).readdirSync("outbox"));
   const oRes = await cPost(`/p/${w.token}/request`, {
-    modules: mods, preset: "ajanlott", billing_period: "monthly", domain_type: "citoviso_registered", domain_name: "apartmanilavanda.hr",
+    modules: mods, preset: "ajanlott", billing_period: "monthly", domain_type: "citoviso_registered", domain_name: "apartmanilavanda.com",
     photo_rights_declared: true, recurring_consent: true, withdrawal_waiver: true, terms_accepted: true, price: expect,
     buyer_type: "individual", buyer_name: "Ivan Babić", buyer_country: "HR", buyer_zip: "21300", buyer_city: "Makarska",
     buyer_address: "Obala kralja Tomislava 12", buyer_email: "elek@citoviso.com",
@@ -110,7 +110,18 @@ try {
       await db.updateTable("domain_provisioning").set({ status: "registering" } as never).where("tenant_id", "=", t.id).execute();
       const forecast = await domainFeeForRenewal(t.id, 1, "hr", { forecast: true });
       const mint = await domainFeeForRenewal(t.id, 1, "hr");
-      check("folyamatban lévő beszerzés: az előrejelzés számol a díjjal, a terhelés NEM (§B.17)", forecast?.fee === fee && mint === null, `forecast ${JSON.stringify(forecast)} · mint ${JSON.stringify(mint)}`);
+      check(`folyamatban lévő beszerzés: az előrejelzés számol a díjjal (${fee ? formatMinor(fee, "EUR", "hr") : "0 — a domain csomag-tartalom"}), a terhelés NEM (§B.17)`, (fee === 0 ? forecast === null : forecast?.fee === fee) && mint === null, `forecast ${JSON.stringify(forecast)} · mint ${JSON.stringify(mint)}`);
+      // The same with a domain that is NOT package content (a fee is due): forecast = fee, mint = none.
+      {
+        const pricingMod = await import("../src/pricing.js");
+        await db.deleteFrom("package_module").where("module_id", "=", "domain").execute();
+        await pricingMod.loadPricing(true);
+        const f2 = await domainFeeForRenewal(t.id, 1, "hr", { forecast: true });
+        const m2 = await domainFeeForRenewal(t.id, 1, "hr");
+        check("ha a domain nem csomag-tartalom: az előrejelzés a havidíjjal (3 €), a terhelés nem", f2?.fee === 300 && m2 === null, `forecast ${JSON.stringify(f2)} · mint ${JSON.stringify(m2)}`);
+        await db.insertInto("package_module").values({ module_id: "domain", tier: "alap" } as never).execute();
+        await pricingMod.loadPricing(true);
+      }
       await db.updateTable("domain_provisioning").set({ status: "failed" } as never).where("tenant_id", "=", t.id).execute();
       await db.updateTable("site").set({ custom_domain_status: "failed" } as never).where("id", "=", site.id).execute();
       check("elbukott beszerzés: sem az előrejelzés, sem a terhelés nem számol vele", (await domainFeeForRenewal(t.id, 1, "hr", { forecast: true })) === null);
@@ -123,8 +134,8 @@ try {
   // d) the failure letter's wording follows the cause.
   {
     const { buildDomainFailedEmail } = await import("../src/email/domainEmail.js");
-    const notTaken = buildDomainFailedEmail({ to: "elek@citoviso.com", domain: "apartmanilavanda.hr", adminUrl: "https://x/admin", taken: false, lang: "hu" });
-    const taken = buildDomainFailedEmail({ to: "elek@citoviso.com", domain: "apartmanilavanda.hr", adminUrl: "https://x/admin", lang: "hu" });
+    const notTaken = buildDomainFailedEmail({ to: "elek@citoviso.com", domain: "apartmanilavanda.com", adminUrl: "https://x/admin", taken: false, lang: "hu" });
+    const taken = buildDomainFailedEmail({ to: "elek@citoviso.com", domain: "apartmanilavanda.com", adminUrl: "https://x/admin", lang: "hu" });
     check("nem-foglalt ok (plafon/pénznem/hiba) → a levél NEM mondja, hogy elkelt", !/elkelt|más lefoglalta/.test(`${notTaken.subject} ${notTaken.text}`), notTaken.subject);
     check("foglalt ok → a régi szöveg bájtra (HU)", taken.subject === "A választott webcím időközben elkelt" && /más lefoglalta/.test(taken.text));
   }
@@ -173,7 +184,7 @@ try {
     const login = await (await fetch(`${w.publicOrigin}/login?l=hr`)).text();
     check("/login?l=hr: horvátul (nincs „Ügyfél-belépés”, nincs „mutat”)", !login.includes("Ügyfél-belépés") && !/>mutat</.test(login) && !/'mutat'/.test(login), login.match(/<h1[^>]*>[^<]*/)?.[0] ?? "");
     const { injectOwnedBanner, injectOwnedNotice } = await import("../src/console/prospectNotice.js");
-    const own = { stage: "live", siteUrl: "https://apartmanilavanda.hr", loginUrl: "https://citoviso.test/login" } as never;
+    const own = { stage: "live", siteUrl: "https://apartmanilavanda.com", loginUrl: "https://citoviso.test/login" } as never;
     const ownHr = injectOwnedNotice(injectOwnedBanner("<html><body></body></html>", { ...(own as object), lang: "hr" } as never), { ...(own as object), lang: "hr" } as never);
     const ownHu = injectOwnedNotice(injectOwnedBanner("<html><body></body></html>", own), own);
     check("vásárlás utáni sáv: horvát lapon nincs magyar forrás, a magyar változatlan", !ownHr.includes("Ez az oldal már az Öné.") && !ownHr.includes("Ön a Citoviso ügyfele") && ownHu.includes("Ez az oldal már az Öné.") && ownHu.includes("Belépés a kezelőfelületre"));
@@ -187,8 +198,37 @@ try {
         check("a rendelésnél megadott OIB a Jogi adatok előtöltése", lg.who.taxNumber === "69435151530", String(lg.who.taxNumber));
       }
     }
+    {
+      const { documentsSection } = await import("../src/server/adminViews.js");
+      const docs = (currency: string, lang: string) => documentsSection({ invoices: [], agreements: [{ key: "order", acceptedAt: new Date("2026-11-22T10:00:00Z"), year: "2026", text: null, currency, facts: [{ key: "billingPeriod", value: "monthly" }, { key: "price", value: "975" }, { key: "commitment", value: "1" }] }], sub: "szerzodesek", year: "mind", q: "", nextRenewal: null, owed: null } as never, lang);
+      const hrDocs = docs("EUR", "hr");
+      check("Ugovori: az ár a rendelés pénznemében (9,75 €), nem „975”; az ütem nem „monthly”", hrDocs.includes("9,75") && !/>975</.test(hrDocs) && !/>monthly</.test(hrDocs), (hrDocs.match(/<dd>[^<]*<\/dd>/g) ?? []).join(" "));
+      const huDocs = docs("HUF", "hu");
+      check("Ugovori HU: „Havi”, „975 Ft”, „1 hónap”", huDocs.includes("<dd>Havi</dd>") && huDocs.includes("975 Ft") && huDocs.includes("1 hónap"), (huDocs.match(/<dd>[^<]*<\/dd>/g) ?? []).join(" "));
+    }
     const loginHu = await (await fetch(`${w.publicOrigin}/login`)).text();
     check("/login HU: változatlan felirat", loginHu.includes("Ügyfél-belépés") && />mutat</.test(loginHu));
+  }
+
+  // ── ⑤ the personal letter in every country (tulaj 11-22) ──────────────────────────────────
+  console.log("⑤ a személyes levél az ország pénznemében, domainjével, nyelvén");
+  {
+    const { priceSentence, personalParts, composePersonalBody, packageDomainTld } = await import("../src/outreach/experimentCopy.js");
+    const { collectFallbacks } = await import("../src/i18n/packs.js");
+    const { buildDraftForProspect } = await import("../src/outreach/draft.js");
+    check("HU árszöveg bájtra a régi", priceSentence("hu", "2 780", "HU") === "Ha tetszik: havi 2 780 Ft-tól, saját .hu címmel.");
+    const tld = packageDomainTld("HR");
+    const hr = priceSentence("hr", "7 €", "HR");
+    check(`HR árszöveg: euró, „Ft” nélkül, a régió csomag-domainje (${tld ?? "nincs"})`, !/Ft/.test(hr) && hr.includes("7 €") && (tld ? hr.includes(tld) : true), hr);
+    const dr = await buildDraftForProspect(w.prospectId, { reserveLabel: false });
+    if (dr) {
+      const { value: parts, fallbacks } = collectFallbacks(() => personalParts(dr.input, dr.draft, priceSentence(dr.lang, dr.draft.parts.priceOffer, "HR"), "Elek"));
+      const body = composePersonalBody(parts, { cta: dr.draft.link, unsub: dr.draft.unsubscribeLink, privacy: dr.draft.privacyLink }, dr.lang);
+      check("HR személyes levél: nincs „Ft”, a lap linkje benne", !/\bFt\b/.test(body) && body.includes(dr.draft.link), body.slice(0, 200));
+      check("HR személyes levél: a fordítás-mérés lefut (a teszt-világ jelölőivel nincs magyar fallback)", Array.isArray(fallbacks) && fallbacks.length === 0, fallbacks.join(" | "));
+      const ro = collectFallbacks(() => personalParts({ ...dr.input, lang: "ro" }, dr.draft, "", "Elek")).fallbacks;
+      check("csomag nélküli nyelven (ro) a személyes levél hiányát a mérés elkapja (→ §C-kapu, nincs magyar szöveg kiküldve)", ro.length > 0, String(ro.length));
+    }
   }
 
   // ── ④ plurals ───────────────────────────────────────────────────────────────────────────

@@ -21,6 +21,9 @@
 
 import { T } from "../i18n/mail.js";
 import { config } from "../config.js";
+import { pricingRegionForCountry } from "../country.js";
+import { carriesCurrencySign } from "../email/outreachEmail.js";
+import { getDomainFreeInPackage, offeredTlds } from "../pricing.js";
 import type { DraftInput, OutreachDraft, OutreachParts } from "./draft.js";
 
 /**
@@ -41,11 +44,34 @@ export function subjectIsThisYours(lang: string, name: string, city: string | nu
   return town ? T(lang, "Ez az Ön szállása? ({name}, {city})", { name, city: town }) : T(lang, "Ez az Ön szállása? ({name})", { name });
 }
 
-/** The price line of the personal letter; `country` = the lead's ISO-2 (the „.hu” is the Hungarian domain). */
+/**
+ * ORSZÁG-RÉTEG 3/10 (tulaj 11-22: a személyes levél minden országba): the domain ending a lead of
+ * `country` gets IN its base package — the country's pricing region must make the domain package
+ * content (`domain_free_in_package`) and offer an ending that is (`domain_tld.free_in_package`).
+ * Null = no such ending (the sentence then names no ending — never a claim the package cannot keep).
+ */
+export function packageDomainTld(country: string | null | undefined): string | null {
+  try {
+    const region = pricingRegionForCountry(country);
+    if (!getDomainFreeInPackage(region)) return null;
+    return offeredTlds(region).find((t) => t.freeInPackage)?.tld ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The price line of the personal letter; `country` = the lead's ISO-2. HU: the forint sentence with
+ * the „.hu” (byte-identical). Elsewhere (3/10): the amount carries its own currency sign (draft.ts
+ * fromPricePair → formatMinor, so no „Ft” after it) and the ending is the region's package domain.
+ */
 export function priceSentence(lang: string, offerPrice: string, country: string | null | undefined = "HU"): string {
-  return (country ?? "").toUpperCase() === "HU"
-    ? T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját .hu címmel.", { offerPrice })
-    : T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját címmel.", { offerPrice });
+  if ((country ?? "").toUpperCase() === "HU") return T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját .hu címmel.", { offerPrice });
+  if (!carriesCurrencySign(offerPrice)) return T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját címmel.", { offerPrice });
+  const tld = packageDomainTld(country);
+  return tld
+    ? T(lang, "Ha tetszik: havi {offerPrice}-tól, saját {tld} címmel.", { offerPrice, tld })
+    : T(lang, "Ha tetszik: havi {offerPrice}-tól, saját címmel.", { offerPrice });
 }
 
 /**

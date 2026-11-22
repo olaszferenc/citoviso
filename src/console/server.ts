@@ -4139,18 +4139,22 @@ async function handle(
   const cfgDomCheckMatch = /^\/configure\/([0-9a-f-]{36})\/domain-check$/i.exec(path);
   if (method === "GET" && cfgDomCheckMatch) {
     const norm = normalizeCustomDomain(url.searchParams.get("name") ?? "");
+    // 3/10 (Elek HR: „Csak angol betű…”, „pelda.hu” to a Croatian buyer): the reasons in the
+    // buyer's language (the lead's), Hungarian byte-identical.
+    const chkLead = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", cfgDomCheckMatch[1]!).executeTakeFirst();
+    const chkLang = chkLead?.lead_id ? await prepareRenderLang(await langForLead(chkLead.lead_id)) : "hu";
+    const chkRegion = await regionForArtifactOrNull(cfgDomCheckMatch[1]!);
     if (!norm.ok) {
-      return send(res, 200, JSON.stringify({ ok: false, reason: norm.reason }), "application/json");
+      return send(res, 200, JSON.stringify({ ok: false, reason: domainReasonText(chkLang, norm.reason ?? "", chkRegion) }), "application/json");
     }
     // ADR-0360 ③: the buyer picks name AND ending — but only from the offered endings of
     // the lead's market (ADR-0443).
-    const chkRegion = await regionForArtifactOrNull(cfgDomCheckMatch[1]!);
     if (!chkRegion || !offeredTldOf(norm.domain!, chkRegion)) {
       const list = chkRegion ? offeredTlds(chkRegion).map((t) => t.tld).join(", ") : "";
       return send(
         res,
         200,
-        JSON.stringify({ ok: false, reason: `Ezt a végződést nem kínáljuk. Választható: ${list || "—"}` }),
+        JSON.stringify({ ok: false, reason: T(chkLang, "Ezt a végződést nem kínáljuk. Választható: {list}", { list: list || "—" }) }),
         "application/json",
       );
     }
@@ -6112,6 +6116,31 @@ function alertWebhookOnce(gateway: string, paymentRef: string, status: number, r
   }
   webhookAlerted.set(key, now);
   void alertWebhookFailure({ gateway, paymentRef, status, reason });
+}
+
+/** 3/10: normalizeCustomDomain's reasons (Hungarian source) in the buyer's language — literal T()
+ *  calls so the catalogue carries them; the example ending is the market's own. */
+function domainReasonText(lang: string, reason: string, region: string | null): string {
+  if (lang === "hu") return reason;
+  const tld = (region ? offeredTlds(region)[0]?.tld : null) ?? ".com";
+  switch (reason) {
+    case "Adjon meg egy domain nevet":
+      return T(lang, "Adjon meg egy domain nevet");
+    case "Túl hosszú domain név":
+      return T(lang, "Túl hosszú domain név");
+    case "Végződés is kell, például: pelda.hu":
+      return T(lang, "Végződés is kell, például: {pelda}", { pelda: `${T(lang, "pelda")}${tld}` });
+    case "Hibás domain név (üres rész a pontok között)":
+      return T(lang, "Hibás domain név (üres rész a pontok között)");
+    case "Túl hosszú rész a domain névben":
+      return T(lang, "Túl hosszú rész a domain névben");
+    case "Csak angol betű, szám és kötőjel használható":
+      return T(lang, "Csak angol betű, szám és kötőjel használható");
+    case "Hibás végződés (például: .hu, .com)":
+      return T(lang, "Hibás végződés (például: {tld})", { tld });
+    default:
+      return reason;
+  }
 }
 
 /**

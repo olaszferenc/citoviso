@@ -41,7 +41,7 @@ A `plan.html` a jóváhagyott, működő vázlat. Felül váltható a méret és
 ### 4. A 2. lépés: cím — EGYETLEN felajánlott név, nincs lista
 
 **A felajánlott név**
-- Ha a csomag hordozza, a vezető sor: **„A csomagjához saját {tld} cím jár. Ezt a szabad nevet foglaltuk le Önnek:”**. A név nagy betűvel áll, alatta „szabad” és **„benne a csomagban · 0 Ft”**. Előre ki van jelölve.
+- Ha a csomag hordozza, a vezető sor: **„A csomagjához saját {tld} cím jár. Ezt a szabad nevet foglaltuk le Önnek:”**. A név nagy betűvel áll, alatta „szabad” és **„benne a csomagban · {p}”** (a `{p}` a nulla a piac pénznemében: HU „0 Ft”, HR „0 €” — 3/10b, tulaj-kivétel 2026-11-22). Előre ki van jelölve.
 - Ha a csomag NEM hordozza, a vezető sor: **„Saját címet is kérhet az oldalához. Ez a név szabad:”**. Ugyanez a kártya a végződés havidíjával („+{díj}/hó”) és egy **„Kérem a saját címet”** jelölőnégyzettel jelenik meg, alapból üresen.
 - Ha a csomag a küszöb alatt van, a kártya nem jelenik meg; a vezető sor kimondja a feltételt.
 - A felajánlott név a regisztrátor szerint SZABAD (a `/domains` első `free` találata; csomag-tartalomnál az ingyenes végződés előnyt kap). Foglalt nevet nem ajánlunk.

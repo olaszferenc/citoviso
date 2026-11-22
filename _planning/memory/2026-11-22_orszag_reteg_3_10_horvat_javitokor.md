@@ -26,3 +26,18 @@ Brief: `~/rc-briefs/orszag-reteg-3j-horvat-javitokor-20261121.md` · session `ci
   `apartmanilavanda`), vásárlás utáni mock foglaltság-404, Szállás.hu az admin iCal-kártyán / varázsló-lépésben, „Jedinica:
   Mogućnosti smještaja”, 25 % nem látszik az alsó sávban/csomag-ablakban (HU-n is így), Barion-sáv szövege.
 - Bábel-jegy: `~/rc-briefs/babel-orszag-reteg-3j-horvat-20261122.md` (hr 45 felirat + plurál-alakok + javítások).
+
+## 2. land (3/10b) — HR ár-réteg + személyes levél minden országba
+- **Landolva előtte:** 3/10 → origin/main `f3f7bb12`, ADR-0464.
+- **HR ár-réteg** (`0149`, additív, dev DB-ben lefutott): az ÉLŐ magyar ársor egyszeri euró-másolata, 1 € = 373,22 Ft
+  (MNB 2026-11-20). Alapdíj 5 €; modulok 1 € (szobák, vélemények, foglalás 2 €); csomagok Alap 7 / Ajánlott 13 /
+  Teljes 18 €; többnyelvű 13/16/21 €; 2 hónap ingyen évesen; domain csomag-tartalom, küszöb 5 €, havidíj 3 €,
+  kivásárlás 54 €, vállalás 1 hó; **.com** (4 899 Ft/év, HUF költség, plafon 6 200 Ft). Koordinátori döntés: a csomagár
+  a közvetlen átváltás kerekítve — a kódban a csomag = alapdíj + modulok, ezért a szobák/vélemények 2 €.
+- **Személyes levél**: `priceSentence` a pénznemmel és a régió csomag-domainjével (`packageDomainTld`), a személyes
+  változat fordítás-hiánya → §C → kontroll-levél (magyar soha). A bekapcsolás (`assignVariants`) érintetlen.
+- **Elek** (`~/rc-briefs/elek-hr-20261122b/vevo/LELETEK.md`): összegek mindenhol egyeznek (13 € lista, 9,75 € első díj,
+  13 € következő terhelés); javítva: „0 Ft” a domain-lépésben, „pelda.hu” + magyar domain-hibák, Ugovori nyers értékek.
+- **Nyitott (koordinátor/tulaj):** a személyes levél árszövege nem mondja ki, hogy csak az ELSŐ díj kedvezményes
+  (HU-n is így, tulaj-szöveg); a domain „minden csomag része” vs „kisebb csomagnál 3 €/hó” mondat; három különböző
+  citoviso-alcím; a dev DB magyar ársora/csomag-összetétele elavult az éleshez képest.

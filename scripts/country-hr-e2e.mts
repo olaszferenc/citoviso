@@ -129,7 +129,12 @@ const gaps0 = await missingHrStrings();
 const { BABEL_PENDING_3J } = await import("./lib/babel-pending-3j.mts");
 const pendingOk = new Set([ESCALATION_LEGAL, ...BABEL_PENDING_3J]);
 check("nyelv: legfeljebb a Bábelre váró feliratok hiányoznak (eszkalációs jogi sor + a 3/10 jegye)", gaps0.every((x) => pendingOk.has(x)) && (gaps0.length ? st0.babel === "bad" : st0.babel === "ok"), gaps0.filter((x) => !pendingOk.has(x)).join(" | "));
-check("az ársor HIÁNYOS (a régió üres — a tulaj állítja be)", st0.prices === "bad", r0.items.find((i) => i.key === "prices")?.detail);
+// The modules off sale on production (app_setting module_sales_disabled, read 2026-11-22) — the
+// package prices the owner approved are the ones a buyer sees there.
+const PROD_OFF_SALE = new Set(["email", "newsletter", "domain"]);
+// 3/10 (0149): the 'hr' price layer is the owner's one-time euro copy — complete as migrated.
+check("az ársor a 0149 horvát réteg: teljes, 5 € alapdíj, saját domain .com a csomagban", st0.prices === "ok" && pricing.getBaseMonthly("hr") === 500 && JSON.stringify(pricing.offeredTlds("hr").map((t) => t.tld)) === '[".com"]' && pricing.getDomainFreeInPackage("hr"), r0.items.find((i) => i.key === "prices")?.detail);
+check("a csomagárak: Alap 7 €, Ajánlott 13 €, Teljes 18 €", ["alap", "ajanlott", "teljes"].map((id) => pricing.computeMonthly((pricing.currentPresets().find((p) => p.id === id)?.modules ?? []).filter((m) => !PROD_OFF_SALE.has(m)), "hr")).join(",") === "700,1300,1800", ["alap", "ajanlott", "teljes"].map((id) => pricing.computeMonthly(pricing.currentPresets().find((p) => p.id === id)?.modules ?? [], "hr")).join(","));
 check("a piac-kapu zárva", !(await isMarketApproved("HR")) && !r0.open);
 check("2027 is lefedve (mozgó ünnepek évenként)", r0.items.find((i) => i.key === "holidays")?.detail.includes("2027") === true);
 
@@ -138,7 +143,7 @@ console.log("② az Országok lap: teszt-ársorral minden zöld, megnyitható");
 const seeded = await seedHrTestPrices();
 const marked = await markMissingHrStrings();
 if (marked.length) console.log(`   (jelölő-szöveg a Bábelre váró ${marked.length} feliratra — nem fordítás)`);
-console.log(`   (teszt-ársor: HUF → EUR, 1 € = ${TEST_HUF_PER_EUR} Ft; alapdíj ${formatMinor(seeded.base, "EUR", "hr")}, ${seeded.modules} modulár)`);
+console.log(`   (ár-réteg: alapdíj ${formatMinor(seeded.base, "EUR", "hr")}, ${seeded.modules} modulár — a 0149 migrációból)`);
 const op = await db.insertInto("operator_user").values({ username: "hr-e2e", display_name: "HR E2E", role: "superadmin", password_hash: "x" })
   .returning("id").executeTakeFirstOrThrow();
 const { mintOperatorCookieValue } = await import("../src/auth/operatorAuth.js");
@@ -173,7 +178,7 @@ try {
   check("mobilon is listázza a HR-t", (await page.getByText("Horvátország").count()) > 0);
 
   // ── ③ the mock ──────────────────────────────────────────────────────────────────────────
-  console.log("③ HR lead → horvát mock, .hr javaslat");
+  console.log("③ HR lead → horvát mock, .com javaslat (tulaj 11-22: .com, nem .hr)");
   const { createFixtureParent } = await import("./lib/fixture-parent.mts");
   const parent = await createFixtureParent(db as never, "hre2e");
   const lead = async (name: string, raw: Record<string, unknown>): Promise<string> =>
@@ -201,7 +206,7 @@ try {
   check("a lapon nincs magyar katalógus-felirat", left.length === 0, left.slice(0, 4).join(" | "));
   check("nincs magyar IFA-szabály, nincs Balaton, nincs forint", !/idegenforgalmi|Balaton|\bFt\b|forint/i.test(visibleText(html)) && !html.includes('data-cit-ifa="'));
   const sug = suggestDomains("Apartmani Lavanda", endingsForCountry(pricing.offeredTlds("hr").map((t) => t.tld), HR!.ownSiteTlds));
-  check(".hr javaslat elöl, nincs .hu", sug[0]?.endsWith(".hr") === true && sug.every((d) => !d.endsWith(".hu")), sug.join(", "));
+  check(".com javaslat, nincs .hu és .hr", sug.length > 0 && sug.every((d) => d.endsWith(".com")), sug.join(", "));
 
   // ── ④ the cold letter ───────────────────────────────────────────────────────────────────
   console.log("④ hideg levél: horvátul, EUR");

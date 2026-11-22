@@ -30,7 +30,7 @@ import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { ensureLanguagePack, missingBuyerPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, ensureLanguagePack, missingBuyerPackStrings } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { countryConfigSync } from "../country.js";
 import { babelHoldReason, outreachWindowBlocksIn } from "./countryOutreach.js";
@@ -39,7 +39,7 @@ import { isTestLeadName } from "./ownerTestPhone.js";
 import { planCountStill } from "./planSet.js";
 import { assignVariants, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
 import { mailHeroUrl, remoteHeroActive, storeMailHero } from "./emailOpen.js";
-import { composePersonalBody, personalParts, personalSenderName } from "./experimentCopy.js";
+import { composePersonalBody, personalParts, personalSenderName, priceSentence } from "./experimentCopy.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -461,8 +461,16 @@ export async function sendOutreachMail(
     if (v.bodyStyle === "personal") {
       // The personal first-person letter (experimentCopy.ts): its own parts and body, the price line
       // in its place; today's price sentence keeps its discount footnote.
-      const parts = personalParts(d.input, out, v.priceLine, personalSenderName());
-      return { ...out, parts, body: composePersonalBody(parts, links, d.lang) };
+      // 3/10: a foreign letter's own texts join the fallback measure — a personal variant with any
+      // untranslated sentence fails the §C gate below and the (translated) control letter goes out.
+      const { value: parts, fallbacks } = collectFallbacks(() => personalParts(d.input, out, v.priceLine, personalSenderName()));
+      const { value: body, fallbacks: bodyFallbacks } = collectFallbacks(() => composePersonalBody(parts, links, d.lang));
+      // The price sentence was chosen in assignVariants (outside this measure) — re-measured here.
+      const priceFallbacks = v.keys.price_line === "mondat"
+        ? collectFallbacks(() => priceSentence(d.lang, d.draft.parts.priceOffer ?? "", d.market.country)).fallbacks
+        : [];
+      const untranslated = out.untranslated ? [...new Set([...out.untranslated, ...fallbacks, ...bodyFallbacks, ...priceFallbacks])] : out.untranslated;
+      return { ...out, parts, body, ...(untranslated ? { untranslated } : {}) };
     }
     if (v.priceLine !== undefined) {
       // No discount in the letter → the discount's validity footnote has nothing to qualify.
