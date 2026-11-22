@@ -1,4 +1,4 @@
-## ADR-XXXX — Nemzetközi: HR végpróba (felderítéstől a fizetésig) + vevő-oldali zsákutcák a látogató nyelvén
+## ADR-0470 — Nemzetközi: HR végpróba (felderítéstől a fizetésig) + vevő-oldali zsákutcák a látogató nyelvén
 
 **Státusz:** ELFOGADVA (tulaj-jóváhagyás 2026-11-22 „ok mehet” a koordinátoron át, `cit9b4690e3`; brief
 `nemzetkozi-hr-vegproba-20261122.md`, SUB `cit41e31dd4`) · **Épít:** ADR-0437, ADR-0455, ADR-0456, ADR-0461,

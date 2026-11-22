@@ -1,6 +1,6 @@
 # 2026-11-22 — Nemzetközi: HR végpróba (felderítéstől a számláig) + Elek négy szerepben
 
-**Session:** SUB cit41e31dd4 (koordinátor cit9b4690e3). **ADR:** ADR-XXXX (`_planning/decisions/XXXX-nemzetkozi-hr-vegproba.md`).
+**Session:** SUB cit41e31dd4 (koordinátor cit9b4690e3). **ADR:** ADR-0470 (`_planning/decisions/XXXX-nemzetkozi-hr-vegproba.md`).
 Élesen semmi nem változott; prod DB-be írás nem volt; a HR piac csak scratch DB-ben nyílt.
 
 ## A lánc (1–7)
