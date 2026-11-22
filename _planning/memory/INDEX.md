@@ -8,6 +8,7 @@
 
 - [2026-11-22_orszag_reteg_3_10_horvat_javitokor.md](2026-11-22_orszag_reteg_3_10_horvat_javitokor.md) — 2026-11-22 — Ország-réteg 3/10: horvát javítókör (Elek HR leletei) + Elek ismétlés
 - [2026-11-22_nemzetkozi_b_kikuldes_valasz.md](2026-11-22_nemzetkozi_b_kikuldes_valasz.md) — 2026-11-22 — Nemzetközi B: kiküldés, utánkövetés, válasz, elutasító országfüggően (`cit4ddfda9e`)
+- [2026-11-22_nemzetkozi_A_gyujtes.md](2026-11-22_nemzetkozi_A_gyujtes.md) — 2026-11-22 — Nemzetközi A: a lead-gyűjtés országfüggő (repó + lánc-másolat)
 - [2026-11-22_kiserletek_riport.md](2026-11-22_kiserletek_riport.md) — 2026-11-22 — Riport „Kísérletek” fül + ár-sor dimenzió (citbeaa9a26)
 - [2026-11-22_brave_kivaltas_bongeszos_kereses.md](2026-11-22_brave_kivaltas_bongeszos_kereses.md) — 2026-11-22 — Brave-kiváltás: kulcs nélküli böngészős keresés (csak tartalék), honlap-kapu Brave elöl + böngésző csak VAN
 - [2026-11-21_kiserlet_motor.md](2026-11-21_kiserlet_motor.md) — 2026-11-21 — Kísérlet-motor a hideg megkereséshez (citbeaa9a26)
