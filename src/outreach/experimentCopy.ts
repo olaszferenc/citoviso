@@ -24,11 +24,12 @@ import { config } from "../config.js";
 import type { DraftInput, OutreachDraft, OutreachParts } from "./draft.js";
 
 /**
- * The study the billboard paragraph cites (owner's text, 2026-11-22) — ONE place, so a moved page is
- * a one-line fix. ⚠️ Measured 2026-11-22: this address answers 404; the study is reachable on Cornell's
- * eCommons — the replacement is the owner's/coordinator's call (reported).
+ * The source the billboard paragraph cites (owner's text, 2026-11-22) — ONE place, so a moved page is
+ * a one-line fix. Cornell's 2017 news article on the study (coordinator 2026-11-22; measured 200). The
+ * first address (…/research-publications/billboard-effect-still-alive-and-well) answered 404, and the
+ * eCommons record answers 429 to bots. The sentence itself stays as the owner wrote it (his decision).
  */
-export const CORNELL_BILLBOARD_URL = "https://business.cornell.edu/centers/chr/research-publications/billboard-effect-still-alive-and-well";
+export const CORNELL_BILLBOARD_URL = "https://business.cornell.edu/news/2017/04/14/online-travel-sites-still-important-hotel/";
 
 /** The personal sender's name (config), or "" when unset → the personal variants do not apply. */
 export function personalSenderName(): string {

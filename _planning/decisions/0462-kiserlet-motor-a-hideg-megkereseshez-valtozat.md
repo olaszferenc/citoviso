@@ -85,7 +85,9 @@ kattintott) nem választható szét, és minden szöveg-ötlet tulaj-kör maradt
    „csak Ön látja” fordulatot is keretezésnek számítja (igaz: a link nem nyilvános). Lelet: a megadott
    Cornell-oldal 2026-11-22-én 404-et ad, és a 75% egy 2011-es, nagy szállodalánc-foglalókra és az
    Expediára vonatkozó vizsgálatból származik (a 2017-es jelentés idézi, és gyengülő hatást mér) —
-   jelezve a koordinátornak.
+   jelezve a koordinátornak. Döntés (koordinátor, 2026-11-22): a link a 2017-es Cornell-cikk
+   (`business.cornell.edu/news/2017/04/14/online-travel-sites-still-important-hotel/`), a mondat szövege
+   a tulajé marad.
 
 ### Elvetett alternatívák
 
