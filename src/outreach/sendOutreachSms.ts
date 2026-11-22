@@ -42,6 +42,7 @@ import { normalizePhone, sendSms } from "../sms/sender.js";
 import { isMobileE164In, normalizePhoneIn } from "../text/phoneCountry.js";
 import { countryConfigSync } from "../country.js";
 import { babelHoldReason, modemPairBlocks, outreachWindowBlocksIn } from "./countryOutreach.js";
+import { leadPhoneE164 } from "./leadClock.js";
 import {
   SEND_WINDOW,
   budapestHhmm,
@@ -138,15 +139,16 @@ export function pairWindowBlocks(phoneE164: string, now: Date = new Date()): str
  * would silently miss the match.
  */
 export async function isPhoneSuppressed(phoneE164: string): Promise<boolean> {
+  // NEMZETKÖZI B: a lead marked „ne keressük” (lead.contact_block_at) stops its number too, and
+  // each stored number is read in ITS lead's country (a Croatian 091… is +385…, never null).
   const rows = await db
     .selectFrom("prospect")
     .innerJoin("lead", "lead.id", "prospect.lead_id")
     .select(["lead.raw as raw"])
-    .where("prospect.unsubscribed_at", "is not", null)
+    .where((eb) => eb.or([eb("prospect.unsubscribed_at", "is not", null), eb("lead.contact_block_at", "is not", null)]))
     .execute();
   for (const r of rows) {
-    const raw = (r.raw ?? {}) as { phone?: string };
-    if (raw.phone && normalizePhone(raw.phone) === phoneE164) return true;
+    if (leadPhoneE164(r.raw as { phone?: unknown; country?: unknown } | null) === phoneE164) return true;
   }
   return false;
 }
@@ -206,12 +208,15 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
       "prospect.mock_artifact_id as artifactId",
       "lead.id as leadId",
       "lead.name as leadName",
+      "lead.contact_block_at as contactBlockAt",
     ])
     .where("prospect.id", "=", prospectId)
     .executeTakeFirst();
 
   if (!p) return no("nincs ilyen prospect");
   if (p.unsubscribedAt) return no("a címzett leiratkozott — küldés tilos");
+  // NEMZETKÖZI B védőháló: „ne keressük” on the lead, even for a prospect created after the block.
+  if (p.contactBlockAt) return no("a lead „ne keressük” jelet kapott (elutasító / nem érintett) — küldés tilos");
   // Elek 10-13 O-1: a trialing or paying lead gets no cold message on any channel.
   const customer = await alreadyCustomerBlocks(p.leadId);
   if (customer) return no(customer);
@@ -339,6 +344,8 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   // protects the RECIPIENT, so the owner's allowlisted test number is exempt.
   // Budapest wall clock (ADR-0288): on the UTC server the process-local hour opened
   // this window at 10:00 and closed it at 22:00 Budapest time.
+  // country-layer-check ALLOW: only a lead of the modem's own country (dial code 36, the HU
+  // row — modemPairBlocks above) reaches this line, so Budapest IS the lead's clock.
   const now = new Date();
   if (!isAllowlistedTestNumber(to) && !mobileWindowOff() && !sendWindowOpen(now)) {
     return no(

@@ -3548,7 +3548,11 @@ async function handle(
       const fv = await fieldVisibility(loaded.id, loaded.lead.name);
       if (url.searchParams.get("part") === "fields")
         return send(res, 200, JSON.stringify({ fieldVisibility: fv }), "application/json");
-      const pack = { ...(await buildSourcePack(loaded)), fieldVisibility: fv };
+      // NEMZETKÖZI B: a lead outside Hungary says the language its copy is written in (the country
+      // row's default_lang; null = the country has no row → the writer refuses). A Hungarian pack
+      // carries no such key, so the writer's input stays byte for byte what it was.
+      const writeLang = countryConfigSync(await countryOfLead(loaded.id))?.defaultLang ?? null;
+      const pack = { ...(await buildSourcePack(loaded)), ...(writeLang === "hu" ? {} : { lang: writeLang }), fieldVisibility: fv };
       return send(res, 200, JSON.stringify(pack), "application/json");
     } catch (e) {
       console.error(`[source-pack] ${packMatch[1]}: ${(e as Error).message}`);

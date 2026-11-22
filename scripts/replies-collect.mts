@@ -74,6 +74,8 @@ interface NeedsSuggestion {
   lang?: string | null;
   /** The SMS sign-off in that language. */
   signature?: string;
+  /** NEMZETKÖZI B: the lead's zone (its country row); absent/null = Budapest only. */
+  timeZone?: string | null;
 }
 
 interface IngestReply {
@@ -131,7 +133,13 @@ function poeTicket(n: NeedsSuggestion, consoleBase: string): { name: string; bod
   const name = `${bpDay(n.receivedAt)}-${n.leadId.slice(0, 8)}-valasz-${n.id.slice(0, 8)}.md`;
   const url = n.url || `${consoleBase}/?reply=${encodeURIComponent(n.id)}#replies`;
   const ch = n.channel === "sms" ? "SMS" : "e-mail";
-  const at = new Date(n.receivedAt).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" });
+  // The operator box reads Budapest; a foreign lead's own local time rides beside it (NEMZETKÖZI B).
+  // country-layer-check ALLOW: operator-facing ticket stamp (Poe works on the Budapest box).
+  const at = new Date(n.receivedAt).toLocaleString("hu-HU", { timeZone: "Europe/Budapest" }) +
+    (n.timeZone && n.timeZone !== "Europe/Budapest"
+      ? ` (a lead helyi ideje: ${new Date(n.receivedAt).toLocaleString("hu-HU", { timeZone: n.timeZone })}, ${n.timeZone})`
+      : "");
+  const foreign = Boolean(n.lang && n.lang !== "hu");
   const sig = n.signature || "A Citoviso csapata";
   // ADR-0455: a non-Hungarian conversation says its language — Poe answers in it. A Hungarian
   // ticket stays as it was (no extra line).
@@ -155,8 +163,15 @@ function poeTicket(n: NeedsSuggestion, consoleBase: string): { name: string; bod
     `- Árat CSAK az élő árlistából (a konzol árazás-lapja — pricing_config), soha emlékezetből.\n` +
     (n.channel === "sms"
       ? `- SMS: legfeljebb 5 rész (a konzol számolja), aláírás: „${sig}”.\n`
-      : `- E-mail: a tárgy „Re: …”, aláírás: „Üdvözlettel,” + a megkeresés-levél márka-aláírása (konfigból — a mi korábbi levelünk alján látod).\n`) +
-    `- Magázol; személynév aláírásként soha.\n` +
+      : foreign
+        ? `- E-mail: a tárgy „Re: …” (a lead nyelvén szokásos alakban), aláírás: a lead nyelvén szokásos udvarias zárás (a „Üdvözlettel,” megfelelője) + a megkeresés-levél márka-aláírása (konfigból — a mi korábbi levelünk alján látod).\n`
+        : `- E-mail: a tárgy „Re: …”, aláírás: „Üdvözlettel,” + a megkeresés-levél márka-aláírása (konfigból — a mi korábbi levelünk alján látod).\n`) +
+    (foreign ? `- Magázol (a lead nyelvének udvarias formája); személynév aláírásként soha.\n` : `- Magázol; személynév aláírásként soha.\n`) +
+    // NEMZETKÖZI B (tulaj 2026-11-22): the refusal is recognised in ANY language. The mark itself is
+    // language-independent — „elutasító/nem érintett” (RUNBOOK §6b), whatever the reply's language; „ne keressük” stays the owner's.
+    (foreign
+      ? `- ⛔ Elutasító / nem érintett (bármely nyelven: pl. hr „ne, hvala”, „ne zanima me”, „nemojte me više kontaktirati”, „nisam vlasnik”): a „mire alapoztam” mező ELSŐ sora pontosan „elutasító/nem érintett — a tulaj dönt” (magyarul, bármely nyelvű a válasz; RUNBOOK §6b), és a javaslat csak udvarias tudomásulvétel a lead nyelvén — ajánlat, ár, link nélkül. A „ne keressük” gombot a tulaj nyomja meg.\n`
+      : "") +
     `- A „mire alapoztam” mezőbe soronként írd, honnan vetted (pl. „árazás: élő árlista”).\n`;
   return { name, body };
 }

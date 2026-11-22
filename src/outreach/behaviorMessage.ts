@@ -42,7 +42,11 @@ import { DEFAULT_LANG } from "../i18n/lang.js";
 import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { behaviorWindowBlocks } from "../sms/sendWindow.js";
-import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { normalizePhone } from "../text/phone.js";
+import { isMobileE164In } from "../text/phoneCountry.js";
+import { allCountriesSync, countryConfigSync, countryOfLeads } from "../country.js";
+import { modemPairBlocks } from "./countryOutreach.js";
+import { behaviorWindowBlocksIn, leadCountryCfg, leadPhoneE164 } from "./leadClock.js";
 import { helperFromName, helperName } from "../trial/helperPersona.js";
 import { advertiserIdentity, buildDraftForProspect, fromPricePair } from "./draft.js";
 import { checkOutreachDraft, checkOutreachSms } from "./outreachCheck.js";
@@ -201,6 +205,8 @@ export async function listBehaviorCandidates(
   if (!leadIds.length) return [];
 
   const leads = await db.selectFrom("lead").select(["id", "name", "raw", "lifecycle_status", "contact_block_at"]).where("id", "in", leadIds).execute();
+  // NEMZETKÖZI B: each lead's country (its raw.country, else its scrape area's — one query).
+  const leadCountry = await countryOfLeads(leadIds);
   const prospects = (await db
     .selectFrom("prospect")
     .select([
@@ -284,9 +290,13 @@ export async function listBehaviorCandidates(
     const lastActivity = lastMs ? new Date(lastMs) : null;
 
     // The channel the cold outreach used: the mobile first (owner's plan: „Mobil van → SMS”).
-    const rawPhone = ((lead.raw ?? {}) as { phone?: string }).phone;
-    const phone = rawPhone ? normalizePhone(rawPhone) : null;
-    const mobile = phone && isHuMobileE164(phone) ? phone : null;
+    // NEMZETKÖZI B: the number in the lead's OWN country; the SMS channel only where that country's
+    // mobile pair is open (the HU modem — a foreign lead has no SMS channel, owner 2026-11-22).
+    const leadRaw = lead.raw as { phone?: unknown; country?: unknown } | null;
+    const iso = leadCountry.get(lead.id) ?? null;
+    const leadCfg = countryConfigSync(iso);
+    const phone = leadPhoneE164(leadRaw, iso);
+    const mobile = phone && isMobileE164In(phone, leadCfg) && !modemPairBlocks(leadCfg) ? phone : null;
     const texted = pr.some((p) => p.sms_sent_at || p.mms_sent_at);
     const mailed = pr.filter((p) => p.email_sent_at && (p.contact_email ?? "").trim()).sort((a, b) => ms(b.email_sent_at) - ms(a.email_sent_at))[0];
     const mailedEmail = mailed ? mailed.contact_email!.trim() : null;
@@ -376,8 +386,8 @@ async function personStopKeys(): Promise<{ repliedKeys: Set<string>; blockedKeys
   const repliedKeys = new Set<string>();
   const blockedKeys = new Set<string>();
   for (const r of await db.selectFrom("outreach_reply").select("sender").execute()) for (const k of keyOf(r.sender)) repliedKeys.add(k);
-  const rows = await sql<{ phone: string | null; email: string | null; blocked: boolean; replied: boolean }>`
-    select l.raw->>'phone' as phone, p.contact_email as email,
+  const rows = await sql<{ raw: { phone?: unknown; country?: unknown } | null; email: string | null; blocked: boolean; replied: boolean }>`
+    select l.raw as raw, p.contact_email as email,
            (l.contact_block_at is not null) as blocked,
            exists (select 1 from outreach_reply r where r.lead_id = l.id) as replied
       from lead l
@@ -386,7 +396,9 @@ async function personStopKeys(): Promise<{ repliedKeys: Set<string>; blockedKeys
         or exists (select 1 from outreach_reply r where r.lead_id = l.id)
   `.execute(db);
   for (const r of rows.rows) {
-    const keys = [...keyOf(r.phone), ...keyOf(r.email)];
+    // The lead's phone in ITS country (NEMZETKÖZI B: a Croatian 091… → +385…, not dropped).
+    const ph = leadPhoneE164(r.raw);
+    const keys = [...(ph ? [`sms:${ph}`] : []), ...keyOf(r.email)];
     for (const k of keys) {
       if (r.blocked) blockedKeys.add(k);
       if (r.replied) repliedKeys.add(k);
@@ -461,7 +473,8 @@ export async function sendBehaviorMessage(c: BehaviorCandidate, deps: BehaviorDe
     return { kind: "skipped", reason: "nincs kiváltó vagy célpont" }; // i18n-exempt: operátori kimenet
   }
   if (+now < +c.dueAt) return { kind: "skipped", reason: "még nem esedékes — az utolsó aktivitás után 20 perc, a megkeresés után 48 óra" }; // i18n-exempt: operátori kimenet
-  const block = behaviorWindowBlocks(now);
+  // NEMZETKÖZI B: the LEAD's window (zone, working days, holidays); no country row → closed.
+  const block = behaviorWindowBlocksIn(now, await leadCountryCfg(c.leadId));
   if (block) return { kind: "skipped", reason: block };
 
   let send: () => Promise<{ detail: string; failed: boolean }>;
@@ -592,7 +605,10 @@ export async function runBehaviorMessages(deps: BehaviorDeps = {}): Promise<Beha
   const now = deps.now ?? new Date();
   const settings = await getBehaviorSettings();
   if (!deps.since && !settings.enabled) return { off: true, due: 0, sent: 0, skipped: [], dry: [] };
-  const block = behaviorWindowBlocks(now);
+  // Deferred only when no country's window is open (the HU sentence first, as before).
+  const block = allCountriesSync().every((cfg) => behaviorWindowBlocksIn(now, cfg) !== null)
+    ? (behaviorWindowBlocks(now) ?? "egyik ország viselkedés-ablaka sincs nyitva") // i18n-exempt: operátori kimenet
+    : null;
   if (block && !deps.dryRun) return { deferred: block, due: 0, sent: 0, skipped: [], dry: [] };
   const all = await listBehaviorCandidates({ now, since: deps.since, onlyLeads: deps.onlyLeads });
   const due = all.filter((c) => !c.excluded && c.dueAt && +c.dueAt <= +now);

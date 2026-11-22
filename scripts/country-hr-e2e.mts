@@ -127,7 +127,8 @@ const ESCALATION_LEGAL = "Ezt a levelet azért kapta, mert korábban megtekintet
 const gaps0 = await missingHrStrings();
 // 3/10: the round's new strings wait on the same Bábel ticket (scripts/lib/babel-pending-3j.mts).
 const { BABEL_PENDING_3J } = await import("./lib/babel-pending-3j.mts");
-const pendingOk = new Set([ESCALATION_LEGAL, ...BABEL_PENDING_3J]);
+const { BABEL_PENDING_NEMZB } = await import("./lib/babel-pending-nemzb.mts");
+const pendingOk = new Set([ESCALATION_LEGAL, ...BABEL_PENDING_3J, ...BABEL_PENDING_NEMZB]);
 check("nyelv: legfeljebb a Bábelre váró feliratok hiányoznak (eszkalációs jogi sor + a 3/10 jegye)", gaps0.every((x) => pendingOk.has(x)) && (gaps0.length ? st0.babel === "bad" : st0.babel === "ok"), gaps0.filter((x) => !pendingOk.has(x)).join(" | "));
 // The modules off sale on production (app_setting module_sales_disabled, read 2026-11-22) — the
 // package prices the owner approved are the ones a buyer sees there.

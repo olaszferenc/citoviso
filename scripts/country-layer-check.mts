@@ -894,6 +894,123 @@ console.log("\n⑫ nyitás előtti teljesség (ország-réteg 3/8)");
     scope.has("Miért kaptam?") && ![...scope].some((s) => s.includes("Generáld újra a mockot")));
 }
 
+console.log("\n⑬ NEMZETKÖZI B — utánkövetés, válasz, elutasító (2026-11-22)");
+{
+  // ── nincs beégetett budapesti óra / HU ünnep-vakság / „Ft” / Szállás.hu / magyar-csak szám a küldő kódban ──
+  const B_SCOPE = [
+    "src/outreach/escalationFollowup.ts", "src/outreach/nonOpenerFollowup.ts", "src/outreach/behaviorMessage.ts",
+    "src/outreach/behaviorMessageCopy.ts", "src/outreach/leadClock.ts", "src/outreach/experiment.ts",
+    "src/outreach/trialCampaign.ts", "src/email/trialCampaignEmail.ts", "src/trial/escalation.ts", "src/outreach/coldRamp.ts",
+    "src/outreach/sendOutreachSms.ts", "src/outreach/autoDispatch.ts",
+  ];
+  const B_BURNED =
+    /Europe\/Budapest|budapestIsoDay\(|budapestMinutes\(|budapestWeekday\(|budapestMidnight\(|budapestDayEnd\(|\bbehaviorWindowBlocks\(|\bmockOutreachWindowBlocks\(|\bmockOutreachWindowOpen\(|\bfollowupWindowBlocks\(|\bsendWindowOpen\(|\bnormalizePhone\(|isHuMobileE164\(|Ft-tól|forinttól|Szállás\.hu|\.hu cím|\.hu webcím|lang\s*!==\s*"hu"/;
+  const B_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
+    { file: "src/outreach/escalationFollowup.ts", frag: "export function followupWindowBlocks(now: Date): string | null {", why: "a HU-sor mondata (leadClock home) — a HU emlékeztető-ablak bájtra a régi" },
+    { file: "src/outreach/escalationFollowup.ts", frag: "const homeBlocked = followupWindowBlocks(now);", why: "a halasztás oka: a HU-mondat, ha egyik ország ablaka sincs nyitva (mint régen)" },
+    { file: "src/outreach/escalationFollowup.ts", frag: "if (sendWindowOpen(now)) return null;", why: "a HU-mondat függvénye maga (a budapesti óra = a HU-sor órája)" },
+    { file: "src/outreach/nonOpenerFollowup.ts", frag: "deferred: mockOutreachWindowBlocks(now) ??", why: "a halasztás oka: a HU-mondat, ha egyik ország ablaka sincs nyitva" },
+    { file: "src/outreach/nonOpenerFollowup.ts", frag: "at time zone 'Europe/Budapest'", why: "a követő-postafiók napi kerete a HÁZ napja (egy feladó, egy hírnév — mint a ramp)" },
+    { file: "src/outreach/behaviorMessage.ts", frag: "? (behaviorWindowBlocks(now) ??", why: "a halasztás oka: a HU-mondat, ha egyik ország ablaka sincs nyitva" },
+    { file: "src/outreach/behaviorMessage.ts", frag: "const ph = normalizePhone(raw);", why: "a VÁLASZOLÓ feladója (nemzetközi alakú is) — ország nélkül; a lead száma leadPhoneE164-gyel" },
+    { file: "src/outreach/behaviorMessageCopy.ts", frag: "Ft-tól indul. Hogy mi van benne", why: "a FORINT-ág (pénznem-jel nélküli összeg) — a magyar SMS bájtra azonos" },
+    { file: "src/outreach/behaviorMessageCopy.ts", frag: "forinttól indul (a legkisebb csomag listaára)", why: "a FORINT-ág — a magyar levél bájtra azonos" },
+    { file: "src/outreach/experiment.ts", frag: "const foreign = input.lang !== \"hu\";", why: "a magyar levél változatlan; az idegen nyelvű a Bábel-fordítást méri (nem kapu)" },
+    { file: "src/outreach/experiment.ts", frag: "budapestIsoDay", why: "a kísérlet napi terve a HÁZ napja (egy terv, egy kvóta-osztás minden országra)" },
+    { file: "src/outreach/trialCampaign.ts", frag: "budapestIsoDay", why: "HU-ág / a HU-modem SMS-e (csak HU-lead kap SMS-t); a levél dátuma a lead zónájában (isoDayIn)" },
+    { file: "src/email/trialCampaignEmail.ts", frag: "egy .hu webcímet is tartalmaz", why: "a HU-ág (home) — a magyar levél bájtra azonos" },
+    { file: "src/email/trialCampaignEmail.ts", frag: "a Booking.com, a Szállás.hu és az Airbnb naptárával. Az árak", why: "csak ahol az ország-sor listázza (calendarSyncPortals) — HU bájtra azonos" },
+    { file: "src/email/trialCampaignEmail.ts", frag: "calendarSyncPortals(i.country).includes(\"Szállás.hu\")", why: "a portál-összevetés maga" },
+    { file: "src/trial/escalation.ts", frag: "budapestIsoDay", why: "a régi hívók (konzol) zóna nélkül = a budapesti nap; a tick a lead zónáját adja (isoDayIn)" },
+    { file: "src/outreach/coldRamp.ts", frag: "budapest", why: "a ramp a KÜLDŐ DOMAIN hírneve (nem egy piacé) — a HÁZ napja; a jegyzet a coldRamp fejében" },
+    { file: "src/outreach/sendOutreachSms.ts", frag: "normalizePhone(s.trim())", why: "az operátori teszt-allowlist (saját számok, nemzetközi alakban is)" },
+    { file: "src/outreach/sendOutreachSms.ts", frag: "!sendWindowOpen(now)", why: "ide csak a modem országának (HU) leadje jut — modemPairBlocks fent; a budapesti óra a lead órája" },
+    { file: "src/outreach/autoDispatch.ts", frag: "AT TIME ZONE 'Europe/Budapest'", why: "a ramp napi összege a HÁZ (domain) napja" },
+    { file: "src/outreach/autoDispatch.ts", frag: "budapestIsoDay", why: "a ramp napi plafonja a HÁZ (domain) napja" },
+    { file: "src/outreach/escalationFollowup.ts", frag: "forint helyett {offerPrice} forinttól indul.", why: "a FORINT-ág (foreignMoney hamis) — a magyar emlékeztető bájtra azonos" },
+    { file: "src/trial/escalation.ts", frag: "windowClosed: !mockOutreachWindowOpen(now)", why: "csak a futás-összegző mezője (a HU-ablak); a küldést a lead ablaka dönti (mockWindowBlocksIn)" },
+  ];
+  const hits: string[] = [];
+  const used = new Set<number>();
+  for (const f of B_SCOPE) {
+    src(f).split("\n").forEach((raw, n) => {
+      const code = stripComments(raw);
+      if (!B_BURNED.test(code)) return;
+      const a = B_ALLOW.findIndex((x) => x.file === f && code.includes(x.frag));
+      if (a >= 0) {
+        used.add(a);
+        return;
+      }
+      hits.push(`${f}:${n + 1}: ${raw.trim()}`);
+    });
+  }
+  check("nincs Europe/Budapest / budapesti ablak / „Ft” / Szállás.hu / .hu / HU-csak szám a küldő kódban (ALLOW indokkal)", hits.length === 0, `\n      ${hits.join("\n      ")}`);
+  B_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file} — ${a.why}`, used.has(i)));
+
+  // ── bekötés ──
+  const esc = src("src/outreach/escalationFollowup.ts");
+  const non = src("src/outreach/nonOpenerFollowup.ts");
+  const beh = src("src/outreach/behaviorMessage.ts");
+  const tri = src("src/trial/escalation.ts");
+  const cmp = src("src/outreach/trialCampaign.ts");
+  const sms = src("src/outreach/sendOutreachSms.ts");
+  check("az utánkövetők a LEAD órájával (eszkalációs, nem-nyitó, viselkedés, próba)",
+    /followupWindowBlocksIn\(now, await leadCountryCfg\(/.test(esc) && /mockWindowBlocksIn\(deps\.now \?\? new Date\(\), await leadCountryCfg\(c\.leadId\)\)/.test(non) &&
+      /behaviorWindowBlocksIn\(now, await leadCountryCfg\(c\.leadId\)\)/.test(beh) && /trialDayOf\(now, started, cfg\?\.timeZone\)/.test(tri) && /mockWindowBlocksIn\(now, cfg\)/.test(tri));
+  check("védőháló: minden küldő nézi a lead.contact_block_at-ot (eszkalációs, nem-nyitó, viselkedés, próba-kampány, hideg mobil, szám-szintű tiltás, próba-eszkaláció)",
+    /p\?\.contact_block_at/.test(esc) && /lead\.contact_block_at \|\|/.test(non) && /lead\.contact_block_at \|\|/.test(beh) && /lead\.contact_block_at \|\|/.test(cmp) &&
+      /p\.contactBlockAt/.test(sms) && /eb\("lead\.contact_block_at", "is not", null\)/.test(sms) && /trialContactBlocked\(t\.id\)/.test(tri) &&
+      /\.where\("lead\.contact_block_at", "is", null\)|l\.contact_block_at is null|contact_block_at/.test(src("src/outreach/sendBatch.ts")));
+  check("a lead száma a SAJÁT országában (nem-nyitó, viselkedés, szám-szintű tiltás)",
+    /leadPhoneE164\(lead\.raw/.test(non) && /leadPhoneE164\(leadRaw, iso\)/.test(beh) && /leadPhoneE164\(r\.raw/.test(sms));
+  check("a próba-eszkaláció MMS-e csak a modem országában (HR: csak e-mail)", /const pairBlock = modemPairBlocks\(cfg\);/.test(tri));
+  check("ország nélküli kiküldési sor NEM számít HU-nak", !/eb\("country", "is", null\)/.test(src("src/outreach/autoDispatch.ts")));
+
+  // ── viselkedés: a HU-sor bájtra a régi, a HR-sor zágrábi idővel és horvát ünneppel ──
+  const lc = await import("../src/outreach/leadClock.js");
+  const sw = await import("../src/sms/sendWindow.js");
+  const ef = await import("../src/outreach/escalationFollowup.js");
+  const te = await import("../src/trial/escalation.js");
+  if (hu) {
+    let bad = 0;
+    for (let t = Date.UTC(2026, 2, 20); t < Date.UTC(2026, 3, 3); t += 20 * 60_000) {
+      const d = new Date(t);
+      if (lc.followupWindowBlocksIn(d, hu, ef.followupWindowBlocks) !== ef.followupWindowBlocks(d)) bad++;
+      if (lc.behaviorWindowBlocksIn(d, hu) !== sw.behaviorWindowBlocks(d)) bad++;
+      if (lc.mockWindowBlocksIn(d, hu) !== sw.mockOutreachWindowBlocks(d)) bad++;
+      if (te.trialDayOf(d, new Date(Date.UTC(2026, 2, 18, 23, 30)), hu.timeZone) !== te.trialDayOf(d, new Date(Date.UTC(2026, 2, 18, 23, 30)))) bad++;
+    }
+    check("HU-sor: emlékeztető-, viselkedés-, mock-ablak és próbanap = a régi budapesti, mondatra is (két hét, DST-váltással)", bad === 0, `${bad} eltérés`);
+  }
+  // The HR row's clock (migration 0142 values) — the guard's own literal, not the DB's.
+  const hrClock = { iso2: "HR", name: "Horvátország", timeZone: "Europe/Zagreb", publicHolidays: ["01-01", "12-25", "12-26", "2026-04-06"] };
+  const zg = (iso: string): Date => new Date(iso);
+  check("HR: karácsony (12-25) 10:00 Zágráb — emlékeztető és viselkedés-üzenet zárva, 12-23 10:00 nyitva",
+    lc.followupWindowBlocksIn(zg("2026-12-25T09:00:00Z"), hrClock, ef.followupWindowBlocks) !== null &&
+      lc.behaviorWindowBlocksIn(zg("2026-12-25T09:00:00Z"), hrClock) !== null &&
+      lc.followupWindowBlocksIn(zg("2026-12-23T09:00:00Z"), hrClock, ef.followupWindowBlocks) === null &&
+      lc.behaviorWindowBlocksIn(zg("2026-12-23T09:00:00Z"), hrClock) === null);
+  check("ismeretlen ország: az utánkövetők zárva", lc.followupWindowBlocksIn(new Date(), null, ef.followupWindowBlocks) !== null && lc.behaviorWindowBlocksIn(new Date(), null) !== null && lc.mockWindowBlocksIn(new Date(), null) !== null);
+  check("a próbanap a lead zónájában (Lisszabon 23:30 = már másnap Budapesten)",
+    te.trialDayOf(zg("2026-11-10T23:30:00Z"), zg("2026-11-10T08:00:00Z"), "Europe/Lisbon") === 1 && te.trialDayOf(zg("2026-11-10T23:30:00Z"), zg("2026-11-10T08:00:00Z")) === 2);
+  if (hu) check("a HU-lead száma leadPhoneE164-gyel = a régi normalizePhone", ["06 30 123 4567", "+36 1 234 5678", "0620/555-1234"].every((x) => lc.leadPhoneE164({ phone: x, country: "HU" }) === normalizePhone(x)));
+  // ── a megkeresés-szöveg: nincs „Ft” idegen pénznem mellett, nincs Szállás.hu / .hu a nem-HU ágon ──
+  const bc = await import("../src/outreach/behaviorMessageCopy.js");
+  const tc = await import("../src/email/trialCampaignEmail.js");
+  const smsEur = bc.buildBehaviorSms({ lang: "hu", leadName: "Vila Test", trigger: "price", link: "https://x.test/p", priceList: "€7", trialDays: null, planCount: 1 });
+  check("viselkedés-SMS: euró összeg mellett nincs „Ft”", !/Ft/.test(smsEur.text));
+  const mailEur = bc.buildBehaviorMail({ lang: "hu", leadName: "Vila Test", trigger: "price", link: "https://x.test/p", priceList: "€7", trialDays: null, planCount: 1,
+    to: "a@b.test", trialHost: null, unsubscribeLink: "https://u", privacyLink: "https://p", identity: "id", helperName: null, fromName: "Citoviso" });
+  check("viselkedés-levél: euró összeg mellett nincs „forint”", !/forint/.test(JSON.stringify(mailEur)) && JSON.stringify(mailEur).includes("€7"));
+  const mk = (country: string | null, packageTld: string | null) =>
+    tc.trialCampaignParts({ lang: "hu", leadName: "Vila Test", sentIso: "2026-11-02", days: 14, host: "vila-test.citoviso.com", retentionDays: 90, coupon: null,
+      sender: { sigName: "a", sigCo: "b", sigMail: "c" }, identity: "id", country, packageTld, links: { cta: "https://x", unsub: "https://u", privacy: "https://p" } });
+  const huP = mk(null, null), huP2 = mk("HU", null), hrP = mk("HR", ".com"), noTld = mk("HR", null);
+  check("próba-kampány: a HU-levél (ország nélkül / HU) bájtra azonos, .hu-val és Szállás.hu-val", JSON.stringify(huP) === JSON.stringify(huP2) && huP.gets.some((g) => g.includes(".hu webcím")) && huP.gets.some((g) => g.includes("Szállás.hu")));
+  check("próba-kampány: a HR-levélben nincs .hu és Szállás.hu, a .com a csomag-domain", !hrP.gets.some((g) => /\.hu\b|Szállás\.hu/.test(g)) && hrP.gets.some((g) => g.includes(".com")));
+  check("próba-kampány: csomag-domain nélkül a pont kimarad, és „két dolog” változott", noTld.gets.length === 2 && /két dolog/.test(noTld.p2));
+}
+
 await db.destroy();
 
 console.log(fails ? `\n⛔ country-layer-check: ${fails} hiba` : "\n✅ country-layer-check: az ország-réteg rendben");

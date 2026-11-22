@@ -1,5 +1,6 @@
 // KÍSÉRLET-MOTOR — the wording of the code-defined variants (ADR-0462). Every sentence goes through
-// T() so Bábel can translate it; experiments run on Hungarian letters only (assignVariants).
+// T() so Bábel can translate it; a foreign letter takes a variant only where Bábel translated it
+// in full, else that dimension's control (assignVariants, NEMZETKÖZI B).
 //
 //   subject   ez_az_on_szallasa — „Ez az Ön szállása? ({név}, {település})”, without a town „… ({név})”
 //   body_style szemelyes        — the PERSONAL letter: the OWNER'S FINAL TEXT (2026-11-22, via the

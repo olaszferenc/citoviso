@@ -319,6 +319,7 @@ export async function sendOutreachMail(
       "prospect.mock_artifact_id as artifactId",
       "lead.id as leadId",
       "lead.name as leadName",
+      "lead.contact_block_at as contactBlockAt",
       sql<string | null>`lead.raw->>'city'`.as("leadCity"),
     ])
     .where("prospect.id", "=", prospectId)
@@ -328,6 +329,11 @@ export async function sendOutreachMail(
   if (!p) return { ...base, outcome: { kind: "skipped", reason: "nincs ilyen prospect" } };
   if (p.unsubscribedAt) {
     return { ...base, outcome: { kind: "skipped", reason: "leiratkozott — küldés tilos" } };
+  }
+  // NEMZETKÖZI B védőháló: „ne keressük” on the LEAD — a prospect created after the block (a
+  // re-generated mock) carries no unsubscribed_at of its own, the lead's mark still stops it.
+  if (p.contactBlockAt) {
+    return { ...base, outcome: { kind: "skipped", reason: "a lead „ne keressük” jelet kapott (elutasító / nem érintett) — küldés tilos" } };
   }
   // Elek 10-13 O-1: a trialing or paying lead gets no cold letter — on the server, not only on the screen.
   const customer = await alreadyCustomerBlocks(p.leadId);

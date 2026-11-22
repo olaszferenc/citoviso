@@ -26,8 +26,9 @@ import { collectFallbacks, noteFallback } from "../i18n/packs.js";
 import { OUTREACH_LETTER_LEGAL_V1 } from "../legal.js";
 import { legalTextForLang } from "../legalPack.js";
 import { DEFAULT_LANG, langForCountry } from "../i18n/lang.js";
-import { countryConfig, countryConfigSync, countryOf } from "../country.js";
+import { calendarSyncPortals, countryConfig, countryConfigSync, countryOf } from "../country.js";
 import { gsm7FoldableLang, outreachLangOf } from "./countryOutreach.js";
+import { crossBorderSyncSentence } from "./portalSentence.js";
 import { foreignOfferSentence } from "./foreignPrice.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { HU_PRICING_REGION, loadPricing } from "../pricing.js";
@@ -220,6 +221,12 @@ export interface DraftInput {
    * offline copy tools that render a sample lead; they get the default.
    */
   readonly offerPercent?: number;
+  /**
+   * NEMZETKÖZI B: the lead's ISO-2 (buildDraftForProspect sets it from countryOf). It picks the
+   * portals the iCal sentence may name (calendarSyncPortals: Szállás.hu only where the country row
+   * lists it). Absent = an offline sample render of a Hungarian lead → the Hungarian sentence.
+   */
+  readonly country?: string | null;
   /**
    * What our own site check MEASURED about the lead's existing website (lead.raw.assessment,
    * src/scraper/website.ts). Only an „elavult” lead has one worth quoting, and the letter may
@@ -549,15 +556,19 @@ function renderDraftText(d: DraftInput): OutreachDraft {
       : {}),
     // iCal portal sync (ADR-0361): part of the booking module; ONLY the three portals whose
     // iCal is verified may be named, and never „azonnal” / „árak is” (§B.17).
-    p4: d.trialDays
-      ? T(
-          d.lang,
-          "A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül. Foglalásait automatikusan szinkronizálhatja a Booking.com, az Airbnb és a Szállás.hu naptárával.",
-        )
-      : T(
-          d.lang,
-          "Ha tetszik, a linken meg is rendelheti. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül. Foglalásait automatikusan szinkronizálhatja a Booking.com, az Airbnb és a Szállás.hu naptárával.",
-        ),
+    // NEMZETKÖZI B: Szállás.hu only where the lead's country row lists it (calendarSyncPortals) —
+    // a Croatian letter names the cross-border pair; the Hungarian sentence is untouched.
+    p4: d.country == null || calendarSyncPortals(d.country).includes("Szállás.hu") // i18n-exempt: portal brand name (comparison)
+      ? d.trialDays
+        ? T(
+            d.lang,
+            "A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül. Foglalásait automatikusan szinkronizálhatja a Booking.com, az Airbnb és a Szállás.hu naptárával.",
+          )
+        : T(
+            d.lang,
+            "Ha tetszik, a linken meg is rendelheti. A vendégei ezután közvetlenül Önnél foglalnak, jutalék nélkül. Foglalásait automatikusan szinkronizálhatja a Booking.com, az Airbnb és a Szállás.hu naptárával.",
+          )
+      : crossBorderSyncSentence(d.lang, Boolean(d.trialDays)),
     ...(plans === 3
       ? { planNote: T(d.lang, "A képen az első kinézet látható — a másik kettőt a linken találja.") }
       : plans === 2
@@ -877,6 +888,7 @@ export async function buildDraftForProspect(
     rating,
     token: r.token,
     lang,
+    country,
     siteCheck: siteCheckOf(((r.raw ?? {}) as { assessment?: unknown }).assessment),
     offerPercent: await outreachPercentForProspect(prospectId),
     // ADR-0330: reserved on the first draft — the console's preview and the sent

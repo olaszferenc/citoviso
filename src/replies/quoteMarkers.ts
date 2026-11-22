@@ -75,6 +75,9 @@ export const QUOTE_MARKERS: Readonly<Record<string, QuoteMarkerSet>> = {
   el: { wrote: ["έγραψε"], lead: ["Στις"], header: ["Αρχικό μήνυμα", "Προωθημένο μήνυμα"], from: ["Από"] },
   fr: { wrote: ["a écrit"], lead: ["Le"], header: ["Message d'origine", "Message transféré"], from: ["De"] },
   es: { wrote: ["escribió"], lead: ["El"], header: ["Mensaje original", "Mensaje reenviado"], from: ["De"] },
+  // NEMZETKÖZI B: Portuguese (Bábel ships pt) and Dutch — Gmail „Em … escreveu:” / „Op … schreef …:”.
+  pt: { wrote: ["escreveu"], lead: ["Em", "No dia"], header: ["Mensagem original", "Mensagem encaminhada", "Mensagem reencaminhada"], from: ["De"] },
+  nl: { wrote: ["schreef"], wroteThen: ["schreef"], lead: ["Op"], header: ["Oorspronkelijk bericht", "Doorgestuurd bericht"], from: ["Van"] },
 };
 
 const reEscape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");

@@ -15,7 +15,8 @@
 //         in the owner-approved frame (P2: approved ONCE, then automatic — zero human).
 //   s10 — from trial day 10: „elakadt” — its own category on the report's trial tab.
 //
-// Day N = the start's Budapest calendar day + N − 1 (as ADR-0417 and the report count).
+// Day N = the start's calendar day + N − 1 (as ADR-0417 and the report count) — in the LEAD's
+// zone since NEMZETKÖZI B (the HU row: Budapest).
 // Messages go weekdays 9–16 (the hourly tick); a step that came due on a weekend goes on the
 // next weekday. A trial already past several days when this shipped gets every due step once.
 // Every row in free_trial_notice is claimed BEFORE the send — a re-run never sends twice.
@@ -36,6 +37,9 @@ import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { addIsoDays, budapestIsoDay } from "../text/budapestTime.js";
 import { CONTACT_BLOCK_DETAIL, trialContactBlocked } from "./contactBlock.js";
+import { isoDayIn } from "../text/zoneTime.js";
+import { leadCountryCfg, mockWindowBlocksIn } from "../outreach/leadClock.js";
+import { modemPairBlocks } from "../outreach/countryOutreach.js";
 import { helperFromName, helperName } from "./helperPersona.js";
 import { liveHeading, renderLiveShot, type LiveShotResult } from "./liveShot.js";
 import { loginContext, ownerHasLoggedIn, sendLoggedSms, type LoginSmsSender } from "./loginReminders.js";
@@ -53,16 +57,21 @@ export interface EscalationDeps {
   readonly heading: (siteUrl: string) => Promise<string | null>;
 }
 
-/** The trial day `now` falls on (1 = the start's Budapest day). */
-export function trialDayOf(now: Date, startedAt: Date): number {
-  const a = Date.parse(`${budapestIsoDay(startedAt)}T00:00:00Z`);
-  const b = Date.parse(`${budapestIsoDay(now)}T00:00:00Z`);
+/**
+ * The trial day `now` falls on (1 = the start's calendar day). NEMZETKÖZI B: the calendar is the
+ * LEAD's zone (`timeZone`, from its country row); omitted = the Budapest day, as before (the HU
+ * row's zone is Europe/Budapest, so a Hungarian trial counts exactly as it always did).
+ */
+export function trialDayOf(now: Date, startedAt: Date, timeZone?: string): number {
+  const day = (d: Date): string => (timeZone ? isoDayIn(d, timeZone) : budapestIsoDay(d));
+  const a = Date.parse(`${day(startedAt)}T00:00:00Z`);
+  const b = Date.parse(`${day(now)}T00:00:00Z`);
   return Math.round((b - a) / 86_400_000) + 1;
 }
 
-/** The Budapest day a step comes due on. */
-export function escalationDay(step: EscalationStep, startedAt: Date): string {
-  return addIsoDays(budapestIsoDay(startedAt), ESCALATION_DAYS[step] - 1);
+/** The day a step comes due on, in the lead's zone (omitted = Budapest). */
+export function escalationDay(step: EscalationStep, startedAt: Date, timeZone?: string): string {
+  return addIsoDays(timeZone ? isoDayIn(startedAt, timeZone) : budapestIsoDay(startedAt), ESCALATION_DAYS[step] - 1);
 }
 
 type Channel = "email" | "sms" | "mms" | "mark";
@@ -134,6 +143,7 @@ export async function runTrialEscalation(
       "free_trial.started_at as started_at",
       "free_trial.trial_until as trial_until",
       "lead.name as lead_name",
+      "lead.id as lead_id",
     ])
     .where("free_trial.status", "=", "active")
     .where("free_trial.tenant_id", "is not", null)
@@ -145,13 +155,17 @@ export async function runTrialEscalation(
     if (!opts.onlyTrialIds && isTestLeadName(t.lead_name)) continue;
     const started = new Date(t.started_at as unknown as string);
     const until = new Date(t.trial_until as unknown as string);
-    const day = trialDayOf(now, started);
+    // NEMZETKÖZI B: the trial's calendar and the message window are the LEAD's country's (zone,
+    // working days, holidays). No country row → the marks still go (nothing is sent), the
+    // messages wait (fail closed). The HU row = the Budapest calendar and window, as before.
+    const cfg = await leadCountryCfg(t.lead_id);
+    const day = trialDayOf(now, started, cfg?.timeZone);
     if (day < ESCALATION_DAYS.e4) continue;
     if (await ownerHasLoggedIn(t.tenant_id!)) continue;
 
     if (await claim(t.id, "e4", "mark", "sent", null)) out.flagged++;
     if (day >= ESCALATION_DAYS.s10 && (await claim(t.id, "s10", "mark", "sent", null))) out.stalled++;
-    if (out.windowClosed || !deps) continue;
+    if (mockWindowBlocksIn(now, cfg) || !deps) continue;
     if (day < ESCALATION_DAYS.m5) continue;
     if (await trialContactBlocked(t.id)) {
       for (const [s, ch] of [["m5", "mms"], ["h7", "email"]] as const) {
@@ -161,8 +175,12 @@ export async function runTrialEscalation(
     }
     const siteUrl = await siteUrlOf(t.tenant_id!);
 
-    // m5 — the live-site MMS
-    if (!t.contact_phone) {
+    // m5 — the live-site MMS (the HU modem only: a country whose row does not open the MMS+SMS
+    // pair — HR: e-mail only, owner 2026-11-22 — gets no MMS; recorded, never sent abroad).
+    const pairBlock = modemPairBlocks(cfg);
+    if (pairBlock) {
+      if (await claim(t.id, "m5", "mms", "skipped", pairBlock.slice(0, 500))) out.skipped++;
+    } else if (!t.contact_phone) {
       if (await claim(t.id, "m5", "mms", "skipped", "nincs telefonszám")) out.skipped++;
     } else if (!siteUrl) {
       if (await claim(t.id, "m5", "mms", "skipped", "nincs élő oldal")) out.skipped++;
@@ -206,7 +224,7 @@ export async function runTrialEscalation(
         contactName: c.contactName,
         daysLive: day - 1,
         daysLeft: trialDaysLeft(now, until),
-        trialUntilIso: budapestIsoDay(until),
+        trialUntilIso: cfg ? isoDayIn(until, cfg.timeZone) : budapestIsoDay(until),
         heroHeading: siteUrl ? await deps.heading(siteUrl) : null,
         helperName: helperName(c.lang),
         fromName: helperFromName(c.lang),

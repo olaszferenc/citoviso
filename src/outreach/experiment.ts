@@ -37,6 +37,8 @@ import { config } from "../config.js";
 import { budapestIsoDay, budapestMidnight } from "../text/budapestTime.js";
 import type { ExperimentDimension } from "../db/schema.js";
 import { personalSenderName, priceSentence, subjectIsThisYours } from "./experimentCopy.js";
+import { T } from "../i18n/mail.js";
+import { collectFallbacks } from "../i18n/packs.js";
 
 export const DIMENSIONS: readonly ExperimentDimension[] = ["subject", "first_line", "sender", "body_style", "image", "price_line"];
 export const CONTROL_KEY = "control";
@@ -530,7 +532,20 @@ export async function assignVariants(input: {
   readonly participate: boolean;
   readonly now?: Date;
 }): Promise<LetterVariants> {
-  if (!input.participate || input.lang !== "hu") return CONTROL_LETTER;
+  if (!input.participate) return CONTROL_LETTER;
+  // NEMZETKÖZI B (brief 2026-11-22): the experiment runs in EVERY language whose wording of the
+  // variant exists. A foreign letter takes a variant only when its text is translated in full
+  // (Bábel's pack — no AI, no Hungarian fallback); a missing translation → that dimension's
+  // control. The Hungarian letter is untouched (`foreign` false → every text as before).
+  const foreign = input.lang !== "hu";
+  /** The variant's own text in the letter's language, or null when any part of it is untranslated. */
+  const inLang = (fn: () => string): string | null => {
+    if (!foreign) return fn();
+    const m = collectFallbacks(fn);
+    return m.fallbacks.length ? null : m.value;
+  };
+  /** A catalog template (Hungarian source) in the letter's language, or null when not translated. */
+  const templateIn = (t: string | null | undefined): string | null => (t ? inLang(() => (foreign ? T(input.lang, t) : t)) : null);
   try {
     const now = input.now ?? new Date();
     const plan = await ensureDailyPlan(now);
@@ -554,15 +569,17 @@ export async function assignVariants(input: {
         .filter((v) => {
           if (v.isControl) return true;
           // Code-defined wording (experimentCopy.ts, T()) — the catalog row carries no template.
-          if (dim === "subject" && v.key === "ez_az_on_szallasa") return Boolean(input.leadName.trim());
+          if (dim === "subject" && v.key === "ez_az_on_szallasa") return Boolean(input.leadName.trim()) && inLang(() => subjectIsThisYours(input.lang, input.leadName, input.city)) !== null;
           if (dim === "body_style" && v.key === "szemelyes") return Boolean(personalSenderName());
           // „mondat” is the base package's from-price: ONLY in the personal letter, never beside the
           // boxed letter's booking/commission promise (coordinator 2026-11-22). body_style is chosen first.
-          if (dim === "price_line" && v.key === "mondat") return bodyStyle === "personal" && Boolean((input.offerPrice ?? "").trim());
-          if (dim === "subject" || dim === "first_line") return v.template ? renderTemplate(v.template, vars) !== null : false;
+          if (dim === "price_line" && v.key === "mondat") {
+            return bodyStyle === "personal" && Boolean((input.offerPrice ?? "").trim()) && inLang(() => priceSentence(input.lang, input.offerPrice ?? "", input.country)) !== null;
+          }
+          if (dim === "subject" || dim === "first_line") { const t = templateIn(v.template); return t ? renderTemplate(t, vars) !== null : false; }
           if (dim === "sender") return Boolean(senderNameOf(v.key));
           // price_line: "none" is structural; any other key needs its sentence template to render.
-          if (dim === "price_line") return v.key === "none" || (v.template ? renderTemplate(v.template, vars) !== null : false);
+          if (dim === "price_line") { if (v.key === "none") return true; const t = templateIn(v.template); return t ? renderTemplate(t, vars) !== null : false; }
           return true;
         })
         .map((v) => v.key);
@@ -572,15 +589,15 @@ export async function assignVariants(input: {
       if (key === CONTROL_KEY) continue;
       const row = rows.find((v) => v.key === key);
       if (dim === "subject" && key === "ez_az_on_szallasa") subject = subjectIsThisYours(input.lang, input.leadName, input.city);
-      else if (dim === "subject" && row?.template) subject = renderTemplate(row.template, vars) ?? undefined;
-      if (dim === "first_line" && row?.template) firstLine = renderTemplate(row.template, vars) ?? undefined;
+      else if (dim === "subject" && row?.template) subject = renderTemplate(templateIn(row.template) ?? "{missing}", vars) ?? undefined;
+      if (dim === "first_line" && row?.template) firstLine = renderTemplate(templateIn(row.template) ?? "{missing}", vars) ?? undefined;
       if (dim === "sender") fromName = senderNameOf(key) ?? undefined;
       if (dim === "body_style" && key === "plain") bodyStyle = "plain";
       if (dim === "body_style" && key === "szemelyes") bodyStyle = "personal";
       if (dim === "image" && key === "none") image = false;
       if (dim === "price_line")
         priceLine =
-          key === "none" ? "" : key === "mondat" ? priceSentence(input.lang, input.offerPrice ?? "", input.country) : row?.template ? renderTemplate(row.template, vars) ?? undefined : undefined;
+          key === "none" ? "" : key === "mondat" ? priceSentence(input.lang, input.offerPrice ?? "", input.country) : row?.template ? renderTemplate(templateIn(row.template) ?? "{missing}", vars) ?? undefined : undefined;
     }
     return {
       keys,

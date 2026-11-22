@@ -49,6 +49,8 @@ import { getEscalationConfig, legacyOutreachPercent } from "../payment/offers.js
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { countryConfigSync, countryOfLeads } from "../country.js";
+import { packageDomainTld } from "./experimentCopy.js";
+import { isoDayIn } from "../text/zoneTime.js";
 import { leadMobileIn, modemPairBlocks, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { getFreeTrialConfig } from "../trial/config.js";
@@ -179,7 +181,7 @@ export async function listTrialCampaignCandidates(
 
   const leads = await db
     .selectFrom("lead")
-    .select(["id", "name", "raw", "lifecycle_status"])
+    .select(["id", "name", "raw", "lifecycle_status", "contact_block_at"])
     .where("id", "in", leadIds)
     .execute();
   const prospects = (await db
@@ -301,6 +303,8 @@ export async function listTrialCampaignCandidates(
     if (isTestLead(lead.name)) { no("test"); continue; }
     if (INACTIVE_STATUSES.includes(lead.lifecycle_status)) { no("inactive"); continue; }
     if (
+      // NEMZETKÖZI B védőháló: „ne keressük” on the lead itself, whatever its prospects say.
+      lead.contact_block_at ||
       rows.some((p) => p.unsubscribed_at) ||
       (mailedEmail && (await isEmailSuppressed(mailedEmail))) ||
       (liveEmail && (await isEmailSuppressed(liveEmail))) ||
@@ -564,13 +568,17 @@ export async function buildTrialCampaignLetterFor(
   const { value: rendered, fallbacks } = collectFallbacks(() => renderTrialCampaignLetter({
     lang: d.lang,
     leadName: d.input.leadName,
-    sentIso: budapestIsoDay(sentAt),
+    // NEMZETKÖZI B: the day the cold letter went out, on the LEAD's calendar (HU row: Budapest).
+    sentIso: ((tz) => (tz ? isoDayIn(sentAt, tz) : budapestIsoDay(sentAt)))(countryConfigSync(d.market.country)?.timeZone),
     days: n.days,
     host,
     retentionDays: n.retentionDays,
     coupon: offer,
     sender: senderParts(),
     identity: advertiserIdentity(d.lang),
+    // NEMZETKÖZI B: the lead's country picks the domain ending and the portals the letter names.
+    country: d.market.country,
+    packageTld: d.market.country && d.market.country !== "HU" ? packageDomainTld(d.market.country) : null,
     links: { cta: d.draft.link, unsub: d.draft.unsubscribeLink, privacy: d.draft.privacyLink },
   }));
   const letter = d.lang !== DEFAULT_LANG ? { ...rendered, untranslated: fallbacks } : rendered;

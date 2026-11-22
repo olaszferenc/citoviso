@@ -302,23 +302,26 @@ async function sharedPhoneHold(leadId: string): Promise<string | null> {
 
 /**
  * ORSZÁG-RÉTEG 3/5: leads the timer contacted today in ONE country — that country's day, in its
- * zone. The home country also counts the rows claimed before migration 0140 (country NULL, all
- * Hungarian), so the HU counter reads what sentToday() always read for a Hungarian queue.
+ * zone. NEMZETKÖZI B: a row without a country is NOBODY's (fail closed — never counted as HU).
+ * Only rows claimed before migration 0140 carry a NULL country, and those were all sent on
+ * earlier days; since 0140 a row of an unknown country is held, never sent.
  */
 export async function sentTodayIn(cfg: Pick<CountryConfig, "iso2" | "timeZone">): Promise<number> {
   const r = await db
     .selectFrom("outreach_dispatch")
     .select((eb) => eb.fn.countAll<string>().as("n"))
     .where("status", "=", "sent")
-    .where((eb) =>
-      cfg.iso2 === DISPATCH_HOME_COUNTRY ? eb.or([eb("country", "=", cfg.iso2), eb("country", "is", null)]) : eb("country", "=", cfg.iso2),
-    )
+    .where("country", "=", cfg.iso2)
     .where("sent_at", ">=", sql<Date>`(date_trunc('day', now() AT TIME ZONE ${cfg.timeZone}) AT TIME ZONE ${cfg.timeZone})`)
     .executeTakeFirstOrThrow();
   return Number(r.n);
 }
 
-/** Leads the timer contacted today (Budapest day), every country together. */
+/**
+ * Leads the timer contacted today, every country together — the cold RAMP's day total. The ramp
+ * is the sending DOMAIN's reputation, not a market's (coldRamp.ts), so it counts on the house day.
+ * country-layer-check ALLOW: house (domain) day, not a lead's clock.
+ */
 export async function sentToday(): Promise<number> {
   const r = await db
     .selectFrom("outreach_dispatch")

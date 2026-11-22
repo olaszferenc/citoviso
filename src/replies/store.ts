@@ -343,14 +343,21 @@ export interface RepliesBlock {
 
 /**
  * Display settlement from a lead address. Google's shape is "<city>, <street>, <zip>
- * Hungary"; the Hungarian one is "<zip> <city>, <street>". null when neither fits.
+ * Hungary"; the Hungarian one is "<zip> <city>, <street>". NEMZETKÖZI B: elsewhere the
+ * postcode has 4–5 digits and usually follows the street ("Obala 5, 21000 Split, Croatia") —
+ * the "<zip> <city>" segment is read when neither Hungarian shape fits. null when none fits.
  */
 export function placeOf(address: string | null | undefined): string | null {
   const a = (address ?? "").trim();
   const hu = /^\d{4}\s+([^,\d]+?)\s*(?:,|$)/.exec(a);
   if (hu) return hu[1]!.trim();
   const first = a.split(",")[0]?.trim() ?? "";
-  return first && !/\d/.test(first) ? first : null;
+  if (first && !/\d/.test(first)) return first;
+  for (const seg of a.split(",").slice(1)) {
+    const m = /^\s*(?:[A-Z]{1,3}[- ])?\d{4,5}\s+([^,\d]+?)\s*$/u.exec(seg);
+    if (m) return m[1]!.trim();
+  }
+  return null;
 }
 
 /** Everything the dashboard block needs, newest first (the open/all filter is client-side). */
@@ -509,6 +516,8 @@ export async function repliesNeedingSuggestion(): Promise<
     readonly lang: string | null;
     /** The SMS sign-off in that language (the house, never a person). */
     readonly signature: string;
+    /** NEMZETKÖZI B: the lead's zone (its country row), null = no row — the ticket's local time. */
+    readonly timeZone: string | null;
   }[]
 > {
   const rows = await db
@@ -538,6 +547,7 @@ export async function repliesNeedingSuggestion(): Promise<
       receivedAt: new Date(r.received_at as unknown as Date).toISOString(),
       lang,
       signature: smsSignatureFor(lang),
+      timeZone: (await countryConfig(await countryOfLead(r.lead_id)))?.timeZone ?? null,
     });
   }
   return out;

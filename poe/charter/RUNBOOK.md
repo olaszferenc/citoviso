@@ -139,7 +139,11 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
    (tulaj, 2026-10-27: „én hagyjam jóvá a szövegterveket”). Elutasítónak / nem érintettnek is:
    rövid, udvarias nyugtázás (köszönjük, tudomásul vettük, többet nem keressük; ajánlat, link, ár
    nélkül), a „mire alapoztam” első sora: „elutasító/nem érintett — a tulaj dönt: elküldi, vagy
-   küldés nélkül lezárja”. Hogy küld-e, lezár-e, az mindig a tulaj döntése. Ha a konzolon a
+   küldés nélkül lezárja”. Hogy küld-e, lezár-e, az mindig a tulaj döntése.
+   🌍 **Az elutasítást BÁRMELY nyelven felismered** (tulaj, 2026-11-22 — NEMZETKÖZI B): a válasz
+   az ország nyelvén jön (pl. hr „ne, hvala”, „ne zanima me”, „nemojte me više kontaktirati”,
+   „nisam vlasnik”). A jelölés NYELVFÜGGETLEN: az első sor akkor is pontosan a magyar
+   „elutasító/nem érintett — …”, ha a válasz és a nyugtázás horvát; a nyugtázást a lead nyelvén írod. Ha a konzolon a
    válasz már „Megválaszolva”, nem írsz, csak a jegyet jelölöd késznek.
 4. ⛔ **KÜLDENI TILOS.** A küldés az operátoré (ADR-0325): ő olvassa el, javítja, és ő küldi.
 5. A jegyet jelöld késznek (a fájl végére: `KÉSZ — <idő>`), ne töröld.

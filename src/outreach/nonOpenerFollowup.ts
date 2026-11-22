@@ -41,7 +41,8 @@ import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
-import { normalizePhone } from "../text/phone.js";
+import { allCountriesSync, countryOfLeads } from "../country.js";
+import { leadCountryCfg, leadPhoneE164, mockWindowBlocksIn } from "./leadClock.js";
 import { buildDraftForProspect } from "./draft.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
@@ -137,7 +138,9 @@ export async function listNonOpenerCandidates(
   const leadIds = (await mailed.execute()).map((r) => r.lead_id);
   if (!leadIds.length) return [];
 
-  const leads = await db.selectFrom("lead").select(["id", "name", "raw", "lifecycle_status"]).where("id", "in", leadIds).execute();
+  const leads = await db.selectFrom("lead").select(["id", "name", "raw", "lifecycle_status", "contact_block_at"]).where("id", "in", leadIds).execute();
+  // NEMZETKÖZI B: each lead's country (its raw.country, else its scrape area's — one query).
+  const leadCountry = await countryOfLeads(leadIds);
   const prospects = await db
     .selectFrom("prospect")
     .select([
@@ -227,14 +230,16 @@ export async function listNonOpenerCandidates(
     const no = (excluded: NonOpenerExclusion): void => {
       verdicts.push({ ...target, excluded });
     };
-    const rawPhone = ((lead.raw ?? {}) as { phone?: string }).phone;
-    const phone = rawPhone ? normalizePhone(rawPhone) : null;
+    // NEMZETKÖZI B: the number in the lead's OWN country (a Croatian 091… is +385…, not null).
+    const phone = leadPhoneE164(lead.raw as { phone?: unknown; country?: unknown } | null, leadCountry.get(lead.id) ?? null);
 
     if (doneLeads.has(lead.id)) { no("already"); continue; }
     if (!live) { no("archived"); continue; }
     if (isTestLeadName(lead.name) || lead.name === ELEK_LEAD_NAME) { no("test"); continue; }
     if (INACTIVE_STATUSES.includes(lead.lifecycle_status)) { no("inactive"); continue; }
     if (
+      // NEMZETKÖZI B védőháló: „ne keressük” on the lead itself, whatever its prospects say.
+      lead.contact_block_at ||
       rows.some((p) => p.unsubscribed_at) ||
       (mailedEmail && (await isEmailSuppressed(mailedEmail))) ||
       (liveEmail && (await isEmailSuppressed(liveEmail))) ||
@@ -344,6 +349,9 @@ export async function buildNonOpenerLetterFor(
   };
 }
 
+// The cap is the follow-up MAILBOX's (one sender, one reputation — like the cold ramp), so it
+// counts on the house day (APP_TZ), whichever country the letters went to.
+// country-layer-check ALLOW: house mailbox day, not a lead's clock.
 async function sentToday(now: Date): Promise<number> {
   const r = await sql<{ n: string }>`select count(*) as n from nonopener_followup where status = 'sent'
     and sent_at >= date_trunc('day', ${now}::timestamptz at time zone 'Europe/Budapest') at time zone 'Europe/Budapest'`.execute(db);
@@ -386,7 +394,9 @@ export async function sendNonOpenerFollowup(c: NonOpenerCandidate, deps: NonOpen
   }
   if (deps.dryRun) return { kind: "dry-run", detail: built.send.subject };
 
-  const block = mockOutreachWindowBlocks(deps.now ?? new Date());
+  // NEMZETKÖZI B: the mock-outreach window in the LEAD's country (zone, holidays, row hours);
+  // no country row → not sent (fail closed). The HU row reads mockOutreachWindowBlocks.
+  const block = mockWindowBlocksIn(deps.now ?? new Date(), await leadCountryCfg(c.leadId));
   if (block) return { kind: "skipped", reason: block };
   const hero = deps.heroShot ?? (c.artifactId ? await ensureHeroShot(c.artifactId) : null);
   if (!hero) return { kind: "skipped", reason: "nincs nyitókép — a levél a képpel indul, kép nélkül nem megy" }; // i18n-exempt: operátori kimenet
@@ -441,8 +451,11 @@ export interface NonOpenerTickResult {
  * mock-outreach window. A skipped lead does not use up a slot — the tick walks on (bounded).
  */
 export async function runNonOpenerFollowups(now: Date = new Date(), deps: NonOpenerDeps = {}): Promise<NonOpenerTickResult> {
-  const block = mockOutreachWindowBlocks(now);
-  if (block) return { sent: 0, skipped: 0, eligible: 0, deferred: block };
+  // Deferred only when no country's window is open (the HU row's sentence first, as before);
+  // each lead's own window is re-read in sendNonOpenerFollowup.
+  if (allCountriesSync().every((cfg) => mockWindowBlocksIn(now, cfg) !== null)) {
+    return { sent: 0, skipped: 0, eligible: 0, deferred: mockOutreachWindowBlocks(now) ?? "egyik ország megkeresési ablaka sincs nyitva" }; // i18n-exempt: operátori kimenet
+  }
   const cap = await nonOpenerDailyCap();
   const room = Math.min(NONOPENER_PER_TICK, cap - (await sentToday(now)));
   if (room <= 0) return { sent: 0, skipped: 0, eligible: 0, deferred: `napi keret (${cap}) elérve` }; // i18n-exempt: operátori kimenet

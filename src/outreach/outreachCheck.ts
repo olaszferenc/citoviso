@@ -627,7 +627,11 @@ function foreignGateMarks(lang: string): { identity: string; legal: string; fram
     lang,
     "Nem kép, hanem működő oldal: kattintható, telefonon is jól mutat, és benne vannak a szállása képei és adatai. Még nem nyilvános, csak ezen a linken érhető el:",
   );
-  const framing = [...new Set([mail, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
+  // NEMZETKÖZI B: the escalation follow-up (escalationFollowup.ts) frames the page in its own hook
+  // („… megnézte a honlap-tervét”) — without it every translated follow-up failed KERETEZÉS, so
+  // no foreign follow-up could ever go out. The Hungarian rule (FRAMING_PATTERN) is untouched.
+  const followup = T(lang, "Köszönjük, hogy többször is megnézte a honlap-tervét.");
+  const framing = [...new Set([mail, followup, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
   return {
     identity: longest(T(lang, "A megkeresés küldője: {who}", v)).toLowerCase(),
     // ORSZÁG-RÉTEG 3/9: the letter takes its legal line from the COUNTRY LEGAL PACK (draft.ts →

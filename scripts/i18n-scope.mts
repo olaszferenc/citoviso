@@ -45,6 +45,9 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // errors and logs (a fatal boot error, a progress line) — none reaches a customer.
   "src/country.ts": "operátori hiba-/naplószöveg (az ország-réteg nem olvasható) — vevőhöz nem jut",
   "src/scraper/enrichGeo.ts": "operátori napló (Nominatim-dúsítás folyamatjelzése) — vevőhöz nem jut",
+  // NEMZETKÖZI B: the lead-clock's Hungarian literals are the operator-facing reasons a follow-up
+  // waits (dispatch note, CLI, run summary) — never a text of a letter or SMS.
+  "src/outreach/leadClock.ts": "operátori ok (miért vár az utánkövető) — vevőhöz nem jut",
   // ADR-0462 kísérlet-motor: the Hungarian literals are the guard's house alert (alertHouse → the
   // operator's mailbox) and logs. The variant WORDING a lead reads is not in this file: it is the
   // catalog row (outreach_variant.template), used for Hungarian letters ONLY (assignVariants gives a

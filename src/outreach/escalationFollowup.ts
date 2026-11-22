@@ -37,6 +37,8 @@ import { T } from "../i18n/mail.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { collectFallbacks } from "../i18n/packs.js";
 import { foreignEscalationSentence } from "./foreignPrice.js";
+import { allCountriesSync } from "../country.js";
+import { followupWindowBlocksIn, leadCountryCfg } from "./leadClock.js";
 
 export interface FollowupRunResult {
   readonly sent: number;
@@ -93,8 +95,13 @@ export async function sendEscalationFollowups(
   now: Date = new Date(),
   opts: { readonly sender?: EmailSender; readonly onlyProspects?: ReadonlySet<string> } = {},
 ): Promise<FollowupRunResult> {
-  const blocked = followupWindowBlocks(now);
-  if (blocked) return { sent: 0, skipped: 0, deferred: blocked };
+  // NEMZETKÖZI B: the window is the LEAD's (its zone, its holidays). The run is deferred only when
+  // no country's window is open; the HU row reads followupWindowBlocks' own sentence, so a
+  // Hungarian-only list is deferred exactly as before.
+  const homeBlocked = followupWindowBlocks(now);
+  if (allCountriesSync().every((c) => followupWindowBlocksIn(now, c, followupWindowBlocks) !== null)) {
+    return { sent: 0, skipped: 0, deferred: homeBlocked ?? "egyik ország emlékeztető-ablaka sincs nyitva" }; // i18n-exempt: operátori napló
+  }
   // Owner 2026-11-18 („az újramegkereső email se menjen ki”): a stop switch, app_setting
   // 'escalation_followup' = {"enabled":false}. Missing / unreadable = ON (the row predates it).
   // It stops only this follow-up LETTER — the on-page offer keeps running.
@@ -109,11 +116,20 @@ export async function sendEscalationFollowups(
   for (const f of due) {
     const p = await db
       .selectFrom("prospect")
-      .select(["lead_id", "contact_email", "unsubscribed_at"])
-      .where("id", "=", f.prospectId)
+      .innerJoin("lead", "lead.id", "prospect.lead_id")
+      .select(["prospect.lead_id as lead_id", "prospect.contact_email as contact_email", "prospect.unsubscribed_at as unsubscribed_at", "lead.contact_block_at as contact_block_at"])
+      .where("prospect.id", "=", f.prospectId)
       .executeTakeFirst();
     const email = p?.contact_email?.trim() || null;
-    if (!email || p?.unsubscribed_at || (await isEmailSuppressed(email))) {
+    // NEMZETKÖZI B védőháló: „ne keressük” on the LEAD (lead.contact_block_at) stops it too — a
+    // prospect created after the block carries no unsubscribed_at of its own.
+    if (!email || p?.unsubscribed_at || p?.contact_block_at || (await isEmailSuppressed(email))) {
+      skipped++;
+      continue;
+    }
+    // The lead's own window (zone, holidays); no country row → not sent (fail closed). A due
+    // reminder outside its window is left unclaimed: the next hourly run inside it sends it.
+    if (followupWindowBlocksIn(now, await leadCountryCfg(p!.lead_id), followupWindowBlocks)) {
       skipped++;
       continue;
     }

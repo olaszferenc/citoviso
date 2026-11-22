@@ -33,6 +33,7 @@
 // is unchanged (ADR-0348). The approved "más stílusú változat" sentence is NOT here yet: it
 // needs its click target (GET confirm page + POST into the reply inbox) — see the README.
 
+import { calendarSyncPortals } from "../country.js";
 import path from "node:path";
 import { T } from "../i18n/mail.js";
 import { huArticleLower } from "../hu.js";
@@ -83,6 +84,14 @@ export interface TrialCampaignLetterInput {
   readonly sender: { readonly sigName: string; readonly sigCo: string; readonly sigMail: string };
   /** advertiserIdentity(lang) — §C.2 registry identification. */
   readonly identity: string;
+  /**
+   * NEMZETKÖZI B: the lead's ISO-2. Absent or "HU" = the Hungarian letter, byte for byte (the
+   * .hu address, Szállás.hu). Any other country: the package's own domain ending (`packageTld`,
+   * packageDomainTld) and only the portals the country row lists (calendarSyncPortals).
+   */
+  readonly country?: string | null;
+  /** The domain ending the lead's region puts in every package („.com” for HR), or null = none. */
+  readonly packageTld?: string | null;
   readonly links: {
     /** The mock link AGAIN — the lead's preview subdomain (draft.link, ADR-0330). */
     readonly cta: string;
@@ -159,6 +168,16 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
   // The platform domain the trial runs on — the host minus the lead's own label.
   const domain = i.host.slice(i.host.indexOf(".") + 1);
   const pct = i.coupon && i.coupon.percent > 0 ? { p: String(i.coupon.percent), days } : null;
+  // NEMZETKÖZI B: the Hungarian letter (country absent / HU) keeps its .hu point byte for byte;
+  // another country names its region's package ending, and with none the point is left out
+  // (never a domain the package does not carry, §B.17) — the intro then counts two changes.
+  const home = !i.country || i.country.toUpperCase() === "HU";
+  const tld = (i.packageTld ?? "").trim().replace(/^\.?/, ".");
+  const domainPoint: string | null = home
+    ? T(lang, "Bármelyik csomagunk díja egy .hu webcímet is tartalmaz, külön havidíj nélkül (pl. a szálláshelye nevével). A próba {domain}-os címen fut, a .hu cím a megrendeléssel jár.", { domain })
+    : tld.length > 1
+      ? T(lang, "Bármelyik csomagunk díja egy {tld} webcímet is tartalmaz, külön havidíj nélkül (pl. a szálláshelye nevével). A próba {domain}-os címen fut, a {tld} cím a megrendeléssel jár.", { domain, tld })
+      : null;
   const offer = pct
     ? i.coupon!.promised
       ? T(lang, "Ha a {days} napon belül megrendeli: megkapja a korábban ígért {p}% kedvezményt (éves fizetésnél az első évre, havi fizetésnél az első hónapra; utána a listaár érvényes).", pct)
@@ -169,7 +188,9 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
     headerTag: T(lang, "Újdonság"),
     greet: T(lang, "Tisztelt {name}!", { name }),
     p1: T(lang, "{when} küldtünk Önnek egy honlap-tervet.", { when: upperFirst(when) }),
-    p2: T(lang, "Azóta három dolog változott, ami Önnek is számíthat."),
+    p2: domainPoint === null
+      ? T(lang, "Azóta két dolog változott, ami Önnek is számíthat.")
+      : T(lang, "Azóta három dolog változott, ami Önnek is számíthat."),
     ctaTry: T(lang, "Kipróbálom {days} napig ingyen", { days }),
     heroAlt: T(lang, "A honlap-terv nyitóképe"),
     whyQ: T(lang, "Ha nem érdekli: mi tartja vissza?"),
@@ -186,8 +207,10 @@ export function trialCampaignParts(i: TrialCampaignLetterInput): TrialCampaignPa
     // domain_free_in_package), the per-room iCal link (ADR-0361) — prices do NOT sync.
     gets: [
       T(lang, "{days} napig ingyen, élesben kipróbálhatja a tervét: bankkártya nélkül, és a végén semmit nem terhelünk.", { days }),
-      T(lang, "Bármelyik csomagunk díja egy .hu webcímet is tartalmaz, külön havidíj nélkül (pl. a szálláshelye nevével). A próba {domain}-os címen fut, a .hu cím a megrendeléssel jár.", { domain }),
-      T(lang, "A foglalási naptár iCal-linkkel, szobánként összeköthető a Booking.com, a Szállás.hu és az Airbnb naptárával. Az árak nem szinkronizálódnak: a portálon és a honlapon külön állítja őket."),
+      ...(domainPoint === null ? [] : [domainPoint]),
+      home || calendarSyncPortals(i.country).includes("Szállás.hu") // i18n-exempt: portal brand name (comparison)
+        ? T(lang, "A foglalási naptár iCal-linkkel, szobánként összeköthető a Booking.com, a Szállás.hu és az Airbnb naptárával. Az árak nem szinkronizálódnak: a portálon és a honlapon külön állítja őket.")
+        : T(lang, "A foglalási naptár iCal-linkkel, szobánként összeköthető a Booking.com és az Airbnb naptárával. Az árak nem szinkronizálódnak: a portálon és a honlapon külön állítja őket."),
     ],
     endTitle: T(lang, "Mi történik a {days} nap végén?", { days }),
     // Each point is the code's: the trial site is suspended at the end (trial/expiry.ts), no

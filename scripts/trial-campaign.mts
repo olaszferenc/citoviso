@@ -46,6 +46,15 @@ import {
 } from "../src/outreach/trialCampaign.js";
 import { smsEncoding } from "../src/sms/encoding.js";
 import { mockOutreachWindowBlocks } from "../src/sms/sendWindow.js";
+import { allCountriesSync } from "../src/country.js";
+import { outreachWindowBlocksIn } from "../src/outreach/countryOutreach.js";
+
+/** NEMZETKÖZI B: the run stops only when NO country's window is open (each send re-judges its
+ *  lead's own window — sendTrialCampaignMail/Sms); the HU sentence first, as before. */
+function anyWindowBlocks(now: Date): string | null {
+  if (allCountriesSync().some((c) => outreachWindowBlocksIn(now, c) === null)) return null;
+  return mockOutreachWindowBlocks(now) ?? "egyik ország megkeresési ablaka sincs nyitva";
+}
 
 const argv = process.argv.slice(2);
 const flag = (name: string): boolean => argv.includes(name);
@@ -221,7 +230,7 @@ async function main(): Promise<void> {
   const limit = num("--limit", Infinity);
   const smsGapMs = Math.max(90, num("--sms-koz", 95)) * 1000;
   const mailGapMs = num("--level-koz", 20) * 1000;
-  const block = mockOutreachWindowBlocks(new Date());
+  const block = anyWindowBlocks(new Date());
   if (block) {
     console.error(`⛔ ${block}`);
     process.exitCode = 1;
@@ -233,7 +242,7 @@ async function main(): Promise<void> {
   for (const c of targets) {
     if (sent >= limit) break;
     // The window is re-judged per message: a run that crosses 16:00 stops there.
-    const w = mockOutreachWindowBlocks(new Date());
+    const w = anyWindowBlocks(new Date());
     if (w) {
       await log(`MEGÁLL — ${w}`);
       break;

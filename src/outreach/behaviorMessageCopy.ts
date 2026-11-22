@@ -24,6 +24,7 @@ import { esc, mailButton, mailNote, mailPara, platformMail } from "../email/plat
 import type { EmailMessage } from "../email/sender.js";
 import { helperSignature, signatureBlock } from "../email/signature.js";
 import { coldHost } from "./coldLane.js";
+import { carriesCurrencySign } from "../email/outreachEmail.js";
 
 export type BehaviorTrigger = "return" | "price" | "start";
 
@@ -90,11 +91,18 @@ export interface BehaviorSms {
 
 function smsBody(lang: string, trigger: BehaviorTrigger, name: string, mark: string, price: string | null, days: number | null): string {
   if (trigger === "price") {
-    return T(lang, "{name}: a honlap-terve havi {price} Ft-tól indul. Hogy mi van benne és mi nem, itt látja: {link} Citoviso", {
-      name,
-      price: price ?? "",
-      link: mark,
-    });
+    // NEMZETKÖZI B: an amount in another currency carries its own sign (formatMinor) — no „Ft” after it.
+    return carriesCurrencySign(price ?? "")
+      ? T(lang, "{name}: a honlap-terve havi {price}-tól indul. Hogy mi van benne és mi nem, itt látja: {link} Citoviso", {
+          name,
+          price: price ?? "",
+          link: mark,
+        })
+      : T(lang, "{name}: a honlap-terve havi {price} Ft-tól indul. Hogy mi van benne és mi nem, itt látja: {link} Citoviso", {
+          name,
+          price: price ?? "",
+          link: mark,
+        });
   }
   if (trigger === "start") {
     return T(lang, "{name}: a honlap-tervéből egy kattintással élő honlap lesz, {days} napig ingyen, kártya nélkül. {link} Citoviso", {
@@ -169,7 +177,9 @@ export function buildBehaviorMail(input: BehaviorMailInput): BehaviorMail {
     subject = T(lang, "{name} – mennyibe kerül a honlap?", { name });
     heading = T(lang, "Mennyibe kerül a honlap?");
     para =
-      T(lang, "A honlap-terve havi {price} forinttól indul (a legkisebb csomag listaára).", { price: input.priceList ?? "" }) +
+      (carriesCurrencySign(input.priceList ?? "")
+        ? T(lang, "A honlap-terve havi {price}-tól indul (a legkisebb csomag listaára).", { price: input.priceList ?? "" })
+        : T(lang, "A honlap-terve havi {price} forinttól indul (a legkisebb csomag listaára).", { price: input.priceList ?? "" })) +
       " " +
       T(lang, "Hogy pontosan mi van benne, mi kerül pluszba, és lemondható-e, a terv alján egy helyen megtalálja — és ha más kérdése van, ott azonnal választ kap.");
     button = T(lang, "Mi van benne?");
