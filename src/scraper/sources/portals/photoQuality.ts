@@ -59,6 +59,9 @@ const URL_DENY: ReadonlyArray<{ re: RegExp; why: string }> = [
   // Map graphics offered as "the area" (balatoni-szallaskereso.hu).
   { re: /terkep|\bmap\b/i, why: "térkép-grafika, nem fotó" },
   { re: /\.svg(\?|$)/i, why: "vektorgrafika — felület-elem, nem fotó" },
+  // Embedded-video poster frames (YouTube / Vimeo): the generic HR portal reader picked one up
+  // (Nemzetközi A, 2026-11-22). A video still is not a gallery photo of the property.
+  { re: /(\/\/i\d?\.ytimg\.com\/|\/\/img\.youtube\.com\/|youtube(-nocookie)?\.com\/vi(_webp)?\/|\/\/i\.vimeocdn\.com\/video\/|\/\/vumbnail\.com\/)/i, why: "videó-bélyegkép, nem a szállás fotója" },
 ];
 
 /**

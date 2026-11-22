@@ -90,6 +90,9 @@ async function addCountry(r: {
   iso: string; name: string; lang: string; tz: string; currency: string; dial: string; trunk: string;
   mobiles: string[]; nsn: [number, number]; holidays: string[]; portals: string[]; tlds: string[];
 }): Promise<void> {
+  // Since 0150 the scratch DB already carries a real BG row (and later rows may follow): this e2e
+  // measures ITS OWN shapes, so the migrated row is replaced (scratch DB only).
+  await db.executeQuery(sql`delete from country where iso2 = ${r.iso}`.compile(db));
   await db.executeQuery(
     sql`
       insert into country (iso2, name, aliases, default_lang, time_zone, currency, pricing_region, area_bbox,

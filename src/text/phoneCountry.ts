@@ -33,13 +33,18 @@ export function normalizePhoneIn(raw: string, cfg: PhoneRules | null): string | 
   if (!cfg) return null;
   // A number already carrying the dial code without "+" ("359888040056").
   let nsn: string | null = null;
+  const fits = (n: string): boolean => n.length >= cfg.phoneNsnMin && n.length <= cfg.phoneNsnMax;
+  const withDial = c.startsWith(cfg.dialCode) && c.length - cfg.dialCode.length >= cfg.phoneNsnMin;
   if (cfg.trunkPrefix && c.startsWith(cfg.trunkPrefix)) nsn = c.slice(cfg.trunkPrefix.length);
-  else if (c.startsWith(cfg.dialCode) && c.length - cfg.dialCode.length >= cfg.phoneNsnMin) nsn = c.slice(cfg.dialCode.length);
-  // ADR-0450: a country WITHOUT a trunk prefix (CZ, PL …) writes its national number bare
-  // ("777 123 456") — that IS the national significant number.
-  else if (!cfg.trunkPrefix) nsn = c;
-  if (nsn === null || nsn.startsWith("0")) return null;
-  return nsn.length >= cfg.phoneNsnMin && nsn.length <= cfg.phoneNsnMax ? `+${cfg.dialCode}${nsn}` : null;
+  else if (cfg.trunkPrefix) nsn = withDial ? c.slice(cfg.dialCode.length) : null;
+  // ADR-0450: a country WITHOUT a trunk prefix (CZ, PL, IT …) writes its national number bare
+  // ("777 123 456") — that IS the national significant number. The dial code without "+" is
+  // only read off when the bare digits do not fit: an Italian mobile may itself start with "39".
+  else nsn = withDial && !fits(c) ? c.slice(cfg.dialCode.length) : c;
+  // A leading 0 is a trunk prefix only where the country HAS one; in Italy (no trunk prefix) the
+  // 0 of a landline is part of the number („06 1234 5678” → +39 06 1234 5678; C SUB, 2026-11-22).
+  if (nsn === null || (cfg.trunkPrefix && nsn.startsWith("0"))) return null;
+  return fits(nsn) ? `+${cfg.dialCode}${nsn}` : null;
 }
 
 /** Is this E.164 number a mobile of `cfg`'s country (the SMS/MMS/messenger channels need one)? */

@@ -286,6 +286,14 @@ check(
   "a régió-stock kép a saját adatlapon is tiltott marad (§B.17)",
 );
 
+check(
+  "ELDOB · YouTube/Vimeo videó-bélyegkép a generikus HR portál-olvasóból (HR végpróba 2026-11-22)",
+  judgePhoto({ url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg", width: 1280, height: 720 }).usable === false &&
+    judgePhoto({ url: "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg" }).usable === false &&
+    judgePhoto({ url: "https://i.vimeocdn.com/video/123456789-abc_1280x720.jpg" }).usable === false,
+  "a beágyazott videó kockája nem a szállás galéria-fotója",
+);
+
 // ── largestPhotoUrl transform (2026-08-23) — the pure half of the size-upgrade ──
 // (The network verify/fallback lives in portalListing.ts and is exercised live.) The
 // transform must swap the size-segment to the largest derivative AND no-op on anything

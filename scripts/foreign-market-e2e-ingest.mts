@@ -18,7 +18,7 @@
 //      and the outreach mail (langForLead: scraper_definition.country) would use;
 //   ⑥ dedupe: the same six links pasted on an overlapping second region → `known`.
 //
-// The pure helpers (normalizePhone, classifyWebsite) are also probed with the local
+// The pure helpers (normalizePhoneIn, classifyWebsite) are also probed with the local
 // number / portal shapes of both markets.
 //
 // ISOLATION: own scratch DB (dropped on every exit path) — the shared citoviso_dev is never
@@ -101,7 +101,6 @@ const { config } = await import("../src/config.js");
 
 const { saveRegion } = await import("../src/console/data.js");
 const store = await import("../src/scout/store.js");
-const { normalizePhone } = await import("../src/text/phone.js");
 const { classifyWebsite } = await import("../src/scraper/qualify.js");
 const { langForCountry } = await import("../src/i18n/lang.js");
 const { langForLead } = await import("../src/i18n/mail.js");
@@ -200,6 +199,7 @@ const mapsLink = (p: Place): string =>
 
 // ── pure probes: phone + portal shapes of both markets ───────────────────────────────────
 console.log("\n── tiszta függvények: telefon + portál-osztályozás ──");
+await refreshCountries();
 {
   const phones: Array<[string, string | null]> = [
     ["098 882 491", "+38598882491"], ["091 518 4983", "+385915184983"], ["021 616 148", "+38521616148"],
@@ -217,8 +217,11 @@ console.log("\n── tiszta függvények: telefon + portál-osztályozás ─�
       report(`normalizePhoneIn("${raw}", ${SYN_ISO}-sor)`, got === want ? "PASS" : "FAIL", `kapott ${JSON.stringify(got)}, várt ${want}`);
       continue;
     }
-    const got = normalizePhone(raw);
-    report(`normalizePhone("${raw}")`, got === want ? "PASS" : "FAIL", `kapott ${JSON.stringify(got)}, várt ${want}`);
+    // A foreign number is read in ITS country's plan (normalizePhoneIn + the country row), never
+    // with the Hungarian-only normalizePhone (that one is measured by the HU regressions).
+    const iso = want!.startsWith("+385") ? "HR" : "BG";
+    const got = normalizePhoneIn(raw, countryConfigSync(iso));
+    report(`normalizePhoneIn("${raw}", ${iso}-sor)`, got === want ? "PASS" : "FAIL", `kapott ${JSON.stringify(got)}, várt ${want}`);
   }
   if (SYNTHETIC) {
     report(`classifyWebsite(${SYN_PORTAL}) — a sor portál-hostja`, classifyWebsite(`https://www.${SYN_PORTAL}/listing/1`) === "portal_only" ? "PASS" : "FAIL",

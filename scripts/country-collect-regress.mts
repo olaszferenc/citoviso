@@ -260,6 +260,19 @@ check("HR domain-tipp: apartmaniivana.hr a jelöltek közt",
 for (const [raw, want] of [["021 612 345", "+38521612345"], ["+385 (0)91 234 5678", "+385912345678"], ["098/765-432", "+38598765432"]] as const) {
   check(`HR szám: „${raw}” → ${want}`, normalizePhoneIn(raw, HR_ROW) === want, String(normalizePhoneIn(raw, HR_ROW)));
 }
+// HR végpróba 2026-11-22: a trunk-prefix NÉLKÜLI országok (IT, CZ) generic terve. Az olasz vezetékes szám 0-val
+// kezdődik, és a 0 a szám része (nincs trunk); egy „39”-cel kezdődő olasz mobil nem hívószám-előtag.
+{
+  const IT_ROW = { ...HR_ROW, iso2: "IT", dialCode: "39", trunkPrefix: "", mobilePrefixes: ["3"], phoneNsnMin: 9, phoneNsnMax: 10 } as CountryConfig;
+  const CZ_ROW = { ...HR_ROW, iso2: "CZ", dialCode: "420", trunkPrefix: "", mobilePrefixes: ["60", "77"], phoneNsnMin: 9, phoneNsnMax: 9 } as CountryConfig;
+  for (const [raw, row, want] of [
+    ["06 1234 5678", IT_ROW, "+390612345678"], ["055 123456", IT_ROW, "+39055123456"], ["347 123 4567", IT_ROW, "+393471234567"],
+    ["393 123 4567", IT_ROW, "+393931234567"], ["39 347 123 4567", IT_ROW, "+393471234567"], ["+39 06 1234 5678", IT_ROW, "+390612345678"],
+    ["777 123 456", CZ_ROW, "+420777123456"], ["420 777 123 456", CZ_ROW, "+420777123456"],
+  ] as const) {
+    check(`${row.iso2} szám (trunk nélkül): „${raw}” → ${want}`, normalizePhoneIn(raw, row) === want, String(normalizePhoneIn(raw, row)));
+  }
+}
 check("HR mobil: 098/765-432 mobil, 021 612 345 vezetékes", ec.isMobile("098/765-432", HR_ROW) && !ec.isMobile("021 612 345", HR_ROW));
 check("HR csatorna: e-mail nélkül mobil → sms-képes jelölés", ec.resolveChannel(undefined, "091 234 5678", HR_ROW) === "sms");
 check("HR kulcs: +385 21 612 345 ≡ 021 612 345 (napló + portál)",

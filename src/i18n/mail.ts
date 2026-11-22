@@ -202,9 +202,14 @@ export async function langForLead(leadId: string): Promise<string> {
     .where("lead_id", "=", leadId)
     .orderBy("generated_at", "desc")
     .executeTakeFirst();
-  if (art) return readLang(art.inputs);
+  const written = art ? pickLang(art.inputs) : null;
+  if (written) return written;
+  // A mock without a recorded language (an early or hand-made artifact) is NOT proof the lead was
+  // written to in Hungarian: the lead's country decides (HR végpróba 2026-11-22 — a Czech/Bulgarian
+  // reply was stored as „hu”). Only a legacy artifact whose country has no row keeps the old default.
   const country = await countryOfLead(leadId);
   const lang = langForCountry(country);
+  if (!lang && art) return readLang(art.inputs);
   if (!lang) {
     throw new Error(`a lead országa (${country ?? "ismeretlen"}) nincs az ország-rétegben — nincs nyelve, nem írunk neki (${leadId})`); // i18n-exempt: operátori hiba
   }
