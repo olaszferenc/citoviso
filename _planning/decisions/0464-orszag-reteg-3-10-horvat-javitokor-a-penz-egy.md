@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/10: horvát javítókör — a pénz egy forrásból, ország-függő tartalom, OIB, nyelvi maradványok és a többes szám
+## ADR-0464 — Ország-réteg 3/10: horvát javítókör — a pénz egy forrásból, ország-függő tartalom, OIB, nyelvi maradványok és a többes szám
 
 **Státusz:** ELFOGADVA (tulaj „ok mehet” 2026-11-21 a koordinátoron át, brief
 `orszag-reteg-3j-horvat-javitokor-20261121.md`, koordinátor `cit9b4690e3`) ·

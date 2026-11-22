@@ -1,6 +1,6 @@
 # 2026-11-22 — Ország-réteg 3/10: horvát javítókör (Elek HR leletei) + Elek ismétlés
 
-Brief: `~/rc-briefs/orszag-reteg-3j-horvat-javitokor-20261121.md` · session `citda4f0c91` · koordinátor `cit9b4690e3` · ADR-XXXX (3/10).
+Brief: `~/rc-briefs/orszag-reteg-3j-horvat-javitokor-20261121.md` · session `citda4f0c91` · koordinátor `cit9b4690e3` · ADR-0464 (3/10).
 
 ## Elvégezve
 - **Pénz:** −25 % egy forrásból (a valódi küldés rögzíti az ajánlatot; a tesztvilág a valódi úton küld); a következő terhelés
