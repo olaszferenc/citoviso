@@ -1,6 +1,6 @@
 # 2026-11-22 — Nemzetközi B: kiküldés, utánkövetés, válasz, elutasító országfüggően (`cit4ddfda9e`)
 
-Koordinátor: `cit9b4690e3`. Brief: `~/rc-briefs/nemzetkozi-B-kikuldes-valasz-20261122.md`. ADR-XXXX
+Koordinátor: `cit9b4690e3`. Brief: `~/rc-briefs/nemzetkozi-B-kikuldes-valasz-20261122.md`. ADR-0466
 (`_planning/decisions/XXXX-nemzetkozi-b-kikuldes-valasz-orszagfuggo.md`). Élesen NINCS.
 
 ## Elvégzett munka

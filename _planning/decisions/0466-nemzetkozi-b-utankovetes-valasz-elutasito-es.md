@@ -1,4 +1,4 @@
-## ADR-XXXX — Nemzetközi B: utánkövetés, válasz, elutasító és kiküldési sor a lead országában
+## ADR-0466 — Nemzetközi B: utánkövetés, válasz, elutasító és kiküldési sor a lead országában
 
 **Státusz:** ELFOGADVA (tulaj-jóváhagyás 2026-11-22 a koordinátoron át, `cit9b4690e3`; brief
 `~/rc-briefs/nemzetkozi-B-kikuldes-valasz-20261122.md`) · **Épít:** ADR-0437 (ország-réteg), ADR-0455 (CRM-óra),

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-nemzetkozi-b-kikuldes-valasz-orszagfuggo.md) — Nemzetközi B: utánkövetés, válasz, elutasító és kiküldési sor a lead országában
+- [ADR-0466](decisions/0466-nemzetkozi-b-utankovetes-valasz-elutasito-es.md) — Nemzetközi B: utánkövetés, válasz, elutasító és kiküldési sor a lead országában
 - [ADR-0465](decisions/0465-orszag-reteg-3-10b-a-horvat-ar-reteg-a-magyar.md) — Ország-réteg 3/10b: a horvát ár-réteg (a magyar csomagok egyszeri euró-másolata, .com) és a személyes levél minden országba
 - [ADR-0464](decisions/0464-orszag-reteg-3-10-horvat-javitokor-a-penz-egy.md) — Ország-réteg 3/10: horvát javítókör — a pénz egy forrásból, ország-függő tartalom, OIB, nyelvi maradványok és a többes szám
 - [ADR-0463](decisions/0463-kulcs-nelkuli-bongeszos-webes-kereses-a-brave.md) — Kulcs nélküli, böngészős webes keresés a Brave után (Startpage, $0)
