@@ -123,6 +123,10 @@ function pilotCopyAddress(msg: EmailMessage): string | null {
   const addr = (config.emailBcc ?? "").trim();
   if (!addr) return null;
   if (msg.audience === "guest") return null;
+  // Cold lane (getcitoviso.com): no pilot copy. The owner's mailbox is Zoho, and Zoho rejects every
+  // mail of this sender (554 5.7.7 policy violation): 341 copies bounced 2026-11-18..22, none arrived,
+  // and each bounce counts against the cold sender's reputation. Owner, 2026-11-22: „igen” to switching it off.
+  if (msg.lane === "cold") return null;
   if (msg.to.trim().toLowerCase() === addr.toLowerCase()) return null; // no self-copy
   return addr;
 }

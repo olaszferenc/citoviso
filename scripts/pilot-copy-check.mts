@@ -106,6 +106,7 @@ try {
   ok(Boolean(mailCopy?.html?.includes(`${TOK}/unsubscribe"`)), "a másolat leiratkozó linkje érintetlen");
   ok(!Object.keys(mailCopy?.headers ?? {}).some((k) => /^list-unsubscribe/i.test(k)) && mailCopy?.headers?.["X-Keep"] === "1", "a másolatról a List-Unsubscribe fejlécek lekerülnek (a tulaj postafiókja nem iratkoztathatja le a leadet)");
   ok(pilotOwnViewCopy({ ...leadMail, audience: "guest" }) === null, "vendég-levélről nincs másolat");
+  ok(pilotOwnViewCopy({ ...leadMail, lane: "cold" as const }) === null, "hideg sávos levélről nincs másolat (a Zoho elutasítja, tulaj 2026-11-22)");
   ok(pilotOwnViewCopy({ ...leadMail, text: "számla", html: "<p>számla</p>" }) === null, "követett link nélkül nincs külön másolat (marad a Bcc)");
   await getEmailSender().send(leadMail);
   const emls = await readdir(path.join(work, "outbox")).catch(() => [] as string[]);
