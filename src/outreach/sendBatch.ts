@@ -39,6 +39,8 @@ import { isTestLeadName } from "./ownerTestPhone.js";
 import { planCountStill } from "./planSet.js";
 import { assignVariants, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
 import { mailHeroUrl, remoteHeroActive, storeMailHero } from "./emailOpen.js";
+import { composePersonalBody, personalParts, personalSenderName } from "./experimentCopy.js";
+import { coldHost } from "./coldLane.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -455,6 +457,13 @@ export async function sendOutreachMail(
   // body is RE-COMPOSED from the parts, so the HTML and the gated text stay one, §I).
   const letterOf = (v: LetterVariants): OutreachDraft => {
     let out: OutreachDraft = v.subject ? { ...d.draft, subject: v.subject } : d.draft;
+    const links = { cta: out.link, unsub: out.unsubscribeLink, privacy: out.privacyLink, ...(out.whyLink ? { why: out.whyLink } : {}) };
+    if (v.bodyStyle === "personal") {
+      // The personal first-person letter (experimentCopy.ts): its own parts and body, the price line
+      // in its place; today's price sentence keeps its discount footnote.
+      const parts = personalParts(d.input, out, v.priceLine, personalSenderName(), coldHost());
+      return { ...out, parts, body: composePersonalBody(parts, links, d.lang) };
+    }
     if (v.priceLine !== undefined) {
       // No discount in the letter → the discount's validity footnote has nothing to qualify.
       const parts = { ...out.parts, p3: v.priceLine, fine: "" };

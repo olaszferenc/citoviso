@@ -256,6 +256,57 @@ function buildPlainMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, 
 }
 
 /**
+ * The PERSONAL letter (experiment `body_style: szemelyes`, src/outreach/experimentCopy.ts): first
+ * person singular, no logo, no button, no price box — greeting, the intro with the bare link, the
+ * hero (if the image dimension keeps it), the proof, the no-work promise, the price line, the „not
+ * mine” line, a three-line signature, the unchanged legal footer. Renders the SAME parts the gated
+ * body (composePersonalBody) carries, in the same order. Tables only (outlook-lint).
+ */
+function buildPersonalMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, lang: string | undefined): string {
+  const link = (href: string, txt = href): string =>
+    `<a href="${esc(href)}" style="color:${NAVY};word-break:break-all">${esc(txt)}</a>`;
+  const row = (inner: string): string => `<tr><td style="padding:0 ${PAD}px">${inner}</td></tr>`;
+  const small = (txt: string, extra = ""): string =>
+    `<p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:${FOOT};font-family:${FONT}">${esc(txt)}${extra}</p>`;
+  const hero = heroSrc
+    ? row(
+        `<a href="${esc(l.cta)}" style="text-decoration:none">` +
+          `<img src="${heroSrc}" alt="${esc(T(lang, "A honlap nyitóképe"))}" width="${W - 2 * PAD}" ` +
+          `style="display:block;width:100%;max-width:${W - 2 * PAD}px;height:auto;border:1px solid ${LINE};margin:0 0 14px" border="0"></a>`,
+      )
+    : "";
+  const body =
+    `<tr><td style="padding:20px ${PAD}px 0">${p(t.greet)}` +
+    `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">${esc(t.hook)}<br>${link(l.cta)}</p></td></tr>` +
+    hero +
+    (t.planNote ? row(p(t.planNote)) : "") +
+    row(p(t.p1)) +
+    row(p(t.p2)) +
+    (t.p3 ? row(p(t.p3)) : "") +
+    row(p(t.p4)) +
+    row(
+      `<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">` +
+        `${esc(T(lang, "Üdvözlettel,"))}<br>${esc(t.sigName)}<br>${esc(t.sigCo)}</p>`,
+    ) +
+    `<tr><td style="padding:0 ${PAD}px 22px"><div style="padding-top:14px;border-top:1px solid ${LINE}">` +
+    (t.fine ? small(t.fine) : "") +
+    (t.why && l.why ? small(t.why, `<br>${link(l.why)}`) : "") +
+    small(t.unsubTxt, `<br>${link(l.unsub)}`) +
+    small(`${t.legal} `, link(l.privacy)) +
+    `<p style="margin:0;font-size:12px;line-height:1.6;color:${FOOT};font-family:${FONT}">${esc(t.identity)}</p>` +
+    `</div></td></tr>`;
+  const inner = tbl(`width="100%" style="width:100%;max-width:${W}px;background:#ffffff" bgcolor="#ffffff"`, body);
+  return tbl(
+    `width="100%" bgcolor="#ffffff" style="background:#ffffff"`,
+    `<tr><td align="left" style="padding:0">` +
+      `<!--[if mso]><table role="presentation" width="${W}" align="left" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
+      inner +
+      `<!--[if mso]></td></tr></table><![endif]-->` +
+      `</td></tr>`,
+  );
+}
+
+/**
  * Build the sendable e-mail from a PASS-gated draft. Call ONLY after
  * checkOutreachDraft returned PASS — this module renders, it does not judge.
  *
@@ -282,7 +333,7 @@ export function buildOutreachEmail(
     heroUrl?: string;
     firstLine?: string;
     fromName?: string;
-    bodyStyle?: "boxed" | "plain";
+    bodyStyle?: "boxed" | "plain" | "personal";
     noImage?: boolean;
     /** Experiment `price_line`: the parts carry a plain price sentence (or none) — no navy box. */
     noPriceBox?: boolean;
@@ -310,7 +361,8 @@ export function buildOutreachEmail(
   const remoteHero = !opts.noImage && opts.heroUrl ? opts.heroUrl : null;
   const hasShot = !opts.noImage && !remoteHero && Boolean(opts.heroShotPath);
   const heroSrc = remoteHero ?? (hasShot ? `cid:${HERO_CID}` : null);
-  const plain = opts.bodyStyle === "plain";
+  // The plain and the personal layouts share the white, logo-less frame.
+  const plain = opts.bodyStyle === "plain" || opts.bodyStyle === "personal";
   const brand = bandBrand();
   // The W row names the cold-lane host: a letter from getcitoviso.com mentions ONE domain.
   const sig = signatureBlock(senderSignature(draft.parts, opts.lang, T(opts.lang, "Üdvözlettel,"), config.outreachSender.title, coldHost()));
@@ -320,7 +372,9 @@ export function buildOutreachEmail(
     privacy: draft.privacyLink,
     ...(draft.whyLink ? { why: draft.whyLink } : {}),
   };
-  const inner = plain
+  const inner = opts.bodyStyle === "personal"
+    ? buildPersonalMail(heroSrc, draft.parts, links, opts.lang)
+    : plain
     ? buildPlainMail(heroSrc, draft.parts, links, opts.lang)
     : buildMail(heroSrc, draft.parts, links, opts.lang, brand.html, sig, !opts.noPriceBox);
 
@@ -329,7 +383,7 @@ export function buildOutreachEmail(
     // Inbox snippet line — VISIBLE, first text of the letter (owner 2026-11-18). The 11-16 hidden preheader
     // (display:none text + 60 invisible filler chars) coincided with opens falling from 17% to 1–3% (Gmail
     // spam placement): hidden text is a classic spam signal, so nothing in this letter may be hidden.
-    `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:center;padding:12px 16px 0">` +
+    `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:${plain ? "left" : "center"};padding:12px ${plain ? PAD : 16}px 0">` +
     `${esc(opts.firstLine ?? T(opts.lang, "Elkészült a honlapja, nézze meg!"))}</div>` +
     inner +
     `</body></html>`;

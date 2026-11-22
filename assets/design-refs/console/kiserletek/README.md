@@ -30,8 +30,10 @@ a bal menü Riport-csoportjában.
    Jobb oldalon: „N fut”.
 4. **Lenyitva a teljes tábla**: Változat (+ a szövege vagy leírása) · Állapot (kontroll · fut /
    fut / kikapcsolta az őr + ok / jóváhagyásra vár) · Ma (a mai osztás %) · Küldés · Levélnyitás
-   24 ó · Link 24 ó · **Link 72 ó** (ezt követi a gép) · Válasz · Leiratkozás. Mobilon a tábla
-   vízszintesen görgethető.
+   24 ó · Link 24 ó · **Link 72 ó** (ezt követi a gép) · Válasz · Leiratkozás. Mobilon (≤760 px) a
+   tábla soronként kártyává törik: fent a változat neve és szövege, alatta az állapot-pirula, majd
+   a számok egymás alatt, a soruk nevével (koordinátor-javítás 2026-11-22: a görgetett táblában az
+   állapot-oszlop levágódott).
 5. **Lábjegyzet**: mi a levélnyitás (a kép letöltése, Gmail-proxy is; az Apple-előtöltés nem nyitás),
    mi a link-nyitás, mit követ a gép (72 órás link-nyitás, 10%-os padló), és az őr szabálya
    (≥100 levél, a kontroll + 0,5 pont fölötti leiratkozás vagy panasz → kikapcsol; a mai levelet

@@ -4262,3 +4262,16 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   .xp-kstrip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .xp-lc summary { grid-template-columns: 110px 1fr auto 18px; grid-template-areas: "d v n ar"; }
 }
+/* ≤760px: each variant row becomes a card — name on top, the pill, then labelled numbers (coordinator 2026-11-22). */
+@media (max-width: 760px) {
+  .xp-lc__t { overflow-x: visible; padding: 0 10px 10px; }
+  .xp-tbl { min-width: 0; }
+  .xp-tbl thead { display: none; }
+  .xp-tbl, .xp-tbl tbody, .xp-tbl tr, .xp-tbl td { display: block; width: auto; }
+  .xp-tbl td:first-child { min-width: 0; }
+  .xp-tbl tr { border: 1px solid var(--citui-line); border-radius: var(--citui-radius); padding: 8px 10px; margin: 0 0 8px; }
+  .xp-tbl td { border: 0; padding: 3px 0; text-align: left; }
+  .xp-tbl td:nth-child(2) { padding-bottom: 6px; }
+  .xp-tbl td[data-l] { display: flex; justify-content: space-between; gap: 12px; }
+  .xp-tbl td[data-l]::before { content: attr(data-l); color: var(--citui-muted); }
+}

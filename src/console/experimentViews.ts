@@ -60,17 +60,19 @@ function dimRow(d: DimensionReport, lang: string): string {
     .map((r) => {
       const s = r.stats;
       const text = variantText(r);
+      // data-l = the column name, shown in front of the number when the row breaks into a card (≤760px).
+      const cell = (label: string, v: string): string => `<td data-l="${esc(label)}">${v}</td>`;
       return (
         `<tr class="${r.enabled ? "" : "off"}">` +
         `<td><b>${esc(r.label)}</b>${text ? `<small>„${esc(text)}”</small>` : ""}${r.disabledReason ? `<small>${esc(r.disabledReason)}</small>` : ""}</td>` +
         `<td>${pill(r, lang)}</td>` +
-        `<td>${r.shareToday !== null ? `${Math.round(r.shareToday * 100)}%` : "—"}</td>` +
-        `<td>${num(s?.sends ?? 0)}</td>` +
-        `<td>${pct(s?.mail24 ?? 0, s?.mature24 ?? 0)}</td>` +
-        `<td>${pct(s?.link24 ?? 0, s?.mature24 ?? 0)}</td>` +
-        `<td><b>${pct(s?.link72 ?? 0, s?.mature72 ?? 0)}</b></td>` +
-        `<td>${pct(s?.replies ?? 0, s?.sends ?? 0)}</td>` +
-        `<td>${pct(s?.unsubs ?? 0, s?.sends ?? 0)}</td>` +
+        cell(T(lang, "Ma"), r.shareToday !== null ? `${Math.round(r.shareToday * 100)}%` : "—") +
+        cell(T(lang, "Küldés"), num(s?.sends ?? 0)) +
+        cell(T(lang, "Levélnyitás 24 ó"), pct(s?.mail24 ?? 0, s?.mature24 ?? 0)) +
+        cell(T(lang, "Link 24 ó"), pct(s?.link24 ?? 0, s?.mature24 ?? 0)) +
+        cell(T(lang, "Link 72 ó"), `<b>${pct(s?.link72 ?? 0, s?.mature72 ?? 0)}</b>`) +
+        cell(T(lang, "Válasz"), pct(s?.replies ?? 0, s?.sends ?? 0)) +
+        cell(T(lang, "Leiratkozás"), pct(s?.unsubs ?? 0, s?.sends ?? 0)) +
         `</tr>`
       );
     })

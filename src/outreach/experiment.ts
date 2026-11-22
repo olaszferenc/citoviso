@@ -36,6 +36,7 @@ import { alertHouse } from "../console/houseAlert.js";
 import { config } from "../config.js";
 import { budapestIsoDay, budapestMidnight } from "../text/budapestTime.js";
 import type { ExperimentDimension } from "../db/schema.js";
+import { personalSenderName, priceSentence, subjectIsThisYours } from "./experimentCopy.js";
 
 export const DIMENSIONS: readonly ExperimentDimension[] = ["subject", "first_line", "sender", "body_style", "image", "price_line"];
 export const CONTROL_KEY = "control";
@@ -259,6 +260,8 @@ export function renderTemplate(
 /** The From display name a sender variant asks for; undefined = the control (no override); null = not applicable. */
 export function senderNameOf(key: string): string | undefined | null {
   if (key === CONTROL_KEY) return undefined;
+  // „szemelyes” (coordinator 2026-11-22): the personal sender of the follow-up letter — config, never hardcoded.
+  if (key === "szemelyes") return personalSenderName() || null;
   const person = (config.outreachSender.name || "").trim();
   if (!person) return null;
   if (key === "person") return person;
@@ -496,7 +499,8 @@ export interface LetterVariants {
   readonly firstLine?: string;
   /** From display name; undefined = the lane's own. */
   readonly fromName?: string;
-  readonly bodyStyle: "boxed" | "plain";
+  /** "personal" = the first-person letter (experimentCopy.ts personalParts). */
+  readonly bodyStyle: "boxed" | "plain" | "personal";
   readonly image: boolean;
   /**
    * `price_line` (0144): undefined = today's price (navy box + the p3 sentence); "" = no price in the
@@ -531,7 +535,7 @@ export async function assignVariants(input: {
     let subject: string | undefined;
     let firstLine: string | undefined;
     let fromName: string | undefined;
-    let bodyStyle: "boxed" | "plain" = "boxed";
+    let bodyStyle: "boxed" | "plain" | "personal" = "boxed";
     let image = true;
     let priceLine: string | undefined;
     const vars = { name: input.leadName, city: input.city, price: input.price, offerPrice: input.offerPrice };
@@ -540,6 +544,12 @@ export async function assignVariants(input: {
       const applicable = rows
         .filter((v) => {
           if (v.isControl) return true;
+          // Code-defined wording (experimentCopy.ts, T()) — the catalog row carries no template.
+          if (dim === "subject" && v.key === "ez_az_on_szallasa") return Boolean(input.leadName.trim());
+          if (dim === "body_style" && v.key === "szemelyes") return Boolean(personalSenderName());
+          // „mondat” is the base package's from-price: ONLY in the personal letter, never beside the
+          // boxed letter's booking/commission promise (coordinator 2026-11-22). body_style is chosen first.
+          if (dim === "price_line" && v.key === "mondat") return bodyStyle === "personal" && Boolean((input.offerPrice ?? "").trim());
           if (dim === "subject" || dim === "first_line") return v.template ? renderTemplate(v.template, vars) !== null : false;
           if (dim === "sender") return Boolean(senderNameOf(v.key));
           // price_line: "none" is structural; any other key needs its sentence template to render.
@@ -552,12 +562,16 @@ export async function assignVariants(input: {
       keys[dim] = key;
       if (key === CONTROL_KEY) continue;
       const row = rows.find((v) => v.key === key);
-      if (dim === "subject" && row?.template) subject = renderTemplate(row.template, vars) ?? undefined;
+      if (dim === "subject" && key === "ez_az_on_szallasa") subject = subjectIsThisYours(input.lang, input.leadName, input.city);
+      else if (dim === "subject" && row?.template) subject = renderTemplate(row.template, vars) ?? undefined;
       if (dim === "first_line" && row?.template) firstLine = renderTemplate(row.template, vars) ?? undefined;
       if (dim === "sender") fromName = senderNameOf(key) ?? undefined;
       if (dim === "body_style" && key === "plain") bodyStyle = "plain";
+      if (dim === "body_style" && key === "szemelyes") bodyStyle = "personal";
       if (dim === "image" && key === "none") image = false;
-      if (dim === "price_line") priceLine = key === "none" ? "" : row?.template ? renderTemplate(row.template, vars) ?? undefined : undefined;
+      if (dim === "price_line")
+        priceLine =
+          key === "none" ? "" : key === "mondat" ? priceSentence(input.lang, input.offerPrice ?? "") : row?.template ? renderTemplate(row.template, vars) ?? undefined : undefined;
     }
     return {
       keys,

@@ -65,6 +65,16 @@ kattintott) nem választható szét, és minden szöveg-ötlet tulaj-kör maradt
    terv `assets/design-refs/console/kiserletek/`; a hétfői sor a Riportba kerül, mert heti
    összefoglaló LEVÉL nincs — az előző lezárt budapesti hetet mutatja, hétfő 0:00-kor vált.
 
+8. **Személyes levél változatai (2026-11-22, koordinátor; a szöveg végleges jóváhagyása a tulajnál,
+   migráció 0145, mind KIKAPCSOLVA):** `sender/szemelyes` (név = `OUTREACH_FOLLOWUP_SENDER_NAME`),
+   `subject/ez_az_on_szallasa`, `body_style/szemelyes` (E/1, logó/gomb/árdoboz nélkül),
+   `price_line/mondat`. A szövegük a KÓDBAN él `T()`-vel (`src/outreach/experimentCopy.ts`), a
+   katalógus-sor `template`-je NULL. A `mondat` csak a személyes levéllel alkalmazható, mert a -tól ár
+   az Alap csomag, foglalás nélkül, és nem állhat a dobozos levél foglalás/jutalék-ígérete mellett.
+   A megszólítás (szállásnév) és az E/1 a tulaj döntése, nem kísérleti dimenzió. A §C-kapu a kész
+   személyes levelet 2026-11-22-én KERETEZÉS miatt FLAG-eli: a szövegben nincs §A-keretezés („nem
+   nyilvános” / terv). Ezt a koordinátor dönti el; addig a változat bekapcsolva is kontrollra esne vissza.
+
 ### Elvetett alternatívák
 
 - **Fix A/B 50-50:** a rosszabb fél a teszt végéig a keret felét égeti, és két változatnál többre nem

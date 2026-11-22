@@ -38,6 +38,7 @@ import { loadPricing } from "../src/pricing.js";
 import { lastWeek, verdictOf, pBetter, type VariantRow } from "../src/console/experimentReport.js";
 import { weeklyText, weekEndDay } from "../src/console/experimentViews.js";
 import { composeBody } from "../src/outreach/draft.js";
+import { composePersonalBody, personalParts, personalProof, priceSentence, subjectIsThisYours } from "../src/outreach/experimentCopy.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 
 let failures = 0;
@@ -240,6 +241,46 @@ console.log("⑨ ár-sor dimenzió");
   check("ár-mondat sablon: {price} kitöltve", sentence.startsWith("Havi ") && !sentence.includes("{"));
   const ctl = buildOutreachEmail(d, "teszt@example.com", { lang });
   check("kontroll: a mai árdoboz és ár-mondat változatlan", Boolean(ctl.html?.includes("#0a1f36")) && ctl.text.includes(d.parts.p3) && ctl.text.includes(d.parts.fine));
+}
+
+console.log("⑩ személyes levél (kikapcsolt változatok, 2026-11-22)");
+{
+  const lang = await prepareMailLang("hu");
+  check("tárgy településsel", subjectIsThisYours(lang, "Piszkeri Vendégház", "Cece") === "Ez az Ön szállása? (Piszkeri Vendégház, Cece)");
+  check("tárgy település nélkül", subjectIsThisYours(lang, "Piszkeri Vendégház", "  ") === "Ez az Ön szállása? (Piszkeri Vendégház)");
+  check("ár-mondat", priceSentence(lang, "3 660") === "Bemutatkozó áron havi 3 660 Ft-tól az Öné.");
+  const di = (seg: string, rating: { value: number; count: number } | null, siteCheck: "unreachable" | "no_viewport" | "responsive" | null = null) =>
+    ({ leadName: "Piszkeri Vendégház", region: "", qualification: null, segment: seg, rating, token: "abcdefghijklmnopqrstuvwx", lang, planCount: 1, siteCheck }) as Parameters<typeof personalProof>[0];
+  check("bizonyíték: 4,8 ★ + nincs honlap → a jóváhagyott mondat", personalProof(di("nincs_honlap", { value: 4.8, count: 15 })) === "A Google-on 15 értékelés alapján 4,8 csillagos a ház, saját honlapot viszont nem találtam, ezért megcsináltam.");
+  check("bizonyíték: 3,9 ★ nem idézhető → „Átnéztem…” + megfigyelés", personalProof(di("nincs_honlap", { value: 3.9, count: 40 })) === "Átnéztem a nyilvánosan elérhető adatait. Saját honlapot viszont nem találtam.");
+  check("bizonyíték: 4,0 ★ már idézhető (a meglévő küszöb)", personalProof(di("nincs_honlap", { value: 4, count: 5 })).startsWith("A Google-on 5 értékelés alapján 4 csillagos"));
+  check("bizonyíték: elavult, nem töltött be (E/1)", personalProof(di("elavult", null, "unreachable")).endsWith("A honlapját viszont nem tudtam megnyitni, amikor megnéztem."));
+  check("bizonyíték: elavult, nincs telefonra igazítva", personalProof(di("elavult", { value: 4.5, count: 30 }, "no_viewport")).endsWith("a mostani honlapja viszont nincs telefonra igazítva."));
+  check("bizonyíték: modern (van_labnyom)", personalProof(di("van_labnyom", null)).endsWith("A mostani honlapját is megnéztem."));
+  for (const seg of ["nincs_honlap", "elavult", "van_labnyom", "0_labnyom"]) {
+    const t = personalProof(di(seg, { value: 4.6, count: 12 }, seg === "elavult" ? "no_viewport" : null)) + personalProof(di(seg, null));
+    check(`bizonyíték E/1, nincs T/1 maradvány (${seg})`, !/\b(néztük|találtunk|tudtuk|Láttuk|Átnéztük)\b/.test(t), t);
+  }
+  const input = di("nincs_honlap", { value: 4.8, count: 15 });
+  const base = renderDraft(input);
+  const links = { cta: base.link, unsub: base.unsubscribeLink, privacy: base.privacyLink };
+  const parts = personalParts(input, base, priceSentence(lang, base.parts.priceOffer), "Kovács Anna", "getcitoviso.com");
+  const body = composePersonalBody(parts, links, lang);
+  const order = [parts.greet, parts.hook, base.link, parts.p1, parts.p2, parts.p3, parts.p4, "Üdvözlettel,", "Kovács Anna", "Citoviso · getcitoviso.com", base.unsubscribeLink, base.privacyLink, parts.identity];
+  const idx = order.map((x) => body.indexOf(x));
+  check("a részek a jóváhagyott sorrendben, mind benne", idx.every((v, i) => v >= 0 && (i === 0 || v > idx[i - 1])), idx);
+  check("ár-mondatnál nincs kedvezmény-lábjegyzet, nincs próba-mondat, nincs foglalás/jutalék-ígéret", !body.includes(base.parts.fine) && !/jutalék|foglal/i.test(body));
+  const letter = { ...base, subject: subjectIsThisYours(lang, "Piszkeri Vendégház", "Cece"), parts, body };
+  const m = buildOutreachEmail(letter, "teszt@example.com", { lang, bodyStyle: "personal", heroShotPath: "assets/design-refs/console/outreach-mail/hero.png", fromName: "Kovács Anna" });
+  check("HTML: se logó, se gomb, se árdoboz; a kép megvan; nincs logó/aláírás-csatolmány", !m.html?.includes("Megnézem a honlapot") && !m.html?.includes("#0a1f36") && Boolean(m.html?.includes(`cid:${HERO_CID}`)) && (m.attachments ?? []).every((a) => a.cid === HERO_CID));
+  check("HTML: a szöveges rész a kapuzott törzs (§I-őr nem dob)", m.text === body);
+  const today = personalParts(input, base, undefined, "Kovács Anna", "getcitoviso.com");
+  check("mai ár a személyes levélben: a mai ár-mondat + a kedvezmény-lábjegyzet marad", today.p3 === base.parts.p3 && today.fine === base.parts.fine);
+  // ⚠️ Documents the open decision (coordinator): the approved intro has no §A framing word („nem
+  // nyilvános” / terv) — the gate on the FINISHED letter catches it, so the variant would fall back
+  // to the control. When the wording is fixed this check is to be flipped to PASS.
+  const g = checkOutreachDraft(letter, "Piszkeri Vendégház", lang, { country: "HU", approved: true });
+  check("§C a kész személyes levélen: ma KERETEZÉS-FLAG (nyitott döntés a koordinátornál)", g.verdict === "FLAG" && g.reasons.length === 1 && g.reasons[0].startsWith("KERETEZÉS"), g.reasons);
 }
 
 if (failures) {

@@ -21,6 +21,7 @@
 //   npx tsx scripts/outlook-lint.mts
 
 import { renderDraft } from "../src/outreach/draft.js";
+import { composePersonalBody, personalParts } from "../src/outreach/experimentCopy.js";
 import { buildOutreachEmail } from "../src/email/outreachEmail.js";
 import { buildTrafficEmail } from "../src/email/trafficEmail.js";
 import { buildTrialCampaignEmail, renderTrialCampaignLetter } from "../src/email/trialCampaignEmail.js";
@@ -106,6 +107,16 @@ const draft = renderDraft({
   token: "00000000-0000-0000-0000-000000000000",
   lang,
 });
+const PERSONAL_INPUT = {
+  leadName: "Rozé Fogadó",
+  region: "Balaton-felvidék",
+  qualification: null,
+  segment: "nincs_honlap",
+  rating: { value: 4.7, count: 91 },
+  token: "00000000-0000-0000-0000-000000000000",
+  lang,
+  planCount: 1,
+};
 const html = buildOutreachEmail(draft, "teszt@example.com", {
   lang,
   heroShotPath: "assets/design-refs/console/outreach-mail/hero.png",
@@ -124,6 +135,18 @@ const LETTERS: readonly { name: string; html: string }[] = [
       bodyStyle: "plain",
       heroUrl: "https://getcitoviso.com/p/00000000000000000000/kep.jpg",
     }).html as string,
+  },
+  {
+    // Kísérlet-motor `body_style: szemelyes` — the personal first-person letter (experimentCopy.ts).
+    name: "hideg megkereső levél — személyes változat (kísérlet-motor)",
+    html: buildOutreachEmail(
+      (() => {
+        const parts = personalParts(PERSONAL_INPUT, draft, undefined, "Kovács Anna", "getcitoviso.com");
+        return { ...draft, parts, body: composePersonalBody(parts, { cta: draft.link, unsub: draft.unsubscribeLink, privacy: draft.privacyLink }, lang) };
+      })(),
+      "teszt@example.com",
+      { lang, bodyStyle: "personal", heroShotPath: "assets/design-refs/console/outreach-mail/hero.png" },
+    ).html as string,
   },
   {
     name: "havi forgalmi levél (ADR-0108)",

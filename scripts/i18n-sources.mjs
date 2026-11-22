@@ -95,6 +95,8 @@ export const I18N_SOURCES = [
   // gate (the ADR-0036 country gate) blocks non-`hu` leads today; the day that
   // opens, every lead would have received Hungarian with every guard green.
   "src/outreach/draft.ts",
+  // ADR-0462: the experiment's code-defined variant wording (personal letter, subject, price line).
+  "src/outreach/experimentCopy.ts",
   "src/booking/requests.ts",
   // ADR-0367 (Elek 2026-10-11 K1 · K7): the portal-sync owner letters (conflict, lasting failure).
   "src/booking/syncMail.ts",

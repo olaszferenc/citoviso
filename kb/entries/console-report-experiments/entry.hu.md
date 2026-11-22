@@ -39,7 +39,8 @@ balra, amíg a **„Kísérletek”** fül előjön — a fülsor oldalra görge
   magasabb százalékot látsz, de még nincs 30 érett levele — kevés levélből a szám még csalóka.
 - Egy sorra koppintva kinyílik a tábla: **„Változat”**, **„Állapot”**, **„Ma”** (a mai osztás),
   **„Küldés”**, **„Levélnyitás 24 ó”**, **„Link 24 ó”**, **„Link 72 ó”**, **„Válasz”**,
-  **„Leiratkozás”**. Telefonon a tábla oldalra húzható.
+  **„Leiratkozás”**. Telefonon minden változat egy külön kártya: fent a neve, alatta az állapota, majd a számok egymás
+  alatt, mindegyik előtt a neve.
 - Állapot: **„kontroll · fut”** (a mai levél, ehhez mérünk), **„fut”**, **„kikapcsolta az őr”**
   (alatta az ok), **„jóváhagyásra vár”** (a szövegét még nem hagyta jóvá a tulaj).
 
