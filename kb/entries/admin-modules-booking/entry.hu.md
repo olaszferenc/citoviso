@@ -19,7 +19,7 @@ A sötét fejléc-blokk alatt egy sor kis gomb áll: **„Mikor nem kiadó?”**
 tetején marad, egy gombra koppintva a lap arra a részre ugrik, és mindig az a gomb van kiemelve, amelyik
 résznél éppen jár. Számítógépen ugyanez a lista a jobb szélen áll, **„Ezen a lapon”** címmel. A lap részei
 csoportokba vannak rendezve, a csoport címe után egy vonal fut a lap széléig: a naptár, aztán
-**„Portálok”** (a Booking.com, a Szállás.hu és az Airbnb összekötése), aztán **„Szobák és beállítások”**
+**„Portálok”** (a foglalási portálok — például a Booking.com és az Airbnb — összekötése), aztán **„Szobák és beállítások”**
 (a kiadott szobái, a kérdésről kérdésre beállítás és a haladó beállítások).
 
 ## A beállítások: kérdésről kérdésre
@@ -120,22 +120,26 @@ A foglalt napra koppintva **a képernyő közepén felugrik a nap részlete**:
 
 A kártyát az **×** jellel vagy a mögötte lévő sötét háttérre koppintva zárja be.
 
-## Ha a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is hirdet
+## Ha más portálon (Booking.com, Airbnb …) is hirdet
 
 Kösse össze a naptárakat, így nem kell két helyen lezárnia ugyanazt a napot: ami a portálon
 foglalt, az itt is lezár, és ami itt foglalt, az a portálon is. A naptár alatti
 **„Hirdeti máshol is?”** kártya tetején az **„Így köti össze — videó és leírás”** rész végigmutatja
-az egészet. Fent kiválasztja a portált (Booking.com, Szállás.hu vagy Airbnb), alatta pedig két nézet közül választ:
+az egészet. Fent kiválasztja a portált, alatta pedig két nézet közül választ:
 a **„Videó”** 2,5–3 perces, magyar hanggal és felirattal mutatja meg, mire kattintson a portálon és itt
 (minden menüpontra ráközelít, és megáll rajta); a **„Leírás képekkel”** ugyanezeket a lépéseket számozott
 képekkel adja, a képen keret jelöli, hová kell kattintani. Egy képre koppintva nagyobban látja.
 A videó magyar nyelvű, ezért csak magyar felületen jelenik meg; más nyelven a **„Videó”** gomb
 nem látszik, ott rögtön a képes leírás nyílik.
 
-Alatta mindhárom portálnak saját doboza van, két lépéssel:
+Hogy mely portálok jelennek meg, az a szállás országától függ: magyarországi szállásnál a
+Booking.com, a Szállás.hu és az Airbnb, más országban a Booking.com és az Airbnb — csak azokat a
+portálokat mutatjuk, amelyekkel a naptár-összekötést az adott országban kipróbáltuk.
+
+Alatta minden felkínált portálnak saját doboza van, két lépéssel:
 
 1. **A portál naptár-linkjét hozza ide.** A portálon a naptár-szinkron menüben kap egy linket
-   (Booking.com: Árak és elérhetőség › Naptár › naptár-szinkronizálás; Szállás.hu: Árak és kapacitás › Naptár
+   (Booking.com: Árak és elérhetőség › Naptár › naptár-szinkronizálás; Szállás.hu (magyarországi szállásnál): Árak és kapacitás › Naptár
    szinkron (iCal); Airbnb: Naptár › Foglalhatóság › Naptárak bekötése — angol felületen Rates & Availability ›
    Sync calendars, illetve Calendar › Availability › Connect calendars). Másolja be a mezőbe, és
    nyomja meg az **„Összekötés”** gombot — azonnal megnézzük, és kiírjuk, hány foglalt napot hoztunk át.

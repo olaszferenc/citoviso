@@ -103,6 +103,7 @@ import { capacityError, overCapacity, siteTouristTax, stayIsTaken, stayQuote, st
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { countryOfSite, countryOfTenant, siteCurrency } from "../tenant/siteCountry.js";
+import { calendarSyncPortals } from "../country.js";
 import { minorDigits } from "../text/money.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
@@ -1732,6 +1733,11 @@ async function serveAdmin(
           })),
           unitId: unit.id,
           links,
+          // NEMZETKÖZI C: the portal cards follow the lodging's country (no Szállás.hu in HR).
+          ...(await (async () => {
+            const row = await countryOfSite(site.id);
+            return row ? { syncPortals: calendarSyncPortals(row.iso2) } : {};
+          })()),
           exportUrl: await getExportFeedUrl(unit.id, siteUrl),
           // A6: one address per portal — that portal's own nights are left out of it.
           exportUrls: Object.fromEntries(

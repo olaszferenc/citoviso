@@ -2455,6 +2455,9 @@ export interface BookingEditorData {
   /** A6: the feed URL per portal (provider → URL) — each portal gets back everything but its own nights. */
   readonly exportUrls?: Readonly<Record<string, string>>;
   readonly requests: EditorRequest[];
+  /** NEMZETKÖZI C: the portals the lodging's country may be told about (calendarSyncPortals);
+   *  absent = all of them (a Hungarian or country-less site — the old card, unchanged). */
+  readonly syncPortals?: readonly string[];
 }
 
 function huDay(iso: string): string {
@@ -2793,7 +2796,8 @@ function syncPortals(lang: string): readonly {
 /** One portal = one card with the two steps (approved plan „portal-sync”, variant 1). */
 function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean): string {
   const imported = booking.links.filter((l) => l.direction === "import");
-  const portals = syncPortals(lang);
+  const only = booking.syncPortals;
+  const portals = syncPortals(lang).filter((p) => !only || only.includes(p.provider));
   const known = new Set(portals.map((p) => p.provider));
   const unitField = `<input type="hidden" name="unit" value="${esc(booking.unitId)}">`;
   const loc = dateLocale(lang);
@@ -2988,9 +2992,13 @@ function portalSyncCard(booking: BookingEditorData, lang: string, multi: boolean
     // id: the sync-failure letter's button lands here (Elek 10-12 N2).
     `<div class="adm-card" id="portal-naptar">` +
     `<div class="adm-card__head"><span class="adm-ico">${ic("external")}</span><h2>${T(lang, "Hirdeti máshol is?")}</h2></div>` +
-    `<p class="adm-lead">${esc(T(lang, "Ha {what} a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") }))}</p>` +
+    `<p class="adm-lead">${esc(
+      !only || only.includes("Szállás.hu") // i18n-exempt: portal brand name (calendarSyncPortals value)
+        ? T(lang, "Ha {what} a Booking.com-on, a Szállás.hu-n vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") })
+        : T(lang, "Ha {what} a Booking.com-on vagy az Airbnb-n is fent van, kösse össze a naptárakat: ami ott foglalt, itt is lezár — és fordítva. Az árakat a portálon továbbra is ott állítja.", { what: multi ? T(lang, "ez a szoba") : T(lang, "a szállása") }),
+    )}</p>` +
     // The tutorial (video + steps with screenshots) — the most asked phone question (owner, 2026-11-03).
-    portalGuide(lang) +
+    portalGuide(lang, only) +
     `<div class="psync">${cards}</div>` +
     others +
     `<ul class="psync__limits">` +

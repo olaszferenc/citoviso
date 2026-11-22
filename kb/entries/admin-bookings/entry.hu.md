@@ -77,8 +77,8 @@ szeretné, minden szobát kijelöl). Az ilyen kérést így ismeri fel:
   (ár nélküli kérésnél „Árajánlat-kérés · 2 szoba”);
 - a kártyán a kért szobák vesszővel felsorolva szerepelnek;
 - a **„Visszaigazolom”** gomb mellett zárójelben a szobák száma áll, például „(2 szoba)”, és a
-  megerősítés kimondja, hogy az összes kért szoba napjai foglalttá válnak — a portálok
-  (Booking.com, Szállás.hu, Airbnb) felé is.
+  megerősítés kimondja, hogy az összes kért szoba napjai foglalttá válnak — az összekötött
+  portálok felé is.
 
 A döntés **az egész kérésre** szól: vagy minden kért szobát visszaigazol, vagy az egész kérést
 elutasítja. Egy-egy szobát külön nem fogadhat el — ha csak néhány szobát tudna adni, írjon a

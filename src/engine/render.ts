@@ -13,13 +13,13 @@ import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
-import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, sampleRooms, T } from "./templateKit.js";
+import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
 import { isStockPhoto, stockGallery, stockHeroBackdrop } from "./stock.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
 import { jsonForScript } from "../text/jsonForScript.js";
-import { hungarianBedNote, hungarianRoomName } from "./roomNames.js";
+import { hungarianBedNote, hungarianRoomName, localRoomName } from "./roomNames.js";
 import { setHighlightSources } from "./copyFields.js";
 
 /** Templates escape their text, so compare against the escaped form. */
@@ -854,10 +854,15 @@ export function renderSite(
   // An English portal unit name on a Hungarian MOCK („Private Bathroom Twin Room”, booked.hu)
   // → its Hungarian name; render-time, so a rerender fixes an existing mock. The live page
   // shows the owner's own unit names, so the live phase is left alone.
-  if (phase === "mock" && data.rooms?.length && (data.lang ?? "hu") === "hu") {
+  // NEMZETKÖZI C: on a page in another language (not English) the English unit name gives way
+  // to its TYPE in the page's language (roomNames.ts localRoomName); the bed note stays as
+  // published there (no table translates it).
+  if (phase === "mock" && data.rooms?.length) {
+    const hu = (data.lang ?? "hu") === "hu";
+    const d = data;
     const rooms = data.rooms.map((r) => {
-      const name = hungarianRoomName(r.name);
-      const note = r.note ? hungarianBedNote(r.note) : r.note;
+      const name = hu ? hungarianRoomName(r.name) : localRoomName(r.name, d.lang, (t) => roomTypeName(d, t));
+      const note = hu && r.note ? hungarianBedNote(r.note) : r.note;
       return name === r.name && note === r.note ? r : { ...r, name, ...(note ? { note } : {}) };
     });
     if (rooms.some((r, i) => r !== data.rooms![i])) data = { ...data, rooms };

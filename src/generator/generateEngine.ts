@@ -9,7 +9,7 @@
 // confidence rule can never drift between the two paths.
 
 import { assertTemplateHonoured, FIRST_TEMPLATE_DEFAULT } from "./templatePicks.js";
-import { hungarianBedNote, hungarianRoomName } from "../engine/roomNames.js";
+import { hungarianBedNote, hungarianRoomName, localRoomName } from "../engine/roomNames.js";
 import { deniedSampleTypes, roomCountContradicted, roomCountInsideApartments, unitKindOf, unitNamesFromProse, wholeLetOnly, wholeLetStated } from "../engine/sampleFromSource.js";
 import { currentAiUsage, formatUsage, usageForArtifact } from "../ai/usage.js";
 import { withMockBudget } from "../ai/dailyCap.js";
@@ -24,7 +24,7 @@ import { parseHex } from "../engine/palette.js";
 import { leadToSiteData, toSitePhotos } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
 import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
-import { T } from "../engine/templateKit.js";
+import { roomTypeName, T } from "../engine/templateKit.js";
 import { db } from "../db/client.js";
 import { config } from "../config.js";
 import { guestReviewsFresh } from "../scraper/enrichGuestReviews.js";
@@ -116,7 +116,10 @@ export function portalRooms(
     const rooms: Room[] = p.rooms
       .map((r) => ({
         // booked.hu publishes some unit names in English on the Hungarian page.
-        name: dLang.lang === DEFAULT_LANG ? hungarianRoomName((r.name ?? "").trim()) : (r.name ?? "").trim(),
+        // NEMZETKÖZI C: an English name on a page in another language → its type in that language.
+        name: dLang.lang === DEFAULT_LANG
+          ? hungarianRoomName((r.name ?? "").trim())
+          : localRoomName((r.name ?? "").trim(), dLang.lang, (t) => roomTypeName(dLang, t)),
         // The listing's own wording, never rephrased; capacity only when stated.
         ...(r.capacity ? { capacity: T(dLang, "{n} fő", { n: r.capacity }) } : {}),
         ...(r.description?.trim()

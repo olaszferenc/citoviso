@@ -78,3 +78,19 @@ export function hungarianBedNote(note: string): string {
   if (!/\b(?:beds?|bunk)\b/i.test(note)) return note;
   return BEDS.reduce((s, [re, hu]) => s.replace(re, hu), note);
 }
+
+/**
+ * NEMZETKÖZI C: an English portal unit name on a page in ANOTHER language (a Croatian page
+ * showing „Apartment with Sea View”). Translating the composite name is Bábel's work, not a
+ * table's — so the page names the unit by its TYPE, through the page's own pack (T with a
+ * literal key per type, templateKit.ts). Hungarian keeps hungarianRoomName; an English page
+ * and a name that is not English keep the name as published.
+ */
+export function localRoomName(name: string, lang: string | undefined, typeName: (hungarianType: string) => string): string {
+  const l = lang ?? "hu";
+  const n = name.trim();
+  if (l === "hu") return hungarianRoomName(n);
+  if (l === "en" || !n || !ENGLISH.test(n)) return n;
+  const type = TYPES.find(([re]) => re.test(n))?.[1] ?? "szoba";
+  return typeName(type);
+}

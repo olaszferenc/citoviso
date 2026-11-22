@@ -3905,6 +3905,16 @@ if [ -f scripts/portal-sync-guard-check.mts ] && \
   echo "[pre-commit] portal-sync-guard-check (export minden hoszton, ütközés, korlát, SSRF, runtime, fordulónap, dupla POST)…"
   npx tsx scripts/portal-sync-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
+# NEMZETKÖZI C — a két nem-HU felület (tulaj-kivétel 2026-11-22, ADR: *nemzetkozi-c-ket-nem-hu-felulet-kivetellel*):
+#     nem-HU, nem-angol mockon az angol portál-szobanév helyett a típus T()-vel (fallback jelentve, magyar lap
+#     bájtra azonos); a szállás-admin „Hirdeti máshol is?” kártyája az ország calendarSyncPortals-ából
+#     (HR: Booking + Airbnb; HU = ország nélküli, bájtra). Saját scratch-DB (0142 HR sor) + Chromium.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/nemzetkozi-c-felulet-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(roomNames|render)\.ts$|^src/generator/generateEngine\.ts$|^src/server/(moduleConfigViews|portalGuide)\.ts$|^src/country\.ts$|^scripts/nemzetkozi-c-felulet-check\.mts$'; then
+  echo "[pre-commit] nemzetkozi-c-felulet-check (HR mock szobatípus, HR admin csak Booking + Airbnb, HU bájtra)…"
+  npx tsx scripts/nemzetkozi-c-felulet-check.mts >"$GATE_LOG" || gate_failed
+fi
 # FOGLALÁS BEÁLLÍTÁSA (lásd az ADR-t: _planning/decisions/*foglalas-beallitas-kerdezz-felelek*; kontraktus: design-refs/tenant-admin/foglalas-kerdezz-felelek, „B”):
 #     a vezetett oldal a MEGLÉVŐ írás-függvényeken át ír (szobák, árak, időszakok, szabályok,
 #     IFA, értesítés — a DB-ből visszaolvasva), a néma akadályok hangosak, a próba-foglalás a

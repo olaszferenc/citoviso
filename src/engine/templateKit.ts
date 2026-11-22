@@ -912,3 +912,26 @@ export const HERO_FIT_CSS = `
   h1[data-cit-hero-fit="m"]{--cit-hero-cap:max(30px,12vh)}
   h1[data-cit-hero-fit="l"]{--cit-hero-cap:min(max(28px,7.5vh),max(30px,9vw));--cit-hero-measure:22ch}
   h1[data-cit-hero-fit="xl"]{--cit-hero-cap:min(max(26px,6vh),max(28px,8vw));--cit-hero-measure:24ch}`;
+
+/**
+ * NEMZETKÖZI C: a unit TYPE (roomNames.ts TYPES, Hungarian source) in the page language — one
+ * literal T() per type so the catalogue (and Bábel) sees every key.
+ */
+export function roomTypeName(d: Pick<SiteData, "lang">, hungarianType: string): string {
+  switch (hungarianType) {
+    case "lakosztály": return T(d, "Lakosztály"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "stúdió": return T(d, "Stúdió"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "apartman": return T(d, "Apartman"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "nyaraló": return T(d, "Nyaraló"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "ház": return T(d, "Ház"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "bungaló": return T(d, "Bungaló"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "hálóterem": return T(d, "Hálóterem"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "ikerszoba": return T(d, "Ikerszoba"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "kétszemélyes szoba": return T(d, "Kétszemélyes szoba"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "háromszemélyes szoba": return T(d, "Háromszemélyes szoba"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "négyszemélyes szoba": return T(d, "Négyszemélyes szoba"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "egyszemélyes szoba": return T(d, "Egyszemélyes szoba"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    case "családi szoba": return T(d, "Családi szoba"); // i18n-exempt: the case key is roomNames.ts TYPES data, the label is T()
+    default: return T(d, "Szoba");
+  }
+}

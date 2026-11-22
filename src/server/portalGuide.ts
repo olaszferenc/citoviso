@@ -176,8 +176,10 @@ function guidePortals(lang: string): GuidePortal[] {
 const url = (file: string): string => `${BASE}${file}?v=${GUIDE_V}`;
 
 /** The narrated videos are Hungarian (voice and burned-in captions): other languages get the steps only. */
-export function portalGuide(lang: string): string {
-  const portals = guidePortals(lang);
+export function portalGuide(lang: string, only?: readonly string[]): string {
+  // NEMZETKÖZI C: only the portals whose sync we verified for the lodging's country
+  // (country.ts calendarSyncPortals); absent = every portal (a Hungarian / country-less site).
+  const portals = guidePortals(lang).filter((p) => !only || only.includes(p.provider));
   const withVideo = (lang || "hu") === "hu";
   const tabs = portals
     .map((p, i) => `<button class="pguide__tab" type="button" data-k="${p.key}" aria-pressed="${i === 0}">${esc(p.provider)}</button>`)
