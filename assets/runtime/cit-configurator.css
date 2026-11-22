@@ -2504,8 +2504,10 @@
   width: 100%;
   max-width: none;
   top: 0;
-  bottom: 0;
-  height: 100%;
+  /* 3/10 (Elek HR, 390 px: the consent bar sat on the „Plati” button): the pay sheet ends ABOVE
+     the bar, like the side panel and the bottom sheet (--citui-consent-h, 0 once decided). */
+  bottom: var(--citui-consent-h, 0px);
+  height: calc(100% - var(--citui-consent-h, 0px));
   max-height: none;
   border-radius: 0;
 }

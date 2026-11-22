@@ -166,7 +166,8 @@ let runtimeStringsCache: string[] | null = null;
 async function runtimeStrings(): Promise<string[]> {
   if (runtimeStringsCache) return runtimeStringsCache;
   const js = await readFile(path.join(RUNTIME_DIR, "cit-runtime.js"), "utf8");
-  runtimeStringsCache = [...new Set([...js.matchAll(/\btr\("((?:[^"\\]|\\.)*)"\)/g)].map((m) => JSON.parse(`"${m[1]}"`) as string))];
+  // 3/10: trn("…", n) — the plural-aware lookup — names its key the same way.
+  runtimeStringsCache = [...new Set([...js.matchAll(/\btrn?\("((?:[^"\\]|\\.)*)"[),]/g)].map((m) => JSON.parse(`"${m[1]}"`) as string))];
   return runtimeStringsCache;
 }
 

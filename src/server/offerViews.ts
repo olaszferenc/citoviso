@@ -475,6 +475,7 @@ export function guestOfferPage(v: GuestOfferView, offerToken: string): string {
       host: v.hostName ?? null,
       back: v.siteUrl ?? null,
       backLabel: T(lang, "Vissza a szállás oldalára"),
+      lang,
     }),
   );
 }
@@ -532,7 +533,7 @@ export function guestOfferResultPage(v: GuestOfferView): string {
       m.title,
       `<h1 data-offer-outcome="${esc(v.outcome)}" style="font-size:1.3rem;color:${color};margin:4px 0 10px">${esc(m.title)}</h1>` +
         `<p style="line-height:1.6;margin:0">${esc(m.body)}</p>`,
-      { host: v.hostName ?? null, back: v.siteUrl ?? null, backLabel: T(lang, "Vissza a szállás oldalára") },
+      { host: v.hostName ?? null, back: v.siteUrl ?? null, backLabel: T(lang, "Vissza a szállás oldalára"), lang },
     ),
   );
 }

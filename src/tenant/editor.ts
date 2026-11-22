@@ -10,6 +10,8 @@ import { childPricing, offeredPlans, readMeals } from "./meals.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/client.js";
+import { T } from "../engine/templateKit.js";
+import { langForTenant, prepareRenderLang } from "../i18n/mail.js";
 import { applyLivePhotoPolicy } from "../engine/photoPolicy.js";
 import { isStockPhoto } from "../engine/stock.js";
 import type { PhotoProvenance, Recipe, SiteData } from "../engine/recipe.js";
@@ -233,13 +235,15 @@ export function unitPageData(
     name: unit.name,
     tagline: [base.name, base.place?.city].filter(Boolean).join(" · "),
     intro: unit.description?.trim() || base.intro,
-    highlights: unit.amenities.length ? unit.amenities : base.highlights,
+    // 3/10: catalogue amenities in the page's language (stored by their Hungarian label).
+    highlights: unit.amenities.length ? unit.amenities.map((a) => (amenityByLabel(a.trim()) ? T(base, a.trim()) : a)) : base.highlights,
     photos: unitPhotos.map((p) => ({
       url: p.url,
       alt: p.alt,
       ...(p.provenance ? { provenance: p.provenance } : {}),
     })),
-    ...(unit.capacity ? { stats: [{ label: "Férőhely", value: `${unit.capacity} fő` }] } : {}),
+    // 3/10 (Elek HR: „5 fő” on a Croatian page): in the page's language, plural-aware.
+    ...(unit.capacity ? { stats: [{ label: T(base, "Férőhely"), value: T(base, "{n} fő", { n: unit.capacity }) }] } : {}),
     // No room LIST on a room page, and only this unit's prices.
     rooms: undefined,
     ...(mine.length ? { pricing: { ...housePricing, units: mine } } : { pricing: undefined }),
@@ -289,6 +293,10 @@ export async function moduleContentFor(
   overrideActive?: ReadonlySet<string>,
 ): Promise<ModuleContent> {
   const unitPhotos = photosByUnit(photos);
+  // 3/10 (Elek HR: „5 fő”, „85,50 € / éj” on a Croatian guest page): the room card speaks the
+  // site's language; Hungarian renders byte-identically.
+  const lang = await prepareRenderLang(await langForTenant(tenantId));
+  const L = { lang };
   const overrideRenderable = overrideActive ? new Set(renderableModules(overrideActive)) : null;
   // What the GUEST sees (0126): owned AND not hidden by the owner — a hidden module is
   // cut exactly like an unbought one (and a hidden booking gives its slot back to enquiry).
@@ -305,7 +313,9 @@ export async function moduleContentFor(
   const out: Record<string, unknown> = {};
 
   if (on("amenities")) {
-    const items = lines("amenities");
+    // 3/10 (Elek HR: „Ingyenes Wi-Fi” on a Croatian guest page): a CATALOGUE amenity is stored
+    // by its Hungarian label and shown in the site's language; a hand-typed one as typed.
+    const items = lines("amenities").map((x) => (amenityByLabel(x.trim()) ? T(L, x.trim()) : x));
     if (items.length) out.amenities = items;
   }
   if (on("usp")) {
@@ -445,12 +455,12 @@ export async function moduleContentFor(
     // the card contradict the price table AND the booking widget on one screen —
     // 24 000 advertised, 32 000 charged. §B.17: no price set → no line, never a
     // placeholder; and never a number below what the guest will be billed.
-    const perNight =
+    const perUnit = (p: string): string =>
       priceUnit === "per_person_night"
-        ? " / fő / éj"
+        ? T(L, "{p} / fő / éj", { p })
         : priceUnit === "per_stay"
-          ? ""
-          : " / éj";
+          ? p
+          : T(L, "{p} / éj", { p });
     out.rooms = units.map((u) => {
       // ADR-0257: a presentation room carries no price line — a split of the whole
       // house's price would be a number nobody set (§B.17, ADR-0232 ⑦).
@@ -476,7 +486,7 @@ export async function moduleContentFor(
           const item = amenityByLabel(label);
           // Measured: all 17 stored labels hit the 70-item catalogue exactly. A label
           // that does not (a hand-typed one) still shows — just without an icon.
-          return item ? { label, icon: amenitySvg(item) } : { label };
+          return item ? { label: T(L, label), icon: amenitySvg(item) } : { label };
         });
       // The card links to the unit's own page ONLY when that page really gets written —
       // one predicate, shared with the writer loop, so a card can never point at a 404.
@@ -490,13 +500,13 @@ export async function moduleContentFor(
       const oneP = !span || Math.round(span.min) === Math.round(span.max);
       const priceLine = span
         ? oneP
-          ? `${formatSpan(span.min, span.max, currency)}${perNight}`
-          : `${formatSpan(span.min, span.min, currency)}-tól${perNight}`
+          ? perUnit(formatSpan(span.min, span.max, currency))
+          : perUnit(T(L, "{p}-tól", { p: formatSpan(span.min, span.min, currency) }))
         : "";
       return {
         name: u.name,
         unitId: u.id,
-        ...(u.capacity ? { capacity: `${u.capacity} fő` } : {}),
+        ...(u.capacity ? { capacity: T(L, "{n} fő", { n: u.capacity }) } : {}),
         ...(description ? { description } : {}),
         ...(amenities.length ? { amenities } : {}),
         ...(priceLine ? { price: priceLine } : {}),

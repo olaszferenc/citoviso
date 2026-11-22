@@ -31,6 +31,22 @@ import { tagLink, tagLinkInText, type OpenViaTag } from "../outreach/openVia.js"
 import { coldHost } from "../outreach/coldLane.js";
 
 /** CID of the embedded hero screenshot (referenced from the HTML). */
+
+/**
+ * 3/10 (Elek HR: „12,52 € Ft/mj.” in the price box): a forint amount is a bare number and the
+ * sentence names the forint; any other currency's amount already carries its own sign
+ * (draft.ts fromPricePair → formatMinor), so the sentence must not add „Ft”.
+ */
+export function carriesCurrencySign(amount: string): boolean {
+  return /[^\d\s\u00a0\u202f.,]/.test(amount);
+}
+export function perMonth(lang: string | undefined, amount: string): string {
+  return carriesCurrencySign(amount) ? T(lang, "{price}/hó", { price: amount }) : T(lang, "{price} Ft/hó", { price: amount });
+}
+export function perMonthFrom(lang: string | undefined, amount: string): string {
+  return carriesCurrencySign(amount) ? T(lang, "{price}/hó-tól", { price: amount }) : T(lang, "{price} Ft/hó-tól", { price: amount });
+}
+
 export const HERO_CID = "hero-terv";
 
 // Brand constants COPIED from citui.css — a mail client has no var(), so the design
@@ -139,8 +155,8 @@ function buildMail(
       `width="100%" bgcolor="${NAVY_DEEP}"`,
       `<tr><td style="background:${NAVY_DEEP};border-radius:10px;padding:16px 18px;font-family:${FONT}">` +
         `<span style="font-size:12px;letter-spacing:1px;color:${CYAN};text-transform:uppercase">${esc(T(lang, "Bemutatkozó ajánlat"))}</span><br>` +
-        `<span style="font-size:15px;color:#a9bdd0;text-decoration:line-through">${esc(T(lang, "{price} Ft/hó", { price: t.priceList }))}</span> ` +
-        `<span style="font-size:24px;font-weight:700;color:#ffffff">${esc(T(lang, "{price} Ft/hó-tól", { price: t.priceOffer }))}</span> ` +
+        `<span style="font-size:15px;color:#a9bdd0;text-decoration:line-through">${esc(perMonth(lang, t.priceList))}</span> ` +
+        `<span style="font-size:24px;font-weight:700;color:#ffffff">${esc(perMonthFrom(lang, t.priceOffer))}</span> ` +
         `<span style="font-size:12px;font-weight:700;color:${CYAN}">&nbsp;−${esc(t.percent)}%</span>` +
         `</td></tr>`,
     ) +

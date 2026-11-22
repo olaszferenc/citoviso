@@ -28,6 +28,7 @@ import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import { formatMinor, formatMoney, formatNumber } from "../text/money.js";
 import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { formatDay } from "../text/day.js";
 import type { MonthView } from "../tenant/availability.js";
 import { DEFAULT_UNIT_NAME, guestUnits, type UnitDeletionImpact } from "../tenant/units.js";
 import { bookingRef } from "../booking/requests.js";
@@ -4644,7 +4645,7 @@ export function bookingVerdictPage(r: {
     m.tone === "ok" ? "var(--citui-ok)" : m.tone === "bad" ? "var(--citui-bad)" : "var(--citui-muted)";
 
   return (
-    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${esc(lang || "hu")}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
@@ -4823,7 +4824,8 @@ export function reviewDecideConfirmPage(
 export function guestPageShell(
   title: string,
   inner: string,
-  opts: { host?: string | null; back?: string | null; backLabel?: string } = {},
+  /** `lang` (3/10, Elek HR: a Croatian cancel page marked `lang="hu"`): the page's language. */
+  opts: { host?: string | null; back?: string | null; backLabel?: string; lang?: string } = {},
 ): string {
   const head = opts.host
     ? `<p style="font-weight:800;font-size:1rem;color:var(--citui-navy-900);margin:0 0 14px;` +
@@ -4835,7 +4837,7 @@ export function guestPageShell(
         `style="text-decoration:none">${esc(opts.backLabel)}</a></p>`
       : "";
   return (
-    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${esc(opts.lang || "hu")}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
@@ -4896,10 +4898,10 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       T(lang, "A link már nem él"),
       `<h1 style="font-size:1.4rem;margin-top:0">${T(lang, "A link már nem él")}</h1>` +
         `<p style="font-size:1rem;line-height:1.7">${msg}</p>`,
-      { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára") },
+      { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára"), lang },
     );
   }
-  const when = `${esc(huDay(v.dateFrom!))} — ${esc(huDay(v.dateTo!))}`;
+  const when = `${esc(formatDay(v.dateFrom!, lang))} — ${esc(formatDay(v.dateTo!, lang))}`;
   return guestPageShell(
     T(lang, "Foglalás lemondása"),
     `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${T(lang, "Biztosan lemondja a foglalását?")}</h1>` +
@@ -4928,6 +4930,7 @@ export function guestCancelConfirmPage(v: GuestCancelView, token: string): strin
       // No second exit at the bottom: the "Mégsem" above IS the way back, and two
       // buttons doing the same thing on one short page read as two choices.
       backLabel: undefined,
+      lang,
     },
   );
 }
@@ -4937,7 +4940,7 @@ export function guestCancelDonePage(v: GuestCancelView): string {
   const lang = v.lang ?? "hu";
   if (v.outcome !== "cancelled") return guestCancelConfirmPage(v, "");
   const reach = guestReach(v, lang);
-  const when = `${esc(huDay(v.dateFrom!))} — ${esc(huDay(v.dateTo!))}`;
+  const when = `${esc(formatDay(v.dateFrom!, lang))} — ${esc(formatDay(v.dateTo!, lang))}`;
   return guestPageShell(
     T(lang, "Foglalása lemondva"),
     `<h1 style="font-size:1.4rem;margin-top:0;color:var(--citui-navy-900)">${T(lang, "Foglalása lemondva")}</h1>` +
@@ -4947,7 +4950,7 @@ export function guestCancelDonePage(v: GuestCancelView): string {
       (v.ref ? `<br><span style="font-size:.85rem">${T(lang, "Hivatkozás:")} ${esc(v.ref)}</span>` : "") +
       `</div>` +
       (reach ? `<div style="margin-top:14px">${reach}</div>` : ""),
-    { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára") },
+    { host: v.hostName, back: v.siteUrl, backLabel: T(lang, "Vissza a szállás oldalára"), lang },
   );
 }
 

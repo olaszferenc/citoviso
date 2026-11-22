@@ -282,6 +282,9 @@ export interface OwnedBannerInput {
     /** GET /p/<t>/folytatas — the trialist's own checkout. */
     readonly continueUrl: string;
   };
+  /** 3/10 (Elek HR: a Hungarian „Ez az oldal már az Öné” bar on a Croatian page): the page's
+   *  language — absent = Hungarian, byte-identical. */
+  readonly lang?: string;
 }
 
 /** The brand cyan, literal for the same reason the two greys are: this bar sits
@@ -319,21 +322,26 @@ const OWNED_CSS =
 
 /** WHY they see this instead of the offer. No tracking claim and no "not live
  *  yet" claim — the two sentences that would be false here. */
-const OWNED_WHY =
-  "Ezt a linket a korábbi megkeresésünkben kapta. Azóta megrendelte a honlapját, ezért itt " +
-  "már nem lehet újra megrendelni — a szövegeit és a képeit a kezelőfelületen szerkesztheti. " +
-  "Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.";
+function ownedWhy(lang: string | undefined): string {
+  return T(
+    lang,
+    "Ezt a linket a korábbi megkeresésünkben kapta. Azóta megrendelte a honlapját, ezért itt már nem lehet újra megrendelni — a szövegeit és a képeit a kezelőfelületen szerkesztheti. Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.",
+  );
+}
 
 /** WHY, for a trialist: they never ordered, they started the free trial. */
-const TRIAL_WHY =
-  "Ezt a linket a korábbi megkeresésünkben kapta. Azóta elindította az ingyenes próbát, ezért itt " +
-  "nem indítható újra — a szövegeit és a képeit a kezelőfelületen szerkesztheti. " +
-  "Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.";
+function trialWhy(lang: string | undefined): string {
+  return T(
+    lang,
+    "Ezt a linket a korábbi megkeresésünkben kapta. Azóta elindította az ingyenes próbát, ezért itt nem indítható újra — a szövegeit és a képeit a kezelőfelületen szerkesztheti. Ezt a megtekintést nem rögzítjük és nem használjuk ajánlat-személyre szabásra.",
+  );
+}
 
 /** The headline per stage. A stalled activation MUST NOT claim a live site —
  *  that is the buyer most likely to re-open the letter, and the one a confident
  *  "your page is live" would mislead hardest. */
 function ownedHeadline(i: OwnedBannerInput): string {
+  const L = i.lang;
   const strong = (s: string) =>
     `<strong style="color:#fff;font-weight:600">${CHECK}${s}</strong>`;
   // A lapsed trial: the site is paused (trial/expiry.ts), nothing was charged, and paying
@@ -342,26 +350,26 @@ function ownedHeadline(i: OwnedBannerInput): string {
   if (i.trial?.status === "lapsed") {
     // No CHECK mark: it confirms something done, and an expiry is not a confirmation.
     return (
-      `<strong style="color:#fff;font-weight:600">Az ingyenes próbaidő lejárt — a honlapja szünetel.</strong>` +
-      " Nem terheltünk semmit. Ha folytatja, a honlap azonnal visszakapcsol."
+      `<strong style="color:#fff;font-weight:600">${T(L, "Az ingyenes próbaidő lejárt — a honlapja szünetel.")}</strong>` +
+      " " + T(L, "Nem terheltünk semmit. Ha folytatja, a honlap azonnal visszakapcsol.")
     );
   }
   if (i.stage === "paid_pending") {
     return (
-      strong("Ezt már megrendelte.") +
-      " A fizetés beérkezett, az oldala még készül — amint elkészül, e-mailben jelezzük."
+      strong(T(L, "Ezt már megrendelte.")) +
+      " " + T(L, "A fizetés beérkezett, az oldala még készül — amint elkészül, e-mailben jelezzük.")
     );
   }
   if (i.stage === "provisioned") {
     return (
-      strong("Ez az oldal már az Öné.") +
-      " Elkészült; a nyilvános megjelenés még folyamatban van."
+      strong(T(L, "Ez az oldal már az Öné.")) +
+      " " + T(L, "Elkészült; a nyilvános megjelenés még folyamatban van.")
     );
   }
   return (
-    strong("Ez az oldal már az Öné.") +
+    strong(T(L, "Ez az oldal már az Öné.")) +
     (i.siteUrl
-      ? ` Az oldala él: <a href="${escapeHtml(i.siteUrl)}" ` +
+      ? ` ${T(L, "Az oldala él:")} <a href="${escapeHtml(i.siteUrl)}" ` +
         `style="color:#fff;text-decoration:underline">${escapeHtml(prettyUrl(i.siteUrl))}</a>`
       : "")
   );
@@ -390,9 +398,9 @@ export function injectOwnedBanner(html: string, input: OwnedBannerInput): string
   // footer (injectOwnedNotice), so it is not lost.
   const action =
     input.trial?.status === "lapsed"
-      ? `<a class="ow-btn" data-cit-owned-continue href="${escapeHtml(input.trial.continueUrl)}">Megrendelem — fizetés</a>`
+      ? `<a class="ow-btn" data-cit-owned-continue href="${escapeHtml(input.trial.continueUrl)}">${T(input.lang, "Megrendelem — fizetés")}</a>`
       : input.loginUrl
-        ? `<a class="ow-btn" href="${escapeHtml(input.loginUrl)}">Belépés a kezelőfelületre</a>`
+        ? `<a class="ow-btn" href="${escapeHtml(input.loginUrl)}">${T(input.lang, "Belépés a kezelőfelületre")}</a>`
         : "";
   const banner =
     OWNED_CSS +
@@ -401,9 +409,9 @@ export function injectOwnedBanner(html: string, input: OwnedBannerInput): string
     `font:400 13px/1.55 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
     `<div class="ow-wrap"><div class="ow-row">` +
     `<div class="ow-txt">${ownedHeadline(input)}</div>${action}</div>` +
-    `<details class="ow-det"><summary>Miért ezt látom?</summary>` +
-    `<div class="ow-body">${input.trial ? TRIAL_WHY : OWNED_WHY} ` +
-    `<a href="/privacy" style="color:${INK_MUTED};text-decoration:underline">Adatkezelési tájékoztató</a>` +
+    `<details class="ow-det"><summary>${T(input.lang, "Miért ezt látom?")}</summary>` +
+    `<div class="ow-body">${input.trial ? trialWhy(input.lang) : ownedWhy(input.lang)} ` +
+    `<a href="${privacyHref(input.lang)}" style="color:${INK_MUTED};text-decoration:underline">${T(input.lang, "Adatkezelési tájékoztató")}</a>` +
     `</div></details></div></div>`;
   return prependToBody(html, banner);
 }
@@ -418,15 +426,15 @@ export function injectOwnedBanner(html: string, input: OwnedBannerInput): string
  */
 export function injectOwnedNotice(html: string, input: OwnedBannerInput): string {
   const where = input.loginUrl
-    ? ` Kezelőfelület: <a href="${escapeHtml(input.loginUrl)}" ` +
+    ? ` ${T(input.lang, "Kezelőfelület:")} <a href="${escapeHtml(input.loginUrl)}" ` +
       `style="color:${INK_MUTED};${TAP_LINK}">${escapeHtml(prettyUrl(input.loginUrl))}</a> · `
     : " ";
   const notice =
     `<div data-cit-footer="owned" style="padding:14px 18px;${FOOTER_CLEARANCE};text-align:center;` +
     `font:12px/1.6 system-ui,sans-serif;color:${INK_MUTED};background:${SURFACE}">` +
-    `Ön a Citoviso ügyfele — ezt az oldalt a korábbi megkeresésünk linkjéről nyitotta meg. ` +
-    `A megtekintést nem rögzítjük.${where}` +
-    `<a href="/privacy" style="color:${INK_MUTED};${TAP_LINK}">Adatkezelési tájékoztató</a>` +
+    `${T(input.lang, "Ön a Citoviso ügyfele — ezt az oldalt a korábbi megkeresésünk linkjéről nyitotta meg.")} ` +
+    `${T(input.lang, "A megtekintést nem rögzítjük.")}${where}` +
+    `<a href="${privacyHref(input.lang)}" style="color:${INK_MUTED};${TAP_LINK}">${T(input.lang, "Adatkezelési tájékoztató")}</a>` +
     `</div>`;
   return appendToBody(html, notice);
 }

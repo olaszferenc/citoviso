@@ -52,7 +52,8 @@ ok(
   "utólagos (domain_upgrade) rendelésnél a webhook elindítja a beszerzést",
 );
 ok(
-  /activated\)\s*fireDomainProvisioning/.test(svc),
+  // 3/10: `activated ? fireDomainProvisioning(…)` — the run is awaited (briefly) before the activation letter.
+  /activated(\)\s*|\s*\?\s*)fireDomainProvisioning/.test(svc),
   "initial rendelésnél a beszerzés az élesítés UTÁN indul (regisztrált domain eset)",
 );
 

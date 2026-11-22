@@ -1078,6 +1078,8 @@ export interface CountryLegalLocal {
   readonly taxIdLabel?: string;
   /** Who owes the tax id on the imprint; the Hungarian rule (business only) when unset. */
   readonly taxIdRequired?: "always" | "business";
+  /** 3/10: the offline check digit of the tax id (billing/taxId.ts nationalTaxIdProblem). */
+  readonly taxIdCheck?: "hr_oib";
   /** false = the HU NTAK row is not offered (it is a Hungarian register). Unset = HU behaviour. */
   readonly ntak?: boolean;
   readonly fields: readonly LocalLegalField[];
@@ -1152,6 +1154,7 @@ export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
   HR: {
     taxIdLabel: "Horvát személyi azonosító szám (OIB)", // i18n-exempt: legal pack (§H.22)
     taxIdRequired: "always",
+    taxIdCheck: "hr_oib",
     ntak: false,
     fields: [
       { id: "hr_cat", label: "Kategorizálási határozat száma", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)

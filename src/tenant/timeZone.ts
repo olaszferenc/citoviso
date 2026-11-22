@@ -7,6 +7,7 @@
 // every price view), the zone changes about never, and the console and public servers are
 // separate processes, so a write in one reaches the other within the TTL.
 
+import { countryOfLead } from "../country.js";
 import { db } from "../db/client.js";
 import { APP_TZ, defaultTimeZoneForCountry, isValidTimeZone, todayIn } from "../text/zoneTime.js";
 import type { ZonePickerData } from "./zonePicker.js";
@@ -82,17 +83,11 @@ export async function setTenantTimeZone(tenantId: string, tz: string): Promise<v
   byTenant.set(tenantId, { tz, at: Date.now() });
 }
 
-/** The accommodation's country (the scrape area's — the source provisioning used). */
+/** The accommodation's country — THE lead's (ADR-0437 ②, the source provisioning uses since 3/10). */
 export async function tenantCountry(tenantId: string): Promise<string | null> {
-  const row = await db
-    .selectFrom("tenant")
-    .innerJoin("lead", "lead.id", "tenant.lead_id")
-    .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
-    .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
-    .select("scraper_definition.country")
-    .where("tenant.id", "=", tenantId)
-    .executeTakeFirst();
-  const c = String(row?.country ?? "").trim().toUpperCase();
+  const row = await db.selectFrom("tenant").select("lead_id").where("id", "=", tenantId).executeTakeFirst();
+  if (!row?.lead_id) return null;
+  const c = String((await countryOfLead(row.lead_id)) ?? "").trim().toUpperCase();
   return c || null;
 }
 

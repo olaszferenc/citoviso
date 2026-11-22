@@ -32,7 +32,7 @@ import { sql } from "kysely";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { budapestIsoDay, budapestMinutes } from "../text/budapestTime.js";
-import { formatMoney } from "../text/money.js";
+import { formatMinor } from "../text/money.js";
 import { alertHouse, asciiFold } from "./houseAlert.js";
 import { isLiveHost } from "../invoicing/keyGuard.js";
 
@@ -88,9 +88,11 @@ function isOneTime(kind: string): boolean {
   return kind === "multilang" || kind === "domain_settlement" || kind === "domain_upgrade";
 }
 
-/** The house money format (src/text/money.ts), with plain spaces: the SMS must stay GSM-7. */
+/** The house money format (src/text/money.ts), with plain spaces: the SMS must stay GSM-7.
+ *  `payment.amount` is in the currency's MINOR unit (ADR-0443) — 3/10: the alert printed a
+ *  16,49 € payment as „1 649 €” (HUF has no minor digits: byte-identical). */
 function money(amount: number, currency: string): string {
-  return formatMoney(amount, currency).replace(/[\u00a0\u202f]/g, " ");
+  return formatMinor(amount, currency).replace(/[\u00a0\u202f]/g, " ");
 }
 
 /** The console's absolute base for the mail links. CONSOLE_URL wins; prod had none on

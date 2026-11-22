@@ -154,27 +154,45 @@ export async function domainFeeForRenewal(
   cycleMonths: number,
   /** The subscription's pricing region (ADR-0443) — the fee is in its currency. */
   region: string,
+  /**
+   * 3/10 (Elek HR, „26,94 € → 24,38 €”): a SCREEN or LETTER that forecasts the next charge
+   * also counts a beszerzés that is still running (pending → setup_retry) — the order
+   * charged the fee and promised it on the next cycle, and the name is on its way. The
+   * renewal MINT never passes this: it bills only a name we actually hold (§B.17), so a
+   * purchase that fails before the date is not charged, and its failure letter says so.
+   */
+  opts: { forecast?: boolean } = {},
 ): Promise<{ fee: number; domain: string } | null> {
   const site = await db
     .selectFrom("site")
     .select(["custom_domain", "custom_domain_status"])
     .where("tenant_id", "=", tenantId)
-    .where("custom_domain", "is not", null)
     .executeTakeFirst();
-  if (!site?.custom_domain) return null;
-  if (!["registered", "dns_pending", "tls_pending", "live"].includes(site.custom_domain_status))
-    return null;
+  let domain: string | null = null;
+  if (site?.custom_domain && ["registered", "dns_pending", "tls_pending", "live"].includes(site.custom_domain_status)) {
+    domain = site.custom_domain;
+  } else if (opts.forecast && site?.custom_domain_status !== "live") {
+    const running = await db
+      .selectFrom("domain_provisioning")
+      .select("domain")
+      .where("tenant_id", "=", tenantId)
+      .where("status", "not in", ["live", "failed"])
+      .orderBy("created_at", "desc")
+      .executeTakeFirst();
+    domain = running?.domain ?? null;
+  }
+  if (!domain) return null;
 
   // ADR-0360: per ending, and 0 while the tenant's modules are package content — so a
   // tenant who downgrades below the domain-carrying package starts paying the fee on the
   // next cycle, and one who upgrades stops. The off-sale modules cannot be bought, so they
   // do not count against the set (the same reading the order path uses).
   const fee = domainFeeForCycle(cycleMonths, region, {
-    domain: site.custom_domain,
+    domain,
     modules: await renewableModuleIds(tenantId),
     disabled: await getDisabledModules(),
   });
-  return fee > 0 ? { fee, domain: site.custom_domain } : null;
+  return fee > 0 ? { fee, domain } : null;
 }
 
 /** B-opció additions whose first fee this cycle collects (ADR-0080 ③) — the

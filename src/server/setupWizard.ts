@@ -11,7 +11,7 @@
 
 import { db } from "../db/client.js";
 import { T } from "../i18n/mail.js";
-import { currencySign, formatMinor, formatMoney, formatNumber } from "../text/money.js";
+import { currencySign, formatMinor, formatMoney, formatNumber, majorToMinor } from "../text/money.js";
 import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
 import {
   bookableOf,
@@ -140,7 +140,7 @@ export function previewOf(ctx: SetupCtx, lang: string, siteName: string, host: s
       return {
         name: u.name,
         cap: u.capacity,
-        price: !pricing ? null : ps === "on_request" ? T(lang, "árajánlat") : base ? (currencySign(ctx.siteCurrency) === "Ft" ? T(lang, "{p} Ft / éj", { p: formatNumber(base.amount, lang) }) : T(lang, "{p} / éj", { p: formatMoney(base.amount, ctx.siteCurrency, lang) })) : ps === "none" ? T(lang, "nincs ár") : T(lang, "időszakos ár"),
+        price: !pricing ? null : ps === "on_request" ? T(lang, "árajánlat") : base ? (currencySign(ctx.siteCurrency) === "Ft" ? T(lang, "{p} Ft / éj", { p: formatNumber(base.amount, lang) }) : T(lang, "{p} / éj", { p: formatMinor(majorToMinor(base.amount, ctx.siteCurrency), ctx.siteCurrency, lang) })) : ps === "none" ? T(lang, "nincs ár") : T(lang, "időszakos ár"),
         priceMissing: pricing && ps === "none",
       };
     }),

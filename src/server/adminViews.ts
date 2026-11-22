@@ -834,7 +834,8 @@ export function loginPage(
     : "";
   const pwToggle =
     `<script>function citPwT(id,btn){var i=document.getElementById(id);` +
-    `var show=i.type==='password';i.type=show?'text':'password';btn.textContent=show?'elrejt':'mutat';}</script>`;
+    // 3/10 (Elek HR: „mutat” on a Croatian login): both labels in the page's language.
+    `var show=i.type==='password';i.type=show?'text':'password';btn.textContent=show?${jsonForScript(T(lang, "elrejt"))}:${jsonForScript(T(lang, "mutat"))};}</script>`;
   return shell(
     T(lang, "Ügyfél-belépés"),
     `${pwToggle}<div class="citui-container" style="max-width:420px;padding:64px 0">` +
@@ -854,14 +855,14 @@ export function loginPage(
           `var i=document.querySelector('input[name="next"]');if(i&&i.value.indexOf("#")<0)i.value+=h})();</script>`
         : "") +
       `<div class="citui-field"><label class="citui-label" for="username">${T(lang, "Felhasználónév")}</label>` +
-      `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" autofocus placeholder="pl. napfeny-panzio"></div>` +
+      `<input class="citui-input" id="username" name="username" required autocapitalize="none" autocorrect="off" autofocus placeholder="${esc(T(lang, "pl. {p}", { p: "napfeny-panzio" }))}"></div>` +
       `<div class="citui-field"><label class="citui-label" for="password">${T(lang, "Jelszó")}</label>` +
       `<div style="display:flex;gap:8px;align-items:center">` +
       `<input class="citui-input" id="password" name="password" type="password" required placeholder="${T(lang, "a jelszava")}" style="flex:1">` +
-      `<button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" onclick="citPwT('password',this)">mutat</button></div></div>` +
+      `<button type="button" class="citui-btn citui-btn--ghost citui-btn--sm" onclick="citPwT('password',this)">${T(lang, "mutat")}</button></div></div>` +
       `<button class="citui-btn citui-btn--primary" type="submit" style="width:100%">${T(lang, "Belépés")}</button>` +
       `</form>${note}` +
-      `<p class="citui-hint" style="text-align:center;margin-top:16px"><a href="/login/help">${T(lang, "Elfelejtett jelszó?")}</a> · <a href="/">${T(lang, "Vissza a főoldalra")}</a></p>` +
+      `<p class="citui-hint" style="text-align:center;margin-top:16px"><a href="/login/help${lang && lang !== DEFAULT_LANG ? `?lang=${esc(lang)}` : ""}">${T(lang, "Elfelejtett jelszó?")}</a> · <a href="/">${T(lang, "Vissza a főoldalra")}</a></p>` +
       `</div>` +
       (consoleLoginUrl
         ? `<p class="citui-hint" style="text-align:center;margin-top:14px">${T(lang, "Citoviso-munkatárs?")} <a href="${esc(consoleLoginUrl)}">${T(lang, "Belépés a belső konzolba ▸")}</a></p>`
@@ -5360,6 +5361,9 @@ export interface LegalAdminData {
   readonly imprintUrl?: string | null;
   /** ORSZÁG-RÉTEG 3/7: the lodging country's mandatory local items (none for HU). */
   readonly local?: CountryLegalLocal;
+  /** 3/10: the tax id just refused by its check digit (Hungarian source) and what was typed. */
+  readonly taxIdError?: string | null;
+  readonly taxIdTyped?: string;
 }
 
 export interface DocumentsAdminData {
@@ -5582,7 +5586,7 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
         // OVERRIDES the ADR-0084 README's „számlaszám · dátum…" ordering.
         `<div class="adm-inv__t"><strong>${esc(item)}</strong>` +
         `<span class="sub">${esc([i.invoiceNumber, when].filter(Boolean).join(" · "))}</span>` +
-        `<span class="adm-chip2 adm-chip2--ok">${i.status === "storno" ? T(lang, "Sztornózva") : T(lang, "Kifizetve")}${i.vatTreatment === "aam" ? " · AAM" : ""}</span></div>` +
+        `<span class="adm-chip2 adm-chip2--ok">${i.status === "storno" ? T(lang, "Sztornózva") : T(lang, "Kifizetve")}${i.vatTreatment === "aam" ? (lang === "hu" ? " · AAM" : ` · ${T(lang, "alanyi adómentes")}`) : ""}</span></div>` +
         `<div class="adm-inv__r"><div class="adm-inv__amt">${esc(fmtMoney(i.gross, i.currency, lang))}</div>` +
         // A PDF az ELSŐDLEGES művelet: a soron, egy koppintásra (a terv köti).
         (i.hasPdf
@@ -6267,8 +6271,11 @@ export function legalSection(legal: LegalAdminData, lang = "hu"): string {
     field(
       "tax_number",
       legal.local?.taxIdLabel ? legalTextForLang(lang, legal.local.taxIdLabel) : T(lang, "Adószám"),
-      legal.who.taxNumber,
+      legal.taxIdError ? (legal.taxIdTyped ?? "") : legal.who.taxNumber,
     ) +
+    (legal.taxIdError
+      ? `<p class="adm-banner adm-banner--warn" role="alert" style="margin:-6px 0 12px">${esc(legal.taxIdError)} ${T(lang, "A többi adatot elmentettük; ezt a mezőt nem.")}</p>`
+      : "") +
     field(
       "reg_number",
       T(lang, "Nyilvántartási szám"),

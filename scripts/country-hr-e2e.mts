@@ -125,7 +125,10 @@ check("adatok · jog · ünnep · csatorna zöld", ["data", "legal", "holidays",
 // 2026-11-19); once Bábel adds it, the item is green here too.
 const ESCALATION_LEGAL = "Ezt a levelet azért kapta, mert korábban megtekintette a honlap-tervét, és a döntés-segítő ajánlata hamarosan lejár (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:";
 const gaps0 = await missingHrStrings();
-check("nyelv: legfeljebb a Bábelre váró eszkalációs jogi sor hiányzik", gaps0.every((x) => x === ESCALATION_LEGAL) && (gaps0.length ? st0.babel === "bad" : st0.babel === "ok"), gaps0.join(" | "));
+// 3/10: the round's new strings wait on the same Bábel ticket (scripts/lib/babel-pending-3j.mts).
+const { BABEL_PENDING_3J } = await import("./lib/babel-pending-3j.mts");
+const pendingOk = new Set([ESCALATION_LEGAL, ...BABEL_PENDING_3J]);
+check("nyelv: legfeljebb a Bábelre váró feliratok hiányoznak (eszkalációs jogi sor + a 3/10 jegye)", gaps0.every((x) => pendingOk.has(x)) && (gaps0.length ? st0.babel === "bad" : st0.babel === "ok"), gaps0.filter((x) => !pendingOk.has(x)).join(" | "));
 check("az ársor HIÁNYOS (a régió üres — a tulaj állítja be)", st0.prices === "bad", r0.items.find((i) => i.key === "prices")?.detail);
 check("a piac-kapu zárva", !(await isMarketApproved("HR")) && !r0.open);
 check("2027 is lefedve (mozgó ünnepek évenként)", r0.items.find((i) => i.key === "holidays")?.detail.includes("2027") === true);

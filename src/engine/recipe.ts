@@ -274,6 +274,9 @@ export interface SiteData {
   /** ORSZÁG-RÉTEG 3/9: the lead country's currency (ISO 4217) on a FOREIGN mock — the sample
    *  booking widget prices its „minta-ár” in it. Absent → Hungarian (HUF), as before. */
   readonly currency?: string;
+  /** ORSZÁG-RÉTEG 3/10: the lead's country (ISO 3166-1 alpha-2) on a FOREIGN mock — the sample
+   *  widget names the calendar-sync portals of THAT country. Absent → Hungarian, as before. */
+  readonly country?: string;
   readonly name: string;
   readonly tagline: string;
   readonly intro: string;

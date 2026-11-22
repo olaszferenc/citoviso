@@ -57,7 +57,8 @@ function stripComments(s: string): string {
 function stripWrapped(s: string): string {
   return s
     .replace(/\bT\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,\s*"(?:[^"\\]|\\.)*"/g, "T(_,_W_")
-    .replace(/\btr\(\s*"(?:[^"\\]|\\.)*"\s*\)/g, "tr(_W_)");
+    .replace(/\btr\(\s*"(?:[^"\\]|\\.)*"\s*\)/g, "tr(_W_)")
+      .replace(/\btrn\(\s*"(?:[^"\\]|\\.)*"\s*,/g, "trn(_,") // 3/10: the plural-aware lookup;
 }
 
 const ACCENT = /[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/;

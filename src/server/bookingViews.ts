@@ -29,6 +29,7 @@ import { formatDay } from "../text/day.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { dateLocale } from "../i18n/lang.js";
 import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
+import { DEFAULT_UNIT_NAME } from "../tenant/units.js";
 
 export interface BookingsTabData {
   readonly units: readonly { id: string; name: string }[];
@@ -199,6 +200,15 @@ function overlapGroups(pend: readonly InboxItem[]): Map<string, InboxItem[]> {
 }
 
 const tabHref = (extra: string) => `/admin?tab=foglalasok${extra}`;
+
+/**
+ * 3/10 (Elek HR: „A szállás egésze” in a Croatian admin): the default unit's name is OUR
+ * stored wording (units.ts DEFAULT_UNIT_NAME), not the owner's — shown in the reader's
+ * language. A name the owner typed is shown as typed.
+ */
+function unitLabel(name: string, lang: string): string {
+  return name === DEFAULT_UNIT_NAME ? T(lang, "A szállás egésze") : name;
+}
 
 /** "2026. október" in the reader's language — the calendar link names its target. */
 function monthName(iso: string, lang: string): string {
@@ -397,7 +407,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
         d.units
           .map(
             (u) =>
-              `<option value="${esc(u.id)}"${u.id === d.unitId ? " selected" : ""}>${esc(u.name)}</option>`,
+              `<option value="${esc(u.id)}"${u.id === d.unitId ? " selected" : ""}>${esc(unitLabel(u.name, lang))}</option>`,
           )
           .join("") +
         `</select></form>`
@@ -409,12 +419,15 @@ function calendarCard(d: BookingsTabData, lang: string): string {
       : "";
 
   const openQs = d.calendarOpen ? "" : "&naptar=1";
+  // 3/10 (Elek HR: „Kalendar — 2026. december”): the month in the reader's language; the
+  // Hungarian label stays the grid's own (byte-identical).
+  const monthLabel = lang === "hu" ? m.label : monthName(m.month, lang);
   return (
     `<div class="bk-cal${d.calendarOpen ? " is-open" : ""}" id="naptar">` +
     `<a class="bk-cal__top" href="${tabHref(`${qsBase}${openQs}`)}#naptar" data-bk-caltoggle>` +
     `<span class="bk-cal__ico">${ic("bookings", 20)}</span>` +
-    `<span class="bk-cal__t"><b>${T(lang, "Naptár")} — ${esc(m.label)}${
-      d.units.length > 1 ? ` · ${esc(d.units.find((u) => u.id === d.unitId)?.name ?? "")}` : ""
+    `<span class="bk-cal__t"><b>${T(lang, "Naptár")} — ${esc(monthLabel)}${
+      d.units.length > 1 ? ` · ${esc(unitLabel(d.units.find((u) => u.id === d.unitId)?.name ?? "", lang))}` : ""
     }</b><span>${esc(summary)}</span></span>` +
     `<span class="bk-cal__chev">${ic("close", 16)}</span>` +
     `</a>` +
@@ -422,7 +435,7 @@ function calendarCard(d: BookingsTabData, lang: string): string {
     unitSelect +
     `<div class="bk-cal__hd">` +
     `<a class="bk-cal__nav" href="${tabHref(`&u=${encodeURIComponent(d.unitId)}&ho=${m.prevMonth}&naptar=1`)}#naptar">‹</a>` +
-    `<b>${esc(m.label)}</b>` +
+    `<b>${esc(monthLabel)}</b>` +
     `<a class="bk-cal__nav" href="${tabHref(`&u=${encodeURIComponent(d.unitId)}&ho=${m.nextMonth}&naptar=1`)}#naptar">›</a>` +
     `</div>` +
     // ⛔ Kontraktus ⑤: a megnyitott nap adata a RÁCS FÖLÉ kerül. Mérve a régi lapon:

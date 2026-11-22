@@ -359,6 +359,8 @@ export interface OrderIntentTable {
   buyer_tax_number: string | null;
   /** EU VAT (közösségi adószám), e.g. 'PL1234567890'. */
   buyer_eu_vat_number: string | null;
+  /** 0148 (3/10): a national tax id that is not a VAT number (HR OIB). Never on the invoice. */
+  buyer_national_tax_id: Generated<string | null>;
   /** ISO 3166-1 alpha-2. */
   buyer_country: string | null;
   buyer_zip: string | null;

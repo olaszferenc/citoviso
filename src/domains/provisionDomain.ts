@@ -96,6 +96,8 @@ async function notifyTenant(
   provisioningId?: string,
   /** ADR-0381: a package-content (0 Ft) claim — the letter says nothing about money. */
   free = false,
+  /** 3/10: the registrar said the name is TAKEN — only then may the letter say so. */
+  taken = true,
 ): Promise<boolean> {
   try {
     const user = await db
@@ -131,6 +133,7 @@ async function notifyTenant(
             adminUrl: `${config.publicSiteUrl}/admin?tab=webcim`,
             released,
             free,
+            taken,
             lang,
           });
     await getEmailSender().send(msg);
@@ -748,7 +751,9 @@ export async function runDomainProvisioning(
     // legközelebbi belépéskor szembesüljön vele.
     // A second order on a site whose domain is live: the tenant has a working domain —
     // a "we could not buy it" letter about the duplicate would only confuse.
-    if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released, undefined, free);
+    // 3/10 (Elek HR): a cost-cap / currency refusal is not „someone took it” — only a
+    // DomainTakenError may be told as taken (the letter used to say „elkelt” for every cause).
+    if (!liveAlready) await notifyTenant(p.tenantId, p.siteId, "failed", p.domain, released, undefined, free, err instanceof DomainTakenError);
     // ADR-0374: the tenant was told — the house was not. A paid-for name that we could not
     // buy is a buyer waiting on us; the house hears it (mail + SMS).
     await alertDomainFailed(p.domain, p.tenantId, p.id, msg, released, liveAlready, free);

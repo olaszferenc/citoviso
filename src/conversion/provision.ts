@@ -322,21 +322,17 @@ export async function convertLead(
     .where("lead_id", "=", leadId)
     .executeTakeFirst();
   if (!tenant) {
-    // ADR-0290: the accommodation starts in its country's zone (the scrape area's
-    // country — the same source the market gate uses); the owner can change it.
-    const origin = await db
-      .selectFrom("lead")
-      .innerJoin("scrape_run", "scrape_run.id", "lead.scrape_run_id")
-      .innerJoin("scraper_definition", "scraper_definition.id", "scrape_run.scraper_definition_id")
-      .select("scraper_definition.country")
-      .where("lead.id", "=", leadId)
-      .executeTakeFirst();
+    // ADR-0290: the accommodation starts in its country's zone; the owner can change it.
+    // 3/10 (Elek HR: a Makarska tenant on Europe/Budapest): THE lead's country (ADR-0437 ② —
+    // its own coordinate country, the scrape area's only without one), the same source the
+    // market gate, the legal pack and the currency use — no longer the scrape area alone.
+    const leadCountry = await countryOfLead(leadId);
     tenant = await db
       .insertInto("tenant")
       .values({
         lead_id: leadId,
         display_name: lead.name,
-        time_zone: defaultTimeZoneForCountry(origin?.country),
+        time_zone: defaultTimeZoneForCountry(leadCountry),
       })
       .returning("id")
       .executeTakeFirstOrThrow();

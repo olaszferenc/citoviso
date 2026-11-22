@@ -67,8 +67,11 @@ export async function seedHrTestPrices(): Promise<{ base: number; modules: numbe
   const huTld = pricing.offeredTlds("hu")[0];
   const fee = hufToEurCents(huTld?.monthlyFee ?? 1000);
   const tld = (t: string) => ({
-    tld: t, offered: true, costNet: 2000, costCurrency: "EUR", costMeasuredAt: "2026-11-19T00:00:00.000Z",
-    maxCost: 5000, monthlyFee: fee, freeInPackage: huTld?.freeInPackage ?? false,
+    // 3/10: the purchase cost is in the REGISTRAR's currency (it answers in HUF for every ending,
+    // see registrar getYearlyNetPrice), not the market's: an EUR cap made every .hr purchase
+    // fail the cost-cap check („currencies differ”) in Elek's HR round.
+    tld: t, offered: true, costNet: 1990, costCurrency: "HUF", costMeasuredAt: "2026-11-19T00:00:00.000Z",
+    maxCost: 9000, monthlyFee: fee, freeInPackage: huTld?.freeInPackage ?? false,
   });
   await pricing.saveDomainTlds("hr", [tld(".hr"), tld(".com"), tld(".eu")]);
   await pricing.loadPricing(true);

@@ -80,6 +80,42 @@ export function collectFallbacks<V>(fn: () => V): { value: V; fallbacks: string[
   }
 }
 
+// ── 3/10 PLURALS (Elek HR: „1 noći”, „2 osoba”) ────────────────────────────────────────────
+// The catalogue key stays ONE Hungarian string („{n} éj” — Hungarian has no plural after a
+// numeral). A language that inflects writes the translation VALUE in plural form:
+//   "plural:one={n} noć;few={n} noći;other={n} noći"
+// (categories of Intl.PluralRules for that language; `other` is mandatory, `;` separates).
+// Every T() with a numeric {n} picks the form (interpolate below, templateKit.T, the runtime's
+// trn()); a plain value works as before. No key is added, so no completeness count moves.
+export const PLURAL_PREFIX = "plural:";
+
+/** The forms of a plural value, or null when the value is a plain translation. */
+export function pluralForms(s: string): Map<string, string> | null {
+  if (!s.startsWith(PLURAL_PREFIX)) return null;
+  const forms = new Map<string, string>();
+  for (const part of s.slice(PLURAL_PREFIX.length).split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0) forms.set(part.slice(0, i).trim(), part.slice(i + 1));
+  }
+  return forms.has("other") ? forms : null;
+}
+
+/** The form of `s` for the count `n` in `lang` — `s` itself when it is not a plural value. */
+export function selectPlural(lang: string | undefined, s: string, n: number | string | undefined): string {
+  const forms = pluralForms(s);
+  if (!forms) return s;
+  const num = typeof n === "number" ? n : Number(String(n ?? "").replace(/\s/g, "").replace(",", "."));
+  let cat = "other";
+  if (Number.isFinite(num)) {
+    try {
+      cat = new Intl.PluralRules(lang || DEFAULT_LANG).select(num);
+    } catch {
+      cat = "other";
+    }
+  }
+  return forms.get(cat) ?? forms.get("other")!;
+}
+
 /** {placeholder} tokens of a string, order-insensitive set. */
 function placeholders(s: string): string[] {
   return [...s.matchAll(/\{[a-zA-Z0-9_]+\}/g)].map((m) => m[0]).sort();
@@ -102,6 +138,15 @@ function isArticleToken(tok: string): boolean {
  * a translation must not invent one the source does not have.
  */
 export function placeholderProblem(hu: string, tr: string): string | null {
+  // 3/10: a plural value keeps the contract in EVERY form.
+  const forms = pluralForms(tr);
+  if (forms) {
+    for (const [cat, form] of forms) {
+      const why = placeholderProblem(hu, form);
+      if (why) return `${cat}: ${why}`;
+    }
+    return null;
+  }
   const src = placeholders(hu);
   const out = placeholders(tr);
   const need = src.filter((t) => !isArticleToken(t));
@@ -124,6 +169,7 @@ export function interpolate(
   s: string,
   vars?: Record<string, string | number>,
 ): string {
+  s = selectPlural(lang, s, vars?.n);
   if (!vars) return s;
   const translated = (lang || DEFAULT_LANG) !== DEFAULT_LANG && s !== hu;
   for (const [k, v] of Object.entries(vars)) {

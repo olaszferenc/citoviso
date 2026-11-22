@@ -431,7 +431,7 @@ import { runStaggered } from "./staggeredBatch.js";
 import { HUB_PREFIX } from "./nav.js";
 import { langForCountry, uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
-import { prepareRenderLang, T } from "../i18n/mail.js";
+import { langForLead, prepareRenderLang, T } from "../i18n/mail.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
 import { faviconSvg } from "../ui/brand.js";
 import { servePwa } from "../ui/pwa.js";
@@ -1258,8 +1258,13 @@ async function handleOrderRequest(
   // client is display-only here exactly as it is for the price below. Without
   // this the invoice fell back to lead.name + a regex-split Maps address + a
   // NULL tax number, i.e. an unusable invoice for every company buyer.
+  // 3/10 (Elek HR: a Hungarian VIES message to a Croatian buyer): the messages speak the
+  // buyer's language — the lead's, as the page it ordered from.
+  const buyerLeadRow = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  const buyerLang = buyerLeadRow?.lead_id ? await prepareRenderLang(await langForLead(buyerLeadRow.lead_id)) : "hu";
   const buyerCheck = await validateBuyer(body as BuyerInput, {
     requireTerms: Boolean(config.termsUrl),
+    lang: buyerLang,
   });
   if (!buyerCheck.ok) {
     send(
@@ -4690,9 +4695,11 @@ async function handle(
         // ADR-0344 / Elek 3: a trialist reads as owned too — tell the bar, so a lapsed one
         // gets "szünetel" + the /folytatas checkout instead of "már az Öné… folyamatban".
         const trial = await continuableTrialForLead(p.leadId);
+        // 3/10: the bar speaks the lead's language (absent = Hungarian).
+        const ownedLang = p.lang && p.lang !== "hu" ? { lang: await prepareRenderLang(p.lang) } : {};
         const framing = trial
-          ? { ...owned, trial: { status: trial.status, continueUrl: `/p/${pMatch[1]}/folytatas` } }
-          : owned;
+          ? { ...owned, ...ownedLang, trial: { status: trial.status, continueUrl: `/p/${pMatch[1]}/folytatas` } }
+          : { ...owned, ...ownedLang };
         return send(
           res,
           200,

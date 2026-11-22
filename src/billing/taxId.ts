@@ -13,6 +13,8 @@
 // VIES also returns the registered LEGAL NAME, which is how we stop putting a
 // Google Maps marketing name on an invoice.
 
+import { T } from "../i18n/mail.js";
+
 /** VIES REST (verified live 2026-08-22): GET .../ms/{CC}/vat/{number}. */
 const VIES_BASE = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms";
 const VIES_TIMEOUT_MS = 6000;
@@ -120,6 +122,59 @@ export function findHuTaxNumberInText(text: string): string | null {
 
 export function isValidHuTaxNumber(raw: string): boolean {
   return huTaxNumberProblem(raw) === null;
+}
+
+/**
+ * Croatian OIB (osobni identifikacijski broj): 11 digits, the last one an ISO 7064
+ * MOD 11,10 check digit over the first ten. Offline and authoritative like the HU
+ * checksum: an obrt with no VAT number is absent from VIES, the OIB still identifies it.
+ * Accepts an optional "HR" prefix and separators (people paste "HR 694 351 515 30").
+ */
+export function normalizeHrOib(raw: string): string | null {
+  const digits = (raw ?? "").trim().replace(/^HR/i, "").replace(/[\s.\-]/g, "");
+  return /^\d{11}$/.test(digits) ? digits : null;
+}
+
+/** ISO 7064 MOD 11,10 over the first ten digits; true when the 11th is the check digit. */
+export function hrOibChecksumOk(elevenDigits: string): boolean {
+  if (!/^\d{11}$/.test(elevenDigits)) return false;
+  let t = 10;
+  for (let i = 0; i < 10; i++) {
+    t = (t + Number(elevenDigits[i])) % 10;
+    if (t === 0) t = 10;
+    t = (t * 2) % 11;
+  }
+  const check = (11 - t) % 10;
+  return check === Number(elevenDigits[10]);
+}
+
+/**
+ * Why this OIB is not acceptable, in the reader's language (`lang`, default Hungarian), or
+ * null when valid. Returning the REASON lets the form say which digit to look at.
+ */
+export function hrOibProblem(raw: string, lang = "hu"): string | null {
+  const stripped = (raw ?? "").trim().replace(/^HR/i, "").replace(/[\s.\-]/g, "");
+  if (!stripped) return T(lang, "Adja meg az OIB-t.");
+  if (!/^\d+$/.test(stripped) || stripped.length !== 11) return T(lang, "Az OIB 11 számjegyű.");
+  if (!hrOibChecksumOk(stripped)) return T(lang, "Az OIB ellenőrző számjegye nem stimmel — valószínűleg elgépelés.");
+  return null;
+}
+
+/** The offline national tax-id checks a country's legal schema can name (legal.ts taxIdCheck). */
+export type NationalTaxIdCheck = "hr_oib";
+
+/**
+ * The national tax-id check named by a country's legal schema: the problem (in `lang`) or
+ * null. No check named → any value is accepted (the imprint shows what the tenant typed;
+ * VIES stays the VAT authority).
+ */
+export function nationalTaxIdProblem(check: NationalTaxIdCheck | undefined, raw: string, lang = "hu"): string | null {
+  switch (check) {
+    case "hr_oib":
+      return hrOibProblem(raw, lang);
+    default:
+      return null;
+  }
 }
 
 export interface ParsedEuVat {

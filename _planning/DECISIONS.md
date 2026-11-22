@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-orszag-reteg-3-10-horvat-javitokor.md) — Ország-réteg 3/10: horvát javítókör — a pénz egy forrásból, ország-függő tartalom, OIB, nyelvi maradványok és a többes szám
 - [ADR-0463](decisions/0463-kulcs-nelkuli-bongeszos-webes-kereses-a-brave.md) — Kulcs nélküli, böngészős webes keresés a Brave után (Startpage, $0)
 - [ADR-0462](decisions/0462-kiserlet-motor-a-hideg-megkereseshez-valtozat.md) — Kísérlet-motor a hideg megkereséshez: változat-címke, levélnyitás-mérés pixel nélkül, gépi keret-osztás
 - [ADR-0461](decisions/0461-orszag-reteg-3-9-az-elso-orszag-horvatorszag.md) — Ország-réteg 3/9: az első ország, Horvátország — ország-sor migrációban, a küldési ablak a sorból, a §C-kapu a jogi csomagból

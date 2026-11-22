@@ -1572,7 +1572,7 @@
         // névoszlop megtartja a szélességét.
         '<span class="cit-cfg-name">' +
         '<span class="cit-cfg-label">' +
-        esc(mod.label) +
+        esc(tr(mod.label)) + // 3/10 (Elek HR: the „Prilagodit ću” rows in Hungarian)
         "</span>" +
         // ⭐ Kontraktus §2 (C változat): a SOR mondja meg MIT. A pirula csak akkor
         // látszik, ha a modult a FÜGGŐSÉG hozta be — egy sajátkezű választás nem
@@ -2388,6 +2388,25 @@
     var pf = B.prefill || {};
     var list = B.countries && B.countries.length ? B.countries : [{ code: "HU", label: tr("Magyarország") }];
     var home = pf.country || "HU";
+    // 3/10 (Elek HR: 27 Hungarian country names in a Croatian order form): a non-Hungarian page
+    // names the countries in ITS language (Intl.DisplayNames; VIES' EL is ISO GR), the buyer's
+    // own country first, the rest in that language's order. Hungarian page: the list as sent.
+    var pageLang = (document.documentElement.lang || "hu").slice(0, 2);
+    if (pageLang !== "hu") {
+      try {
+        var dn = new Intl.DisplayNames([pageLang], { type: "region" });
+        list = list.map(function (c) {
+          return { code: c.code, label: dn.of(c.code === "EL" ? "GR" : c.code) || c.label };
+        });
+        list.sort(function (a, b) {
+          if (a.code === home) return -1;
+          if (b.code === home) return 1;
+          return a.label.localeCompare(b.label, pageLang);
+        });
+      } catch (e) {
+        /* no Intl region names → the list as sent */
+      }
+    }
     var opts = list
       .map(function (c) {
         return (
@@ -2476,8 +2495,14 @@
       bField("buyer_tax_number", tr("Adószám"), {
         hidden: true, mode: "numeric", placeholder: "12345678-2-41", cls: "cit-cfg-f--wide",
       }) +
+      // 3/10 (Elek HR): a Croatian business is identified by its OIB (checked offline, ISO 7064
+      // MOD 11,10 — billing/taxId.ts); its community VAT number is optional (many obrt are
+      // outside VAT). Shown for HR only, same shape as the HU adószám field above.
+      bField("buyer_national_tax_id", tr("OIB (horvát adóazonosító)"), {
+        hidden: true, mode: "numeric", placeholder: "69435151530", cls: "cit-cfg-f--wide",
+      }) +
       bField("buyer_eu_vat_number", tr("Közösségi adószám"), {
-        hidden: true, placeholder: "DE123456789", cls: "cit-cfg-f--wide",
+        hidden: true, placeholder: home === "HR" ? "HR69435151530" : "DE123456789", cls: "cit-cfg-f--wide",
       }) +
       bField("buyer_zip", tr("Irányítószám"), { value: pf.zip, mode: "numeric", auto: "postal-code" }) +
       bField("buyer_city", tr("Település"), { value: pf.city, auto: "address-level2" }) +
@@ -2675,7 +2700,7 @@
     var n = MODULES.filter(function (m) {
       return selected[m.id];
     }).length;
-    b.textContent = (p ? p.label : tr("Egyedi")) + " · " + tr("{n} szekció").replace("{n}", String(n));
+    b.textContent = (p ? tr(p.label) : tr("Egyedi")) + " · " + tr("{n} szekció").replace("{n}", String(n));
   }
 
   // ── step 3 state + wiring (0029) ────────────────────────────────────────────
@@ -2887,7 +2912,15 @@
     var country = (bInput("buyer_country") || {}).value || "HU";
     var isBusiness = buyerType === "business";
     showField("buyer_tax_number", isBusiness && country === "HU");
+    showField("buyer_national_tax_id", isBusiness && country === "HR");
     showField("buyer_eu_vat_number", isBusiness && country !== "HU");
+    var vatLabel = panel.querySelector('[data-fw="buyer_eu_vat_number"] span');
+    if (vatLabel) {
+      vatLabel.textContent = country === "HR" ? tr("Közösségi adószám (ha van)") : tr("Közösségi adószám");
+    }
+    var vatGiven = !!((bInput("buyer_eu_vat_number") || {}).value || "").trim();
+    // HR without a VAT number: no VIES, no reverse charge — the AAM sentence (billing/buyer.ts).
+    var reverse = isBusiness && country !== "HU" && (country !== "HR" || vatGiven);
     var nameLabel = panel.querySelector('[data-fw="buyer_name"] span');
     if (nameLabel) {
       nameLabel.textContent = isBusiness ? tr("Cégnév vagy egyéni vállalkozó neve") : tr("Teljes név");
@@ -2905,7 +2938,7 @@
         if (wf) wf.setAttribute("hidden", "");
       } else consent.removeAttribute("hidden");
     }
-    billNote.textContent = isBusiness && country !== "HU"
+    billNote.textContent = isBusiness && country !== "HU" && (country !== "HR" || vatGiven)
       ? tr("A közösségi adószámot a beküldéskor a VIES-ben ellenőrizzük.")
       : "";
     // §B.17: the VAT sentence must match what the invoice will actually carry —
@@ -2913,7 +2946,7 @@
     var vat = panel.querySelector(".cit-cfg-vatnote");
     if (vat) {
       var B2 = CFG.billing || {};
-      vat.textContent = (isBusiness && country !== "HU" ? B2.vatNoteReverse : B2.vatNote) || "";
+      vat.textContent = (reverse ? B2.vatNoteReverse : B2.vatNote) || "";
     }
     // The consent COUNT changes with the buyer type (3 → 2), so the gate and its
     // note must be recomputed here, not only on a tick.
@@ -2984,6 +3017,8 @@
   panel.addEventListener("input", function (e) {
     var k = e.target && e.target.getAttribute && e.target.getAttribute("data-f");
     if (k === "buyer_address" || k === "buyer_city" || k === "buyer_name") syncTaxHint();
+    // 3/10: HR — whether a VAT number is typed decides the VIES note and the VAT sentence.
+    if (k === "buyer_eu_vat_number") syncBillingFields();
   });
 
   panel.querySelectorAll(".cit-cfg-bt").forEach(function (b) {
@@ -3205,7 +3240,7 @@
         '">' +
         (inc ? I.check : I.x) +
         "<span>" +
-        esc(m.label) +
+        esc(tr(m.label)) + // 3/10 (Elek HR: the „Što sadrži?” list in Hungarian)
         "</span></span>"
       );
     });
@@ -3241,9 +3276,9 @@
         (presetCarriesDomain(p) ? '<span class="cit-cfg-preset__dbadge">' + I.globe + esc(domainBadgeText()) + "</span>" : "") +
         '<span class="cit-cfg-preset__dot" aria-hidden="true"></span>' +
         '<span class="cit-cfg-preset__txt"><b>' +
-        esc(p.label) +
+        esc(tr(p.label)) +
         '</b><span class="cit-cfg-preset__note">' +
-        esc(p.note) +
+        esc(tr(p.note)) +
         "</span>" +
         '<button class="cit-cfg-preset__more" type="button" aria-expanded="false">' +
         tr("Mit tartalmaz? ({n} szekció)").replace("{n}", String(count)) +
@@ -3297,7 +3332,7 @@
       return m.group === g;
     });
     if (!mods.length) return;
-    detail.appendChild(el('<div class="cit-cfg-group">' + esc(GROUPS[g] || g) + "</div>"));
+    detail.appendChild(el('<div class="cit-cfg-group">' + esc(tr(GROUPS[g] || g)) /* 3/10 */ + "</div>"));
     mods.forEach(function (m) {
       detail.appendChild(row(m));
     });
@@ -3909,7 +3944,7 @@
     } else {
       var d = new Date();
       d.setMonth(d.getMonth() + months);
-      date = d.getFullYear() + ". " + pad2(d.getMonth() + 1) + ". " + pad2(d.getDate()) + ".";
+      date = ymdLabel(d.getFullYear(), d.getMonth() + 1, d.getDate());
       sentence = tr("A következő terhelés a mai fizetéstől számítva {date}: {amount} {per}, automatikusan.");
     }
     el.textContent = sentence
@@ -3954,7 +3989,19 @@
    *  parses it as UTC midnight and prints the previous day west of Greenwich. */
   function huDay(iso) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-    return m ? m[1] + ". " + m[2] + ". " + m[3] + "." : iso;
+    return m ? ymdLabel(+m[1], +m[2], +m[3]) : iso;
+  }
+  /** 3/10 (Elek HR: „2026. 12. 22.” on a Croatian pay step): a calendar day in the page's
+   *  language — the Hungarian page keeps `2026. 12. 22.` byte for byte (src/text/day.ts twin). */
+  function ymdLabel(y, mo, d) {
+    var pl = (document.documentElement.lang || "hu").slice(0, 2);
+    if (pl === "hu") return y + ". " + pad2(mo) + ". " + pad2(d) + ".";
+    try {
+      return new Intl.DateTimeFormat(pl, { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "UTC" })
+        .format(new Date(Date.UTC(y, mo - 1, d)));
+    } catch (e) {
+      return y + ". " + pad2(mo) + ". " + pad2(d) + ".";
+    }
   }
   /** `2026-10-24` + 1 → `2026-11-24` (day clamped to the month's end), a pure calendar step. */
   function isoAddMonths(iso, k) {
@@ -4191,7 +4238,7 @@
   function trialDate(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return "";
-    return d.getFullYear() + ". " + pad2(d.getMonth() + 1) + ". " + pad2(d.getDate()) + ".";
+    return ymdLabel(d.getFullYear(), d.getMonth() + 1, d.getDate());
   }
   var tSheet = null;
   var tScrim = null;
@@ -4876,6 +4923,7 @@
         buyer_country: val("buyer_country"),
         buyer_tax_number: val("buyer_tax_number"),
         buyer_eu_vat_number: val("buyer_eu_vat_number"),
+        buyer_national_tax_id: val("buyer_national_tax_id"),
         buyer_zip: val("buyer_zip"),
         buyer_city: val("buyer_city"),
         buyer_address: val("buyer_address"),

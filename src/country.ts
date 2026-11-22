@@ -251,6 +251,21 @@ export function countryPortalDomains(): readonly string[] {
   return [...new Set(allCountriesSync().flatMap((c) => c.portalDomains))];
 }
 
+/**
+ * ORSZÁG-RÉTEG 3/10 (Elek HR: „Szállás.hu” in a Croatian letter and sample widget): the portals
+ * whose calendar our iCal sync is VERIFIED with (ADR-0361), as a reader of THIS country may be
+ * told. Booking.com and Airbnb are cross-border; a local portal is named only where the
+ * country row lists its host in `portal_domains` (HU: szallas.hu) — so the list follows the
+ * row, and no portal is ever named whose sync we have not verified (§B.17).
+ * `null` country = a foreign page whose country is unknown → the cross-border pair only.
+ */
+const VERIFIED_LOCAL_ICAL_PORTALS: Readonly<Record<string, string>> = { "szallas.hu": "Szállás.hu" }; // i18n-exempt: portal brand names
+export function calendarSyncPortals(country: string | null | undefined): readonly string[] {
+  const hosts = country ? (countryConfigSync(country)?.portalDomains ?? []) : [];
+  const local = Object.entries(VERIFIED_LOCAL_ICAL_PORTALS).filter(([h]) => hosts.includes(h)).map(([, name]) => name);
+  return ["Booking.com", ...local, "Airbnb"]; // i18n-exempt: portal brand names
+}
+
 /** The layer row a scraped lead is processed with: its own country (coordinate), else the
  *  area's. null = no row → the caller skips the country-dependent step (fail closed). */
 export function leadCountryConfig(

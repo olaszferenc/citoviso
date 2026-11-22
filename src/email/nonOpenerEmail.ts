@@ -19,6 +19,7 @@
 // does not carry.
 
 import path from "node:path";
+import { carriesCurrencySign, perMonth, perMonthFrom } from "./outreachEmail.js";
 import { T } from "../i18n/mail.js";
 import { config } from "../config.js";
 import { bandBrand, esc } from "./platformLayout.js";
@@ -112,14 +113,21 @@ export function nonOpenerParts(i: NonOpenerLetterInput): NonOpenerParts {
     heroAlt: T(lang, "A honlap-terv nyitóképe"),
     headerTag: T(lang, "Előzetes látványterv"),
     offerTitle: T(lang, "Bemutatkozó ajánlat"),
-    priceListTxt: T(lang, "{price} Ft/hó", { price: i.cold.priceList }),
-    priceOfferTxt: T(lang, "{price} Ft/hó-tól", { price: i.cold.priceOffer }),
+    // 3/10: a non-forint amount carries its own sign — no „Ft” after it (outreachEmail.ts).
+    priceListTxt: perMonth(lang, i.cold.priceList),
+    priceOfferTxt: perMonthFrom(lang, i.cold.priceOffer),
     // The price box as a sentence — the plain-text part's twin of the navy box (§I).
-    p3: T(lang, "Bemutatkozó ajánlat: {offer} Ft/hó-tól (listaár {list} Ft/hó, −{percent}%).", {
-      offer: i.cold.priceOffer,
-      list: i.cold.priceList,
-      percent: i.cold.percent,
-    }),
+    p3: carriesCurrencySign(i.cold.priceList)
+      ? T(lang, "Bemutatkozó ajánlat: {offer}/hó-tól (listaár {list}/hó, −{percent}%).", {
+          offer: i.cold.priceOffer,
+          list: i.cold.priceList,
+          percent: i.cold.percent,
+        })
+      : T(lang, "Bemutatkozó ajánlat: {offer} Ft/hó-tól (listaár {list} Ft/hó, −{percent}%).", {
+          offer: i.cold.priceOffer,
+          list: i.cold.priceList,
+          percent: i.cold.percent,
+        }),
     regards: T(lang, "Üdvözlettel,"),
     sigName: i.senderName,
     sigCo: i.cold.sigCo,

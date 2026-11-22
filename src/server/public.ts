@@ -127,6 +127,7 @@ import { chargeUpsellWithToken, openUpsellPayUrl, requestPayment } from "../paym
 import { MODULE_CATALOG } from "../modules.js";
 import { DEFAULT_LANG, langName, uiLangs } from "../i18n/lang.js";
 import { T, langForTenant, prepareMailLang, prepareRenderLang } from "../i18n/mail.js";
+import { nationalTaxIdProblem } from "../billing/taxId.js";
 import { cartReturnUrl, currentTopic, markWalkSeen, moduleTopicStep, walkItems, walkPost, walkScreen, walkWanted } from "./setupWizard.js";
 import { moduleStepPanel, overviewSetupStrip, returnToWalkBar, setupTilesSection, setupWizardPage } from "./setupWizardViews.js";
 import { guestSentence, loadSetupCtx } from "../tenant/moduleSetup.js";
@@ -2341,6 +2342,10 @@ async function serveAdmin(
       privacyUrl: siteUrl ? `${siteUrl.replace(/\/$/, "")}${TENANT_LEGAL_PATHS.privacy}` : null,
       imprintUrl: siteUrl ? `${siteUrl.replace(/\/$/, "")}${TENANT_LEGAL_PATHS.imprint}` : null,
       local: st.local,
+      // 3/10: a refused tax id (check digit) — the problem and the digits the owner typed.
+      ...(params.get("taxerr") === "1"
+        ? { taxIdError: nationalTaxIdProblem(st.local.taxIdCheck, params.get("taxv") ?? "", await langForTenant(session.tenantId)) ?? null, taxIdTyped: (params.get("taxv") ?? "").slice(0, 40) }
+        : {}),
     };
   } else if (tab === "uzenetek") {
     // Opening a message marks it read — the click IS the acknowledgement, so it
@@ -4318,11 +4323,17 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const local = localDefs.length
       ? Object.fromEntries(localDefs.map((f) => [f.id, form.get(`local_${f.id}`)]))
       : undefined;
+    // 3/10 (Elek HR): a country whose tax id carries an offline check digit (HR OIB, ISO 7064
+    // MOD 11,10) refuses a mistyped one — the rest of the form is saved, the tax id keeps its
+    // previous value, and the panel names the problem with the rejected digits back in the field.
+    const legalNow = await loadTenantLegal(session.tenantId);
+    const taxRaw = (form.get("tax_number") ?? "").trim();
+    const taxProblem = taxRaw ? nationalTaxIdProblem(legalNow.local.taxIdCheck, taxRaw) : null;
     await saveTenantLegal(session.tenantId, {
       ...(local ? { local } : {}),
       legalName: form.get("legal_name"),
       address: form.get("address"),
-      taxNumber: form.get("tax_number"),
+      taxNumber: taxProblem ? legalNow.who.taxNumber : form.get("tax_number"),
       regNumber: form.get("reg_number"),
       ntakId: form.get("ntak_id"),
       email: form.get("email"),
@@ -4331,6 +4342,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // The legal pages are static snapshots: without a re-render the owner would save
     // and see the old text — the very "silent no-op" this codebase keeps tripping on.
     await rerenderTenantSnapshot(session.tenantId);
+    if (taxProblem) return redirect(res, `/admin?tab=fiok&taxerr=1&taxv=${encodeURIComponent(taxRaw.slice(0, 40))}#jogi-adatok`);
     return redirect(res, "/admin?tab=fiok&saved=1#jogi-adatok");
   }
   if (req.method === "POST" && pathname === "/admin/photos") {
@@ -4668,11 +4680,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // ADR-0067: /login lives on the platform host with NO tenant context, so the
     // language arrives as a hint on the link the owner clicked on their own site
     // (ownerLogin.ts). Unknown/unsupported → Hungarian.
-    const loginLang = await prepareRenderLang(
-      uiLangs().includes(url.searchParams.get("lang") ?? "")
-        ? (url.searchParams.get("lang") as string)
-        : DEFAULT_LANG,
-    );
+    // 3/10 (Elek HR: /login?l=hr all Hungarian): `?l=` is the short hint the legal pages and the
+    // lead's links use (legalViews.ts) — the login reads it too; `?lang=` keeps precedence.
+    const loginHint = url.searchParams.get("lang") ?? url.searchParams.get("l") ?? "";
+    const loginLang = await prepareRenderLang(uiLangs().includes(loginHint) ? loginHint : DEFAULT_LANG);
     if (pathname === "/login") {
       return send(
         res,

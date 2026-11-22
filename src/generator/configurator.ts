@@ -16,6 +16,8 @@ import { fileURLToPath } from "node:url";
 
 import { getDisabledModules } from "../moduleSales.js";
 import { offeredModuleIds, offeredPackagesFrom } from "../packageOffer.js";
+import { calendarSyncPortals } from "../country.js";
+import { T } from "../i18n/mail.js";
 import {
   MODULE_CATALOG,
   GROUP_LABELS,
@@ -113,6 +115,14 @@ async function configuratorBlock(): Promise<string> {
     `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${jsonForScript(banner.trim())};\n${phoneNorm}\n${money}\n${js}\n</script>\n`;
   return cached;
 }
+
+
+/** 3/10: the booking module's description where no local portal syncs (HU's publicDesc minus Szállás.hu). */
+const HU_SOURCE = "hu";
+const BOOKING_DESC_NO_LOCAL_PORTAL = T(
+  HU_SOURCE,
+  "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére. A naptár összeköthető a Booking.com és az Airbnb naptárával: ami ott foglalt, itt is lezár, és fordítva — az árat a portálon továbbra is Ön állítja.",
+);
 
 export interface ConfiguratorManifest {
   readonly artifactId: string;
@@ -480,6 +490,7 @@ export async function buildManifest(
   // ORSZÁG-RÉTEG 3/7: every legal wording below comes from the lodging country's pack (the
   // Hungarian pack = the old constants verbatim); our document links carry `?c=<CC>` for it.
   const lp = opts.legalPack ?? homeLegalPack();
+  const syncPortals = calendarSyncPortals(lp.country);
   const withC = (u: string | null): string | null => (u && !lp.home ? `${u}${u.includes("?") ? "&" : "?"}c=${lp.country}` : u);
   // Guard fixtures render without a lead; every product caller passes the lead's region.
   const region = opts.pricingRegion ?? HU_PRICING_REGION;
@@ -622,8 +633,12 @@ export async function buildManifest(
     modules: offered.map((m) => ({
       id: m.id,
       label: m.publicLabel,
-      desc: m.publicDesc,
-      ...(m.publicIncl ? { incl: { label: m.publicIncl.label, tags: [...m.publicIncl.tags] } } : {}),
+      // 3/10 (Elek HR): the calendar-sync portals are the lodging country's (country.ts
+      // calendarSyncPortals) — no Szállás.hu for a Croatian buyer; HU unchanged.
+      desc: m.id === "booking" && !syncPortals.includes("Szállás.hu") ? BOOKING_DESC_NO_LOCAL_PORTAL : m.publicDesc, // i18n-exempt: portal brand name
+      ...(m.publicIncl
+        ? { incl: { label: m.publicIncl.label, tags: m.id === "booking" ? m.publicIncl.tags.filter((t) => syncPortals.includes(t)) : [...m.publicIncl.tags] } }
+        : {}),
       group: m.group,
       present: present.has(m.id),
       spine: !!m.spine,

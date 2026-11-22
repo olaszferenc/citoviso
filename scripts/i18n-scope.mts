@@ -290,7 +290,8 @@ function hasBareHungarian(src: string): boolean {
     if (/i18n-exempt/.test(line)) continue;
     line = line
       .replace(/\bT\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*\s*,\s*"(?:[^"\\]|\\.)*"/g, "T(_)")
-      .replace(/\btr\(\s*"(?:[^"\\]|\\.)*"\s*\)/g, "tr(_)");
+      .replace(/\btr\(\s*"(?:[^"\\]|\\.)*"\s*\)/g, "tr(_)")
+      .replace(/\btrn\(\s*"(?:[^"\\]|\\.)*"\s*,/g, "trn(_,") // 3/10: the plural-aware lookup;
     for (const m of line.matchAll(/"((?:[^"\\]|\\.)+)"|`([^`]*)`/g)) {
       const text = (m[1] ?? m[2] ?? "").replace(/\$\{[^}]*\}/g, "");
       if (HU.test(text)) return true;

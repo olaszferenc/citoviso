@@ -204,7 +204,8 @@ export async function getSubscriptionAdmin(
     }));
   const modulesTotal = items.reduce((s, i) => s + i.price, getBaseMonthly(region));
   // Elek B4: the screen's totals carry the domain fee exactly as the renewal mint does.
-  const domainDue = await domainFeeForRenewal(tenantId, 1, region);
+  // 3/10: a forecast screen — a beszerzés still running counts (the mint bills only a held name).
+  const domainDue = await domainFeeForRenewal(tenantId, 1, region, { forecast: true });
   const domainMonthly = domainDue?.fee ?? 0;
   const total = modulesTotal + domainMonthly;
   let domainInPackage: SubscriptionAdminData["domainInPackage"] = null;

@@ -17,6 +17,7 @@
 // from the skin's --cit-* contract, so the block inherits whatever template it
 // lands in instead of fighting it.
 
+import { calendarSyncPortals, countryConfigSync } from "../country.js";
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
@@ -329,7 +330,22 @@ function money(amount: number, currency?: string, lang?: string): string {
 /** ADR-0378: a meal plan's name in the page's language (literal keys for the catalogue). */
 /** ORSZÁG-RÉTEG 3/9: the sample widget's currency on a foreign mock; HU pages carry none (unchanged). */
 function demoCurrencyAttr(d: SiteData): string {
-  return d.currency && /^[A-Z]{3}$/.test(d.currency) && d.currency !== "HUF" ? ` data-cit-currency="${esc(d.currency)}"` : "";
+  return (
+    (d.currency && /^[A-Z]{3}$/.test(d.currency) && d.currency !== "HUF" ? ` data-cit-currency="${esc(d.currency)}"` : "") +
+    demoPortalsAttr(d)
+  );
+}
+
+/** 3/10: the sample widget's calendar-sync portals — no attribute on a Hungarian page (the
+ *  runtime's own list, every HU page byte-identical); a foreign page gets its country's list
+ *  (a page re-rendered from pre-3/10 inputs knows only its language → the cross-border pair). */
+function demoPortalsAttr(d: SiteData): string {
+  if (!d.lang || d.lang === "hu") return "";
+  const country = d.country && /^[A-Z]{2}$/.test(d.country) ? d.country : null;
+  // 3/10 (Elek HR: around midnight the sample calendar offered yesterday — the mock had no zone,
+  // so its „today” was the UTC day): a foreign mock carries its country's zone, like a live page.
+  const tz = country ? countryConfigSync(country)?.timeZone : null;
+  return ` data-cit-portals="${esc(JSON.stringify(calendarSyncPortals(country)))}"` + (tz ? ` data-cit-tz="${esc(tz)}"` : "");
 }
 
 function mealName(d: SiteData, id: "none" | "bb" | "hb" | "fb"): string {

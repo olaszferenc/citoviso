@@ -26,6 +26,26 @@
   /* ADR-0036: buyer-facing strings resolve through the server-injected pack
    * (window.CIT_I18N). Hungarian pages carry no map → tr() is identity. */
   function tr(s) { var m = window.CIT_I18N; return (m && m[s]) || s; }
+  // 3/10 (Elek HR: „1 noći”, „2 osoba”): the plural-aware lookup — a translation value of the
+  // form "plural:one=…;few=…;other=…" (src/i18n/packs.ts selectPlural) gives the form for the
+  // count `n` under Intl.PluralRules of the page's language; a plain value is returned as is.
+  function trn(s, n) {
+    var v = tr(s);
+    if (v.indexOf("plural:") !== 0) return v;
+    var forms = {};
+    v.slice(7).split(";").forEach(function (part) {
+      var i = part.indexOf("=");
+      if (i > 0) forms[part.slice(0, i).trim()] = part.slice(i + 1);
+    });
+    if (forms.other == null) return v;
+    var cat = "other";
+    try {
+      cat = new Intl.PluralRules(document.documentElement.lang || "hu").select(Number(n));
+    } catch (e) {
+      cat = "other";
+    }
+    return forms[cat] != null ? forms[cat] : forms.other;
+  }
 
   var SVG_CAL =
     '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -113,6 +133,17 @@
     // lead cannot try is a module we cannot sell (ADR-0015); a demo that quietly
     // POSTs is worse (§B.17) — so the sample state is explicit (MINTA ribbon).
     var demo = slot.hasAttribute("data-cit-demo");
+    // 3/10: the calendar-sync portals of the page's country (data-cit-portals, src/country.ts
+    // calendarSyncPortals); no attribute = the Hungarian list, as before.
+    function demoPortals() {
+      try {
+        var list = JSON.parse(slot.getAttribute("data-cit-portals") || "null");
+        if (Array.isArray(list) && list.length) return list;
+      } catch (e) {
+        /* fall through to the Hungarian list */
+      }
+      return ["Booking.com", "Szállás.hu", "Airbnb"]; // i18n-exempt: portal brand names
+    }
     var minN = Number(slot.getAttribute("data-cit-min-nights") || 1);
     var maxN = Number(slot.getAttribute("data-cit-max-nights") || 30);
     var horizon = Number(slot.getAttribute("data-cit-horizon") || 12);
@@ -174,7 +205,7 @@
           // ADR-0257 (contract whole-only ⑪): the house is the one thing to book — say so.
           ? '<div class="cit-book__field cit-book__only"><span class="cit-book__label">' + tr("Amit foglal") + "</span>" +
             '<p class="cit-book__onlyname"><b>' + esc(units[0].name) + "</b>" +
-            (units[0].capacity ? " · " + tr("legfeljebb {n} fő").replace("{n}", units[0].capacity) : "") +
+            (units[0].capacity ? " · " + trn("legfeljebb {n} fő", units[0].capacity).replace("{n}", units[0].capacity) : "") +
             "<br><span>" + tr("A teljes ház — a szobák külön nem foglalhatók.") + "</span></p></div>"
           : "") +
         '<input type="hidden" name="unit" value="' + esc(units[0].id) + '">';
@@ -200,7 +231,7 @@
       // the price stays on the portal — the sentence says so (§B.17).
       (demo
         ? '<div class="cit-book__sync"><span class="cit-book__synct">' + SVG_SYNC + "<span>" + tr("Naptára szinkronban:") + "</span></span>" +
-          ["Booking.com", "Szállás.hu", "Airbnb"].map( // i18n-exempt: portal brand names
+          demoPortals().map(
             function (p) { return '<span class="cit-book__ptag">' + esc(p) + "</span>"; }).join("") +
           '<span class="cit-book__syncs">' + tr("Ami a portálon foglalt, itt is lezár — és fordítva. Nem kell két naptárat vezetnie; az árat a portálon továbbra is Ön állítja.") + "</span></div>"
         : "") +
@@ -663,8 +694,8 @@
       if (open.length) {
         var part = q.lines.concat(mls).map(function (l) {
           return '<span class="cit-book__qline">' + esc(l.label) + ": " +
-            tr("{n} éj").replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
-            (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
+            trn("{n} éj", l.n).replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
+            (l.guests > 1 ? " × " + trn("{n} fő", l.guests).replace("{n}", l.guests) : "") +
             " = " + moneyHtml(l.sum, cur) + "</span>";
         }).join("") +
           open.map(function (name) {
@@ -689,8 +720,8 @@
       var mealSum = mls.reduce(function (t, l) { return t + l.sum; }, 0);
       var rows = q.lines.concat(mls).map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
-          tr("{n} éj").replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
-          (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
+          trn("{n} éj", l.n).replace("{n}", l.n) + " × " + moneyHtml(l.per, cur) +
+          (l.guests > 1 ? " × " + trn("{n} fő", l.guests).replace("{n}", l.guests) : "") +
           " = " + moneyHtml(l.sum, cur) + "</span>";
       }).join("");
       /* ⛔ KONTRAKTUS ①–④ (booking-price-clarity, tulaj 2026-09-14: „A — nyitott
@@ -772,7 +803,7 @@
      * computation: the receipt must show the number that is ON the request. */
     /* Elek 10-13 T-7: the letters' words — "3 fő, ebből 1 gyermek" (requests.ts `headcount`). */
     function headcount(g, k) {
-      return k ? tr("{n} fő, ebből {k} gyermek").replace("{n}", g).replace("{k}", k) : tr("{n} fő").replace("{n}", g);
+      return k ? trn("{n} fő, ebből {k} gyermek", g).replace("{n}", g).replace("{k}", k) : trn("{n} fő", g).replace("{n}", g);
     }
     function huDay(iso) {
       /* ORSZÁG-RÉTEG 3/9 (Elek HR): a foreign page writes the day in ITS language's order
@@ -790,15 +821,15 @@
       var cur = s.currency || "HUF";
       var rows = (s.lines || []).map(function (l) {
         return '<span class="cit-book__qline">' + esc(l.label) + ": " +
-          tr("{n} éj").replace("{n}", l.nights) + " × " + moneyHtml(l.perNight, cur) +
-          (l.guests > 1 ? " × " + tr("{n} fő").replace("{n}", l.guests) : "") +
+          trn("{n} éj", l.nights).replace("{n}", l.nights) + " × " + moneyHtml(l.perNight, cur) +
+          (l.guests > 1 ? " × " + trn("{n} fő", l.guests).replace("{n}", l.guests) : "") +
           " = " + moneyHtml(l.sum, cur) + "</span>";
       }).join("");
       var facts =
         '<span class="cit-book__rrow"><span>' + tr("Időszak") + "</span><b>" +
           esc(huDay(s.dateFrom)) + " — " + esc(huDay(s.dateTo)) + "</b></span>" +
         '<span class="cit-book__rrow"><span>' + tr("Éjszakák") + "</span><b>" +
-          esc(tr("{n} éj").replace("{n}", s.nights)) + "</b></span>" +
+          esc(trn("{n} éj", s.nights).replace("{n}", s.nights)) + "</b></span>" +
         '<span class="cit-book__rrow"><span>' + tr("Létszám") + "</span><b>" +
           esc(headcount(s.guests, s.children || 0)) + "</b></span>" +
         (s.unitName
@@ -1025,13 +1056,13 @@
         var ok = roomFree(u.id, a, b);
         var q = ok ? quoteForPricing(a, b, (byUnit[u.id] || {}).pricing) : null;
         var price = !ok ? "" : q
-          ? "<b>" + moneyHtml(q.total, ((byUnit[u.id] || {}).pricing || {}).currency || "HUF") + "</b>" + esc(tr("{n} éj").replace("{n}", nights(a, b)))
+          ? "<b>" + moneyHtml(q.total, ((byUnit[u.id] || {}).pricing || {}).currency || "HUF") + "</b>" + esc(trn("{n} éj", nights(a, b)).replace("{n}", nights(a, b)))
           : "<b>" + tr("egyedi ár") + "</b>";
         return '<label class="cit-book__room' + (ok ? "" : " is-off") + '">' +
           '<input type="checkbox" value="' + esc(u.id) + '" data-cit-room-pick' + (picked[u.id] ? " checked" : "") + (ok ? "" : " disabled") + ">" +
           '<span class="cit-book__roomn">' + esc(u.name) + "</span>" +
           '<span class="cit-book__roomp">' + price + "</span>" +
-          '<span class="cit-book__roomc">' + (u.capacity ? esc(tr("{n} fő").replace("{n}", u.capacity)) : "") + "</span>" +
+          '<span class="cit-book__roomc">' + (u.capacity ? esc(trn("{n} fő", u.capacity).replace("{n}", u.capacity)) : "") + "</span>" +
           (ok ? "" : '<span class="cit-book__roomx">' + tr("Erre az időszakra foglalt") + "</span>") +
           "</label>";
       }).join("") +
@@ -1290,7 +1321,7 @@
         // Elek F-2: between the two taps the strip says the minimum for this arrival.
         var minA = a && !b ? minFor(a, shift(a, 1)) : 0;
         nightsEl.textContent = n > 0
-          ? tr("{n} éjszaka").replace("{n}", n)
+          ? trn("{n} éjszaka", n).replace("{n}", n)
           : minA > 1 ? tr("legalább {n} éjszaka").replace("{n}", minA) : "";
         if (multi) renderRooms();
         renderQuote(a, b, n);
@@ -1495,7 +1526,7 @@
         var facts =
           '<div class="cit-book__receipt">' +
           rrow(tr("Időszak"), huDay(qa) + " — " + huDay(qb)) +
-          rrow(tr("Éjszakák"), tr("{n} éj").replace("{n}", qn)) +
+          rrow(tr("Éjszakák"), trn("{n} éj", qn).replace("{n}", qn)) +
           rrow(tr("Létszám"), headcount(guests, kids)) +
           (unitName ? rrow(multi && pickedUnits().length > 1 ? tr("Szobák") : tr("Egység"), unitName) : "") +
           (dq

@@ -106,9 +106,13 @@ export function buildDomainFailedEmail(input: {
   released?: boolean;
   /** ADR-0381: a package-content (0 Ft) claim — nothing was charged or held. */
   free?: boolean;
+  /** 3/10: the registrar refused the name as TAKEN (default — the legacy callers). Any other
+   *  cause (price cap, currency, registrar error) must not be told as „someone took it”. */
+  taken?: boolean;
   lang?: string;
 }): EmailMessage {
   const { to, domain, adminUrl, released, free, lang } = input;
+  const taken = input.taken ?? true;
 
   // ADR-0251: a held order that failed costs NOTHING — the hold is released, the
   // commitment never starts. The legacy text stays for an order that was charged
@@ -126,9 +130,15 @@ export function buildDomainFailedEmail(input: {
         "{Art} {domain} nevet sajnos nem tudtuk megvásárolni. A kártyáját nem terheltük: a zárolást feloldottuk, a bankjától függően néhány munkanapon belül eltűnik a számlájáról. Az előfizetési vállalás sem indult el.",
         { Art: huArticle(domain), domain },
       )
-    : T(
+    : taken
+    ? T(
         lang,
         "{Art} {domain} nevet sajnos időközben más lefoglalta, ezért nem tudtuk megvásárolni. A befizetett összeg nem vész el: egy másik névre fordítjuk.",
+        { Art: huArticle(domain), domain },
+      )
+    : T(
+        lang,
+        "{Art} {domain} nevet sajnos nem tudtuk megvásárolni. A befizetett összeg nem vész el: egy másik névre fordítjuk.",
         { Art: huArticle(domain), domain },
       );
 
@@ -138,7 +148,9 @@ export function buildDomainFailedEmail(input: {
     ? T(lang, "Nem tudtuk megvásárolni a választott webcímet")
     : released
     ? T(lang, "Nem tudtuk megvásárolni a választott webcímet — nem terheltünk semmit")
-    : T(lang, "A választott webcím időközben elkelt");
+    : taken
+    ? T(lang, "A választott webcím időközben elkelt")
+    : T(lang, "Nem tudtuk megvásárolni a választott webcímet");
   const text =
     title +
     `\n\n${body}\n\n` +

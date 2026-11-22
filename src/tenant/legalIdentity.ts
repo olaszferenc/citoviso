@@ -76,6 +76,7 @@ export async function loadTenantLegal(tenantId: string): Promise<TenantLegalStat
       "buyer_name",
       "buyer_type",
       "buyer_tax_number",
+      "buyer_national_tax_id",
       "buyer_zip",
       "buyer_city",
       "buyer_address",
@@ -86,6 +87,22 @@ export async function loadTenantLegal(tenantId: string): Promise<TenantLegalStat
     .orderBy("created_at", "desc")
     .executeTakeFirst();
 
+  // 3/10 (Elek HR: the OIB given at the order did not reach the panel): a Croatian business
+  // buyer's OIB lives on its FIRST order (the lead's, no tenant_id) — and a later module
+  // purchase copies no national id. Only this one item is looked up through the lead's
+  // prospects; every other prefill keeps its own source.
+  const nationalId = trimOrNull(buyer?.buyer_national_tax_id) ?? (
+    await db
+      .selectFrom("order_intent")
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+      .select("order_intent.buyer_national_tax_id as id")
+      .where("tenant.id", "=", tenantId)
+      .where("order_intent.buyer_national_tax_id", "is not", null)
+      .orderBy("order_intent.created_at", "desc")
+      .executeTakeFirst()
+  )?.id ?? null;
+
   const who: TenantLegalIdentity = {
     legalName: trimOrNull(own?.legal_name) ?? trimOrNull(buyer?.buyer_name),
     address:
@@ -95,7 +112,9 @@ export async function loadTenantLegal(tenantId: string): Promise<TenantLegalStat
         trimOrNull(buyer?.buyer_city),
         trimOrNull(buyer?.buyer_address),
       ),
-    taxNumber: trimOrNull(own?.tax_number) ?? trimOrNull(buyer?.buyer_tax_number),
+    // 3/10: a Croatian business buyer's OIB (order_intent.buyer_national_tax_id) IS the tax id
+    // its imprint owes (LEGAL_LOCAL.HR taxIdLabel) — prefilled like the HU adószám.
+    taxNumber: trimOrNull(own?.tax_number) ?? trimOrNull(buyer?.buyer_tax_number) ?? trimOrNull(nationalId),
     // Never inherited: nothing in the checkout asks for a registry number.
     regNumber: trimOrNull(own?.reg_number),
     ntakId: trimOrNull(own?.ntak_id),

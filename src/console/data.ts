@@ -1308,6 +1308,7 @@ export async function recordOrderIntent(input: {
             buyer_name: input.buyer.buyerName,
             buyer_tax_number: input.buyer.buyerTaxNumber,
             buyer_eu_vat_number: input.buyer.buyerEuVatNumber,
+            ...(input.buyer.buyerNationalTaxId ? { buyer_national_tax_id: input.buyer.buyerNationalTaxId } : {}),
             buyer_country: input.buyer.buyerCountry,
             buyer_zip: input.buyer.buyerZip,
             buyer_city: input.buyer.buyerCity,

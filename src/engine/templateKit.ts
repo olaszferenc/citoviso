@@ -2,7 +2,7 @@
 // the cross-cutting helpers from here (never from another template), so templates stay
 // independent files and the registry (templates.ts) stays a plain import list.
 
-import { tSync } from "../i18n/packs.js";
+import { selectPlural, tSync } from "../i18n/packs.js";
 import { iconSvg, starIcon } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
@@ -23,7 +23,8 @@ export function T(
   hu: string,
   vars?: Record<string, string | number>,
 ): string {
-  let s = tSync(d.lang, hu);
+  // 3/10: a plural value picks its form by {n} (packs.ts selectPlural).
+  let s = selectPlural(d.lang, tSync(d.lang, hu), vars?.n);
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }

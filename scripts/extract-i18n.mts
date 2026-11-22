@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   //    it as an UNWRAPPED literal (it is wrapped) and the harvest skipped it. One
   //    occurrence today; the point is that the shape was unrepresentable.
   const RE =
-    /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,|tr\()\s*"((?:[^"\\]|\\.)+)"/g;
+    /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,|trn?\()\s*"((?:[^"\\]|\\.)+)"/g;
   for (const file of files) {
     const src = await readFile(file, "utf8").catch(() => "");
     const surface = surfaceOf(path.relative(ROOT, file));

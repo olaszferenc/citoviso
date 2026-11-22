@@ -729,7 +729,16 @@ export async function applyWebhookResult(
   // ADR-0071: an 'initial' order may also carry a custom domain (domain_type=
   // citoviso_registered). Now that the site is live, register + move it in. A no-op
   // (returns null) for citoviso_sub / own orders.
-  if (activated) fireDomainProvisioning(payment.order_intent_id);
+  //
+  // 3/10 (Elek HR, „one event, one letter, one truth”): the activation letter states the
+  // domain's state, so it waits for the beszerzés to SETTLE — briefly. Measured: the mock
+  // registrar failed in 0.1 s, and the buyer got „purchase in progress, nothing to do” and
+  // „the address is taken” in the same second. An instant outcome (live / failed) is now in
+  // the letter's state (failed → the letter makes no domain promise; the failure letter is
+  // the one truth about it); a slow real registrar keeps running in the background and the
+  // letter truthfully says „in progress”.
+  const domainRun = activated ? fireDomainProvisioning(payment.order_intent_id) : null;
+  if (domainRun) await settleWithin(domainRun, DOMAIN_SETTLE_BEFORE_ACTIVATION_MAIL_MS);
   // ADR-0402 "A": „Megrendelését aktiváltuk” — site address, own-domain state, login and the
   // next charge in ONE letter; after the subscription (the renewal figure needs it).
   if (activated) await sendActivationMail(payment.order_intent_id, payment.id, renewalPreview);
@@ -1479,8 +1488,23 @@ async function fireReservedDomainProvisioning(orderIntentId: string): Promise<vo
     .catch((e) => console.error(`[domain] beszerzés-futtatás HIBA:`, e));
 }
 
-function fireDomainProvisioning(orderIntentId: string): void {
-  provisionOrderDomain(orderIntentId)
+/** 3/10: how long the activation letter waits for an instant domain outcome. */
+const DOMAIN_SETTLE_BEFORE_ACTIVATION_MAIL_MS = 8_000;
+
+/** Resolve when `p` settles or after `ms`, whichever is first — never rejects. */
+async function settleWithin(p: Promise<unknown>, ms: number): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  await Promise.race([
+    p.then(() => undefined, () => undefined),
+    new Promise<void>((r) => {
+      timer = setTimeout(r, ms);
+    }),
+  ]);
+  if (timer) clearTimeout(timer);
+}
+
+function fireDomainProvisioning(orderIntentId: string): Promise<void> {
+  return provisionOrderDomain(orderIntentId)
     .then((status) => {
       if (status === null) return; // no custom domain on this order
       if (status === "live") console.log(`[domain] beszerzés kész → ÉLES: ${orderIntentId}`);
@@ -2288,7 +2312,8 @@ async function renewalPreview(tenantId: string): Promise<ActivationSummary["rene
     const moduleIds = await renewableModuleIds(tenantId);
     const region = sub.pricing_region;
     const listPrice = period === "annual" ? computeAnnual(moduleIds, region) : computeMonthly(moduleIds, region);
-    const domain = await domainFeeForRenewal(tenantId, months, region);
+    // 3/10: a forecast — a beszerzés still running counts (the mint bills only a held name).
+    const domain = await domainFeeForRenewal(tenantId, months, region, { forecast: true });
     return {
       date,
       amount: listPrice + (domain?.fee ?? 0),

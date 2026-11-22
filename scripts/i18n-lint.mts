@@ -44,6 +44,8 @@ function violations(src: string): { line: number; text: string }[] {
     // Drop wrapped calls: T(x, "…"), tr("…") — including their vars object.
     l = l.replace(/\bT\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,\s*"(?:[^"\\]|\\.)*"/g, "T(_,_WRAPPED_");
     l = l.replace(/\btr\(\s*"(?:[^"\\]|\\.)*"\s*\)/g, "tr(_WRAPPED_)");
+    // 3/10: trn("…", n) — the plural-aware client lookup (Intl.PluralRules), same key.
+    l = l.replace(/\btrn\(\s*"(?:[^"\\]|\\.)*"\s*,/g, "trn(_WRAPPED_,");
     // Remaining double-quoted literals with Hungarian accents = suspects.
     for (const m of l.matchAll(/"((?:[^"\\]|\\.)+)"/g)) {
       if (HU.test(m[1]!)) out.push({ line: i + 1, text: m[1]!.slice(0, 60) });

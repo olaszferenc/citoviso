@@ -6,9 +6,13 @@
 // at the checkout step with their wallet out, and "érvénytelen adat" without
 // saying WHICH field loses the sale.
 
+import { T } from "../i18n/mail.js";
 import {
   checkVies,
+  hrOibChecksumOk,
+  hrOibProblem,
   huTaxNumberProblem,
+  normalizeHrOib,
   findHuTaxNumberInText,
   normalizeHuTaxNumber,
   parseEuVat,
@@ -24,6 +28,8 @@ export interface BuyerInput {
   readonly buyer_name?: unknown;
   readonly buyer_tax_number?: unknown;
   readonly buyer_eu_vat_number?: unknown;
+  /** 3/10: a national tax id that is not a VAT number (HR OIB) — the business branch of HR. */
+  readonly buyer_national_tax_id?: unknown;
   readonly buyer_country?: unknown;
   readonly buyer_zip?: unknown;
   readonly buyer_city?: unknown;
@@ -41,6 +47,9 @@ export interface BuyerDeclaration {
   readonly buyerName: string;
   readonly buyerTaxNumber: string | null;
   readonly buyerEuVatNumber: string | null;
+  /** 3/10: HR OIB (11 digits) of a Croatian business buyer; null elsewhere. Never on the
+   *  invoice's HU tax-number field — it prefills the tenant's imprint (legalIdentity.ts). */
+  readonly buyerNationalTaxId: string | null;
   readonly buyerCountry: string;
   readonly buyerZip: string;
   readonly buyerCity: string;
@@ -143,37 +152,39 @@ function nameRoughlyMatches(a: string, b: string): boolean {
  */
 export async function validateBuyer(
   raw: BuyerInput,
-  opts: { readonly requireTerms?: boolean } = {},
+  /** `lang` (3/10): the buyer's language — every message is T()-wrapped (hu: byte-identical). */
+  opts: { readonly requireTerms?: boolean; readonly lang?: string } = {},
 ): Promise<BuyerValidation> {
   const errors: Record<string, string> = {};
+  const lang = opts.lang ?? "hu";
 
   const buyerType = raw.buyer_type === "business" ? "business" : raw.buyer_type === "individual" ? "individual" : null;
   if (!buyerType) {
-    errors.buyer_type = "Válassza ki, hogy magánszemélyként vagy cégként rendel.";
+    errors.buyer_type = T(lang, "Válassza ki, hogy magánszemélyként vagy cégként rendel.");
   }
 
   const buyerName = str(raw.buyer_name);
   if (buyerName.length < 2) {
     errors.buyer_name =
       buyerType === "business"
-        ? "Adja meg a cég teljes, hivatalos nevét."
-        : "Adja meg a teljes nevét.";
+        ? T(lang, "Adja meg a cég teljes, hivatalos nevét.")
+        : T(lang, "Adja meg a teljes nevét.");
   }
 
   const buyerCountry = (str(raw.buyer_country, 2) || "HU").toUpperCase();
-  if (!/^[A-Z]{2}$/.test(buyerCountry)) errors.buyer_country = "Válasszon országot.";
+  if (!/^[A-Z]{2}$/.test(buyerCountry)) errors.buyer_country = T(lang, "Válasszon országot.");
 
   const buyerZip = str(raw.buyer_zip, 16);
-  if (!buyerZip) errors.buyer_zip = "Adja meg az irányítószámot.";
+  if (!buyerZip) errors.buyer_zip = T(lang, "Adja meg az irányítószámot.");
   else if (buyerCountry === "HU" && !/^\d{4}$/.test(buyerZip)) {
-    errors.buyer_zip = "A magyar irányítószám 4 számjegyű.";
+    errors.buyer_zip = T(lang, "A magyar irányítószám 4 számjegyű.");
   }
 
   const buyerCity = str(raw.buyer_city, 100);
-  if (!buyerCity) errors.buyer_city = "Adja meg a települést.";
+  if (!buyerCity) errors.buyer_city = T(lang, "Adja meg a települést.");
 
   const buyerAddress = str(raw.buyer_address);
-  if (!buyerAddress) errors.buyer_address = "Adja meg az utcát és házszámot.";
+  if (!buyerAddress) errors.buyer_address = T(lang, "Adja meg az utcát és házszámot.");
 
   // ⛔ Elek F-1: an adószám typed into the address/city/name field went to NAV as
   // part of the invoice ADDRESS. Refuse it with the way out, never store it.
@@ -181,15 +192,18 @@ export async function validateBuyer(
     for (const [key, value] of [["buyer_address", buyerAddress], ["buyer_city", buyerCity], ["buyer_name", buyerName]] as const) {
       const tax = findHuTaxNumberInText(value);
       if (tax && !errors[key]) {
-        errors[key] =
-          `Ebben a mezőben egy adószám áll (${tax}). Ha vállalkozóként rendel, válassza a „Cégként vagy egyéni vállalkozóként” lehetőséget, és az adószámot az Adószám mezőbe írja.`;
+        errors[key] = T(
+          lang,
+          "Ebben a mezőben egy adószám áll ({tax}). Ha vállalkozóként rendel, válassza a „Cégként vagy egyéni vállalkozóként” lehetőséget, és az adószámot az Adószám mezőbe írja.",
+          { tax },
+        );
       }
     }
   }
 
   const buyerEmail = str(raw.buyer_email, 254).toLowerCase();
-  if (!buyerEmail) errors.buyer_email = "Adja meg a számlázási e-mail címet.";
-  else if (!emailLooksValid(buyerEmail)) errors.buyer_email = "Ez az e-mail cím nem tűnik érvényesnek.";
+  if (!buyerEmail) errors.buyer_email = T(lang, "Adja meg a számlázási e-mail címet.");
+  else if (!emailLooksValid(buyerEmail)) errors.buyer_email = T(lang, "Ez az e-mail cím nem tűnik érvényesnek.");
 
   // Further billing recipients (0032). A bad entry BLOCKS the order rather than
   // being dropped: silently losing the accountant's address means the invoice
@@ -198,15 +212,16 @@ export async function validateBuyer(
   if (billing.invalid.length) {
     errors.billing_emails =
       billing.invalid.length === 1
-        ? `Ez a cím nem tűnik érvényesnek: ${billing.invalid[0]}`
-        : `Ezek a címek nem tűnnek érvényesnek: ${billing.invalid.join(", ")}`;
+        ? T(lang, "Ez a cím nem tűnik érvényesnek: {cim}", { cim: billing.invalid[0]! })
+        : T(lang, "Ezek a címek nem tűnnek érvényesnek: {cimek}", { cimek: billing.invalid.join(", ") });
   } else if (billing.overflow) {
-    errors.billing_emails = `Legfeljebb ${MAX_BILLING_EMAILS} további számlázási cím adható meg.`;
+    errors.billing_emails = T(lang, "Legfeljebb {n} további számlázási cím adható meg.", { n: MAX_BILLING_EMAILS });
   }
 
   // ── tax identity ──────────────────────────────────────────────────────────
   let buyerTaxNumber: string | null = null;
   let buyerEuVatNumber: string | null = null;
+  let buyerNationalTaxId: string | null = null;
   let viesStatus: ViesStatus = "not_checked";
   let viesCheckedAt: Date | null = null;
   let viesName: string | null = null;
@@ -221,10 +236,31 @@ export async function validateBuyer(
       if (problem) errors.buyer_tax_number = problem;
       else buyerTaxNumber = normalizeHuTaxNumber(rawTax);
     } else {
-      const parsed = parseEuVat(str(raw.buyer_eu_vat_number, 32), buyerCountry);
+      // 3/10 (Elek HR): a Croatian obrt / company is identified by its OIB (ISO 7064 MOD 11,10,
+      // offline, authoritative) — many are outside VAT, so the community VAT number is OPTIONAL
+      // there: without one, no VIES call and no reverse charge (vatTreatmentFor: not_checked).
+      const vatRaw = str(raw.buyer_eu_vat_number, 32);
+      let vatOptional = false;
+      if (buyerCountry === "HR") {
+        const oibRaw = str(raw.buyer_national_tax_id, 32);
+        const oibProblem = hrOibProblem(oibRaw, lang);
+        if (oibProblem) errors.buyer_national_tax_id = oibProblem;
+        else buyerNationalTaxId = normalizeHrOib(oibRaw);
+        vatOptional = true;
+      }
+      const parsed = vatOptional && !vatRaw ? null : parseEuVat(vatRaw, buyerCountry);
       if (!parsed) {
-        errors.buyer_eu_vat_number =
-          "Adja meg az érvényes közösségi adószámot (pl. DE123456789).";
+        if (!(vatOptional && !vatRaw)) {
+          errors.buyer_eu_vat_number = T(lang, "Adja meg az érvényes közösségi adószámot (pl. {pelda}).", {
+            pelda: buyerCountry === "HR" ? "HR69435151530" : "DE123456789",
+          });
+        }
+      } else if (buyerCountry === "HR" && parsed.country === "HR" && !hrOibChecksumOk(parsed.number)) {
+        // 3/10 (Elek HR): a Croatian VAT number IS „HR” + the OIB — its check digit is known offline,
+        // so an obviously wrong number never reaches VIES (or flips the invoice to reverse charge).
+        errors.buyer_eu_vat_number = T(lang, "A horvát közösségi adószám „HR” + az OIB — ennek az ellenőrző számjegye nem stimmel.");
+      } else if (buyerCountry === "HR" && buyerNationalTaxId && parsed.number !== buyerNationalTaxId) {
+        errors.buyer_eu_vat_number = T(lang, "A horvát közösségi adószám „HR” + az OIB — a kettő itt nem egyezik.");
       } else {
         buyerEuVatNumber = parsed.formatted;
         const vies = await checkVies(parsed.country, parsed.number);
@@ -232,8 +268,10 @@ export async function validateBuyer(
         viesCheckedAt = new Date();
         viesName = vies.name;
         if (vies.status === "invalid") {
-          errors.buyer_eu_vat_number =
-            "Ezt a közösségi adószámot a VIES nem ismeri el érvényesként. Ellenőrizze, vagy rendeljen magánszemélyként.";
+          errors.buyer_eu_vat_number = T(
+            lang,
+            "Ezt a közösségi adószámot a VIES nem ismeri el érvényesként. Ellenőrizze, vagy rendeljen magánszemélyként.",
+          );
         } else if (vies.status === "unavailable") {
           // NEVER block on an EU-side outage — invoice as AAM and let the
           // operator resolve the treatment before the invoice goes out.
@@ -252,15 +290,17 @@ export async function validateBuyer(
   // ── consents ──────────────────────────────────────────────────────────────
   const termsAccepted = raw.terms_accepted === true;
   if (opts.requireTerms && !termsAccepted) {
-    errors.terms_accepted = "Az ÁSZF elfogadása a megrendeléshez szükséges.";
+    errors.terms_accepted = T(lang, "Az ÁSZF elfogadása a megrendeléshez szükséges.");
   }
 
   // A consumer must expressly consent to immediate performance, otherwise they
   // keep a 14-day withdrawal right over an already-built site.
   const withdrawalWaived = raw.withdrawal_waiver === true;
   if (buyerType === "individual" && !withdrawalWaived) {
-    errors.withdrawal_waiver =
-      "Az azonnali élesítéshez a hozzájárulás szükséges — enélkül csak 14 nap után tudjuk elindítani az oldalt.";
+    errors.withdrawal_waiver = T(
+      lang,
+      "Az azonnali élesítéshez a hozzájárulás szükséges — enélkül csak 14 nap után tudjuk elindítani az oldalt.",
+    );
   }
 
   if (Object.keys(errors).length) return { ok: false, errors };
@@ -274,6 +314,7 @@ export async function validateBuyer(
       buyerName,
       buyerTaxNumber,
       buyerEuVatNumber,
+      buyerNationalTaxId,
       buyerCountry,
       buyerZip,
       buyerCity,

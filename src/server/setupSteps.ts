@@ -13,7 +13,7 @@
 import { normaliseFeedUrl, SYNC_MSG, syncCalendarLink } from "../booking/sync.js";
 import { huArticleLower } from "../hu.js";
 import { T } from "../i18n/mail.js";
-import { currencySign, formatMoney, minorDigits } from "../text/money.js";
+import { currencySign, formatMoney, formatNumber, minorDigits } from "../text/money.js";
 import { currencySymbol } from "../text/currencyName.js";
 import { addCalendarLink, EXPORT_PORTALS, getExportFeedUrl } from "../tenant/availability.js";
 import { AMENITY_CATALOG, composeAmenities } from "../tenant/amenityCatalog.js";
@@ -313,7 +313,8 @@ function pricingSteps(env: StepEnv): SetupStep[] {
             ? T(lang, "{name} — ár / éj (Ft)", { name: u.name })
             : T(lang, "{name} — ár / éj ({cur})", { name: u.name, cur: currencySymbol(ctx.siteCurrency, lang) }),
           base ? String(base.amount) : "",
-          { placeholder: T(lang, "pl. 25 000") },
+          // 3/10 (Elek HR): „npr. 25 000” for a euro price — the example follows the currency.
+          { placeholder: currencySign(ctx.siteCurrency) === "Ft" ? T(lang, "pl. 25 000") : T(lang, "pl. {p}", { p: formatNumber(60, lang) }) },
         ) +
         check("por", "1", u.priceOnRequest, T(lang, "Ennél nem adok meg árat"), T(lang, "A vendég árajánlatot kér, Ön válaszol neki.")),
       save: async (e, form) => {
