@@ -1849,7 +1849,7 @@ fi
 # a levélnyitás-osztályozás (Gmail-proxy = nyitás, Apple-előtöltés ≠ nyitás, bot kizárva), a levél
 # változatai (távoli kép, sima törzs, első sor, feladó-név) és a §C-kapu a KÉSZ levélen. ~3 s.
 if [ -f scripts/experiment-selftest.mts ] && \
-   changed_files | grep -qE '^src/outreach/(experiment|experimentCopy|emailOpen|sendBatch|outreachCheck|draft)\.ts$|^src/email/outreachEmail\.ts$|^src/console/prospectPath\.ts$|^src/console/experiment(Report|Views)\.ts$|^src/analytics/userAgent\.ts$|^migrations/014[3-5]_|^scripts/experiment-selftest\.mts$'; then
+   changed_files | grep -qE '^src/outreach/(experiment|experimentCopy|emailOpen|sendBatch|outreachCheck|draft)\.ts$|^src/email/outreachEmail\.ts$|^src/console/prospectPath\.ts$|^src/console/experiment(Report|Views)\.ts$|^src/analytics/userAgent\.ts$|^migrations/014[3-6]_|^scripts/experiment-selftest\.mts$'; then
   echo "[pre-commit] experiment-selftest (kísérlet-motor: osztás, padló, őr, levélnyitás, változatok)…"
   npx tsx scripts/experiment-selftest.mts >"$GATE_LOG" || gate_failed
 fi

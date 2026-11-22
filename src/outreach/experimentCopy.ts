@@ -3,8 +3,9 @@
 // Bábel can translate it; experiments run on Hungarian letters only (assignVariants).
 //
 //   subject   ez_az_on_szallasa — „Ez az Ön szállása? ({név}, {település})”, without a town „… ({név})”
-//   body_style szemelyes        — the PERSONAL letter, first person singular: no logo, no button, no box
-//   price_line mondat           — „Bemutatkozó áron havi {offerPrice} Ft-tól az Öné.” — ONLY with the
+//   body_style szemelyes        — the PERSONAL letter, first person singular: no logo, no button, no box,
+//                                 and no inbox line above it — its first visible text is the greeting
+//   price_line mondat           — „Bemutatkozó áron havi {offerPrice} Ft-tól.” — ONLY with the
 //                                 personal body: the from-price is the base package WITHOUT booking,
 //                                 so it must never stand next to the boxed letter's booking/commission
 //                                 promise (coordinator, 2026-11-22)
@@ -30,7 +31,7 @@ export function subjectIsThisYours(lang: string, name: string, city: string | nu
 }
 
 export function priceSentence(lang: string, offerPrice: string): string {
-  return T(lang, "Bemutatkozó áron havi {offerPrice} Ft-tól az Öné.", { offerPrice });
+  return T(lang, "Bemutatkozó áron havi {offerPrice} Ft-tól.", { offerPrice });
 }
 
 /** The first-person proof sentence — the same rules as draft.ts hookText (stars from 4,0, measured site check). */
@@ -72,7 +73,7 @@ export function personalParts(d: DraftInput, base: OutreachDraft, priceLine: str
   return {
     ...base.parts,
     greet: T(d.lang, "Tisztelt {name}!", { name: d.leadName }),
-    hook: T(d.lang, "Elkészítettem a szállása honlapját, egyelőre csak Ön látja. Nem kép, hanem működő oldal, telefonon is:"),
+    hook: T(d.lang, "Elkészítettem a szállása honlapját; még nem nyilvános, egyelőre csak Ön látja. Nem kép, hanem működő oldal, telefonon is:"),
     p1: personalProof(d),
     p2: T(d.lang, "Ha tetszik, Önnek semmit nem kell beállítania: a kollégám megcsinálja, Ön csak jóváhagyja."),
     p3: keepToday ? base.parts.p3 : priceLine,

@@ -72,8 +72,11 @@ kattintott) nem választható szét, és minden szöveg-ötlet tulaj-kör maradt
    katalógus-sor `template`-je NULL. A `mondat` csak a személyes levéllel alkalmazható, mert a -tól ár
    az Alap csomag, foglalás nélkül, és nem állhat a dobozos levél foglalás/jutalék-ígérete mellett.
    A megszólítás (szállásnév) és az E/1 a tulaj döntése, nem kísérleti dimenzió. A §C-kapu a kész
-   személyes levelet 2026-11-22-én KERETEZÉS miatt FLAG-eli: a szövegben nincs §A-keretezés („nem
-   nyilvános” / terv). Ezt a koordinátor dönti el; addig a változat bekapcsolva is kontrollra esne vissza.
+   személyes levelet először KERETEZÉS miatt FLAG-elte; a koordinátor döntése (2026-11-22): a bevezető
+   „még nem nyilvános, egyelőre csak Ön látja”, így PASS. Az ár-mondat rövidítve „Bemutatkozó áron havi
+   {offerPrice} Ft-tól.” (a „… az Öné” reklámfordulatot a tulaj/Elek korábban elvetette). A személyes
+   levélnek nincs felső (első-sor) szövege, az első látható szöveg a megszólítás; az első-sor dimenzió
+   csak a dobozos levélre vonatkozik (a sima és a személyes levélen nem kísérletezik, nem is rögzül).
 
 ### Elvetett alternatívák
 

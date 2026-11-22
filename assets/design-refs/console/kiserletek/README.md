@@ -27,7 +27,8 @@ a bal menü Riport-csoportjában.
    - egy nem-kontroll változat vezet (a futók közül a legmagasabb 72 órás link-nyitás, ≥30 érett
      levéllel) → „„X” vezet: a% vs. mai b%”, zöld bal szegéllyel;
    - különben → „A mai levél tartja magát (b%)”, navy szegéllyel.
-   Jobb oldalon: „N fut”.
+   Jobb oldalon: „N fut”; az Első sor dimenziónál mellette: „csak a dobozos levélen”, az Ár-sornál:
+   „az ár-mondat csak a személyes levélben” (koordinátor, 2026-11-22).
 4. **Lenyitva a teljes tábla**: Változat (+ a szövege vagy leírása) · Állapot (kontroll · fut /
    fut / kikapcsolta az őr + ok / jóváhagyásra vár) · Ma (a mai osztás %) · Küldés · Levélnyitás
    24 ó · Link 24 ó · **Link 72 ó** (ezt követi a gép) · Válasz · Leiratkozás. Mobilon (≤760 px) a

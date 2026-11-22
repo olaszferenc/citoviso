@@ -383,8 +383,12 @@ export function buildOutreachEmail(
     // Inbox snippet line — VISIBLE, first text of the letter (owner 2026-11-18). The 11-16 hidden preheader
     // (display:none text + 60 invisible filler chars) coincided with opens falling from 17% to 1–3% (Gmail
     // spam placement): hidden text is a classic spam signal, so nothing in this letter may be hidden.
-    `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:${plain ? "left" : "center"};padding:12px ${plain ? PAD : 16}px 0">` +
-    `${esc(opts.firstLine ?? T(opts.lang, "Elkészült a honlapja, nézze meg!"))}</div>` +
+    // The personal letter has no such line: its first visible text is the greeting, so the Gmail
+    // preview reads „Tisztelt {név}! Elkészítettem…” (coordinator 2026-11-22).
+    (opts.bodyStyle === "personal"
+      ? ""
+      : `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:${plain ? "left" : "center"};padding:12px ${plain ? PAD : 16}px 0">` +
+        `${esc(opts.firstLine ?? T(opts.lang, "Elkészült a honlapja, nézze meg!"))}</div>`) +
     inner +
     `</body></html>`;
 

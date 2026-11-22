@@ -40,6 +40,8 @@ import { personalSenderName, priceSentence, subjectIsThisYours } from "./experim
 
 export const DIMENSIONS: readonly ExperimentDimension[] = ["subject", "first_line", "sender", "body_style", "image", "price_line"];
 export const CONTROL_KEY = "control";
+/** The order assignVariants decides the dimensions in (body_style first — the others depend on it). */
+const ASSIGN_ORDER: readonly ExperimentDimension[] = ["body_style", "subject", "first_line", "sender", "image", "price_line"];
 export const EXPERIMENT_SETTING_KEY = "outreach_experiment";
 
 export interface ExperimentSettings {
@@ -539,7 +541,12 @@ export async function assignVariants(input: {
     let image = true;
     let priceLine: string | undefined;
     const vars = { name: input.leadName, city: input.city, price: input.price, offerPrice: input.offerPrice };
-    for (const dim of DIMENSIONS) {
+    // body_style is chosen FIRST: the first line exists only on the boxed letter, and the price
+    // sentence only in the personal one (coordinator 2026-11-22).
+    for (const dim of ASSIGN_ORDER) {
+      // The visible first line belongs to the boxed letter only: the plain letter keeps today's line
+      // unexperimented, the personal letter has none (its first text is the greeting). Not recorded.
+      if (dim === "first_line" && bodyStyle !== "boxed") continue;
       const rows = catalog.filter((v) => v.dimension === dim && v.enabled);
       const applicable = rows
         .filter((v) => {

@@ -18,6 +18,12 @@ const DIM_LABEL = (lang: string): Record<ExperimentDimension, string> => ({
   price_line: T(lang, "Ár-sor"),
 });
 
+/** A dimension's scope, shown on its row (coordinator 2026-11-22: the first line is the boxed letter's only). */
+const DIM_NOTE = (lang: string): Partial<Record<ExperimentDimension, string>> => ({
+  first_line: T(lang, "csak a dobozos levélen (a személyes levélnek nincs felső sora)"),
+  price_line: T(lang, "az ár-mondat csak a személyes levélben"),
+});
+
 /** One decimal with a comma; no denominator → „—”. */
 function pct(a: number, b: number): string {
   if (!b) return "—";
@@ -94,7 +100,7 @@ function dimRow(d: DimensionReport, lang: string): string {
     `<details class="xp-lc xp-lc--${v.cls}" data-dim="${d.dimension}"><summary>` +
     `<span class="xp-lc__d">${esc(DIM_LABEL(lang)[d.dimension])}</span>` +
     `<span class="xp-lc__v">${esc(v.text)}</span>` +
-    `<span class="xp-lc__n">${esc(T(lang, "{n} fut", { n: d.running }))}</span>` +
+    `<span class="xp-lc__n">${esc(T(lang, "{n} fut", { n: d.running }))}${DIM_NOTE(lang)[d.dimension] ? ` · ${esc(DIM_NOTE(lang)[d.dimension]!)}` : ""}</span>` +
     `<span class="xp-lc__ar" aria-hidden="true">›</span></summary>` +
     `<div class="xp-lc__t"><table class="xp-tbl"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div></details>`
   );

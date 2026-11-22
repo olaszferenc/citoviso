@@ -248,7 +248,7 @@ console.log("⑩ személyes levél (kikapcsolt változatok, 2026-11-22)");
   const lang = await prepareMailLang("hu");
   check("tárgy településsel", subjectIsThisYours(lang, "Piszkeri Vendégház", "Cece") === "Ez az Ön szállása? (Piszkeri Vendégház, Cece)");
   check("tárgy település nélkül", subjectIsThisYours(lang, "Piszkeri Vendégház", "  ") === "Ez az Ön szállása? (Piszkeri Vendégház)");
-  check("ár-mondat", priceSentence(lang, "3 660") === "Bemutatkozó áron havi 3 660 Ft-tól az Öné.");
+  check("ár-mondat (rövidítve, „az Öné” nélkül)", priceSentence(lang, "3 660") === "Bemutatkozó áron havi 3 660 Ft-tól.");
   const di = (seg: string, rating: { value: number; count: number } | null, siteCheck: "unreachable" | "no_viewport" | "responsive" | null = null) =>
     ({ leadName: "Piszkeri Vendégház", region: "", qualification: null, segment: seg, rating, token: "abcdefghijklmnopqrstuvwx", lang, planCount: 1, siteCheck }) as Parameters<typeof personalProof>[0];
   check("bizonyíték: 4,8 ★ + nincs honlap → a jóváhagyott mondat", personalProof(di("nincs_honlap", { value: 4.8, count: 15 })) === "A Google-on 15 értékelés alapján 4,8 csillagos a ház, saját honlapot viszont nem találtam, ezért megcsináltam.");
@@ -276,11 +276,14 @@ console.log("⑩ személyes levél (kikapcsolt változatok, 2026-11-22)");
   check("HTML: a szöveges rész a kapuzott törzs (§I-őr nem dob)", m.text === body);
   const today = personalParts(input, base, undefined, "Kovács Anna", "getcitoviso.com");
   check("mai ár a személyes levélben: a mai ár-mondat + a kedvezmény-lábjegyzet marad", today.p3 === base.parts.p3 && today.fine === base.parts.fine);
-  // ⚠️ Documents the open decision (coordinator): the approved intro has no §A framing word („nem
-  // nyilvános” / terv) — the gate on the FINISHED letter catches it, so the variant would fall back
-  // to the control. When the wording is fixed this check is to be flipped to PASS.
+  // Coordinator 2026-11-22: „még nem nyilvános” in the intro carries the §A framing → the finished letter passes.
   const g = checkOutreachDraft(letter, "Piszkeri Vendégház", lang, { country: "HU", approved: true });
-  check("§C a kész személyes levélen: ma KERETEZÉS-FLAG (nyitott döntés a koordinátornál)", g.verdict === "FLAG" && g.reasons.length === 1 && g.reasons[0].startsWith("KERETEZÉS"), g.reasons);
+  check("§C a kész személyes levélen: PASS (a keretezést a „még nem nyilvános” adja)", g.verdict === "PASS", g.reasons);
+  const noFrame = { ...letter, body: letter.body.replace("még nem nyilvános, ", "") };
+  check("§C: a „még nem nyilvános” nélkül KERETEZÉS-FLAG (a kapu él)", checkOutreachDraft(noFrame, "Piszkeri Vendégház", lang, { country: "HU", approved: true }).reasons.some((r) => r.startsWith("KERETEZÉS")));
+  check("nincs „az Öné” reklámfordulat a személyes levélben", !/az Öné/.test(body));
+  const firstText = (m.html ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  check("a személyes levél első látható szövege a megszólítás (nincs felső sor)", firstText.startsWith("Tisztelt Piszkeri Vendégház!") && !m.html?.includes("Elkészült a honlapja, nézze meg!"), firstText.slice(0, 80));
 }
 
 if (failures) {

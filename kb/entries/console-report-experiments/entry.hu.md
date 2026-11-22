@@ -31,7 +31,9 @@ balra, amíg a **„Kísérletek”** fül előjön — a fülsor oldalra görge
   levél”** (ennyi címkézett levél ment ki eddig), **„Levélnyitás 24 ó”** (a levelek hány százalékát
   nyitották meg egy napon belül), **„Mai keret”** (ennyi levelet oszt szét ma a gép).
 - **Dimenziónként egy sor** (**„Tárgy”**, **„Első sor”**, **„Feladó”**, **„Törzs”**, **„Kép”**,
-  **„Ár-sor”**), mindegyikben egy ítélet. Ha csak a mai levél fut, nincs mit összevetni.
+  **„Ár-sor”**), mindegyikben egy ítélet. Ha csak a mai levél fut, nincs mit összevetni. Az Első
+  sor csak a dobozos levélen van (a személyes levél a megszólítással kezdődik), az ár-mondat csak a
+  személyes levélben — a sor jobb oldalán ezt is kiírja.
 - Ha egy új változat **vezet**, zöld csík jelzi, és a sor kiírja a két számot. Vezet = azok közül,
   amelyeknek már legalább 30 „érett” (72 óránál régebbi) levele van, ennek a legmagasabb a 72 órás
   link-nyitása. Ez még nem bizonyosság, csak a mostani állás; az esélyt a heti sor mondja meg.
