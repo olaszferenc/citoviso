@@ -183,7 +183,7 @@ const ctryHidden = (d: ReportData): string =>
 const periodHidden = (p: ReportPeriod): string =>
   Object.entries(periodParams(p)).map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`).join("");
 
-type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants" | "/report/leads";
+type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants" | "/report/leads" | "/report/experiments";
 
 /** The Riport tab row — Tölcsér · Viselkedés · Mock (mock-tab README ①) · the coming rounds. */
 export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string): string {
@@ -201,6 +201,8 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
     a("/report/tenants", "", T(lang, "Tenantok")) +
     // Lead-állomány (frozen plan: design-refs/console/lead-allomany/, 2026-11-12).
     a("/report/leads", "", T(lang, "Lead-állomány")) +
+    // Kísérletek — the cold letter's variants (frozen plan: design-refs/console/kiserletek/, ADR-0462).
+    a("/report/experiments", "", T(lang, "Kísérletek")) +
     `</nav>`
   );
 }

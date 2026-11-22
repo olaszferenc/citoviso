@@ -253,6 +253,8 @@ import {
 } from "./prospectNotice.js";
 import { markOwnViewLinks, normalizeProspectPath, OWN_VIEW_PARAM } from "./prospectPath.js";
 import { mailHeroPath, RE_MAIL_HERO, recordMailFetch } from "../outreach/emailOpen.js";
+import { getExperimentReport } from "./experimentReport.js";
+import { reportExperimentsPage } from "./experimentViews.js";
 import { injectPlanEndBlock, injectPlanSwitcherBar, planHref, planThumbUrl } from "./planSwitcher.js";
 import {
   ensureCardJpeg,
@@ -3303,6 +3305,11 @@ async function handle(
     const raw = url.searchParams.get("days");
     const days: StockPreset = isStockPreset(raw) ? raw : "0";
     return send(res, 200, reportLeadStockPage(await getLeadStock(reportPeriod(days, null, null, new Date(), "0")), days));
+  }
+  // GET /report/experiments — the Kísérletek tab: the cold letter's variants per dimension, the
+  // Monday line, today's split (frozen plan: design-refs/console/kiserletek/, „C”, ADR-0462).
+  if (method === "GET" && path === "/report/experiments") {
+    return send(res, 200, reportExperimentsPage(await getExperimentReport()));
   }
   if (method === "GET" && path === "/report/tenants") {
     const fRaw = url.searchParams.get("f") ?? "active";

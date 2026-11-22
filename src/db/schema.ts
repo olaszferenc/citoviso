@@ -2300,7 +2300,8 @@ export interface OutreachReplyPollTable {
 
 // --- Experiment engine (migration 0143) — the cold letter's variants and its opens. ---
 
-export type ExperimentDimension = "subject" | "first_line" | "sender" | "body_style" | "image";
+/** 0144 (2026-11-22): + "price_line" — the price in the letter (today's box / a plain sentence / none). */
+export type ExperimentDimension = "subject" | "first_line" | "sender" | "body_style" | "image" | "price_line";
 
 /** 0143: the cold letter's variant catalog; the control row of a dimension is today's letter (no text). */
 export interface OutreachVariantTable {

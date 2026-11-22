@@ -87,6 +87,8 @@ function buildMail(
   lang: string | undefined,
   brand: string,
   sig: SignatureBlock,
+  // Experiment `price_line`: false = no navy box; the p3 sentence (if any) stands as a paragraph.
+  priceBoxOn = true,
 ): string {
   // ── header: two cells, NOT float (Outlook drops float) ───────────────────
   // `brand` = the E4 logo from bandBrand() (owner, 2026-09-25).
@@ -154,7 +156,7 @@ function buildMail(
   const footer =
     `<tr><td style="padding:18px ${PAD}px 22px">` +
     `<div style="padding-top:14px;border-top:1px solid ${LINE};font-family:${FONT};font-size:12px;line-height:1.6;color:${FOOT}">` +
-    `<p style="margin:0 0 8px">${esc(t.fine)}</p>` +
+    (t.fine ? `<p style="margin:0 0 8px">${esc(t.fine)}</p>` : "") +
     (t.why && l.why
       ? `<p style="margin:0 0 8px">${esc(t.why)}<br><a href="${esc(l.why)}" style="color:${FOOT}">${esc(l.why)}</a></p>`
       : "") +
@@ -180,7 +182,7 @@ function buildMail(
     (t.trial ? `<tr><td style="padding:0 ${PAD}px">${p(t.trial)}</td></tr>` : "") +
     `<tr><td style="padding:0 ${PAD}px">${p(t.p4)}</td></tr>` +
     // Same place as p3 in the plain text (composeBody): the price closes the offer.
-    priceBox +
+    (priceBoxOn ? priceBox : t.p3 ? `<tr><td style="padding:0 ${PAD}px">${p(t.p3)}</td></tr>` : "") +
     signature +
     footer;
 
@@ -230,13 +232,13 @@ function buildPlainMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, 
     row(p(t.p2)) +
     (t.trial ? row(p(t.trial)) : "") +
     row(p(t.p4)) +
-    row(p(t.p3)) +
+    (t.p3 ? row(p(t.p3)) : "") +
     row(
       `<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">` +
         `${esc(T(lang, "Üdvözlettel,"))}<br>${esc(t.sigName)}<br>${esc(t.sigCo)}<br>${esc(t.sigMail)}</p>`,
     ) +
     `<tr><td style="padding:0 ${PAD}px 22px"><div style="padding-top:14px;border-top:1px solid ${LINE}">` +
-    small(t.fine) +
+    (t.fine ? small(t.fine) : "") +
     (t.why && l.why ? small(t.why, `<br>${link(l.why)}`) : "") +
     small(t.unsubTxt, `<br>${link(l.unsub)}`) +
     small(`${t.legal} `, link(l.privacy)) +
@@ -282,6 +284,8 @@ export function buildOutreachEmail(
     fromName?: string;
     bodyStyle?: "boxed" | "plain";
     noImage?: boolean;
+    /** Experiment `price_line`: the parts carry a plain price sentence (or none) — no navy box. */
+    noPriceBox?: boolean;
   } = {},
 ): EmailMessage {
   // ⛔ §I / §C.4 CONSISTENCY GUARD. The HTML renders `parts`, the gate judges `body` —
@@ -318,7 +322,7 @@ export function buildOutreachEmail(
   };
   const inner = plain
     ? buildPlainMail(heroSrc, draft.parts, links, opts.lang)
-    : buildMail(heroSrc, draft.parts, links, opts.lang, brand.html, sig);
+    : buildMail(heroSrc, draft.parts, links, opts.lang, brand.html, sig, !opts.noPriceBox);
 
   const html =
     `<!DOCTYPE html><html lang="${opts.lang || "hu"}"><body style="margin:0;padding:0;background:${plain ? "#ffffff" : PAGE_BG}">` +

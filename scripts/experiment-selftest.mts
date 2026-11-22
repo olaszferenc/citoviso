@@ -35,6 +35,9 @@ import { buildOutreachEmail, HERO_CID } from "../src/email/outreachEmail.js";
 import { checkOutreachDraft } from "../src/outreach/outreachCheck.js";
 import { markOwnViewLinks } from "../src/console/prospectPath.js";
 import { loadPricing } from "../src/pricing.js";
+import { lastWeek, verdictOf, pBetter, type VariantRow } from "../src/console/experimentReport.js";
+import { weeklyText, weekEndDay } from "../src/console/experimentViews.js";
+import { composeBody } from "../src/outreach/draft.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 
 let failures = 0;
@@ -192,6 +195,51 @@ console.log("⑥ a levél");
   check("a félrevezető tárgy-változat FLAG (a kapu a tárgyat is nézi)", bad.verdict === "FLAG" && bad.reasons.some((r) => r.startsWith("FÉLREVEZETÉS")), bad.reasons);
   check("a félrevezető első sor FLAG (a kapu az első sort is nézi)", badLine.verdict === "FLAG" && badLine.reasons.some((r) => r.startsWith("FÉLREVEZETÉS")), badLine.reasons);
   check("a kontroll-levél ugyanazzal a kapuval nem kap FÉLREVEZETÉS-t", !base.reasons.some((r) => r.startsWith("FÉLREVEZETÉS")), base.reasons);
+}
+
+console.log("⑧ riport: ítélet, hétfői sor, hét-határ");
+{
+  const st = (key: string, m72: number, l72: number) => ({ dimension: "subject" as const, key, sends: m72, sentToday: 0, mature72: m72, link72: l72, mature24: m72, link24: 0, mail24: 0, prefetchOnly: 0, replies: 0, unsubs: 0, complaints: 0 });
+  const vr = (key: string, isControl: boolean, enabled: boolean, s: ReturnType<typeof st> | null): VariantRow => ({ dimension: "subject", key, label: key, template: null, isControl, enabled, disabledReason: null, stats: s, shareToday: null });
+  check("egy futó változat → idle", verdictOf([vr("control", true, true, st("control", 500, 60)), vr("b", false, false, null)]).kind === "idle");
+  const win = verdictOf([vr("control", true, true, st("control", 500, 60)), vr("b", false, true, st("b", 200, 40))]);
+  check("a jobb jelölt (20% vs 12%) → win", win.kind === "win" && win.leader.key === "b");
+  check("kevés érett levél (29) → nem lehet vezető → hold", verdictOf([vr("control", true, true, st("control", 500, 60)), vr("b", false, true, st("b", 29, 20))]).kind === "hold");
+  check("a kontroll a jobb → hold", verdictOf([vr("control", true, true, st("control", 500, 90)), vr("b", false, true, st("b", 200, 20))]).kind === "hold");
+  check("P(jobb) 20% vs 12% nagy mintán > 0,95", pBetter({ s: 40, n: 200 }, { s: 60, n: 500 }, "x") > 0.95);
+  // 2026-11-22 is a Sunday → the last completed week is 11-09 … 11-15; on Monday 11-23 it is 11-16 … 11-22.
+  const sun = lastWeek(new Date("2026-11-22T10:00:00Z"));
+  const mon = lastWeek(new Date("2026-11-23T07:00:00Z"));
+  check("vasárnap: a múlt hét 11-09 → 11-16 (kizáró)", sun.from === "2026-11-09" && sun.to === "2026-11-16", sun);
+  check("hétfő reggel már az új hét: 11-16 → 11-23", mon.from === "2026-11-16" && mon.to === "2026-11-23", mon);
+  check("a kijelzett utolsó nap vasárnap (11-22)", weekEndDay({ ...mon, variants: 0, dimensions: 0, best: null, disabled: 0 }) === "2026-11-22");
+  const empty = weeklyText({ ...mon, variants: 0, dimensions: 0, best: null, disabled: 0 }, "hu");
+  check("adat nélkül kimondja, hogy nem futott kísérlet", empty.includes("nem ment ki"), empty);
+  const full = weeklyText({ ...mon, variants: 3, dimensions: 2, best: { dimension: "subject", label: "B", rate: 0.2, controlRate: 0.12, pBetter: 0.97 }, disabled: 1 }, "hu");
+  check("teljes sor: darabszám, legjobb, esély, kikapcsolt", full.includes("3 változat") && full.includes("„B”") && full.includes("97%") && full.includes("Kikapcsolva: 1"), full);
+}
+
+console.log("⑨ ár-sor dimenzió");
+{
+  await loadPricing();
+  const lang = await prepareMailLang("hu");
+  const d = renderDraft({ leadName: "Rozé Fogadó", region: "", qualification: null, segment: "nincs_honlap", rating: null, token: "abcdefghijklmnopqrstuvwx", lang, planCount: 1 });
+  const links = { cta: d.link, unsub: d.unsubscribeLink, privacy: d.privacyLink };
+  const noneParts = { ...d.parts, p3: "", fine: "" };
+  const none = { ...d, parts: noneParts, body: composeBody(noneParts, links, lang) };
+  const mNone = buildOutreachEmail(none, "teszt@example.com", { lang, noPriceBox: true });
+  check("ár nélkül: nincs árdoboz, nincs ár-mondat, nincs kedvezmény-lábjegyzet", !mNone.html?.includes("#0a1f36") && !mNone.text.includes(d.parts.p3) && !mNone.text.includes(d.parts.fine));
+  check("ár nélkül: nincs dupla üres sor a szövegben", !/\n\n\n/.test(none.body));
+  const noneGate = checkOutreachDraft(none, "Rozé Fogadó", lang, { country: "HU", approved: true });
+  check("ár nélkül: a §C-kapu átengedi (ugyanúgy, mint a kontrollt)", noneGate.verdict === "PASS", noneGate.reasons);
+  const sentence = renderTemplate("Havi {price} forinttól.", { name: "x", price: d.parts.priceList }) ?? "";
+  const sParts = { ...d.parts, p3: sentence, fine: "" };
+  const sLetter = { ...d, parts: sParts, body: composeBody(sParts, links, lang) };
+  const mS = buildOutreachEmail(sLetter, "teszt@example.com", { lang, noPriceBox: true });
+  check("ár-mondat: a mondat bekezdésként a HTML-ben és a szövegben, doboz nélkül", Boolean(mS.html?.includes(sentence)) && mS.text.includes(sentence) && !mS.html?.includes("#0a1f36"));
+  check("ár-mondat sablon: {price} kitöltve", sentence.startsWith("Havi ") && !sentence.includes("{"));
+  const ctl = buildOutreachEmail(d, "teszt@example.com", { lang });
+  check("kontroll: a mai árdoboz és ár-mondat változatlan", Boolean(ctl.html?.includes("#0a1f36")) && ctl.text.includes(d.parts.p3) && ctl.text.includes(d.parts.fine));
 }
 
 if (failures) {

@@ -8,7 +8,7 @@
 // sending domain). Default cap + inter-send delay are deliberately conservative;
 // the operator raises them consciously per run, not by default.
 
-import { buildDraftForProspect, draftOfferPercent } from "./draft.js";
+import { buildDraftForProspect, composeBody, draftOfferPercent, type OutreachDraft } from "./draft.js";
 import { loadCopyOverride, withMailOverride } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
@@ -446,16 +446,27 @@ export async function sendOutreachMail(
     lang: d.lang,
     leadName: d.input.leadName,
     city: p.leadCity,
+    price: d.draft.parts.priceList,
+    offerPrice: d.draft.parts.priceOffer,
     // The owner's own wording for this lead (copyOverride) is never experimented on.
     participate: !testLead && !opts.dryRun && !opts.probe && !override,
   });
-  if (variants.subject || variants.firstLine) {
+  // The letter the variants make: subject, and for `price_line` the price part of the body (the
+  // body is RE-COMPOSED from the parts, so the HTML and the gated text stay one, §I).
+  const letterOf = (v: LetterVariants): OutreachDraft => {
+    let out: OutreachDraft = v.subject ? { ...d.draft, subject: v.subject } : d.draft;
+    if (v.priceLine !== undefined) {
+      // No discount in the letter → the discount's validity footnote has nothing to qualify.
+      const parts = { ...out.parts, p3: v.priceLine, fine: "" };
+      const body = composeBody(parts, { cta: out.link, unsub: out.unsubscribeLink, privacy: out.privacyLink, ...(out.whyLink ? { why: out.whyLink } : {}) }, d.lang);
+      out = { ...out, parts, body };
+    }
+    return out;
+  };
+  let letter = letterOf(variants);
+  if (letter !== d.draft || variants.firstLine) {
     const vcheck = checkOutreachDraft(
-      {
-        ...d.draft,
-        subject: variants.subject ?? d.draft.subject,
-        body: variants.firstLine ? `${variants.firstLine}\n\n${d.draft.body}` : d.draft.body,
-      },
+      { ...letter, body: variants.firstLine ? `${variants.firstLine}\n\n${letter.body}` : letter.body },
       d.input.leadName,
       d.lang,
       d.market,
@@ -463,6 +474,7 @@ export async function sendOutreachMail(
     if (vcheck.verdict === "FLAG") {
       console.warn(`[experiment] a változat elbukott a §C-kapun (${JSON.stringify(variants.keys)}): ${vcheck.reasons.join(" · ")} → kontroll-levél`);
       variants = controlOf(variants);
+      letter = d.draft;
     }
   }
 
@@ -625,7 +637,7 @@ export async function sendOutreachMail(
   // ADR-0067: the draft prose is already in the lead's language (draft.ts) —
   // declare it on the message too, and localize the image alt text.
   const msg = buildOutreachEmail(
-    variants.subject ? { ...d.draft, subject: variants.subject } : d.draft,
+    letter,
     p.contactEmail,
     {
       heroShotPath,
@@ -636,6 +648,7 @@ export async function sendOutreachMail(
       ...(variants.fromName ? { fromName: variants.fromName } : {}),
       bodyStyle: variants.bodyStyle,
       noImage: !variants.image,
+      ...(variants.priceLine !== undefined ? { noPriceBox: true } : {}),
     },
   );
   // Belt-and-braces: refuse to hand anything UNSUBSCRIBABLE to the raw adapter.

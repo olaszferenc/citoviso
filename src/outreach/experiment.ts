@@ -37,7 +37,7 @@ import { config } from "../config.js";
 import { budapestIsoDay, budapestMidnight } from "../text/budapestTime.js";
 import type { ExperimentDimension } from "../db/schema.js";
 
-export const DIMENSIONS: readonly ExperimentDimension[] = ["subject", "first_line", "sender", "body_style", "image"];
+export const DIMENSIONS: readonly ExperimentDimension[] = ["subject", "first_line", "sender", "body_style", "image", "price_line"];
 export const CONTROL_KEY = "control";
 export const EXPERIMENT_SETTING_KEY = "outreach_experiment";
 
@@ -242,11 +242,14 @@ export function controlAlertVerdict(s: GuardInput, cfg: ExperimentSettings): str
 /** A complaint-worded reply (no feedback loop exists; the reply text is the signal we have). */
 export const COMPLAINT_PATTERN = /\bspam|zaklat|feljelent|panasz|NAIH|adatvédelmi hatóság|jogi lépés/i;
 
-/** Fill {name} / {city}; null when a placeholder has no value (the variant does not apply to this lead). */
-export function renderTemplate(template: string, vars: { name: string; city?: string | null }): string | null {
+/** Fill {name} / {city} / {price} / {offerPrice}; null when a placeholder has no value (the variant does not apply to this lead). */
+export function renderTemplate(
+  template: string,
+  vars: { name: string; city?: string | null; price?: string | null; offerPrice?: string | null },
+): string | null {
   let missing = false;
-  const out = template.replace(/\{(name|city)\}/g, (_m, k: "name" | "city") => {
-    const v = (k === "name" ? vars.name : vars.city ?? "").trim();
+  const out = template.replace(/\{(name|city|price|offerPrice)\}/g, (_m, k: "name" | "city" | "price" | "offerPrice") => {
+    const v = (k === "name" ? vars.name : vars[k] ?? "").trim();
     if (!v) missing = true;
     return v;
   });
@@ -376,6 +379,8 @@ export async function loadVariantStats(now = new Date()): Promise<VariantStats[]
         exists (select 1 from outreach_reply r where r.prospect_id = sv.prospect_id and r.received_at >= sv.sent_at
                   and r.body ~* ${COMPLAINT_PATTERN.source.replace("\\b", "")}) as complaint
     ) f
+    -- As of the given now (the weekly line reads the stats as they stood at the week's end).
+    where sv.sent_at <= ${now}
     group by sv.dimension, sv.variant_key
   `.execute(db);
   return r.rows.map((x) => ({
@@ -493,6 +498,11 @@ export interface LetterVariants {
   readonly fromName?: string;
   readonly bodyStyle: "boxed" | "plain";
   readonly image: boolean;
+  /**
+   * `price_line` (0144): undefined = today's price (navy box + the p3 sentence); "" = no price in the
+   * letter; a string = that plain sentence replaces the box and p3 (no discount, no box).
+   */
+  readonly priceLine?: string;
 }
 
 export const CONTROL_LETTER: LetterVariants = { keys: {}, bodyStyle: "boxed", image: true };
@@ -506,6 +516,9 @@ export async function assignVariants(input: {
   readonly lang: string;
   readonly leadName: string;
   readonly city?: string | null;
+  /** The letter's list / offer price as printed (draft parts) — for a `price_line` sentence template. */
+  readonly price?: string | null;
+  readonly offerPrice?: string | null;
   readonly participate: boolean;
   readonly now?: Date;
 }): Promise<LetterVariants> {
@@ -520,13 +533,17 @@ export async function assignVariants(input: {
     let fromName: string | undefined;
     let bodyStyle: "boxed" | "plain" = "boxed";
     let image = true;
+    let priceLine: string | undefined;
+    const vars = { name: input.leadName, city: input.city, price: input.price, offerPrice: input.offerPrice };
     for (const dim of DIMENSIONS) {
       const rows = catalog.filter((v) => v.dimension === dim && v.enabled);
       const applicable = rows
         .filter((v) => {
           if (v.isControl) return true;
-          if (dim === "subject" || dim === "first_line") return v.template ? renderTemplate(v.template, { name: input.leadName, city: input.city }) !== null : false;
+          if (dim === "subject" || dim === "first_line") return v.template ? renderTemplate(v.template, vars) !== null : false;
           if (dim === "sender") return Boolean(senderNameOf(v.key));
+          // price_line: "none" is structural; any other key needs its sentence template to render.
+          if (dim === "price_line") return v.key === "none" || (v.template ? renderTemplate(v.template, vars) !== null : false);
           return true;
         })
         .map((v) => v.key);
@@ -535,11 +552,12 @@ export async function assignVariants(input: {
       keys[dim] = key;
       if (key === CONTROL_KEY) continue;
       const row = rows.find((v) => v.key === key);
-      if (dim === "subject" && row?.template) subject = renderTemplate(row.template, { name: input.leadName, city: input.city }) ?? undefined;
-      if (dim === "first_line" && row?.template) firstLine = renderTemplate(row.template, { name: input.leadName, city: input.city }) ?? undefined;
+      if (dim === "subject" && row?.template) subject = renderTemplate(row.template, vars) ?? undefined;
+      if (dim === "first_line" && row?.template) firstLine = renderTemplate(row.template, vars) ?? undefined;
       if (dim === "sender") fromName = senderNameOf(key) ?? undefined;
       if (dim === "body_style" && key === "plain") bodyStyle = "plain";
       if (dim === "image" && key === "none") image = false;
+      if (dim === "price_line") priceLine = key === "none" ? "" : row?.template ? renderTemplate(row.template, vars) ?? undefined : undefined;
     }
     return {
       keys,
@@ -548,6 +566,7 @@ export async function assignVariants(input: {
       ...(fromName ? { fromName } : {}),
       bodyStyle,
       image,
+      ...(priceLine !== undefined ? { priceLine } : {}),
     };
   } catch (e) {
     console.error(`[experiment] hozzárendelés hiba → kontroll-levél, nem rögzítve: ${(e as Error).message}`);

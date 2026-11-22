@@ -1,0 +1,505 @@
+<!DOCTYPE html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kísérletek — C: összefoglaló</title><style>
+/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
+  --citui-on-ok: var(--citui-white); /* ADR-0429: text/icon ON the ok fill (the check mark) */
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A kiküldött terv (/p/<token>) alján ülő RÖGZÍTETT réteg MÉRT magassága: a
+     süti-sáv + a sablon saját Foglalás-sávja + a fölé mászó hívó pirula, együtt.
+     A konfigurátor-futó (`assets/runtime/cit-configurator.js`, placeLaunch) írja
+     a gyökérre, mert egyedül ő tudja, meddig kellett felmásznia. A jogi lábléc
+     (`prospectNotice.ts`) ebből tart magának alsó térközt — mérve 2026-09-26,
+     390 px-en 19 sablonból 19-en e nélkül a leiratkozó link a réteg ALATT volt.
+     Alapból 0: pirula nélkül (már megvett oldal, JS nélkül) a süti-sáv magassága
+     a tartalék. */
+  --citui-cfg-clear: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #e6e9ef;
+  --citui-muted:       #8a93a3;
+  --citui-surface:     #12151c;
+  --citui-surface-2:   #1b1f29;
+  --citui-line:        #262b37;
+  --citui-line-strong: #343a48;
+  /* ADR-0224: a tenant-admin sötét módja. Semleges (nem navy-tintált) sötét
+     rétegek — a Linear-terv sötét képei ezekből készültek. */
+  --citui-bg:     #0f1116;
+  --citui-panel:  #151821;
+  --citui-side:   #12151c;
+  --citui-field:  #1b1f29;
+  --citui-hover:  #1e2330;
+  /* A jelzés-hue-k VILÁGOSABB változata: a világos-módú telített zöld/piros a
+     sötét panelen 2,5–3,5 kontrasztot adna keretként és pöttyként. */
+  --citui-ok:      #3ddc97;
+  --citui-warn:    #f0b35a;
+  --citui-bad:     #ff7b7b;
+  --citui-ok-soft: #14352a;
+  /* ⛔ A négy FELIRAT-token a sötét panelre (#151821) KIMÉRVE (WCAG, ≥ 4,5, tartalékkal;
+     mérés: node-os luminancia-számítás, 2026-09-24):
+       ok-ink   #4fe3a3 → 10,85 · bad-ink #ff8e8e → 8,03 · warn-ink #f5c06b → 10,67 ·
+       link-ink #4fd0ea → 9,74 (a --citui-field #1b1f29 mezőn a legrosszabb: bad-ink 7,46;
+       a --citui-muted #8a93a3 a panelen 5,73). */
+  --citui-ok-ink:   #4fe3a3;
+  --citui-bad-ink:  #ff8e8e;
+  --citui-warn-ink: #f5c06b;
+  --citui-link-ink: #4fd0ea;
+  /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
+  --citui-on-bad: var(--citui-navy-900);
+  --citui-on-ok: var(--citui-navy-900); /* white on the bright dark-mode ok measured ~1,7:1 */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
+  --citui-ink-brand:   var(--citui-ink);
+  --citui-ink-brand-2: color-mix(in srgb, var(--citui-ink) 80%, var(--citui-muted));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-ink-brand);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  /* A label that wraps (a long label on a phone) stays centred too: `justify-content`
+     centres the text box, `text-align` the lines inside it (a <button> does it by default,
+     an <a> does not — Elek FK-016: „Vissza a szállás oldalára” hung left). */
+  text-align: center;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+/* The Citoviso lockup "B" (src/ui/brand.ts, ADR-0236): the E4 mark IS the letter C,
+   then "itoviso". Mark = 1.6× the letter size, the word centred on it (the /pay/* ratio
+   the owner approved). Size it with font-size on the lockup. Dark surface → the dark mark
+   + white word; light surface → the light mark + navy word; "themed" follows the theme. */
+.citui-lockup {
+  display: inline-flex; color: var(--citui-navy-900); text-decoration: none;
+  font-family: var(--citui-font-display); font-weight: 700; letter-spacing: -0.01em; line-height: 1;
+  white-space: nowrap;
+}
+.citui-lockup.citui-lockup:hover { text-decoration: none; }
+.citui-lockup--lg { font-size: 1.32rem; } /* header / login size: word 21 px, mark 34 px (= /pay/*) */
+.citui-lockup__row { display: inline-flex; align-items: center; }
+.citui-lockup__mark { height: 1.6em; width: auto; flex: 0 0 auto; margin-right: 0.02em; }
+.citui-lockup__word { line-height: 1; }
+.citui-lockup__word small {
+  display: block; margin-top: 2px; font: 400 11px/1.3 var(--citui-font-text); letter-spacing: 0; color: var(--citui-muted);
+}
+/* ⚠️ Doubled class + :hover: a surface link rule (`.con a` 0,1,1 · `.con a:hover` 0,2,1)
+   otherwise paints the word link-cyan. */
+.citui-lockup.citui-lockup--on-dark, .citui-lockup.citui-lockup--on-dark:hover { color: var(--citui-white); }
+.citui-lockup.citui-lockup--on-light, .citui-lockup.citui-lockup--on-light:hover { color: var(--citui-navy-900); }
+.citui-lockup.citui-lockup--on-themed, .citui-lockup.citui-lockup--on-themed:hover { color: var(--citui-ink-brand); }
+.citui-mark-themed { display: inline-flex; flex: 0 0 auto; }
+.citui-mark-themed svg { height: var(--citui-mark-size, 26px); width: auto; }
+/* Theme switch. ⚠️ Element-qualified on purpose: a sizing rule like `.x svg{display:block}`
+   (0,1,1) beat a bare `.citui-mark--dark{display:none}` and showed BOTH marks. */
+svg.citui-mark--dark { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--light { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--dark { display: block; }
+.citui-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+body{margin:0;background:var(--citui-bg);font-family:var(--citui-font-text);color:var(--citui-ink)}
+.top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:var(--citui-panel);border-bottom:1px solid var(--citui-line);position:sticky;top:0;z-index:5}
+.top b{font-size:14px}.top .sp{flex:1}
+.sz{display:inline-flex;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);overflow:hidden}
+.sz button{border:0;background:transparent;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--citui-ink)}
+.sz button.on{background:var(--citui-navy-900);color:var(--citui-white)}
+.demo{font-size:12px;color:var(--citui-muted)}
+.stage{padding:20px;display:flex;justify-content:center}
+.frame{width:100%;max-width:1180px;container-type:inline-size;background:var(--citui-bg);transition:max-width .2s}
+.frame.mob{max-width:390px;border:1px solid var(--citui-line-strong);border-radius:18px;overflow:hidden}
+.panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius-lg);padding:18px 18px 14px;margin:0 0 14px}
+.panel h2{margin:0 0 4px;font-size:18px;font-family:var(--citui-font-display)}
+.panel h2 .q{font-size:13px;font-weight:400;color:var(--citui-muted)}
+.mut{color:var(--citui-muted)}.small{font-size:12.5px;line-height:1.55}
+.week{display:flex;gap:10px;align-items:flex-start;background:var(--citui-accent-soft);border-radius:var(--citui-radius);padding:10px 12px;margin:10px 0 12px;font-size:13.5px;line-height:1.5}
+.week b{white-space:nowrap}
+.pl{display:inline-flex;align-items:center;gap:6px;border-radius:var(--citui-radius-pill);padding:2px 9px;font-size:12px;border:1px solid var(--citui-line);white-space:nowrap}
+.pl i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pl--ok{color:var(--citui-ok-ink);background:var(--citui-ok-soft);border-color:transparent}
+.pl--bad{color:var(--citui-bad-ink);background:color-mix(in srgb,var(--citui-bad) 12%,var(--citui-panel));border-color:transparent}
+.pl--mut{color:var(--citui-muted)}
+.pl--ctl{color:var(--citui-navy-800);background:var(--citui-surface-2);border-color:transparent}
+.share{position:relative;height:8px;border-radius:4px;background:var(--citui-surface-2);min-width:60px}
+.share i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--citui-link-ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.chips button{border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:5px 11px;font:inherit;font-size:13px;cursor:pointer;color:var(--citui-ink)}
+.chips button.on{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.tgl{font-size:13px;display:inline-flex;gap:6px;align-items:center;margin-left:auto}
+.lead{font-weight:700}
+.best{outline:2px solid var(--citui-cyan-400);outline-offset:-2px}
+
+.lc{border:1px solid var(--citui-line);border-radius:var(--citui-radius);margin:0 0 8px;background:var(--citui-panel)}
+.lc summary{list-style:none;display:grid;grid-template-columns:110px 1fr auto 18px;gap:10px;align-items:center;padding:12px 14px;cursor:pointer}
+.lc summary::-webkit-details-marker{display:none}
+.lc-d{font-weight:700;font-size:14px}.lc-v{font-size:14px}
+.lc--win{border-left:4px solid var(--citui-ok)}.lc--hold{border-left:4px solid var(--citui-navy-800)}.lc--idle{border-left:4px solid var(--citui-line-strong)}
+.lc-ar{transition:transform .15s;font-size:20px;color:var(--citui-muted)}.lc[open] .lc-ar{transform:rotate(90deg)}
+.lc-t{overflow-x:auto;padding:0 14px 12px}
+.lc table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+.lc th{font-size:11px;text-transform:uppercase;color:var(--citui-muted);text-align:right;padding:6px;border-bottom:1px solid var(--citui-line-strong);white-space:nowrap}
+.lc th:nth-child(-n+2),.lc td:nth-child(-n+2){text-align:left}
+.lc td{padding:7px 6px;border-bottom:1px solid var(--citui-line);text-align:right;vertical-align:top}
+.lc td small{display:block;color:var(--citui-muted);font-size:12px}
+.lc tr.off td{color:var(--citui-muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 12px}
+.kpi{border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:10px 12px;background:var(--citui-panel)}
+.kpi b{display:block;font-size:22px}.kpi span{font-size:12px;color:var(--citui-muted)}
+@container (max-width:640px){.kpis{grid-template-columns:1fr 1fr}.lc summary{grid-template-columns:1fr 18px;grid-template-areas:"d ar" "v v" "n n"}.lc-d{grid-area:d}.lc-ar{grid-area:ar}.lc-v{grid-area:v}.lc-n{grid-area:n}}
+</style></head><body>
+<div class="top"><b>Riport ▸ Kísérletek — „C” változat</b><span class="demo">dimenziónként egy ítélet-sor, lenyitva a tábla · MINTA-ADAT (élesen még nincs mért változat)</span><span class="sp"></span>
+<div class="sz" role="group" aria-label="Méret"><button data-s="m">Mobil 390px</button><button data-s="d">Asztali</button></div></div>
+<div class="stage"><div class="frame"><div class="panel"><h2>Kísérletek <span class="q">— melyik levél-változat hoz több nyitást</span></h2><div class="week"><b>A héten</b><span>7 változat futott (5 dimenzió). A legjobb: „Ez az Ön szállása?” tárgy — 72 órás link-nyitás 21,4% (a mai tárgy 13,1%), 90% eséllyel jobb. Kikapcsolva: 1 (leiratkozás).</span></div>
+<div class="kpis"><div class="kpi"><b>9</b><span>futó változat</span></div>
+<div class="kpi"><b>1 041</b><span>kísérleti levél összesen</span></div>
+<div class="kpi"><b>36,3%</b><span>levélnyitás 24 ó (minden változat)</span></div>
+<div class="kpi"><b>130</b><span>mai keret (levél)</span></div></div>
+<details class="lc lc--win"><summary><span class="lc-d">Tárgy</span><span class="lc-v">„Kíváncsiság + szűrő” vezet: 21,4% vs. mai 13,1%</span><span class="lc-n mut small">3 fut</span><span class="lc-ar" aria-hidden="true">›</span></summary>
+<div class="lc-t"><table><thead><tr><th>Változat</th><th>Állapot</th><th>Ma</th><th>Küldés</th><th>Levélny. 24 ó</th><th>Link 24 ó</th><th>Link 72 ó</th><th>Válasz</th><th>Leirat.</th></tr></thead><tbody><tr class=""><td><b>Mai tárgy</b><small>„Rozé Fogadó – kész honlap”</small></td><td><span class="pl pl--ctl"><i></i>kontroll · fut</span></td><td>52%</td><td>612</td><td>33,9%</td><td>11,8%</td><td><b>13,1%</b></td><td>2,3%</td><td>1,1%</td></tr><tr class=""><td><b>Kíváncsiság + szűrő</b><small>„Ez az Ön szállása? (Rozé Fogadó, Tihany)”</small></td><td><span class="pl pl--ok"><i></i>fut</span></td><td>38%</td><td>288</td><td>41,6%</td><td>16,4%</td><td><b>21,4%</b></td><td>3,8%</td><td>0,3%</td></tr><tr class=""><td><b>Kérdés a gazdának</b><small>„Kérdés a Rozé Fogadó gazdájának”</small></td><td><span class="pl pl--ok"><i></i>fut</span></td><td>10%</td><td>141</td><td>36,1%</td><td>9,0%</td><td><b>9,9%</b></td><td>4,3%</td><td>0,0%</td></tr><tr class="off"><td><b>„Megnéztük…”</b><small>„Rozé Fogadó – megnéztük, és készítettünk valamit”</small></td><td><span class="pl pl--bad" title="őr: leiratkozás 0,93% > 0,50% (1/108)"><i></i>kikapcsolta az őr</span></td><td>—</td><td>108</td><td>27,8%</td><td>8,3%</td><td><b>11,1%</b></td><td>1,9%</td><td>0,9%</td></tr><tr class="off"><td><b>Város + „még nem nyilvános”</b><small>„Tihany: a Rozé Fogadó új honlapja (még nem nyilvános)”</small></td><td><span class="pl pl--mut"><i></i>jóváhagyásra vár</span></td><td>—</td><td>0</td><td>—</td><td>—</td><td><b>—</b></td><td>—</td><td>—</td></tr></tbody></table></div></details><details class="lc lc--idle"><summary><span class="lc-d">Első sor</span><span class="lc-v">Csak a mai levél fut — nincs mit összevetni.</span><span class="lc-n mut small">1 fut</span><span class="lc-ar" aria-hidden="true">›</span></summary>
+<div class="lc-t"><table><thead><tr><th>Változat</th><th>Állapot</th><th>Ma</th><th>Küldés</th><th>Levélny. 24 ó</th><th>Link 24 ó</th><th>Link 72 ó</th><th>Válasz</th><th>Leirat.</th></tr></thead><tbody><tr class=""><td><b>Mai első sor</b><small>„Elkészült a honlapja, nézze meg!”</small></td><td><span class="pl pl--ctl"><i></i>kontroll · fut</span></td><td>100%</td><td>1041</td><td>36,3%</td><td>12,7%</td><td><b>14,8%</b></td><td>3,0%</td><td>0,8%</td></tr><tr class="off"><td><b>Ember írta</b><small>„Elkészítettük a Rozé Fogadó honlapját, csak Ön látja:”</small></td><td><span class="pl pl--mut"><i></i>jóváhagyásra vár</span></td><td>—</td><td>0</td><td>—</td><td>—</td><td><b>—</b></td><td>—</td><td>—</td></tr></tbody></table></div></details><details class="lc lc--win"><summary><span class="lc-d">Feladó</span><span class="lc-v">„Személynév” vezet: 17,0% vs. mai 13,5%</span><span class="lc-n mut small">2 fut</span><span class="lc-ar" aria-hidden="true">›</span></summary>
+<div class="lc-t"><table><thead><tr><th>Változat</th><th>Állapot</th><th>Ma</th><th>Küldés</th><th>Levélny. 24 ó</th><th>Link 24 ó</th><th>Link 72 ó</th><th>Válasz</th><th>Leirat.</th></tr></thead><tbody><tr class=""><td><b>Mai feladó</b><small>„Citoviso”</small></td><td><span class="pl pl--ctl"><i></i>kontroll · fut</span></td><td>61%</td><td>640</td><td>34,1%</td><td>12,2%</td><td><b>13,5%</b></td><td>2,7%</td><td>0,9%</td></tr><tr class=""><td><b>Személynév</b><small>„(OUTREACH_SENDER_NAME)”</small></td><td><span class="pl pl--ok"><i></i>fut</span></td><td>39%</td><td>401</td><td>39,8%</td><td>13,4%</td><td><b>17,0%</b></td><td>3,5%</td><td>0,5%</td></tr></tbody></table></div></details><details class="lc lc--win"><summary><span class="lc-d">Törzs</span><span class="lc-v">„Sima levél” vezet: 15,9% vs. mai 13,8%</span><span class="lc-n mut small">2 fut</span><span class="lc-ar" aria-hidden="true">›</span></summary>
+<div class="lc-t"><table><thead><tr><th>Változat</th><th>Állapot</th><th>Ma</th><th>Küldés</th><th>Levélny. 24 ó</th><th>Link 24 ó</th><th>Link 72 ó</th><th>Válasz</th><th>Leirat.</th></tr></thead><tbody><tr class=""><td><b>Képes-dobozos</b><small>„logó · gomb · árdoboz”</small></td><td><span class="pl pl--ctl"><i></i>kontroll · fut</span></td><td>50%</td><td>530</td><td>35,7%</td><td>12,1%</td><td><b>13,8%</b></td><td>2,5%</td><td>0,9%</td></tr><tr class=""><td><b>Sima levél</b><small>„ugyanaz a szöveg, logó/gomb/árdoboz nélkül”</small></td><td><span class="pl pl--ok"><i></i>fut</span></td><td>50%</td><td>511</td><td>36,8%</td><td>13,2%</td><td><b>15,9%</b></td><td>3,5%</td><td>0,6%</td></tr></tbody></table></div></details><details class="lc lc--idle"><summary><span class="lc-d">Kép</span><span class="lc-v">Csak a mai levél fut — nincs mit összevetni.</span><span class="lc-n mut small">1 fut</span><span class="lc-ar" aria-hidden="true">›</span></summary>
+<div class="lc-t"><table><thead><tr><th>Változat</th><th>Állapot</th><th>Ma</th><th>Küldés</th><th>Levélny. 24 ó</th><th>Link 24 ó</th><th>Link 72 ó</th><th>Válasz</th><th>Leirat.</th></tr></thead><tbody><tr class=""><td><b>Hős-képpel</b><small>„a terv nyitóképe a levélben”</small></td><td><span class="pl pl--ctl"><i></i>kontroll · fut</span></td><td>100%</td><td>1041</td><td>36,3%</td><td>12,7%</td><td><b>14,8%</b></td><td>3,0%</td><td>0,8%</td></tr><tr class="off"><td><b>Kép nélkül</b><small>„kattintani kell, hogy lássa”</small></td><td><span class="pl pl--mut"><i></i>jóváhagyásra vár</span></td><td>—</td><td>0</td><td>—</td><td>—</td><td><b>—</b></td><td>—</td><td>—</td></tr></tbody></table></div></details><p class="mut small">Levélnyitás = a levél képét a levelezőprogram letöltötte (Gmail-proxy is); az Apple Mail előtöltése NEM nyitás, külön számolva. Link-nyitás = a levél linkjére kattintott (gép nélkül). A gép a 72 órás link-nyitás szerint osztja a napi keretet; minden futó változat legalább 10%-ot kap. Őr: 100 levél után 0,5% feletti leiratkozás vagy panaszos válasz → a változat kikapcsol (a mai levél sosem).</p></div></div></div>
+<script>
+(function(){var f=document.querySelector('.frame');var bs=document.querySelectorAll('.sz button');
+function set(m){f.classList.toggle('mob',m==='m');bs.forEach(function(b){b.classList.toggle('on',b.dataset.s===m)});}
+bs.forEach(function(b){b.addEventListener('click',function(){set(b.dataset.s)})});
+set(window.innerWidth<700?'m':'d');})();
+</script></body></html>

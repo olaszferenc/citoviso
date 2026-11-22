@@ -54,6 +54,17 @@ kattintott) nem választható szét, és minden szöveg-ötlet tulaj-kör maradt
    `sender` csak a megjelenített nevet váltja, a cím az SMTP-fiók hitelesített címe marad. A `plain`
    törzs UGYANAZOKAT a kapuzott részeket rendereli (a `text/plain` byte-ra azonos).
 
+6. **Ár-sor dimenzió (módosítás 2026-11-22, tulaj-döntés a koordinátoron át, migráció 0144):**
+   `price_line` — kontroll = a mai navy árdoboz + kedvezmény; `none` = se doboz, se ár-mondat, se
+   a kedvezmény érvényességi lábjegyzete; a „sima mondat” változat (`template`, `{price}` /
+   `{offerPrice}`) szövege a koordinátortól jön a tulaj jóváhagyása után. A változat a TÖRZSET
+   írja (a `p3`/`fine` rész kiürül vagy a mondatra cserélődik, a törzs a részekből újraépül), így
+   a §C-kapu a kész levelet ítéli. A levél kedvezmény-százaléka (ADR-0286) ettől függetlenül
+   rögzül a küldéskor: a lap ugyanazt az ajánlatot mutatja.
+7. **Riport „Kísérletek” fül (2026-11-22, tulaj: C terv):** `GET /report/experiments`, befagyasztott
+   terv `assets/design-refs/console/kiserletek/`; a hétfői sor a Riportba kerül, mert heti
+   összefoglaló LEVÉL nincs — az előző lezárt budapesti hetet mutatja, hétfő 0:00-kor vált.
+
 ### Elvetett alternatívák
 
 - **Fix A/B 50-50:** a rosszabb fél a teszt végéig a keret felét égeti, és két változatnál többre nem
