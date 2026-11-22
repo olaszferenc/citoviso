@@ -18,6 +18,10 @@ import { deaccent, tokens } from "../scraper/enrichPresence.js";
 import { distanceKm } from "../scraper/regions.js";
 import type { ContactCandidate, PortalListing, QualifiedLead } from "../scraper/types.js";
 import { leadEmails } from "../email/leadEmails.js";
+import { countryConfigSync, countryOfLeads } from "../country.js";
+import { phoneKey as ledgerPhoneKey } from "../scraper/contactLedger.js";
+import { phoneKeyIn } from "../text/phoneCountry.js";
+import { matcherWords } from "../scraper/genericWords.js";
 
 export type DupSignal = "website" | "phone" | "email" | "proximity";
 export type DupVerdict = "duplicate" | "same_owner" | "unrelated";
@@ -45,20 +49,20 @@ export interface DupLead {
   readonly listings?: readonly PortalListing[];
   readonly lat?: number;
   readonly lon?: number;
+  /** ISO-2 country of the lead (raw.country) — its phone plan and trade words. */
+  readonly country?: string | null;
 }
 
-/** Same number written differently is the same number. */
-function phoneKey(v?: string): string | undefined {
+/** Same number written differently is the same number — read in the lead's country (nemzetközi
+ *  A): the HU row gives the historic national-part key; another country's key carries its dial
+ *  code, so two countries' national numbers never pair up. */
+function phoneKey(v: string | undefined, country: string | null | undefined): string | undefined {
   if (!v) return undefined;
-  const d = v.replace(/\D/g, "");
-  const n = d.startsWith("0036")
-    ? d.slice(4)
-    : d.startsWith("36") && d.length >= 10
-      ? d.slice(2)
-      : d.startsWith("06")
-        ? d.slice(2)
-        : d;
-  return n.length >= 8 ? n : undefined;
+  const rules = countryConfigSync(country);
+  // No country at all (neither the lead's nor its area's): the ledger's historic key.
+  const n = rules ? phoneKeyIn(v, rules) : ledgerPhoneKey(v);
+  if (n.length < 8) return undefined;
+  return rules && rules.phonePlan !== "hu" ? `${rules.dialCode}:${n}` : n;
 }
 
 /** Host without www — two URLs on one host are the same presence. */
@@ -75,13 +79,10 @@ function hostKey(v?: string): string | undefined {
  * Distinctive name tokens — used ONLY to strengthen a proximity match. Trade
  * words are excluded: two "Apartman" entries next door are not evidence.
  */
-const GENERIC = new Set([
-  "szallas", "apartman", "apartmanok", "apartmanhaz", "vendeghaz", "vendeghazak",
-  "panzio", "hotel", "haz", "villa", "kemping", "camping", "udulo", "tabor",
-  "hely", "etterem", "vendeglo", "szoba", "szobak", "motel", "resort", "porta",
-]);
-function brandTokens(name: string): string[] {
-  return tokens(name).filter((t) => t.length >= 4 && !GENERIC.has(t));
+// The lead's country's list (lexicon `duplicateGenericWords`, HU verbatim).
+function brandTokens(name: string, country: string | null | undefined): string[] {
+  const generic = matcherWords(country, "duplicateGenericWords");
+  return tokens(name).filter((t) => t.length >= 4 && !generic.has(t));
 }
 
 /**
@@ -99,6 +100,8 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
     .where("lifecycle_status", "not in", ["terminated", "disqualified"])
     .execute();
 
+  // The lead's country: its own, else its scrape area's (countryOfLeads, ADR-0437 ②).
+  const countries = await countryOfLeads(rows.map((r) => r.id));
   const leads: DupLead[] = rows.map((r) => {
     const raw = (typeof r.raw === "string" ? JSON.parse(r.raw) : r.raw) as QualifiedLead;
     return {
@@ -115,6 +118,7 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
       listings: raw.listings,
       lat: r.lat ?? undefined,
       lon: r.lng ?? undefined,
+      country: countries.get(r.id) ?? null,
     };
   });
 
@@ -153,7 +157,7 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
       ...leadEmails(l).map((value) => ({ kind: "email", value }) as ContactCandidate),
     ]) {
       if (c.kind === "phone") {
-        const k = phoneKey(c.value);
+        const k = phoneKey(c.value, l.country);
         if (k) phones.add(k);
       } else {
         emails.add(c.value.trim().toLowerCase());
@@ -204,8 +208,8 @@ export async function findDuplicateCandidates(limit = 60): Promise<DupCandidate[
       const b = withGeo[j]!;
       const km = distanceKm(a.lat!, a.lon!, b.lat!, b.lon!);
       if (km > 0.06) continue; // ~60 m
-      const ta = brandTokens(a.name);
-      const tb = brandTokens(b.name);
+      const ta = brandTokens(a.name, a.country);
+      const tb = brandTokens(b.name, b.country);
       if (!ta.some((t) => tb.some((u) => deaccent(u) === deaccent(t)))) continue;
       add(a, b, "proximity");
     }

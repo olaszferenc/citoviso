@@ -519,7 +519,7 @@ const elzaPage =
   `<a class="nearby" href="https://hovamenjek.hu/keszthely/miss-mici"><figure><img srcset="${HM}/11997_e33d974a/187x187/keszthely-miss-mici9.jpg 187w,${HM}/11997_e33d974a/250x250/keszthely-miss-mici9.jpg 250w" src="${HM}/11997_e33d974a/187x187/keszthely-miss-mici9.jpg" width="187" height="187" alt="Miss Mici – Keszthely"></figure><h4>Miss Mici</h4></a>` +
   `<a class="nearby" href="https://hovamenjek.hu/keszthely/dora-holiday-house"><figure><img src="${HM}/9926_cb757ef4/187x187/keszthely-2.jpg" width="187" height="187" alt="Dóra Holiday House – Keszthely"></figure><h4>Dóra Holiday House</h4></a>` +
   `</div></body></html>`;
-const elzaImgs = extractListing(elzaPage, "https://hovamenjek.hu/keszthely/elza-apartman").images.map((i) => i.url);
+const elzaImgs = extractListing(elzaPage, "https://hovamenjek.hu/keszthely/elza-apartman", undefined, null).images.map((i) => i.url);
 check(
   "hovamenjek „Közeli szállások”: a szomszédok bélyegképe nem kerül a lead képei közé",
   elzaImgs.length > 0 && elzaImgs.every((u) => u.includes("/12963_")) && !elzaImgs.some((u) => /miss-mici|keszthely-2\.jpg/.test(u)),
@@ -675,7 +675,7 @@ check(
 );
 check(
   "bekötés: a konzolos link-behúzás a többi tárolt leadhez méri (photosOnOtherLeads), a generátor betöltése és galériája usableProfiles-on át olvas",
-  /photosOnOtherLeads\(leadId, [^;]*twinBrands\(before\.name, before\.city\), before\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
+  /photosOnOtherLeads\(leadId, [^;]*twinBrands\(before\.name, before\.city(?:, \w+)?\), before(?:, \w+)?\)/.test(readFileSync(new URL("../src/scraper/attachPhotoLinks.ts", import.meta.url), "utf8")) &&
     /usableProfiles\(stored\.portalProfiles\)/.test(readFileSync(new URL("../src/generator/persist.ts", import.meta.url), "utf8")) &&
     /for \(const profile of usableProfiles\(lead\.portalProfiles\)\)/.test(readFileSync(new URL("../src/generator/generate.ts", import.meta.url), "utf8")),
   "",

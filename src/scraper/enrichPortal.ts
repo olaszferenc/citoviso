@@ -175,7 +175,7 @@ export async function enrichPortal(
   // taken, so a held page gives neither photos nor a phone.
   {
     const keys = [...found.keys()];
-    const held = holdSharedPhotoSets(keys.map((k) => ({ brands: twinBrands(k.name, k.city), profiles: found.get(k)! })));
+    const held = holdSharedPhotoSets(keys.map((k) => ({ brands: twinBrands(k.name, k.city, countryOf(k, region.country)), profiles: found.get(k)! })));
     let demoted = 0;
     keys.forEach((k, i) => {
       demoted += held[i]!.filter((p, j) => p.needsReview && !found.get(k)![j]!.needsReview).length;
@@ -244,7 +244,7 @@ export async function enrichPortal(
       // (not an office/template/machine one) that is tied to THIS business.
       email:
         l.email ??
-        (email && isBusinessEmail(email) && isCorroboratedEmail(email, l) ? email : undefined),
+        (email && isBusinessEmail(email) && isCorroboratedEmail(email, l, countryOf(l, region.country)) ? email : undefined),
     };
   });
 }

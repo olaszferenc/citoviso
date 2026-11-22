@@ -120,7 +120,7 @@ export async function reenrichOne(leadId: string): Promise<ReenrichResult> {
     // reads as "the web search found nothing" when in fact it never ran.
     true,
   );
-  leads = await enrichGeo(enrichContact(leads), region.country, () => {});
+  leads = await enrichGeo(enrichContact(leads, region), region.country, () => {});
 
   const after = leads[0];
   // Curator edits and the audit trail live on `raw` outside the QualifiedLead

@@ -28,7 +28,7 @@ import { leadCountryConfig } from "../country.js";
 import type { PortalLocale } from "./sources/portals/politeness.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
-import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, readPortalListing, twinBrands } from "./sources/portalListing.js";
+import { ENGINE_HOME_REDIRECT, brandTokens, captionBelongsToOther, phoneKey as listingPhoneKey, readPortalListing, twinBrands } from "./sources/portalListing.js";
 import { deaccent, hasNameWord } from "./enrichPresence.js";
 import { mergeListings, mergeProfiles } from "./enrichPortal.js";
 import { buildMaterial } from "./enrichMaterial.js";
@@ -69,8 +69,31 @@ const MAX_OWN_SITE_PHOTOS = 40;
 // serves ANY site's images), cdninstagram.com (an embedded feed carries other accounts).
 // The list itself lives in photoQuality.isSiteBuilderMedia (Wix, Squarespace, Webnode).
 
-/** Shared-platform hosts: there "the same site" is the full host, not the last two labels. */
-const SHARED_PLATFORM = ["webnode.hu", "webnode.page", "wixsite.com", "blogspot.com", "weebly.com", "business.site"];
+/** Shared-platform hosts: there "the same site" is the full host, not the registrable domain.
+ *  Webnode serves every country's sites under its own ccTLD (x.webnode.hr, x.webnode.cz …). */
+const SHARED_PLATFORM = [
+  "webnode.hu", "webnode.page", "wixsite.com", "blogspot.com", "weebly.com", "business.site",
+  "webnode.hr", "webnode.com", "webnode.cz", "webnode.sk", "webnode.si", "webnode.at", "webnode.it",
+];
+
+/**
+ * Second-level PUBLIC SUFFIXES (a curated slice of the Public Suffix List — no PSL package is
+ * installed, and these are the zones our countries' and their guests' sites live in): under
+ * them the registrable domain is THREE labels (apartmani.com.hr, not com.hr — with "the last
+ * two labels" every *.com.hr site was "the same site" as every other).
+ * ⛔ No Hungarian second-level zone (co.hu, info.hu, hotel.hu …) is listed: the Hungarian own
+ * sites keep exactly the site test they were measured with.
+ */
+const MULTI_LABEL_SUFFIXES = new Set([
+  // Croatia (CARNet: com.hr, from.hr, iz.hr, name.hr)
+  "com.hr", "from.hr", "iz.hr", "name.hr",
+  // United Kingdom, Ireland-style and the Commonwealth
+  "co.uk", "org.uk", "me.uk", "ltd.uk", "plc.uk", "ac.uk", "gov.uk",
+  "com.au", "net.au", "org.au", "co.nz", "org.nz", "co.za",
+  // Neighbours and the guests' markets
+  "co.at", "or.at", "com.pl", "net.pl", "org.pl", "co.rs", "in.rs", "org.rs", "com.ro", "org.ro",
+  "com.es", "org.es", "nom.es", "com.tr", "com.mt", "com.cy", "com.gr", "co.il", "co.jp", "com.br",
+]);
 
 /** Gallery-page link on an own site ("Galéria", "Képek", "Fotók", "Gallery"). */
 const GALLERY_LINK = /(gal[eé]ri|gallery|fot[oó]k|k[eé]pek|photos|bilder)/i;
@@ -163,11 +186,14 @@ const GOOGLE_SITES_IMAGE = /^https:\/\/(?:sites\.google\.com\/sitesv-images-rt\/
 /** A CMS theme's own stock picture (Drupal „themes/danland/images/slideshows/sea.jpg”), not the lodging's. */
 const THEME_IMAGE = /\/themes\/[^/]+\/images\//i;
 
-/** Last two labels — fine for the .hu/.com sites this reads. */
-function site2(host: string): string {
+/** The registrable domain of a host: the last two labels, or three under a second-level
+ *  public suffix (MULTI_LABEL_SUFFIXES); a shared platform's whole host. */
+export function site2(host: string): string {
   const h = host.toLowerCase();
   if (SHARED_PLATFORM.some((p) => h === p || h.endsWith(`.${p}`))) return h.replace(/^www\./, "");
-  return h.split(".").slice(-2).join(".");
+  const labels = h.split(".");
+  const n = MULTI_LABEL_SUFFIXES.has(labels.slice(-2).join(".")) ? 3 : 2;
+  return labels.slice(-n).join(".");
 }
 
 function absoluteUrl(raw: string, base: string): string | null {
@@ -306,16 +332,17 @@ export async function readOwnSitePhotos(
   const compactName = deaccent(lead.name.toLowerCase()).replace(/[^a-z0-9]/g, "");
   const nameInDomain =
     (compactName.length >= 6 && hostCompact.includes(compactName)) ||
-    brandTokens(lead.name).some((t) => hostCompact.includes(t.replace(/[^a-z0-9]/g, "")));
+    brandTokens(lead.name, loc.iso2).some((t) => hostCompact.includes(t.replace(/[^a-z0-9]/g, "")));
   const identityOf = (html: string): boolean => {
     if (knownOwn) return true;
     const hay = deaccent(textOf(html).toLowerCase());
     // The lead's OWN town only (ADR-0043) — never the region fallback of geoTerms.
     const townTokens = deaccent((lead.city ?? "").toLowerCase()).split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
     if (nameInDomain && townTokens.some((t) => hay.includes(t))) return true;
-    const digits = (lead.phone ?? "").replace(/\D/g, "");
-    const phoneOnPage = digits.length >= 9 && textOf(html).replace(/\D/g, "").includes(digits.slice(-9));
-    return phoneOnPage && brandTokens(lead.name).some((t) => hasNameWord(hay, t));
+    // The lead's number in ITS country's plan (the HU key is the historic last 9 digits).
+    const key = listingPhoneKey(lead.phone ?? undefined, loc);
+    const phoneOnPage = key !== undefined && textOf(html).replace(/\D/g, "").includes(key);
+    return phoneOnPage && brandTokens(lead.name, loc.iso2).some((t) => hasNameWord(hay, t));
   };
 
   let candidates = ownSiteImages(page.html, page.finalUrl);
@@ -330,7 +357,7 @@ export async function readOwnSitePhotos(
   }
   if (!identityOf(page.html)) {
     return {
-      skipped: brandTokens(lead.name).length
+      skipped: brandTokens(lead.name, loc.iso2).length
         ? "nem igazolható, hogy ez a szállás saját honlapja (nem a leadnél tárolt honlap; a domain nem a szállás nevét viseli, vagy az oldalon nincs a települése; a telefonszáma sincs rajta) — nem kötöttük a leadhez"
         : "a lead neve csupa általános szó, az oldal nem azonosítható vele — nem kötöttük a leadhez",
     };
@@ -366,7 +393,7 @@ export async function readOwnSitePhotos(
       dropped.push(`idegen domain képe (${imgHost})`);
       return false;
     }
-    if (captionBelongsToOther(img.caption, lead.name)) {
+    if (captionBelongsToOther(img.caption, lead.name, [], loc.iso2)) {
       dropped.push("a felirat másik szálláshelyet nevez meg");
       return false;
     }
@@ -399,7 +426,7 @@ export async function readOwnSitePhotos(
     console.log(`      saját honlap ${host}: ${photos.length}/${candidates.length} kép megtartva, ${dropped.length} eldobva`);
   }
 
-  const extracted = extractListing(page.html, page.finalUrl, lead.name);
+  const extracted = extractListing(page.html, page.finalUrl, lead.name, loc);
   const profile: PortalProfile = {
     portal: "own_site",
     portalHost: hostOf(page.finalUrl) ?? host,
@@ -591,10 +618,11 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
 
   // The batch's shared-photo-set guard (enrichPortal) sees one batch; a link pasted in the
   // console is checked against every OTHER stored lead instead (portalPhotos.SHARED_SET_MIN).
+  const leadIso = leadCountryConfig(before, region)?.iso2 ?? null;
   for (let i = 0; i < portalProfiles.length; i++) {
     const p = portalProfiles[i]!;
     if (p.needsReview || !p.photos.length) continue;
-    const { ids, leads } = await photosOnOtherLeads(leadId, p.photos.map((ph) => ph.url), twinBrands(before.name, before.city), before);
+    const { ids, leads } = await photosOnOtherLeads(leadId, p.photos.map((ph) => ph.url), twinBrands(before.name, before.city, leadIso), before, leadIso);
     const shared = sharedPhotoCount(p, ids);
     if (!shared) continue;
     portalProfiles[i] = heldForSharedPhotos(p, shared, leads);
@@ -655,6 +683,8 @@ export async function photosOnOtherLeads(
   brands: readonly string[],
   /** Where the lead is: only NEIGHBOURS are compared (a list page covers one town). */
   at: { readonly lat?: number; readonly lon?: number },
+  /** The lead's country — its neighbours' brand words are read with the same trade words. */
+  country?: string | null,
 ): Promise<{ ids: Set<string>; leads: number }> {
   const wanted = [...new Set(urls.filter(Boolean).map(portalPhotoIdentity))].filter((id) => id.startsWith("/"));
   if (!wanted.length || at.lat == null || at.lon == null) return { ids: new Set(), leads: 0 };
@@ -676,7 +706,7 @@ export async function photosOnOtherLeads(
       and lower(regexp_replace(split_part(ph->>'url', '?', 1), '^[a-z]+://[^/]+', '', 'i')) = any(${wanted})
     limit 2000
   `.execute(db);
-  const rows = found.rows.filter((r) => !sameBrand(brands, twinBrands(r.name ?? "", r.city ?? undefined)));
+  const rows = found.rows.filter((r) => !sameBrand(brands, twinBrands(r.name ?? "", r.city ?? undefined, country)));
   return { ids: new Set(rows.map((r) => r.ident)), leads: new Set(rows.map((r) => r.id)).size };
 }
 

@@ -6,6 +6,7 @@
 // loadRegions(), so getRegion() stays synchronous for the scraper's hot path.
 
 import { db } from "../db/client.js";
+import { countryLexicon } from "../countryLexicon.js";
 import type { Region } from "./types.js";
 
 /** Built-in defaults (the original hard-coded test areas). bbox = [S, W, N, E]. */
@@ -38,20 +39,50 @@ export const DEFAULT_REGIONS: Record<string, Region> = {
 };
 
 /**
- * County regions (Magellan project, 2026-10-07, owner: „megyénként"): the region row
- * `megye-<code>` is the Hungarian county with ISO 3166-2 code HU-<CODE>; the OSM source
- * clips to the county boundary (its bbox is only the enclosing box). Budapest is HU-BU.
+ * SUBDIVISION regions — an area that is one first-level administrative unit of a country
+ * (ISO 3166-2). The OSM source clips to that boundary (the bbox is only the enclosing box).
+ * The units of a country are DATA: its lexicon's `subdivisions` (src/countryLexicon/<iso>.json).
+ *
+ *   `terulet-<cc>-<code>` — any country: `terulet-hr-17` → "HR-17" (Splitsko-dalmatinska).
+ *   `megye-<code>`        — the Hungarian county rows (Magellan project, 2026-10-07, owner:
+ *                           „megyénként"), kept as they are: their ids are stored on runs and
+ *                           tiles. `megye-to` → "HU-TO"; Budapest is HU-BU.
+ *   `country-<cc>`        — a whole-country area (`run.ts --country`): the ISO 3166-1 boundary.
+ *
+ * A code the country's lexicon does not list → undefined (a bbox query, never a guessed unit).
  */
-export const HU_COUNTY_CODES = [
-  "BA", "BE", "BK", "BU", "BZ", "CS", "FE", "GS", "HB", "HE",
-  "JN", "KE", "NO", "PE", "SO", "SZ", "TO", "VA", "VE", "ZA",
-] as const;
-
-/** `megye-to` → "HU-TO"; any other region id → undefined (bbox query). */
+const COUNTY_PREFIX_COUNTRY = "hu";
 export function osmAreaForRegion(id: string): string | undefined {
-  const m = /^megye-([a-z]{2})$/.exec(id);
-  const code = m?.[1]?.toUpperCase();
-  return code && (HU_COUNTY_CODES as readonly string[]).includes(code) ? `HU-${code}` : undefined;
+  const county = /^megye-([a-z]{2})$/.exec(id);
+  const generic = /^terulet-([a-z]{2})-([a-z0-9]{1,3})$/.exec(id);
+  const whole = /^country-([a-z]{2})$/.exec(id);
+  if (whole) return countryLexicon(whole[1]) ? whole[1]!.toUpperCase() : undefined;
+  const [cc, code] = county ? [COUNTY_PREFIX_COUNTRY, county[1]!] : generic ? [generic[1]!, generic[2]!] : [null, null];
+  if (!cc || !code) return undefined;
+  const lex = countryLexicon(cc);
+  const unit = code.toUpperCase();
+  return lex?.subdivisions.some((s) => s.code === unit) ? `${lex.iso2}-${unit}` : undefined;
+}
+
+/** The region id of one subdivision of a country (`HR`, `17` → `terulet-hr-17`). */
+export function subdivisionRegionId(iso2: string, code: string): string {
+  return `terulet-${iso2.toLowerCase()}-${code.toLowerCase()}`;
+}
+
+/**
+ * The region row of a whole-country run (`run.ts --country`, id `country-<cc>`): created on
+ * the first live run so its leads have an area to belong to (getRegion() in reenrich and the
+ * photo attach, the console's area facet). An existing row is left as the operator keeps it.
+ */
+export async function ensureCountryRegion(region: Region): Promise<void> {
+  const [south, west, north, east] = region.bbox;
+  // Never the column default ('HU'): an area without its country is refused.
+  if (!region.country) throw new Error(`A terület (${region.id}) országa ismeretlen — régió-sor nem jön létre`); // i18n-exempt: operátori hiba
+  await db
+    .insertInto("region")
+    .values({ id: region.id, label: region.label, country: region.country, south, west, north, east, active: true })
+    .onConflict((oc) => oc.column("id").doNothing())
+    .execute();
 }
 
 /** Live snapshot — starts as the built-ins, replaced by loadRegions(). */

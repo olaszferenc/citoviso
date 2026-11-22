@@ -235,7 +235,7 @@ for (const n of ["Apartman Vendégház", "B-B Apartman", "11-es és 12-es szám�
   cases.push([
     "bekötés: az elírás csak település + (telefon | listázott telefon | házszám | ≤150 m) mellett nyit kaput",
     /typoHits\.length > 0 &&\s*townOnPage &&\s*\(phoneOnPage \|\| \(leadPhone !== undefined && leadPhone === listingPhone\) \|\| streetMatch === true \|\| \(distance !== undefined && distance <= 150\)\)/.test(src) &&
-      /!verify\(lead\.name, terms, page\.html\) && !\(brandOnPage && phoneOnPage\) && !typoIdentity/.test(src),
+      /!verify\(lead\.name, terms, page\.html(?:, \w+)?\) && !\(brandOnPage && phoneOnPage\) && !typoIdentity/.test(src),
   ]);
   for (const [label, ok] of cases) {
     if (!ok) failed++;

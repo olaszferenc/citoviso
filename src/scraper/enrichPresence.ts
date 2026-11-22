@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import { leadCountryConfig } from "../country.js";
 import { classifyWebsite } from "./qualify.js";
+import { matcherWords } from "./genericWords.js";
 import { PORTAL_USER_AGENT } from "./sources/portals/politeness.js";
 import type { QualifiedLead, Region } from "./types.js";
 
@@ -21,11 +22,11 @@ const CONCURRENCY = 10;
 
 // Accommodation "type" words — stripped to derive a brand core, but candidates
 // are generated BOTH with and without them (a brand may include one, e.g. Villa).
-export const TYPE_WORDS = new Set([
-  "vendeghaz", "haz", "panzio", "szallashely", "szallas", "guest", "guesthouse",
-  "guesthaus", "house", "apartman", "apartment", "camping", "hostel", "fogado",
-  "cottage", "birtok", "pinceszet", "szolobirtok", "villa", "hotel",
-]);
+// The lead's COUNTRY's list (lexicon `typeWords`; the HU list moved there verbatim) —
+// no country → every country's (genericWords.matcherWords).
+export function typeWords(country: string | null | undefined): ReadonlySet<string> {
+  return matcherWords(country, "typeWords");
+}
 
 // Parked / for-sale / placeholder markers → NOT a real own site (§F.15).
 const PARKED = [
@@ -202,9 +203,10 @@ export function searchPlace(lead: { city?: string }, region: Region): string {
   return lead.city ?? region.label;
 }
 
-function candidateHosts(name: string): string[] {
+export function candidateHosts(name: string, country?: string | null): string[] {
   const t = tokens(name);
-  const core = t.filter((w) => !TYPE_WORDS.has(w));
+  const type = typeWords(country);
+  const core = t.filter((w) => !type.has(w));
   const sets = new Set<string>();
   const add = (arr: string[]): void => {
     if (!arr.length) return;
@@ -218,11 +220,12 @@ function candidateHosts(name: string): string[] {
   return [...sets].filter((h) => h.replace(/-/g, "").length >= 5);
 }
 
-function urlCandidates(name: string, region: Region, tlds: readonly string[]): string[] {
-  const hosts = new Set(candidateHosts(name));
+export function urlCandidates(name: string, region: Region, tlds: readonly string[], country?: string | null): string[] {
+  const hosts = new Set(candidateHosts(name, country));
   // Also try brand+region and name+region hosts (common for local businesses).
   const t = tokens(name);
-  const core = t.filter((w) => !TYPE_WORDS.has(w));
+  const type = typeWords(country);
+  const core = t.filter((w) => !type.has(w));
   for (const term of regionTerms(region)) {
     for (const base of [core, t, [...t].reverse()]) {
       if (!base.length) continue;
@@ -272,11 +275,13 @@ export async function fetchHtml(
 }
 
 // Geo-strict verification: brand core AND a place we know the lead sits in must
-// both appear; parked pages are rejected. `terms` comes from geoTerms(lead, region).
-export function verify(name: string, terms: string[], html: string): boolean {
+// both appear; parked pages are rejected. `terms` comes from geoTerms(lead, region);
+// `country` = the lead's (its type words).
+export function verify(name: string, terms: string[], html: string, country?: string | null): boolean {
   const text = deaccent(html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
-  const core = nameWords(name).filter((w) => !TYPE_WORDS.has(w));
+  const type = typeWords(country);
+  const core = nameWords(name).filter((w) => !type.has(w));
   const acr = acronymWords(name);
   const brandHit = [...core.filter(isBrandShaped), ...acr].some((w) => hasNameWord(text, w));
   const geoHit = terms.some((term) => text.includes(term));
@@ -344,14 +349,16 @@ export async function verifyOrRender(
   terms: string[],
   page: { finalUrl: string; html: string },
   locale: string,
+  country?: string | null,
 ): Promise<boolean> {
-  if (verify(name, terms, page.html)) return true;
+  if (verify(name, terms, page.html, country)) return true;
   const text = deaccent(page.html.toLowerCase());
   if (PARKED.some((p) => text.includes(deaccent(p)))) return false;
-  const core = tokens(name).filter((w) => !TYPE_WORDS.has(w));
+  const type = typeWords(country);
+  const core = tokens(name).filter((w) => !type.has(w));
   if (!core.some((w) => w.length >= 4 && text.includes(w))) return false;
   const rendered = await renderHtml(page.finalUrl, locale);
-  return Boolean(rendered && verify(name, terms, rendered.html));
+  return Boolean(rendered && verify(name, terms, rendered.html, country));
 }
 
 async function probeLead(
@@ -362,9 +369,9 @@ async function probeLead(
   const loc = leadCountryConfig(lead, region);
   if (!loc) return null;
   const terms = geoTerms(lead, region);
-  for (const url of urlCandidates(lead.name, region, loc.ownSiteTlds)) {
+  for (const url of urlCandidates(lead.name, region, loc.ownSiteTlds, loc.iso2)) {
     const r = await fetchHtml(url);
-    if (r && (await verifyOrRender(lead.name, terms, r, loc.browserLocale))) return r.finalUrl;
+    if (r && (await verifyOrRender(lead.name, terms, r, loc.browserLocale, loc.iso2))) return r.finalUrl;
   }
   return null;
 }

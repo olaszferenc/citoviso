@@ -4,7 +4,7 @@
 //
 //   ① region: saveRegion() — the function the console's /scrape/regions form calls — for
 //      Makarska (HR) and Nesebar (BG); the stored region.country is read back;
-//   ② tiles: ensureTiles + listTiles — the root grid, SCOUT_KEYWORDS and the Maps search
+//   ② tiles: ensureTiles + listTiles — the root grid, the area country's scoutKeywords and the Maps search
 //      URLs each tile hands Magellan;
 //   ③ worksheet: three REAL lodgings per country (public OSM facts: name, address, pin,
 //      phone, website) pasted as Maps place links (addLinks), the panel facts saved field
@@ -101,7 +101,6 @@ const { config } = await import("../src/config.js");
 
 const { saveRegion } = await import("../src/console/data.js");
 const store = await import("../src/scout/store.js");
-const { SCOUT_KEYWORDS } = await import("../src/scout/rules.js");
 const { normalizePhone } = await import("../src/text/phone.js");
 const { classifyWebsite } = await import("../src/scraper/qualify.js");
 const { langForCountry } = await import("../src/i18n/lang.js");
@@ -256,12 +255,20 @@ for (const m of MARKETS) {
   }
 
   // ② tiles + keywords + Maps URLs
-  const region = (await store.listScoutRegions()).find((r) => r.id === m.regionId)!;
+  const region = (await store.listScoutRegions()).find((r) => r.id === m.regionId);
+  if (!region) {
+    // Nemzetközi A: an area whose country has no layer row has no keywords to count, so the
+    // worksheet does not offer it at all (fail closed) — nothing further to run for it.
+    const hasRow = (await db.selectFrom("country").select("iso2").where("iso2", "=", m.country).executeTakeFirst()) !== undefined;
+    report(`② munkalap: ${m.regionId} (${m.country})`, hasRow ? "FAIL" : "PASS",
+      hasRow ? "van ország-sor, mégsem kínálja a munkalap" : "nincs ország-sor → a terület nem kerül a munkalapra (zárva)");
+    continue;
+  }
   await store.ensureTiles(region);
   const tiles = await store.listTiles(region.id, "hu");
   const leafTiles = tiles.filter((t) => t.state !== "out");
   report(`② ensureTiles(${m.regionId})`, tiles.length ? "PASS" : "FAIL", `${tiles.length} csempe, ${leafTiles.length} nem-„out”`);
-  report(`② SCOUT_KEYWORDS (${m.country})`, "INFO", JSON.stringify(SCOUT_KEYWORDS));
+  report(`② scoutKeywords (${m.country})`, "INFO", JSON.stringify(region.keywords));
   const sample = leafTiles[0]!;
   report(`② Maps-keresés URL (${sample.label})`, "INFO", Object.values(sample.maps).slice(0, 2).join("  |  "));
 
@@ -292,7 +299,7 @@ for (const m of MARKETS) {
         if ("error" in r) report(`③ savePlaceField(${p.name}, ${field})`, "FAIL", r.error);
       }
     }
-    for (const kw of SCOUT_KEYWORDS) {
+    for (const kw of region.keywords) {
       const err = await store.setKeyword((await store.getTile(tileId))!, kw, "3");
       if (err) report(`③ setKeyword(${kw})`, "FAIL", err.error);
     }

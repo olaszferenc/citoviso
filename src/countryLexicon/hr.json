@@ -1,6 +1,68 @@
 {
   "iso2": "HR",
   "osmNameTag": "name:hr",
+  "chainFelderitoAddressOrder": "street-first",
+  "chainKontaktGenericWords": ["smjestaj","privatni","apartman","apartmani","apartmana","apartment","apartments","apartmenti","soba","sobe","rooms","room","kuca","kuce","odmor","holiday","home","homes","house","houses","vila","villa","villas","pansion","pension","hotel","hoteli","hotels","hostel","motel","kamp","camp","camping","mobilne","kucice","studio","studios","guesthouse","guest","rezidencija","residence","resort","obiteljski","seoski","turizam","bed","breakfast","lux","luxury","more","sea","view","beach","plaza","wifi","suite","suites","family","with","terrace","garden","pool","bazen","doo","obrt","ltd","i","and","the","one","two","three","bedroom","double","standard","deluxe","large","small","ferienwohnung","zimmer","appartamenti","camere"],
+  "chainKontaktFreemailRegex": "@(gmail|googlemail|yahoo|hotmail|outlook|live|icloud|me|gmx|net|inet|vip|optinet|globalnet|t-com|email\\.t-com|[a-z]{2}\\.t-com)\\.",
+  "chainKontaktEmailDenyRegex": "(@(?:example|sentry|wixpress|sentry-next|domain|email|yourdomain|apartmanija|adriagate|direct-croatia|booking|facebook|google|w3|schema|azop)\\.|\\.(?:png|jpe?g|gif|webp|svg)$|^(?:noreply|no-reply|webmaster|privacy|zastita-podataka|gdpr|dpo|abuse|hostmaster)@)",
+  "chainKontaktObfuscationAt": ["et","majmun"],
+  "chainKontaktObfuscationBareAt": [],
+  "chainKontaktObfuscationDot": ["točka","tocka"],
+  "chainKontaktObfuscationBareDot": ["točka","tocka"],
+  "chainKontaktStreetStopWords": ["ulica","ul","cesta","trg","put","obala","prilaz","odvojak","šetalište","setaliste"],
+  "chainKontaktUpperClass": "A-ZČĆĐŠŽ",
+  "chainKontaktSkipHostRegex": "(^|\\.)(booking\\.com|trip\\.com|instagram\\.com|tripadvisor\\.|airbnb\\.|google\\.|youtube\\.com|wikipedia\\.org|trivago\\.|expedia\\.|hotels\\.com|agoda\\.|kayak\\.|tiktok\\.com|x\\.com|twitter\\.com|linkedin\\.com|bing\\.com|microsoft\\.com|maps\\.apple|waze\\.com|holidaycheck|hometogo\\.|cozycozy\\.|sudreg|fininfo\\.hr|poslovna\\.hr|companywall|bisnode|transparentno)",
+  "chainKontaktPortalHostRegex": "(apartmanija|direct-croatia|adriagate|adriatic\\.hr|smjestaj|croatia\\.hr|booking-croatia|privatni-smjestaj|apartmani-hrvatska|novasol|interhome|e-domizil|atraveo|holidayhome|traveller|cylex|infobel|facebook|turisticka|makarska-info|visitmakarska|tzgm)",
+  "chainKontaktMuniHostRegex": "(^|\\.)(tz|tzg|turisticka|visit)[a-z-]*\\.|turisticka-zajednica|opcina|gradska-uprava",
+  "chainKontaktContactLinkRegex": "(kontakt|kontakti|impressum|impresum|contact|o-nama|o nama|about|rezervacij|upit|cjenik|lokacija)",
+  "chainKontaktContactPaths": ["/kontakt","/kontakt/","/kontakti","/hr/kontakt","/contact","/en/contact","/o-nama","/kontakt.html","/kontakt.php"],
+  "chainKontaktSearchLodging": "smještaj",
+  "chainKontaktSearchPhone": "telefon",
+  "chainKontaktGmapsFlagCategoryRegex": "restoran|restaurant|bar|konoba|vinarija|škola|općina|gradska uprava|crkva",
+  "chainKontaktGmapsBrokerCategoryRegex": "agencija|posredni|nekretnin|turistička agencija|agency",
+  "chainKontaktMultiPropertyRegex": "slični smještaj|ostali smještaj|smještaj u blizini|još smještaja",
+  "chainKontaktAddrStreetRegex": "\\b(ulica|ul\\.|ul|cesta|trg|put|obala)\\b",
+  "chainKontaktPortalAdapters": [],
+  "chainKontaktFreeHeadRegex": "^([^@]+@(?:gmail|googlemail|yahoo|hotmail|outlook|live|icloud|gmx|net|inet|vip|optinet|globalnet|t-com)\\.(?:com|hr|de|at|co\\.uk))\\..+$",
+  "chainKontaktEmailQueryWord": "email",
+  "chainKontaktSerpAiOverviewRegex": "^(Pregled od umjetne inteligencije|Pregled AI-ja|AI Overview)$",
+  "chainFelderitoDiscoveryOrder": ["17", "19", "13", "15", "18", "08", "09", "21", "01", "02", "03", "04", "05", "06", "07", "10", "11", "12", "14", "16", "20"],
+  "chainFelderitoParkedPhrases": ["domena na prodaju", "ova domena je na prodaju", "stranica u izradi", "stranica je u izradi", "web stranica u izradi", "domena je registrirana", "ova domena je registrirana"],
+  "chainFelderitoPresenceTypeWords": ["apartman", "apartmani", "apartment", "apartments", "smjestaj", "sobe", "soba", "rooms", "kuca", "house", "vila", "villa", "pansion", "hotel", "kamp", "camping", "hostel", "guest", "guesthouse", "studio", "odmor", "holiday"],
+  "chainHonlapSkipHostRegex": "(^|\\.)(booking\\.com|trip\\.com|instagram\\.com|tripadvisor\\.|airbnb\\.|google\\.|youtube\\.com|wikipedia\\.org|trivago\\.|expedia\\.|hotels\\.com|agoda\\.|kayak\\.|tiktok\\.com|bing\\.com|microsoft\\.com|waze\\.com|holidaycheck|hometogo\\.|cozycozy\\.|facebook\\.com|wego\\.|mapcarta|viamichelin|fininfo\\.hr|poslovna\\.hr|companywall\\.hr|sudreg)",
+  "chainHonlapPortalHostRegex": "(apartmanija|direct-croatia|adriagate|adriatic\\.hr|smjestaj\\.com\\.hr|croatia\\.hr|booking-croatia|croatia-apartments|apartmani-hrvatska|croatia-travel|privatni-smjestaj|smjestaj-|turisticka-zajednica|tz[a-z-]*\\.hr$|visit[a-z-]*\\.hr$|-info\\.hr$|pincode|adriaticapartments|novasol|interhome|hrvatska\\.hr|ferienhausmiete|e-gastro|tripadvisor|holidaycheck)",
+  "chainHonlapSharedHostRegex": "(webnode\\.(hr|page|com)|wixsite\\.com|blogspot\\.com|weebly\\.com|business\\.site|wordpress\\.com|site123\\.me|jimdosite\\.com|mozello\\.com)$",
+  "chainHonlapContactPaths": ["/kontakt", "/hr/kontakt", "/contact"],
+  "chainHonlapSearchPortalRegex": "(booking\\.|airbnb\\.|facebook\\.|instagram\\.|google\\.|tripadvisor|youtube|tiktok|wikipedia|viamichelin|mapcarta|maps\\.|expedia|agoda|trivago|kayak|hotels\\.com|holidaycheck|momondo|hrs\\.|yelp|apartmanija|direct-croatia|adriagate|adriatic\\.hr|smjestaj\\.com\\.hr|croatia\\.hr|booking-croatia|croatia-apartments|apartmani-hrvatska|croatia-travel|privatni-smjestaj|smjestaj-|turisticka-zajednica|tz[a-z-]*\\.hr$|visit[a-z-]*\\.hr$|-info\\.hr$|pincode|adriaticapartments|novasol|interhome|hrvatska\\.hr|ferienhausmiete|e-gastro|tripadvisor|holidaycheck|fininfo|poslovna\\.hr|companywall|sudreg|njuskalo)",
+  "chainHonlapSearchStopWords": ["smjestaj", "apartman", "apartmani", "apartmana", "sobe", "soba", "kuca", "odmor", "vila", "villa", "pansion", "hotel", "i", "the", "guesthouse", "apartment", "apartments", "rooms", "room", "studio", "privatni"],
+  "chainHonlapClassifyStopWords": ["smjestaj", "apartman", "apartmani", "apartmana", "sobe", "soba", "kuca", "kuce", "odmor", "vila", "villa", "pansion", "hotel", "hostel", "motel", "kamp", "camping", "i", "the", "guesthouse", "apartment", "apartments", "rooms", "room", "studio", "privatni", "house", "pension", "haus", "lux", "luxury"],
+  "chainHonlapFreeHostRegex": "\\.(webnode\\.hr|wixsite\\.com|weebly\\.com|blogspot\\.com|site123\\.me|jimdosite\\.com)$",
+  "chainHonlapAggregatorRegex": "(^|\\.)(apartmanija\\.hr|direct-croatia\\.com|adriagate\\.com|adriatic\\.hr|smjestaj\\.com\\.hr|croatia\\.hr|booking-croatia\\.com|croatia-apartments\\.com|novasol\\.[a-z.]+|interhome\\.[a-z.]+|trip\\.com|wego\\.[a-z.]+|waze\\.com|mapcarta\\.com|bedandbreakfast\\.eu)$",
+  "chainHonlapBraveParams": {"country": "HR", "search_lang": "hr"},
+  "chainHonlapStartpageLui": "hrvatski",
+  "chainNevjavRules": "neutral",
+  "chainCountryNames": {"HR": ["Hrvatska", "Croatia"], "HU": ["Mađarska", "Hungary"], "SI": ["Slovenija", "Slovenia"], "BA": ["Bosna i Hercegovina", "Bosnia and Herzegovina"], "ME": ["Crna Gora", "Montenegro"], "RS": ["Srbija", "Serbia"], "IT": ["Italija", "Italy"], "AT": ["Austrija", "Austria"]},
+  "chainOsmCategoryLabels": {"hotel": "Hotel", "guest_house": "Pansion", "apartment": "Apartman", "hostel": "Hostel", "chalet": "Kuća za odmor", "motel": "Motel", "camp_site": "Kamp", "caravan_site": "Kamp za kamp-kućice"},
+  "chainNameLodgingRegex": "smještaj|apartman|apartmani|apartmana|sobe|soba|pansion|kuća za odmor|vila|villa|kamp|camping|motel|hostel|hotel|guest ?house|studio apartman",
+  "chainBareTypeNames": ["apartman", "apartmani", "camping", "hostel", "hotel", "kamp", "motel", "pansion", "privatni smjestaj", "smjestaj", "soba", "sobe", "vila", "villa"],
+  "chainExcludeNameRegex": "hotel za pse|pansion za pse|smještaj za pse|za kućne ljubimce|za pse|mačk|starački dom|dom za starije|prihvatilište|beskućni|radnički smještaj|samački hotel|\\b(double|twin|single|triple|family) room\\b|\\bdvokrevetn|\\bjednokrevetn|\\(zatvoreno\\)|\\bzatvoreno\\b|\\bclosed\\b",
+  "chainTypeWordsGeneric": ["smjestaj", "privatni", "apartman", "apartmani", "apartmana", "apartment", "apartments", "sobe", "soba", "rooms", "room", "kuca", "kuce", "odmor", "vila", "villa", "pansion", "hotel", "motel", "kamp", "camping", "hostel", "guest", "house", "guesthouse", "studio", "i", "the", "and", "doo", "obrt"],
+  "chainMapsLodgingCategoryRegex": "smještaj|apartman|hotel|pansion|hostel|motel|kamp|kuća za odmor|vila|soba|sobe|noćenje s doručkom|odmaralište|turističko naselje|seoski turizam|agroturizam|mobilne kućice|guest|lodge|resort|bed (?:&|and) breakfast|studio|villa",
+  "chainMapsNonLodgingCategoryRegex": "plaža|kupalište|bazen|park|muzej|crkva|vidikovac|ribolov|trgovina|dućan|ured|tvrtka|festival|škola|vrtić|bolnica|ambulanta|životinj|pas|mačk|sport|teretana|benzinsk|auto(?!kamp)|namještaj|groblje|općina|gradska uprava|dvorana|vjenčanj|vinarij|vinoteka",
+  "chainMapsFoodCategoryRegex": "restoran|konoba|pizzeria|bar|kafić|caffe|slastičarnica|bistro|pivnica|zalogajnica|grill",
+  "chainMapsStrandNameRegex": "\\bplaža|kupalište|bazen|\\bd\\.o\\.o\\.?$|\\bobrt$",
+  "chainMapsLodgingNameRegex": "hotel|pansion|apartman|apartmani|kamp|camping|sobe|vila|smještaj",
+  "chainMapsBareTypeNames": ["smjestaj", "apartman", "apartmani", "sobe", "hotel", "kamp", "pansion"],
+  "chainMapsRentalListingRegex": "^(Stan|Kuća|Apartman|Vila|Soba)\\W+za \\d+ osob",
+  "chainPostcodeRegex": "\\d{5}",
+  "chainConsentRejectRole": ["Odbij sve", "Reject all", "Alle ablehnen"],
+  "chainConsentRejectText": ["Odbij sve", "Reject all"],
+  "chainCaptchaTextRegex": "unusual traffic|neobičan promet|nisam robot|not a robot",
+  "chainMapsListEndRegex": "Došli ste do kraja popisa|kraj popisa|reached the end of the list",
+  "chainMapsWebsiteLabels": ["Web-lokacija", "Website"],
+  "chainMapsAddressPrefix": "(?:[Aa]dresa|[Aa]dresu):",
+  "chainMapsReviewWordsRegex": "recenzij|ocjen|review",
+  "chainMapsClosedRegex": "Trajno zatvoreno|Permanently closed",
   "tradeWords": [
     "smjestaj", "privatni", "apartman", "apartmani", "apartmana", "apartment", "apartments",
     "apartmenti", "soba", "sobe", "rooms", "room", "zimmer", "kuca", "kuce", "odmor", "holiday",
@@ -43,5 +105,55 @@
     "email.t-com.hr", "zg.t-com.hr", "st.t-com.hr", "ri.t-com.hr", "os.t-com.hr", "du.t-com.hr",
     "zd.t-com.hr", "pu.t-com.hr", "sk.t-com.hr", "ka.t-com.hr", "vz.t-com.hr", "si.t-com.hr", "hi.t-com.hr"
   ],
-  "officialSiteWords": ["sluzbena stranica", "sluzbene stranice", "official website", "official site"]
+  "officialSiteWords": ["sluzbena stranica", "sluzbene stranice", "official website", "official site"],
+
+  "officialSiteQuery": "službena stranica",
+  "placesTradeWords": [
+    "apartment", "apartments", "apartmani", "house", "houses", "guesthouse", "guest", "pension", "family",
+    "suite", "suites", "room", "rooms", "sobe", "breakfast", "holiday", "residence", "home", "homes",
+    "wellness", "sea", "view", "with", "terrace", "camp", "resorts", "hotels", "bungalow", "bungalows",
+    "studio", "vila", "villa", "ltd", "doo"
+  ],
+  "typeWords": [
+    "apartman", "apartmani", "apartment", "apartments", "vila", "villa", "kuca", "house", "guesthouse",
+    "guest", "pansion", "pension", "hotel", "hostel", "kamp", "camping", "sobe", "soba", "rooms", "studio"
+  ],
+  "portalTypeWords": [
+    "kuca", "kuce", "vila", "villa", "apartman", "apartmani", "apartment", "studio", "soba", "sobe",
+    "pansion", "pension", "hotel", "hostel", "kamp", "camping", "motel", "konoba", "agroturizam", "opg",
+    "mobilna", "mobilne", "kucica", "kucice", "chalet", "cottage", "bungalov", "bungalow"
+  ],
+  "genericSiteWords": [
+    "smjestaj", "apartman", "apartmani", "apartmana", "apartment", "apartments", "sobe", "soba", "rooms",
+    "vila", "villa", "kuca", "house", "pansion", "hotel", "hostel", "kamp", "camping", "motel", "studio",
+    "holiday", "privatni", "turizam"
+  ],
+  "listingTitleGenericWords": [
+    "smjestaj", "privatni", "apartman", "apartmani", "apartmana", "apartment", "apartments", "sobe", "soba",
+    "rooms", "vila", "villa", "kuca", "house", "pansion", "hotel", "hostel", "kamp", "camping", "motel",
+    "studio", "holiday"
+  ],
+  "foreignLinkGenericWords": ["apartmani", "apartmana", "vila", "sobe", "soba", "kuca", "smjestaj", "pansion", "kamp"],
+  "listingPathWords": ["smjestaj", "privatni-smjestaj", "znamenitosti"],
+  "relatedBlockPatterns": [
+    "slični\\s+smještaj", "slicni\\s+smjestaj", "slični\\s+objekti", "slicni\\s+objekti",
+    "smještaj\\s+u\\s+blizini", "smjestaj\\s+u\\s+blizini"
+  ],
+  "amenityHeadingPatterns": ["sadržaj", "sadrzaj", "oprema", "usluge"],
+  "nonAmenityItemPatterns": [
+    "kontakt", "galerija", "cijene", "cjenik", "rezervacij", "recenzij", "karta", "lokacija", "opis",
+    "početna", "pocetna", "natrag", "kolačić", "kolacic", "privatnost"
+  ],
+  "capacityUnitPatterns": ["osoba", "osobe", "osobu"],
+  "capacityJoinPatterns": ["ili", "do"],
+  "capacityContextPatterns": ["smještaj", "smjestaj", "gost", "kapacitet", "primiti", "pogodan", "maksimalno"],
+  "listHeadlinePatterns": [
+    ":\\s*\\d+\\s*(?:smještaj[a-z]*|smjestaj[a-z]*|objekat|objekata|apartmana)(?![\\p{L}\\d])"
+  ],
+  "freemailLabels": ["gmail", "googlemail", "yahoo", "hotmail", "outlook", "gmx"],
+  "freemailExact": [
+    "web.de", "net.hr", "inet.hr", "vip.hr", "optinet.hr", "globalnet.hr", "t-com.hr", "email.t-com.hr",
+    "zg.t-com.hr", "st.t-com.hr", "ri.t-com.hr", "os.t-com.hr", "du.t-com.hr", "zd.t-com.hr", "pu.t-com.hr",
+    "sk.t-com.hr", "ka.t-com.hr", "vz.t-com.hr", "si.t-com.hr", "hi.t-com.hr"
+  ]
 }

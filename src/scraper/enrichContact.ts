@@ -1,34 +1,33 @@
 import { fullerEmail } from "../email/leadEmails.js";
+import { leadCountryConfig, type CountryConfig } from "../country.js";
+import { isMobileRawIn, type PhoneRules } from "../text/phoneCountry.js";
 import { mergeContacts } from "./contactLedger.js";
 import { isBusinessEmail } from "./enrichWebSearch.js";
-import type { ContactCandidate, ContactChannel, QualifiedLead } from "./types.js";
+import type { ContactCandidate, ContactChannel, QualifiedLead, Region } from "./types.js";
 
 // Contact qualification. Our outreach is an automated, clickable-link model, so
 // the channel matters more than mere presence: email > sms(mobile) > voice > none.
 // This pass pulls an email off the own-site HTML (already fetched) when the lead
 // has none, and classifies the best channel.
 
-// Hungarian mobile operator prefixes (after country/trunk code): 20,30,31,50,70.
-const MOBILE_PREFIXES = ["20", "30", "31", "50", "70"];
-
-export function isMobile(phone: string): boolean {
-  let d = phone.replace(/\D/g, "");
-  if (d.startsWith("0036")) d = d.slice(4);
-  else if (d.startsWith("36")) d = d.slice(2);
-  else if (d.startsWith("06")) d = d.slice(2);
-  else if (d.startsWith("6") && d.length >= 9) d = d.slice(1);
-  return MOBILE_PREFIXES.includes(d.slice(0, 2));
+/** Is this number (as written) a mobile of the lead's country? `rules` = its country row
+ *  (ADR-0437: mobile ranges, dial code, trunk prefix); no row → not known to be one. The HU
+ *  row answers exactly the former Hungarian test (20/30/31/50/70 after +36/0036/36/06/6). */
+export function isMobile(phone: string, rules: PhoneRules | null): boolean {
+  return isMobileRawIn(phone, rules);
 }
 
-export function resolveChannel(email?: string, phone?: string): ContactChannel {
+export function resolveChannel(email: string | undefined, phone: string | undefined, rules: PhoneRules | null): ContactChannel {
   if (email) return "email";
-  if (phone && isMobile(phone)) return "sms";
+  if (phone && isMobile(phone, rules)) return "sms";
   if (phone) return "voice";
   return "none";
 }
 
-export function enrichContact(leads: QualifiedLead[]): QualifiedLead[] {
+/** `region` = the scrape area — the country fallback of a lead whose own country is unknown. */
+export function enrichContact(leads: QualifiedLead[], region?: Pick<Region, "country"> | null): QualifiedLead[] {
   return leads.map((l) => {
+    const cfg: CountryConfig | null = leadCountryConfig(l, region);
     // Fill email from the own-site HTML if discovery didn't provide one — but
     // apply the SAME quality bar as the web-search path. A site's boilerplate
     // can carry a theme placeholder (the 2026-08-20 run pulled info@domainem.hu
@@ -79,8 +78,8 @@ export function enrichContact(leads: QualifiedLead[]): QualifiedLead[] {
     return {
       ...l,
       email,
-      contactChannel: resolveChannel(email, l.phone),
-      contacts: sightings.length ? mergeContacts(l.contacts, sightings) : l.contacts,
+      contactChannel: resolveChannel(email, l.phone, cfg),
+      contacts: sightings.length ? mergeContacts(l.contacts, sightings, undefined, cfg) : l.contacts,
     };
   });
 }

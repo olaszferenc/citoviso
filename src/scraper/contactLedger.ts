@@ -12,15 +12,25 @@
 // come LATER, from outreach results, not from a guess made today.
 
 import type { ContactCandidate } from "./types.js";
+import { countryLexicon, lexList, allCountryLexicons } from "../countryLexicon.js";
+import { phoneKeyIn, type PhoneRules } from "../text/phoneCountry.js";
 
-/** Same phone written differently is the same phone: compare on digits only. */
-export function phoneKey(v: string): string {
-  const d = v.replace(/\D/g, "");
-  // Hungarian numbers arrive as +36…, 0036…, 06… — normalise to the national part.
-  if (d.startsWith("0036")) return d.slice(4);
-  if (d.startsWith("36") && d.length >= 10) return d.slice(2);
-  if (d.startsWith("06")) return d.slice(2);
-  return d;
+/** What a ledger key needs of the lead's country row (ADR-0437): its dial code and trunk prefix. */
+export type PhoneKeyRules = Pick<PhoneRules, "dialCode" | "trunkPrefix">;
+
+/**
+ * The key of a caller that passes NO country — the ledger's historic arithmetic (a number
+ * written +36…, 0036…, 06… → its national part). Kept only for the callers outside the
+ * collection chain that first read the number in its lead's country themselves
+ * (outreach/sharedContactGate normalises a non-HU number to E.164 before it asks); every
+ * collection caller passes its lead's row. Not a country fallback: it is the same digits.
+ */
+const LEGACY_KEY_RULES: PhoneKeyRules = { dialCode: "36", trunkPrefix: "06" };
+
+/** Same phone written differently is the same phone: compare on its national digits, in the
+ *  lead's country (`rules` = its row; nemzetközi A). The HU row's key is the historic one. */
+export function phoneKey(v: string, rules: PhoneKeyRules | null = LEGACY_KEY_RULES): string {
+  return phoneKeyIn(v, rules);
 }
 
 /**
@@ -33,15 +43,42 @@ export function phoneKey(v: string): string {
  * was ledgered "idegen domain" although `t-online`/`invitel`/`upcmail` already passed —
  * a personal mailbox is not a foreign business.
  */
-export const FREEMAIL =
-  /@((gmail|googlemail|freemail|citromail|indamail|vipmail|hotmail|outlook|yahoo|t-online|invitel|upcmail|digikabel|chello|axelero|t-email|gmx)\.|web\.de$)/i;
+// Nemzetközi A: the providers are DATA of each country (lexicon `freemailLabels` — a mailbox
+// host label under ANY tld, "gmail." — and `freemailExact` — one whole domain, "web.de"); the HU
+// lists are the former regex verbatim, so the HU pattern matches exactly what it matched.
+const escRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function freemailPattern(labels: readonly string[], exact: readonly string[]): RegExp {
+  const alts = [
+    ...(labels.length ? [`(${labels.map(escRe).join("|")})\\.`] : []),
+    ...(exact.length ? [`(${exact.map(escRe).join("|")})$`] : []),
+  ];
+  return alts.length ? new RegExp(`@(${alts.join("|")})`, "i") : /(?!)/;
+}
+const freemailCache = new Map<string, RegExp>();
+/**
+ * The freemail test of a lead's COUNTRY (its own providers); a country without a lexicon, or a
+ * caller that knows none, gets every country's providers (FREEMAIL).
+ */
+export function freemailRe(country?: string | null): RegExp {
+  const iso = countryLexicon(country)?.iso2 ?? "*";
+  let re = freemailCache.get(iso);
+  if (!re) {
+    const isos = iso === "*" ? allCountryLexicons().map((l) => l.iso2) : [iso];
+    const uniq = (key: string): string[] => [...new Set(isos.flatMap((c) => lexList(c, key)))];
+    re = freemailPattern(uniq("freemailLabels"), uniq("freemailExact"));
+    freemailCache.set(iso, re);
+  }
+  return re;
+}
+/** Every country's freemail providers (for a reader that has no lead country). */
+export const FREEMAIL = freemailRe(null);
 
 /** The verdict the corroboration rule writes for a domain not tied to the lead. */
 export const FOREIGN_DOMAIN_REASON = "nem köthető ehhez a vállalkozáshoz (idegen domain)";
 
-function key(c: { kind: string; value: string }): string {
+function key(c: { kind: string; value: string }, rules?: PhoneKeyRules | null): string {
   return c.kind === "phone"
-    ? `phone:${phoneKey(c.value)}`
+    ? `phone:${phoneKey(c.value, rules)}`
     : `email:${c.value.trim().toLowerCase()}`;
 }
 
@@ -62,12 +99,14 @@ export function mergeContacts(
   existing: readonly ContactCandidate[] | undefined,
   found: readonly Omit<ContactCandidate, "firstSeen">[],
   today = new Date().toISOString().slice(0, 10),
+  /** The lead's country row — two spellings of one number are one key in ITS plan. */
+  rules?: PhoneKeyRules | null,
 ): ContactCandidate[] {
   const out = new Map<string, ContactCandidate>();
-  for (const c of existing ?? []) out.set(key(c), c);
+  for (const c of existing ?? []) out.set(key(c, rules), c);
   for (const c of found) {
     if (!c.value?.trim()) continue;
-    const k = key(c);
+    const k = key(c, rules);
     const prev = out.get(k);
     if (!prev) {
       out.set(k, { ...c, firstSeen: today });
@@ -102,8 +141,11 @@ export function guestVisibleContact(
   contacts: readonly ContactCandidate[] | undefined,
   kind: "email" | "phone",
   value: string,
+  /** The lead's country (ISO-2): its phone key and its freemail providers. */
+  country?: string | null,
+  rules?: PhoneKeyRules | null,
 ): boolean {
-  const row = (contacts ?? []).find((c) => key(c) === key({ kind, value }));
+  const row = (contacts ?? []).find((c) => key(c, rules) === key({ kind, value }, rules));
   if (!row || row.accepted) return true;
-  return kind === "email" && row.rejectedReason === FOREIGN_DOMAIN_REASON && FREEMAIL.test(value);
+  return kind === "email" && row.rejectedReason === FOREIGN_DOMAIN_REASON && freemailRe(country).test(value);
 }

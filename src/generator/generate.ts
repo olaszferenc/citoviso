@@ -2,6 +2,7 @@
 // standalone HTML mock, and records a mock_artifact row. Both the CLI (run.ts)
 // and the operator console call this — one code path, clean boundary.
 
+import { countryOf } from "../country.js";
 import { transliterate } from "../text/translit.js";
 import {
   currentAiUsage,
@@ -362,10 +363,10 @@ async function askPlaces(lead: QualifiedLead, identity: PlacesIdentity): Promise
   const id = storedPlaceId(lead);
   let via: CachedPlaces["via"] = "text_search";
   let m = id
-    ? await placesDetailsMatch(id, lead.name, identity.lat, identity.lon, key, lead.city)
+    ? await placesDetailsMatch(id, lead.name, identity.lat, identity.lon, key, lead.city, countryOf(lead))
     : null;
   if (m) via = "details";
-  else m = await placesLookup(lead.name, identity.lat, identity.lon, key, lead.city);
+  else m = await placesLookup(lead.name, identity.lat, identity.lon, key, lead.city, countryOf(lead));
   if (!m) return { v: 1, identity, via, match: null };
   const conf = scoreMatch({
     distanceMeters: m.distanceMeters,

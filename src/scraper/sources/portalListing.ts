@@ -36,26 +36,28 @@ import { multiPropertyPage } from "../portalPhotos.js";
 import { fetchPortalPage } from "./portals/politeness.js";
 import { hostOf, looksLikeListingUrl, resolvePortal } from "./portals/registry.js";
 import { webSearch, webSearchAvailable } from "./webSearch.js";
-import { GENERIC_NAME_WORD } from "../genericWords.js";
+import { genericNameWords, matcherWords } from "../genericWords.js";
+import { normalizePhoneIn, type PhoneRules } from "../../text/phoneCountry.js";
 
 /**
  * Accommodation TYPE words. Stripped from the brand (they identify nothing on
  * their own), but kept as a separate signal: "Rózsakő Ház" and "Rózsakő Nyaraló"
  * are two different properties in the same village, and the type word is the
  * ONLY thing that tells them apart. Live case — both exist in Badacsonytomaj.
+ * The lead's country's list (lexicon `portalTypeWords`, HU verbatim; `country` omitted or
+ * unknown → every country's, genericWords.matcherWords).
  */
-const TYPE_WORD = new Set([
-  "haz", "hazak", "vendeghaz", "nyaralo", "udulohaz", "udulo", "apartman",
-  "apartmanhaz", "panzio", "hotel", "villa", "kastely", "fogado", "csarda",
-  "kemping", "camping", "hostel", "motel", "porta", "kuria", "pinceszet",
-  "birtok", "tanya", "faház", "fahaz", "chalet", "cottage", "studio", "lak",
-]);
+function typeWordSet(country: string | null | undefined): ReadonlySet<string> {
+  return matcherWords(country, "portalTypeWords");
+}
 
-/** The lead's identifying words — what a listing must actually be about. */
-export function brandTokens(name: string): string[] {
-  const words = nameWords(name).filter((t) => isBrandShaped(t) && !GENERIC_NAME_WORD.has(t.replace(/-/g, "")));
+/** The lead's identifying words — what a listing must actually be about. `country` = the lead's
+ *  (its trade words; genericWords.ts). */
+export function brandTokens(name: string, country?: string | null): string[] {
+  const generic = genericNameWords(country);
+  const words = nameWords(name).filter((t) => isBrandShaped(t) && !generic.has(t.replace(/-/g, "")));
   // A capitalised acronym („BBB Apartman”) is a brand word too (acronymWords).
-  return [...words, ...acronymWords(name).filter((t) => !words.includes(t) && !GENERIC_NAME_WORD.has(t))];
+  return [...words, ...acronymWords(name).filter((t) => !words.includes(t) && !generic.has(t))];
 }
 
 /**
@@ -64,14 +66,15 @@ export function brandTokens(name: string): string[] {
  * Apartman Balatonfenyves” share only their town — prod 2026-11-04, the town list that gave
  * both the same gallery; the town word must not make them twins.
  */
-export function twinBrands(name: string, city: string | undefined): string[] {
+export function twinBrands(name: string, city: string | undefined, country?: string | null): string[] {
   const town = new Set(cityTerms({ city }));
-  return brandTokens(name).filter((t) => !town.has(t));
+  return brandTokens(name, country).filter((t) => !town.has(t));
 }
 
 /** Type words present in a name, deaccented. */
-function typeWords(name: string): string[] {
-  return tokens(name).filter((t) => TYPE_WORD.has(t));
+function typeWords(name: string, country: string | null | undefined): string[] {
+  const set = typeWordSet(country);
+  return tokens(name).filter((t) => set.has(t));
 }
 
 /**
@@ -83,13 +86,18 @@ function typeWords(name: string): string[] {
  * Only captions that look like a business name are judged: a plain "Kert" or
  * "Terasz" carries no brand and must not cost us a genuine photo.
  */
-export function captionBelongsToOther(caption: string | undefined, leadName: string, typoHits: readonly string[] = []): boolean {
+export function captionBelongsToOther(
+  caption: string | undefined,
+  leadName: string,
+  typoHits: readonly string[] = [],
+  country?: string | null,
+): boolean {
   if (!caption) return false;
-  if (!typeWords(caption).length) return false; // not a business name — no verdict
+  if (!typeWords(caption, country).length) return false; // not a business name — no verdict
   // The portal's own misspelling of THIS lead („Fenvves Vendégház – Kehidakustány fotó 3”) names
   // the lead — once the listing itself was accepted on that typo (typoBrandTokens).
-  const typoNamed = typoHits.length > 0 && typoBrandTokens(leadName, deaccent(caption.toLowerCase())).some((t) => typoHits.includes(t));
-  return nameCoverage(leadName, caption) === 0 && !typoNamed;
+  const typoNamed = typoHits.length > 0 && typoBrandTokens(leadName, deaccent(caption.toLowerCase()), country).some((t) => typoHits.includes(t));
+  return nameCoverage(leadName, caption, [], country) === 0 && !typoNamed;
 }
 
 /**
@@ -106,13 +114,13 @@ export function captionBelongsToOther(caption: string | undefined, leadName: str
  * "Nyaraló" (unrelated stems, live case in Badacsonytomaj) — that protection is
  * untouched, since neither contains the other.
  */
-export function typeWordConflict(leadName: string, listingTitle: string | undefined): boolean {
+export function typeWordConflict(leadName: string, listingTitle: string | undefined, country?: string | null): boolean {
   if (!listingTitle) return false;
-  const leadTypes = typeWords(leadName);
+  const leadTypes = typeWords(leadName, country);
   if (!leadTypes.length) return false;
   const hay = deaccent(listingTitle.toLowerCase());
   if (leadTypes.some((t) => hay.includes(t))) return false;
-  const listingTypes = typeWords(listingTitle);
+  const listingTypes = typeWords(listingTitle, country);
   if (!listingTypes.length) return false;
   // Only this direction needs testing: the reverse (the lead's type word inside a
   // LONGER listing one) is already answered above by the substring test on `hay`.
@@ -126,8 +134,8 @@ export function typeWordConflict(leadName: string, listingTitle: string | undefi
  * ("Rózsakő Ház Villa - Badacsonytomaj"), and Jaccard would punish that even
  * though the brand matched completely.
  */
-export function nameCoverage(leadName: string, listingText: string, typoHits: readonly string[] = []): number {
-  const brand = brandTokens(leadName);
+export function nameCoverage(leadName: string, listingText: string, typoHits: readonly string[] = [], country?: string | null): number {
+  const brand = brandTokens(leadName, country);
   if (!brand.length) return 0;
   const hay = deaccent(listingText.toLowerCase());
   const hit = brand.filter((t) => hasNameWord(hay, t) || typoHits.includes(t)).length;
@@ -150,18 +158,29 @@ export function withinOneEdit(a: string, b: string): boolean {
  * another word („Hold” / „Hód”) — and never a word the page also prints right. A typo alone
  * proves nothing: the caller accepts it only with the town AND a hard identifier on the page.
  */
-export function typoBrandTokens(leadName: string, haystack: string): string[] {
+export function typoBrandTokens(leadName: string, haystack: string, country?: string | null): string[] {
   const words = new Set(haystack.split(/[^a-z0-9]+/).filter((w) => w.length >= 5));
-  return brandTokens(leadName).filter(
+  return brandTokens(leadName, country).filter(
     (t) => !t.includes("-") && t.length >= 6 && !hasNameWord(haystack, t) && [...words].some((w) => withinOneEdit(w, t)),
   );
 }
 
-/** Comparable form of a phone number: the last 9 digits (drops +36/06 variance). */
-function phoneKey(phone: string | undefined): string | undefined {
-  if (!phone) return undefined;
-  const digits = phone.replace(/\D/g, "");
-  return digits.length >= 9 ? digits.slice(-9) : undefined;
+/**
+ * Comparable form of a phone number in the lead's country (`rules` = its row, ADR-0437).
+ * The Hungarian plan keeps the historic key — the last 9 digits (drops the +36/06 variance).
+ * Any other plan: the national number of its E.164 reading ("+385 21 612 345" and
+ * "021 612 345" → "21612345"; 9 digits would cut a Croatian 8-digit number differently).
+ * No row → no key (the phone gives no evidence rather than a wrong one).
+ */
+export function phoneKey(phone: string | undefined, rules: PhoneRules | null): string | undefined {
+  if (!phone || !rules) return undefined;
+  if (rules.phonePlan === "hu") {
+    const digits = phone.replace(/\D/g, "");
+    return digits.length >= 9 ? digits.slice(-9) : undefined;
+  }
+  const e164 = normalizePhoneIn(phone, rules);
+  const nsn = e164?.startsWith(`+${rules.dialCode}`) ? e164.slice(rules.dialCode.length + 1) : undefined;
+  return nsn && nsn.length >= 6 ? nsn : undefined;
 }
 
 /**
@@ -280,12 +299,14 @@ export async function readPortalListing(
   if (!looksLikeListingUrl(url)) {
     return { url, skipped: "nem adatlap-URL (kategória/keresőoldal)" };
   }
-  if (!brandTokens(lead.name).length) {
+  // ADR-0437: the lead's country row — its trade words, its phone plan, its page language.
+  const loc = leadCountryConfig(lead, region);
+  const iso = loc?.iso2 ?? null;
+  if (!brandTokens(lead.name, iso).length) {
     return { url, skipped: "a lead neve csupa általános szó — portálon nem azonosítható" };
   }
 
-  // ADR-0437: the page is requested in the lead's country's language; no layer row = not read.
-  const loc = leadCountryConfig(lead, region);
+  // The page is requested in the lead's country's language; no layer row = not read.
   if (!loc) return { url, skipped: "a lead országa nincs az ország-rétegben" };
   const { page, reason } = await fetchPortalPage(url, {
     gapMs: adapter.gapMs,
@@ -310,12 +331,12 @@ export async function readPortalListing(
 
   const pageText = textOf(page.html);
   const haystack = deaccent(pageText.toLowerCase());
-  const leadPhone = phoneKey(lead.phone);
+  const leadPhone = phoneKey(lead.phone, loc);
   // Does the page itself print this lead's phone number? A phone number
   // identifies ONE business worldwide, so this is the hardest identity evidence
   // a listing can carry.
   const phoneOnPage = leadPhone ? pageText.replace(/\D/g, "").includes(leadPhone) : false;
-  const brandOnPage = brandTokens(lead.name).some((t) => hasNameWord(haystack, t));
+  const brandOnPage = brandTokens(lead.name, iso).some((t) => hasNameWord(haystack, t));
 
   // Same brand+town proof the presence layer uses (§F.14 / ADR-0043): the town
   // anchor is the lead's OWN city, never the region label.
@@ -327,12 +348,12 @@ export async function readPortalListing(
   // lead whose city facet is "Badacsonytomaj", so the town token misses while
   // the page prints the lead's exact number. This exception ADDS hard evidence;
   // it never relaxes the rule for a page that has none.
-  const extracted = extractListing(page.html, page.finalUrl, lead.name);
+  const extracted = extractListing(page.html, page.finalUrl, lead.name, loc);
   // A town / search list behind a listing-shaped URL (szallaskeres.hu's flat slugs): its
   // prose, amenities and photos are several houses' — never a source (portalPhotos.multiPropertyPage).
   const manyHouses = multiPropertyPage(extracted);
   if (manyHouses) return { url, skipped: `több szállás listaoldala, nem adatlap: ${manyHouses}` };
-  const listingPhone = phoneKey(extracted.phone);
+  const listingPhone = phoneKey(extracted.phone, loc);
   const distance =
     lead.lat != null && lead.lon != null && extracted.lat != null && extracted.lon != null
       ? metersBetween(lead.lat, lead.lon, extracted.lat, extracted.lon)
@@ -342,12 +363,12 @@ export async function readPortalListing(
   // the page AND a hard identifier: its phone, its house number, or the pin within 150 m.
   const terms = geoTerms(lead, region);
   const townOnPage = terms.some((t) => deaccent(page.html.toLowerCase()).includes(t));
-  const typoHits = brandOnPage ? [] : typoBrandTokens(lead.name, haystack);
+  const typoHits = brandOnPage ? [] : typoBrandTokens(lead.name, haystack, iso);
   const typoIdentity =
     typoHits.length > 0 &&
     townOnPage &&
     (phoneOnPage || (leadPhone !== undefined && leadPhone === listingPhone) || streetMatch === true || (distance !== undefined && distance <= 150));
-  if (!verify(lead.name, terms, page.html) && !(brandOnPage && phoneOnPage) && !typoIdentity) {
+  if (!verify(lead.name, terms, page.html, iso) && !(brandOnPage && phoneOnPage) && !typoIdentity) {
     return { url, skipped: "az oldal nem igazolja a márkát ÉS a települést" };
   }
 
@@ -355,7 +376,7 @@ export async function readPortalListing(
   // Score the name against the listing's own headline/prose when it has one;
   // the pre-structured-data stock (table layouts, no h1, no meta) has neither,
   // and falling back to the raw HTML head used to score a real match at 0.00.
-  const coverage = nameCoverage(lead.name, listingText || pageText.slice(0, 8_000), typoIdentity ? typoHits : []);
+  const coverage = nameCoverage(lead.name, listingText || pageText.slice(0, 8_000), typoIdentity ? typoHits : [], iso);
 
   // Phone signal: compare the two numbers when the listing published one;
   // otherwise fall back to "the page prints our number anywhere", which is the
@@ -389,7 +410,7 @@ export async function readPortalListing(
   // house number, or coordinates on top of each other) may override it.
   const hardIdentity =
     phoneMatch === true || streetMatch === true || (distance !== undefined && distance <= 150);
-  const conflict = typeWordConflict(lead.name, extracted.title);
+  const conflict = typeWordConflict(lead.name, extracted.title, iso);
   if (conflict && !hardIdentity) {
     return {
       url,
@@ -446,7 +467,7 @@ export async function readPortalListing(
   // probe's size rides along, so keepUsablePhotos need not measure it a second time.
   const upgrade = adapter.largestPhotoUrl;
   const filtered = extracted.images.filter(
-    (img) => !captionBelongsToOther(img.caption, lead.name, typoIdentity ? typoHits : []),
+    (img) => !captionBelongsToOther(img.caption, lead.name, typoIdentity ? typoHits : [], iso),
   );
   const resolved = await Promise.all(
     filtered.map(async (img) => {
@@ -593,16 +614,18 @@ export async function findPortalCandidates(
     // The lead's own town, not the region label (ADR-0043): "Tekergő keszthely
     // és környéke" returns portals about a different place entirely.
     // ADR-0437: in the lead's country's search language; no layer row = no search.
+    // The trade word is the country row's first accommodation keyword (HU "szállás").
     const loc = leadCountryConfig(lead, region);
-    const results = loc
-      ? await webSearch(`${lead.name} ${searchPlace(lead, region)} szállás`, undefined, undefined, 10, loc.searchLang)
+    const trade = loc?.searchKeywords.accommodation?.[0];
+    const results = loc && trade
+      ? await webSearch(`${lead.name} ${searchPlace(lead, region)} ${trade}`, undefined, undefined, 10, loc.searchLang)
       : [];
     for (const r of results) {
       if (!r.link) continue;
       // The result must at least NAME the business; a portal's category page
       // ("Badacsonytomaji szállások") mentions the town only.
       const hay = `${r.title} ${r.snippet}`;
-      if (nameCoverage(lead.name, hay) < 0.5) continue;
+      if (nameCoverage(lead.name, hay, [], loc?.iso2) < 0.5) continue;
       consider(r.link);
     }
   }

@@ -389,7 +389,7 @@ console.log("\ncsillag a névben: portál-cím → caption → mock név / alt (
   check("PIROS IKER: csillag nélkül betűre ugyanaz", keep.every((s) => withoutStarRating(s) === s), keep.filter((s) => withoutStarRating(s) !== s));
   // Scrape: the portal's og:title and an <img alt> carry the stars → the listing does not.
   const page = `<html><head><meta property="og:title" content="Panoráma Faház**** Mohács"><meta property="og:description" content="Panoráma Faház**** – Szállás Mohács. Csendes faház a Duna mellett, saját kerttel."></head><body><img alt="Panoráma Faház**** – Mohács fotó 32" src="/upload/places/1/fullHd/mohacs-panorama-fahaz32.jpg"></body></html>`;
-  const l = extractListing(page, "https://hovamenjek.hu/mohacs/panorama-fahaz");
+  const l = extractListing(page, "https://hovamenjek.hu/mohacs/panorama-fahaz", undefined, null);
   check("behúzó (extractListing): a cím, a leírás és a caption csillag nélkül",
     l.title === "Panoráma Faház Mohács" && !/[*★]/.test(l.description ?? "") && l.images.every((i) => !/[*★]/.test(i.caption ?? "")) && l.images.some((i) => i.caption === "Panoráma Faház – Mohács fotó 32"),
     { title: l.title, description: l.description, captions: l.images.map((i) => i.caption) });

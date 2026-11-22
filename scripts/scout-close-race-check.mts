@@ -23,7 +23,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { db } from "../src/db/client.js";
 import { closeScoutTile, getTile, reopenScoutTile } from "../src/scout/store.js";
-import { SCOUT_KEYWORDS } from "../src/scout/rules.js";
+import { scoutKeywords } from "../src/scout/rules.js";
 import { runSourcePhase } from "../src/scraper/batchedRun.js";
 
 let failures = 0;
@@ -36,7 +36,8 @@ function check(name: string, cond: boolean, detail?: unknown): void {
 }
 
 const REGION = `zz-guard-${randomUUID().slice(0, 8)}`;
-const kw = Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, 1]));
+// The guard region is created with the column default country (HU) — its keywords.
+const kw = Object.fromEntries(scoutKeywords("HU").map((k) => [k, 1]));
 
 let nextIdx = 0;
 async function makeTile(label: string, places: number): Promise<string> {

@@ -29,9 +29,11 @@ const BLOCK_COOLDOWN_MS = 60 * 60_000;
 const UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
 
-/** Accept-Language per Brave-style search_lang (the country layer's value). */
-function acceptLanguage(searchLang: string): string {
-  const l = (searchLang || "hu").toLowerCase().slice(0, 2);
+/** Accept-Language per Brave-style search_lang (the lead's country layer row's value — every
+ *  caller passes it, ADR-0437). An empty one is not guessed to be any country's language: the
+ *  request then asks in English, the engine's neutral default. */
+export function acceptLanguage(searchLang: string): string {
+  const l = (searchLang || "en").toLowerCase().slice(0, 2);
   return l === "en" ? "en;q=0.9" : `${l};q=0.9,en;q=0.5`;
 }
 

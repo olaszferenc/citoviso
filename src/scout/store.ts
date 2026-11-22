@@ -5,6 +5,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { countryConfigSync, type CountryConfig } from "../country.js";
 import { isSamePlayer } from "../scraper/dedupe.js";
 import { storedLeadIdentitiesWithId } from "../scraper/persist.js";
 import {
@@ -18,7 +19,7 @@ import {
   ratingText,
   regionGrid,
   rowComplete,
-  SCOUT_KEYWORDS,
+  scoutKeywords,
   splitTile,
   mapsSearchUrl,
   tileGeo,
@@ -39,18 +40,27 @@ export interface ScoutRegion extends Bbox {
   readonly id: string;
   readonly label: string;
   readonly circle: Circle | null;
+  /** ISO-2 country of the area (region.country). */
+  readonly country: string;
+  /** The area's Maps searches — its country row's keywords (scoutKeywords). */
+  readonly keywords: readonly string[];
 }
 
+/** The active areas the worksheet can work on. An area whose country has no layer row has no
+ *  keywords to count, so it is not offered at all (fail closed, ADR-0437). */
 export async function listScoutRegions(): Promise<ScoutRegion[]> {
   const rows = await db
     .selectFrom("region")
-    .select(["id", "label", "south", "west", "north", "east", "center_lat", "center_lon", "radius_km"])
+    .select(["id", "label", "country", "south", "west", "north", "east", "center_lat", "center_lon", "radius_km"])
     .where("active", "=", true)
     .orderBy("label")
     .execute();
-  return rows.map((r) => ({
+  // A whole-country area (`country-<cc>`, run.ts --country) is no worksheet: ~1 500 root tiles.
+  return rows.filter((r) => scoutKeywords(r.country).length > 0 && !r.id.startsWith("country-")).map((r) => ({
     id: r.id,
     label: r.label,
+    country: r.country,
+    keywords: scoutKeywords(r.country),
     south: r.south,
     west: r.west,
     north: r.north,
@@ -194,7 +204,11 @@ const PLACE_COLS = [
   "lead_id",
 ] as const;
 
-function placeView(r: PlaceRow, leadNames: Map<string, { name: string; qual: string | null }>): PlaceView {
+function placeView(
+  r: PlaceRow,
+  leadNames: Map<string, { name: string; qual: string | null }>,
+  cfg: CountryConfig | null,
+): PlaceView {
   const known = r.known_lead_id ? leadNames.get(r.known_lead_id) : undefined;
   const lead = r.lead_id ? leadNames.get(r.lead_id) : undefined;
   return {
@@ -208,7 +222,8 @@ function placeView(r: PlaceRow, leadNames: Map<string, { name: string; qual: str
     address: r.address ?? "",
     city: r.city ?? "",
     phone: r.phone ?? "",
-    phoneN: phoneE164(r.phone),
+    // The number is read in the AREA's country (ADR-0437) — the HU row reads exactly as before.
+    phoneN: phoneE164(r.phone, cfg),
     website: r.website ?? "",
     webC: webClass(r.website),
     photos: r.photo_count == null ? "" : String(r.photo_count),
@@ -235,7 +250,14 @@ export async function tilePlaces(tileId: string): Promise<PlaceView[]> {
     .orderBy("created_at")
     .execute()) as PlaceRow[];
   const names = await leadNamesOf(rows);
-  return rows.map((r) => placeView(r, names));
+  const area = await db
+    .selectFrom("scout_tile")
+    .innerJoin("region", "region.id", "scout_tile.region")
+    .select("region.country as country")
+    .where("scout_tile.id", "=", tileId)
+    .executeTakeFirst();
+  const cfg = countryConfigSync(area?.country);
+  return rows.map((r) => placeView(r, names, cfg));
 }
 
 /**
@@ -244,6 +266,7 @@ export async function tilePlaces(tileId: string): Promise<PlaceView[]> {
  * whole-list rule, before 2026-10-07) is re-derived and written back here.
  */
 export async function listTiles(regionId: string, lang = "hu"): Promise<TileView[]> {
+  const keywords = await regionKeywords(regionId);
   const tiles = await db
     .selectFrom("scout_tile")
     .select(["id", "parent_id", "idx", "grid_row", "grid_col", "label", "state", "kw", "south", "west", "north", "east"])
@@ -266,9 +289,9 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
   const views = tiles.map((t) => {
     const kw = (t.kw ?? {}) as Record<string, number | null>;
     const tRows = byTile.get(t.id) ?? [];
-    const state = tileStateOf(t.state, kw, tRows.length);
+    const state = tileStateOf(t.state, kw, tRows.length, keywords);
     if (state !== t.state) stale.push({ id: t.id, state });
-    const input = { state, kw, rows: tRows };
+    const input = { state, kw, rows: tRows, keywords };
     const box = { south: t.south, west: t.west, north: t.north, east: t.east };
     const geo = tileGeo(box);
     return {
@@ -280,10 +303,10 @@ export async function listTiles(regionId: string, lang = "hu"): Promise<TileView
       label: t.label,
       box,
       geo,
-      maps: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, mapsSearchUrl(k, geo)])),
+      maps: Object.fromEntries(keywords.map((k) => [k, mapsSearchUrl(k, geo)])),
       state,
       kw,
-      kwStates: Object.fromEntries(SCOUT_KEYWORDS.map((k) => [k, kwState(kw[k], tRows.length)])),
+      kwStates: Object.fromEntries(keywords.map((k) => [k, kwState(kw[k], tRows.length)])),
       rows: tRows.length,
       canClose: canClose(input),
       hint: closeHint(input, lang),
@@ -352,6 +375,14 @@ export interface TileRow {
   north: number;
   east: number;
   closed_at: Date | null;
+  /** The tile's area's Maps searches (scoutKeywords of region.country). */
+  keywords: readonly string[];
+}
+
+/** The Maps searches of an area: its country row's keywords; unknown area/country → []. */
+async function regionKeywords(regionId: string): Promise<readonly string[]> {
+  const r = await db.selectFrom("region").select("country").where("id", "=", regionId).executeTakeFirst();
+  return scoutKeywords(r?.country);
 }
 
 export async function getTile(tileId: string): Promise<TileRow | null> {
@@ -361,7 +392,8 @@ export async function getTile(tileId: string): Promise<TileRow | null> {
     .select(["id", "region", "parent_id", "label", "state", "kw", "south", "west", "north", "east", "closed_at"])
     .where("id", "=", tileId)
     .executeTakeFirst();
-  return t ? ({ ...t, kw: (t.kw ?? {}) as Record<string, number | null> } as TileRow) : null;
+  if (!t) return null;
+  return { ...t, kw: (t.kw ?? {}) as Record<string, number | null>, keywords: await regionKeywords(t.region) } as TileRow;
 }
 
 async function rowCount(tileId: string): Promise<number> {
@@ -375,7 +407,7 @@ async function rowCount(tileId: string): Promise<number> {
 
 /** Re-derive and store the tile's state from its keywords and rows. */
 async function restate(tile: TileRow): Promise<void> {
-  const next = tileStateOf(tile.state, tile.kw, await rowCount(tile.id));
+  const next = tileStateOf(tile.state, tile.kw, await rowCount(tile.id), tile.keywords);
   await db
     .updateTable("scout_tile")
     .set({ state: next, kw: JSON.stringify(tile.kw), updated_at: new Date() })
@@ -387,7 +419,7 @@ export type MutationError = { readonly error: string };
 
 /** One keyword's hit count. "" clears it; anything but a whole number is refused. */
 export async function setKeyword(tile: TileRow, keyword: string, value: string): Promise<MutationError | null> {
-  if (!(SCOUT_KEYWORDS as readonly string[]).includes(keyword)) return { error: "kw" };
+  if (!tile.keywords.includes(keyword)) return { error: "kw" };
   if (tile.state === "done" || tile.state === "split" || tile.state === "out") return { error: "closed" };
   const v = value.trim();
   if (v !== "" && !/^\d{1,6}$/.test(v)) return { error: "int" };
@@ -616,7 +648,7 @@ export async function closeScoutTile(
       .select(["status", "name", "lat", "lon"])
       .where("tile_id", "=", tile.id)
       .execute();
-    const input = { state: tileStateOf(locked.state as TileState, kw, rows.length), kw, rows };
+    const input = { state: tileStateOf(locked.state as TileState, kw, rows.length, tile.keywords), kw, rows, keywords: tile.keywords };
     if (!canClose(input)) return { error: closeHint(input, lang) };
     const now = new Date();
     const closed = await trx

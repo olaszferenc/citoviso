@@ -2,7 +2,7 @@ import { config } from "../../config.js";
 import { countryConfigSync } from "../../country.js";
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
-import { GENERIC_NAME_WORD, PLACES_TRADE_WORD } from "../genericWords.js";
+import { genericNameWords, placesTradeWords } from "../genericWords.js";
 import { noteDeadKey } from "../../console/keyDeath.js";
 
 // Google Maps via the official Places API (New) — legally clean route. Requires
@@ -399,14 +399,17 @@ function normName(s: string): string {
 /**
  * Brand words of a name: significant tokens minus every trade word — and minus the
  * lead's own town, which names the village, not the business ("Köveskál Vendégház"
- * and "Köveskál Panzió" share only the village).
+ * and "Köveskál Panzió" share only the village). The trade words are the lead's COUNTRY's
+ * (genericWords.ts; unknown country → every country's, the stricter strip).
  */
-export function brandTokens(name: string, city?: string): string[] {
+export function brandTokens(name: string, city?: string, country?: string | null): string[] {
   const town = new Set(city ? normName(city).split(" ") : []);
+  const generic = genericNameWords(country);
+  const places = placesTradeWords(country);
   return normName(name)
     .split(" ")
     .filter(
-      (t) => t.length > 3 && !GENERIC_NAME_WORD.has(t) && !PLACES_TRADE_WORD.has(t) && !town.has(t),
+      (t) => t.length > 3 && !generic.has(t) && !places.has(t) && !town.has(t),
     );
 }
 
@@ -453,8 +456,8 @@ function brandWordFound(t: string, candTokens: readonly string[], candJoined: st
  * only whether the lead's own name is in the place's. A name made only of trade
  * words has nothing to carry, so it scores 1 on an exact match and 0 otherwise.
  */
-export function nameSimilarity(leadName: string, placeName: string, leadCity?: string): number {
-  const lead = brandTokens(leadName, leadCity);
+export function nameSimilarity(leadName: string, placeName: string, leadCity?: string, country?: string | null): number {
+  const lead = brandTokens(leadName, leadCity, country);
   const cand = normName(placeName);
   if (!lead.length) return cand === normName(leadName) ? 1 : 0;
   const candTokens = cand.split(" ").filter(Boolean);
@@ -500,6 +503,7 @@ export function pickPlacesCandidate<P extends { location?: { latitude: number; l
   lon: number,
   places: readonly P[],
   city?: string,
+  country?: string | null,
 ): { place: P; distanceMeters: number } | null {
   const wholeName = normName(name);
   let best: P | undefined;
@@ -511,7 +515,7 @@ export function pickPlacesCandidate<P extends { location?: { latitude: number; l
     if (d >= bestDist) continue;
     const cand = p.displayName?.text ?? "";
     const nameOk =
-      brandTokens(name, city).length === 0 ? normName(cand) === wholeName : nameSimilarity(name, cand, city) > 0;
+      brandTokens(name, city, country).length === 0 ? normName(cand) === wholeName : nameSimilarity(name, cand, city, country) > 0;
     if (!nameOk) continue;
     best = p;
     bestDist = d;
@@ -536,6 +540,8 @@ export async function placesLookup(
   lon: number,
   apiKey: string,
   leadCity?: string,
+  /** The lead's country (its trade words for the name match). */
+  leadCountry?: string | null,
 ): Promise<PlacesMatch | null> {
   // Shared transport: rate-limited, and a per-minute 429 is waited out instead of
   // failing the lead (the caller still learns about day-quota/auth via the throw).
@@ -565,7 +571,7 @@ export async function placesLookup(
   const places = data.places ?? [];
   if (!places.length) return null;
 
-  const picked = pickPlacesCandidate(name, lat, lon, places, leadCity);
+  const picked = pickPlacesCandidate(name, lat, lon, places, leadCity, leadCountry);
   if (!picked) return null;
   const { place: best, distanceMeters: bestDist } = picked;
 
@@ -577,7 +583,7 @@ export async function placesLookup(
     placeId: best.id,
     placeName: best.displayName?.text ?? name,
     distanceMeters: bestDist,
-    nameSimilarity: nameSimilarity(name, best.displayName?.text ?? "", leadCity),
+    nameSimilarity: nameSimilarity(name, best.displayName?.text ?? "", leadCity, leadCountry),
     rating: best.rating,
     userRatingCount: best.userRatingCount,
     phone: best.nationalPhoneNumber,
@@ -610,6 +616,7 @@ export async function placesDetailsMatch(
   lon: number,
   apiKey: string,
   leadCity?: string,
+  leadCountry?: string | null,
 ): Promise<PlacesMatch | null> {
   for (let attempt = 0; ; attempt++) {
     await detailsThrottle();
@@ -644,7 +651,7 @@ export async function placesDetailsMatch(
       placeId: p.id ?? placeId,
       placeName,
       distanceMeters: metersBetween(lat, lon, p.location.latitude, p.location.longitude),
-      nameSimilarity: nameSimilarity(name, placeName, leadCity),
+      nameSimilarity: nameSimilarity(name, placeName, leadCity, leadCountry),
       rating: p.rating,
       userRatingCount: p.userRatingCount,
       photoRefs: (p.photos ?? []).map((ph) => ph.name).filter((n): n is string => Boolean(n)),

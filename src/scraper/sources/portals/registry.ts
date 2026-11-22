@@ -34,6 +34,15 @@ export interface PortalAdapter {
   /** Operator-facing label. */
   readonly label: string;
   /**
+   * The country whose listings this portal carries (ISO-2), or null for a cross-border one
+   * (booking.com). Nemzetközi A (ADR-XXXX): a dedicated adapter is a CALIBRATION for one
+   * market's portal; every other portal — any host a country row lists in `portal_domains`
+   * (classifyWebsite → portal_only) — is read by the GENERIC adapter (schema.org JSON-LD →
+   * OpenGraph → DOM), so a lead of a country without dedicated adapters still gets its
+   * listing's contact and photos.
+   */
+  readonly country: string | null;
+  /**
    * Registrable host(s) this adapter serves. Matched on host LABELS, never as a
    * substring of the URL (the danubiushotels.com ⊃ hotels.com trap, qualify.ts).
    * A leading "*." marks a white-label subdomain farm where the property name
@@ -83,6 +92,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "booked_hu",
     label: "booked.hu (szallas.hu foglalómotor)",
+    country: "HU",
     hosts: ["*.booked.hu", "booked.hu"],
     access: "open",
     note:
@@ -93,6 +103,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "lake_balaton_com",
     label: "lake-balaton.com (white-label)",
+    country: "HU",
     hosts: ["*.lake-balaton.com", "lake-balaton.com"],
     access: "open",
     note: "Ugyanaz a foglalómotor-család, mint a booked.hu — schema.org Hotel JSON-LD.",
@@ -100,6 +111,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "hungaryhotel_net",
     label: "hungaryhotel.net (white-label)",
+    country: "HU",
     hosts: ["*.hungaryhotel.net", "hungaryhotel.net"],
     access: "open",
     note: "White-label aldomain-farm, szálláshelyenként külön aldomainnel; schema.org adat várható.",
@@ -107,6 +119,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "hovamenjek",
     label: "hovamenjek.hu",
+    country: "HU",
     hosts: ["hovamenjek.hu"],
     access: "open",
     listingPath: /^\/[a-z0-9-]+\/[a-z0-9-]+\/?$/i,
@@ -130,6 +143,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "szallas24",
     label: "szallas24.hu",
+    country: "HU",
     hosts: ["szallas24.hu"],
     access: "open",
     listingPath: /^\/[a-z0-9-]+\/[a-z0-9-]+\/?$|^\/szallas\//i,
@@ -140,6 +154,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "zimmerinfo",
     label: "zimmerinfo.hu",
+    country: "HU",
     hosts: ["zimmerinfo.hu"],
     access: "open",
     gapMs: 2_500,
@@ -151,6 +166,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "szallas_hu",
     label: "szallas.hu",
+    country: "HU",
     hosts: ["szallas.hu", "www.szallas.hu"],
     access: "challenge_protected",
     // szallas.hu/<slug> ↔ <slug>.booked.hu — the same engine, the same listing,
@@ -176,6 +192,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "booking_com",
     label: "booking.com",
+    country: null,
     hosts: ["booking.com"],
     access: "challenge_protected",
     note:
@@ -187,6 +204,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "kali_hu",
     label: "kali.hu (Káli-medence turisztikai portál)",
+    country: "HU",
     hosts: ["kali.hu"],
     access: "open",
     listingPath: /^\/szallas\/[^/]+/i,
@@ -195,6 +213,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "kiadoapartman_hu",
     label: "kiadoapartman.hu",
+    country: "HU",
     hosts: ["kiadoapartman.hu"],
     access: "open",
     // A listing is /szallas/<town>/apt<id>/<n>/. /szallas/<town>/ is the TOWN list —
@@ -207,6 +226,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
   {
     id: "badacsony_hu",
     label: "badacsony.hu (települési portál)",
+    country: "HU",
     hosts: ["badacsony.hu", "badacsony.com"],
     access: "open",
     note: "Települési turisztikai portál, strukturált adat nélkül — DOM-kinyerés.",
@@ -217,6 +237,7 @@ export const PORTAL_ADAPTERS: readonly PortalAdapter[] = [
 export const GENERIC_PORTAL: PortalAdapter = {
   id: "generic_portal",
   label: "általános portál-adatlap",
+  country: null,
   hosts: [],
   access: "open",
   note:

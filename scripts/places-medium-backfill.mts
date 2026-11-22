@@ -23,6 +23,7 @@
 //
 // Usage: npx tsx scripts/places-medium-backfill.mts [--apply --backup <file>] [--cache <file>] [--limit N]
 
+import { countryConfigSync, countryOf } from "../src/country.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { sql } from "kysely";
 import { config } from "../src/config.js";
@@ -246,7 +247,7 @@ for (const r of rows) {
     email,
     websiteStatus,
     isLead: isMvpLead(websiteStatus),
-    contactChannel: resolveChannel(email, phone),
+    contactChannel: resolveChannel(email, phone, countryConfigSync(countryOf(raw))),
     contacts,
     placesMatch: { ...evidence, ...held },
   } as QualifiedLead);

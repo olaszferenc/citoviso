@@ -10,12 +10,19 @@
 import { classifyWebsite } from "../scraper/qualify.js";
 import { normalizePhone } from "../text/phone.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
-import type { CountryConfig } from "../country.js";
+import { countryConfigSync, type CountryConfig } from "../country.js";
 import { T } from "../i18n/mail.js";
 
-/** The six Maps searches every tile gets — the Google Maps source's TEXT_QUERIES. */
-export const SCOUT_KEYWORDS = ["szállás", "hotel", "panzió", "apartman", "vendégház", "kemping"] as const;
-export type ScoutKeyword = (typeof SCOUT_KEYWORDS)[number];
+/**
+ * The Maps searches every tile of an area gets — the Google Maps source's text queries: the
+ * area's COUNTRY row's accommodation keywords (ADR-0437, country.search_keywords). The strings
+ * are also the keys of a tile's stored `kw` counts, so the HU row's list ("szállás", "hotel",
+ * "panzió", "apartman", "vendégház", "kemping") keeps every stored HU tile readable as before.
+ * No row → [] → nothing can be counted or closed (fail closed; listScoutRegions hides the area).
+ */
+export function scoutKeywords(country: string | null | undefined): readonly string[] {
+  return countryConfigSync(country)?.searchKeywords.accommodation ?? [];
+}
 
 /**
  * Saturation (ADR-0336, Kiegészítés 2026-10-07). The Maps list stops around 120, but it
@@ -32,6 +39,27 @@ export const SCOUT_SAT_THRESHOLD = 100;
 /** Root tile size: ≈ 10 km north–south × ≈ 11 km east–west at 47° N (≈ Maps zoom 13). */
 export const SCOUT_TILE_LAT_DEG = 0.09;
 export const SCOUT_TILE_LON_DEG = 0.145;
+/** The latitude SCOUT_TILE_LON_DEG was calibrated at. */
+const SCOUT_TILE_CALIB_LAT = 47;
+/**
+ * How far the cos(latitude) scaling may drift from the calibration before the step is
+ * re-derived: ±5 %. That is the spread the calibrated step already had over Hungary
+ * (45.7°–48.6° N → 0.977–1.032 of the 47° width), so every Hungarian area — and every tile
+ * already stored for one — keeps the exact 0.145° step it was cut with.
+ */
+const SCOUT_TILE_LON_TOLERANCE = 0.05;
+
+/**
+ * The root tile's east–west step at a latitude: ≈ 11 km wherever the area lies (a degree of
+ * longitude shrinks with cos(lat) — at 43° N, Makarska, 0.145° would be 11.8 km; at 60° N it
+ * would be 8 km). Inside the calibration band the calibrated constant itself is returned.
+ */
+export function scoutTileLonDeg(lat: number): number {
+  const rad = (d: number): number => (d * Math.PI) / 180;
+  const k = Math.cos(rad(SCOUT_TILE_CALIB_LAT)) / Math.max(Math.cos(rad(lat)), 1e-6);
+  if (Math.abs(k - 1) <= SCOUT_TILE_LON_TOLERANCE) return SCOUT_TILE_LON_DEG;
+  return Number((SCOUT_TILE_LON_DEG * k).toFixed(4));
+}
 
 export type TileState = "todo" | "work" | "sat" | "split" | "done" | "out";
 export type PlaceStatus = "known" | "new" | "proc" | "lead" | "nolead";
@@ -93,15 +121,16 @@ export function boxOutsideCircle(b: Bbox, c: Circle): boolean {
  * the box; a circular region marks its fully-outside tiles `out`.
  */
 export function regionGrid(box: Bbox, circle?: Circle | null): TileSeed[] {
+  const lonStep = scoutTileLonDeg((box.south + box.north) / 2);
   const rows = Math.max(1, Math.ceil((box.north - box.south) / SCOUT_TILE_LAT_DEG - 1e-9));
-  const cols = Math.max(1, Math.ceil((box.east - box.west) / SCOUT_TILE_LON_DEG - 1e-9));
+  const cols = Math.max(1, Math.ceil((box.east - box.west) / lonStep - 1e-9));
   const out: TileSeed[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const north = box.north - r * SCOUT_TILE_LAT_DEG;
       const south = north - SCOUT_TILE_LAT_DEG;
-      const west = box.west + c * SCOUT_TILE_LON_DEG;
-      const east = west + SCOUT_TILE_LON_DEG;
+      const west = box.west + c * lonStep;
+      const east = west + lonStep;
       const b = { south, west, north, east };
       out.push({
         ...b,
@@ -271,14 +300,16 @@ export function kwState(n: number | null | undefined, inTile: number): "todo" | 
   return n > SCOUT_SAT_THRESHOLD && inTile >= SCOUT_SAT_THRESHOLD ? "sat" : "ok";
 }
 
-/** A tile's state after a keyword or a row change (done / split / out never move back). */
+/** A tile's state after a keyword or a row change (done / split / out never move back).
+ *  `keywords` = the area's scoutKeywords(). */
 export function tileStateOf(
   current: TileState,
   kw: Readonly<Record<string, number | null>>,
   rowCount: number,
+  keywords: readonly string[],
 ): TileState {
   if (current === "done" || current === "split" || current === "out") return current;
-  const states = SCOUT_KEYWORDS.map((k) => kwState(kw[k], rowCount));
+  const states = keywords.map((k) => kwState(kw[k], rowCount));
   if (states.includes("sat")) return "sat";
   if (states.some((s) => s !== "todo") || rowCount > 0) return "work";
   return "todo";
@@ -288,6 +319,8 @@ export interface CloseInput {
   readonly state: TileState;
   readonly kw: Readonly<Record<string, number | null>>;
   readonly rows: readonly RowFields[];
+  /** The area's scoutKeywords() — empty (no country row) never closes. */
+  readonly keywords: readonly string[];
 }
 
 function pendingRows(t: CloseInput): number {
@@ -297,7 +330,8 @@ function pendingRows(t: CloseInput): number {
 /** Close gate: every keyword counted, none saturated, no incomplete new place. */
 export function canClose(t: CloseInput): boolean {
   if (t.state === "done" || t.state === "sat" || t.state === "split" || t.state === "out") return false;
-  return SCOUT_KEYWORDS.every((k) => kwState(t.kw[k], t.rows.length) === "ok") && pendingRows(t) === 0;
+  if (!t.keywords.length) return false;
+  return t.keywords.every((k) => kwState(t.kw[k], t.rows.length) === "ok") && pendingRows(t) === 0;
 }
 
 /** The one sentence under the close button: what is still missing (README ③). */
@@ -308,7 +342,7 @@ export function closeHint(t: CloseInput, lang = "hu"): string {
       : T(lang, "Lezárva. Az új helyek feldolgozása lefutott.");
   }
   if (t.state === "sat") return T(lang, "Telített kulcsszó van: bontsd négy csempére, a kisebbeket nézd át.");
-  const left = SCOUT_KEYWORDS.filter((k) => kwState(t.kw[k], t.rows.length) !== "ok").length;
+  const left = t.keywords.filter((k) => kwState(t.kw[k], t.rows.length) !== "ok").length;
   if (left) return T(lang, "{n} kulcsszó van még hátra.", { n: left });
   const p = pendingRows(t);
   if (p) return T(lang, "{n} új hely neve vagy koordinátája hiányzik.", { n: p });

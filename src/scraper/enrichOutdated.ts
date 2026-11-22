@@ -1,3 +1,4 @@
+import { countryOf } from "../country.js";
 import { fetchHtml, geoTerms, verify } from "./enrichPresence.js";
 import { findOwnSiteForLead } from "./enrichSiteSearch.js";
 import { classifyWebsite, isMvpLead } from "./qualify.js";
@@ -50,7 +51,7 @@ async function repairBrokenSite(
   const root = lead.website ? rootOf(lead.website) : null;
   if (root) {
     const page = await fetchHtml(root);
-    if (page && verify(lead.name, terms, page.html)) {
+    if (page && verify(lead.name, terms, page.html, countryOf(lead, region.country))) {
       if (classifyWebsite(page.finalUrl) === "has_own") return page.finalUrl;
     }
   }

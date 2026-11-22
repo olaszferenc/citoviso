@@ -1,6 +1,72 @@
 {
   "iso2": "HU",
   "osmNameTag": "name:hu",
+  "chainFelderitoAddressOrder": "city-first",
+  "chainKontaktGenericWords": ["szallas","szallashely","szallashelyek","apartman","apartmanok","apartmanhaz","kemping","camping","udulo","vendeghaz","vendeghazak","haz","panzio","hotel","tabor","hely","ifjusagi","turistahaz","motel","resort","villa","vendeglo","etterem","szoba","szobak","parton","vadkempingezo","diakszallas","kozossegi","faluhaz","porta","birtok","kiado","balaton","wifi","apartment","apartments","apartmanhazak","house","houses","guesthouse","guest","pension","family","suite","suites","room","rooms","breakfast","holiday","residence","home","homes","wellness","lake","view","with","terrace","camp","resorts","hotels","bungalow","bungalows","szallo","turistaszallo","tanya","nyaralo","nyaralohaz","udulohaz","udulotabor","kft","ltd","medences","vendegszoba","vendegszobak","lakasapartman","faház","fahaz","pihenohaz","and","the","es","a","az","one","two","three","bedroom","double","standard","deluxe","large","small","garden","apartmanhaz"],
+  "chainKontaktFreemailRegex": "@(gmail|googlemail|freemail|citromail|t-online|hotmail|outlook|live|yahoo|icloud|me|gmx|vipmail|chello|invitel|upcmail|indamail|mailbox)\\.",
+  "chainKontaktEmailDenyRegex": "(@(?:example|sentry|wixpress|sentry-next|domain|email|yourdomain|hovamenjek|szallas|booking|booked|zimmerinfo|facebook|google|w3|schema|naih)\\.|\\.(?:png|jpe?g|gif|webp|svg)$|^(?:noreply|no-reply|webmaster|privacy|adatvedelem|dpo|abuse|hostmaster)@)",
+  "chainKontaktObfuscationAt": ["kukac"],
+  "chainKontaktObfuscationBareAt": ["kukac"],
+  "chainKontaktObfuscationDot": ["pont"],
+  "chainKontaktObfuscationBareDot": ["pont"],
+  "chainKontaktStreetStopWords": ["utca","ut","utja","ter","koz","sor"],
+  "chainKontaktUpperClass": "A-ZÁÉÍÓÖŐÚÜŰ",
+  "chainKontaktSkipHostRegex": "(^|\\.)(booking\\.com|trip\\.com|instagram\\.com|tripadvisor\\.|airbnb\\.|google\\.|youtube\\.com|wikipedia\\.org|travelminit\\.|hotelmania\\.net|get2stay\\.eu|trivago\\.|expedia\\.|hotels\\.com|agoda\\.|kayak\\.|tiktok\\.com|x\\.com|twitter\\.com|linkedin\\.com|bing\\.com|microsoft\\.com|maps\\.apple|waze\\.com|szallas\\.hu$|holidaycheck|hometogo\\.|cozycozy\\.|e-cegjegyzek|opten\\.hu|ceginformacio|nemzeticegtar|kozbeszerzes|nav\\.gov)",
+  "chainKontaktPortalHostRegex": "(hovamenjek|szallas|booked|zimmerinfo|szallaskeres|kiadoapartman|kiadonyaralok|szallasvadasz|nethotelbooking|balaton\\.hu|lake-balaton|hungaryhotel|kali\\.hu|badacsony|apartman\\.hu|szallasguru|szallasfoglalo|firmania|ittjartam|utazzitthon|turizmus|tourinform|vendegvaro|falusiturizmus|iranymagyarorszag|szallasinfo|travelport|hotelinfo|szallas24|szallasok|nyaralas|cylex|aranyoldalak|yellowpages|infobel|facebook|openalfa|holidayhome)",
+  "chainKontaktMuniHostRegex": "(^|\\.)(turizmus|tourinform|turisztika|idegenforgalom)\\b|tourinform|onkormanyzat|polgarmesteri|hivatal",
+  "chainKontaktContactLinkRegex": "(kapcsolat|elerhetoseg|elérhetőség|impresszum|impressum|contact|kontakt|rolunk|rólunk|about|foglalas|foglalás|ajanlatkeres|ajánlatkérés)",
+  "chainKontaktContactPaths": ["/kapcsolat","/kapcsolat/","/elerhetoseg","/elerhetosegek","/impresszum","/contact","/rolunk","/kapcsolat.html","/kapcsolat.php"],
+  "chainKontaktSearchLodging": "szállás",
+  "chainKontaktSearchPhone": "telefon",
+  "chainKontaktGmapsFlagCategoryRegex": "étterem|restaurant|bár|pince|iskola|önkormányzat|polgármesteri|templom",
+  "chainKontaktGmapsBrokerCategoryRegex": "ügynökség|közvetít|ingatlan|utazási iroda|agency",
+  "chainKontaktMultiPropertyRegex": "hasonló szállás|további szállás|a környék szállásai",
+  "chainKontaktAddrStreetRegex": "\\b(utca|u\\.|ut|út|ter|tér|koz|köz)\\b",
+  "chainKontaktPortalAdapters": ["hm","booked","zimmerinfo"],
+  "chainKontaktTownListGuesses": ["https://turizmus.{compact}.hu/","https://turizmus.{ts}.hu/","https://www.{compact}.hu/szallashelyek","https://www.{compact}.hu/szallas","https://www.{compact}.hu/turizmus/szallashelyek","https://{compact}.hu/szallashelyek","https://tourinform{compact}.hu/","https://www.tourinform{compact}.hu/szallas"],
+  "chainKontaktTownListQuery": "{city} szálláshelyek turizmus tourinform",
+  "chainKontaktTownLodgingRegex": "szállás|vendégház|apartman|panzió|szálláshely",
+  "chainKontaktTownSubLinkRegex": "sz[aá]ll[aá]s",
+  "chainKontaktFreeHeadRegex": "^([^@]+@(?:gmail|googlemail|freemail|citromail|t-online|hotmail|outlook|live|yahoo|icloud|gmx|vipmail|chello|invitel|upcmail|indamail)\\.(?:com|hu|de|at|co\\.uk))\\..+$",
+  "chainKontaktEmailQueryWord": "email",
+  "chainKontaktSerpAiOverviewRegex": "^(AI-alapú áttekintés|AI Overview)$",
+  "chainFelderitoDiscoveryOrder": ["VE", "SO", "ZA", "BA", "BZ", "HE", "GS", "PE", "VA", "HB", "BK", "SZ", "JN", "BE", "FE", "TO", "NO", "KE", "BU"],
+  "chainFelderitoParkedPhrases": ["domain for sale", "this domain is for sale", "buy this domain", "under construction", "website coming soon", "domain parking", "ez a honlap elado", "a honlap elado", "ez a domain elado", "az oldal elado", "parkolo oldal", "foglalt domain", "this domain has been registered", "domain regisztralva", "a domain regisztralasra kerult"],
+  "chainFelderitoPresenceTypeWords": ["vendeghaz", "haz", "panzio", "szallashely", "szallas", "guest", "guesthouse", "guesthaus", "house", "apartman", "apartment", "camping", "hostel", "fogado", "cottage", "birtok", "pinceszet", "szolobirtok", "villa", "hotel"],
+  "chainHonlapSkipHostRegex": "(\\.com\\.es$|visty\\.site|bedsandhotels|appartman\\.hu|videkivendeghazak|domain2\\.hu|likee\\.com|(^|\\.)(booking\\.com|trip\\.com|instagram\\.com|tripadvisor\\.|airbnb\\.|google\\.|youtube\\.com|wikipedia\\.org|travelminit\\.|hotelmania\\.net|trivago\\.|expedia\\.|hotels\\.com|agoda\\.|kayak\\.|tiktok\\.com|bing\\.com|microsoft\\.com|waze\\.com|holidaycheck|hometogo\\.|cozycozy\\.|facebook\\.com|wego\\.|bedandbreakfast\\.eu|mapptic\\.com|nyitvatartas24|nocowanie\\.pl|penzion-hotel|pagodaapartman|revngo|viamichelin|mapcarta|e-cegjegyzek|opten\\.hu))",
+  "chainHonlapPortalHostRegex": "(hovamenjek|szallas|booked|zimmerinfo|kiadoapartman|kiadonyaralok|kiadovendeghaz|nethotelbooking|balaton\\.hu|lake-balaton|hungaryhotel|kali\\.hu|^(www\\.)?apartman\\.hu$|firmania|ittjartam|utazzitthon|turizmus|turisztika|tourinform|vendegvaro|falusiturizmus|falusivakacio|iranymagyarorszag|travelport|hotelinfo|nyaralas|nyaralokereso|horgasznyaralok|cylex|aranyoldalak|infobel|openalfa|holidayhome|kornyeke\\.hu|programturizmus|tourmix|turatajolo|szallasotletek|hotelszeged|olcsobalatoni|gardoshazak|czakoapartman|szegedtourism|\\.info\\.hu$|tdm\\.hu$)",
+  "chainHonlapSharedHostRegex": "(webnode\\.(hu|page|co\\.uk|com)|wixsite\\.com|blogspot\\.com|weebly\\.com|business\\.site|hupont\\.hu|fw\\.hu|atw\\.hu|5mp\\.eu|mozello\\.hu|gportal\\.hu|wordpress\\.com|eoldal\\.hu)$",
+  "chainHonlapContactPaths": ["/kapcsolat", "/elerhetoseg", "/kapcsolat/"],
+  "chainHonlapSearchPortalRegex": "(szallas\\.hu|szallashirdeto|booking\\.|airbnb\\.|facebook\\.|instagram\\.|google\\.|tripadvisor|hovamenjek|szallasvadasz|kornyeke\\.hu|falusivakacio|revngo|pagodaapartman|travelminit|hotels\\.com|expedia|agoda|trivago|kayak|szallasguru|szallas\\.|utazom|vendeghazak?\\.|apartmanok?\\.|zimmerinfo|nethotel|youtube|tiktok|wikipedia|viamichelin|mapcarta|maps\\.|cylex|ceginfo|opten|e-cegjegyzek|aranyoldalak|yelp|holidaycheck|hrs\\.|momondo|ntak|teletal|termalfurdo|itthon\\.hu|jegy\\.hu|bookandgo|hotel\\.info|szep-kartya|szepkartya|vakacio\\.hu|wellnesstips|szallaskereso|nosalty|olcsoszallasok|szallaskeresonet|egyszallas|kiadoszallas|webkatalog|startlap|ingatlan)",
+  "chainHonlapSearchStopWords": ["vendeghaz", "apartman", "apartmanhaz", "haz", "panzio", "szallas", "hotel", "villa", "kulcsoshaz", "udulohaz", "vendeglo", "es", "a", "az", "the", "guesthouse", "apartment", "szoba", "szobak", "kiado", "solt"],
+  "chainHonlapClassifyStopWords": ["vendeghaz", "apartman", "apartmanhaz", "haz", "panzio", "szallas", "hotel", "villa", "kulcsoshaz", "udulohaz", "udulohaz", "vendeglo", "es", "a", "az", "the", "guesthouse", "apartment", "szoba", "szobak", "kiado", "maganszallashely", "wellness", "apartmann", "nyaralo", "nyaralohaz", "vendeghazak", "apartmanok", "lak", "pihenohaz", "pihenő", "tanya", "porta", "kuria", "fogado", "motel", "hostel", "camping", "kemping", "vendegszoba", "vendegszobak", "szallashely", "udulo", "pension", "haus", "house", "rooms", "room"],
+  "chainHonlapFreeHostRegex": "\\.(webnode\\.hu|hupont\\.hu|wixsite\\.com|weebly\\.com|blogspot\\.com|mozello\\.hu|5mp\\.eu|eoldal\\.hu|gportal\\.hu|uw\\.hu)$",
+  "chainHonlapAggregatorRegex": "(^|\\.)(lake-balaton\\.com|booked\\.hu|hungaryhotel\\.net|trip\\.com|ohb\\.hu|szallas24\\.hu|szallaskeres\\.hu|szallasturul\\.eu|apartman\\.hu|kiadovendeghaz\\.hu|olcsobalatoniszallasok\\.hu|balatonlelleiszallasok\\.hu|penzion-hotel\\.sk|programturizmus\\.hu|czakoapartman\\.hu|szegedtourism\\.hu|heviz\\.hu|algyo\\.hu|balatongyorok\\.hu|balatonfuzfoinfo\\.hu|turisztikaturul\\.eu|ittjartam\\.hu|bedandbreakfast\\.eu|wego\\.[a-z.]+|waze\\.com|hotelszeged\\.com|mapptic\\.com|nyitvatartas24\\.hu|turatajolo\\.hu|gardoshazak\\.hu|karosinfo\\.hu|nagyatadtdm\\.hu|porva\\.hu|moriborvidek\\.hu|mako\\.hu|szigetvar\\.hu|tihany\\.org|zalakaros\\.info\\.hu|muraratka\\.hu|salfold\\.eu|napsugar-lakopark\\.com)$",
+  "chainHonlapBraveParams": {},
+  "chainHonlapStartpageLui": "magyar",
+  "chainNevjavRules": "hu",
+  "chainCountryNames": {"HU": ["Magyarország", "Hungary"], "HR": ["Horvátország", "Croatia", "Hrvatska"], "AT": ["Ausztria", "Austria", "Österreich"], "SI": ["Szlovénia", "Slovenia", "Slovenija"], "RS": ["Szerbia", "Serbia", "Srbija"], "RO": ["Románia", "Romania", "România"], "SK": ["Szlovákia", "Slovakia", "Slovensko"], "UA": ["Ukrajna", "Ukraine"]},
+  "chainOsmCategoryLabels": {"hotel": "Szálloda", "guest_house": "Vendégház", "apartment": "Kiadó apartman", "hostel": "Hostel", "chalet": "Nyaralóház", "motel": "Motel", "camp_site": "Kemping", "caravan_site": "Lakóautó-kemping"},
+  "chainNameLodgingRegex": "vendégház|panzió|apartman|szállás|vendégszoba|kemping|camping|motel|fogadó|hostel|szálló|szálloda|hotel|üdülőház|nyaralóház|guest ?house",
+  "chainBareTypeNames": ["apartman", "apartmanok", "camping", "fogado", "hostel", "hotel", "kemping", "motel", "panzio", "szallas", "szallashely", "szalloda", "turistaszallo", "vendeghaz", "vendegszoba"],
+  "chainExcludeNameRegex": "kutya|macska|cica|állatpanzió|kisállat|ebpanzió|eb-panzió|állatszálló|kutyamegőrző|átmeneti otthon|nővérszálló|hajléktalan|idősek otthona|munkásszálló|\\b(double|twin|single|triple|family) room\\b|\\bkétágyas\\b|\\begyágyas\\b|franciaágyas|\\(megszűnt\\)|\\bbezárt\\b|\\bclosed\\b",
+  "chainTypeWordsGeneric": ["vendeghaz", "vendeghazak", "haz", "panzio", "szallas", "szallashely", "apartman", "apartmanok", "apartmanhaz", "hotel", "motel", "kemping", "camping", "hostel", "guest", "house", "guesthouse", "villa", "vendegszoba", "szallo", "szalloda", "es", "the", "and", "kft", "bt", "szeged", "szegedi", "makoi", "mako", "hodmezovasarhely", "szentes", "csongrad", "apartment", "apartments", "rooms", "room"],
+  "chainMapsLodgingCategoryRegex": "szállás|szálló|szálloda|hotel|panzió|apartman|vendégház|kemping|hostel|motel|nyaraló|üdülő|homestay|farmszállás|lakáskiadás|bed (?:&|and) breakfast|reggeli|táborhely|kabin|guest|lodge|resort|vendégszoba|turistaszálló|lakóautó|ifjúsági|kúria|kastélyszálló|faház|tanyasi turizmus|villa|síház",
+  "chainMapsNonLodgingCategoryRegex": "fürdő|strand|park|múzeum|templom|kilátó|horgász|bolt|üzlet|iroda|cég|fesztivál|iskola|óvoda|kórház|rendelő|állat|kutya|macska|sport|edzőterem|benzinkút|autó(?!s ?csárda)|bútor|temető|polgármesteri|önkormányzat|rendezvényterem|esküvő|pince|bor(?:ászat|bolt)",
+  "chainMapsFoodCategoryRegex": "étterem|vendéglő|csárda|pizzéria|bár|kávé|cukrászda|büfé|bisztró|söröző",
+  "chainMapsStrandNameRegex": "\\bstrand|fürdő|uszoda|\\bKft\\.?$|\\bBt\\.?$",
+  "chainMapsLodgingNameRegex": "szálló|hotel|panzió|vendégház|apartman|kemping|camping",
+  "chainMapsBareTypeNames": ["szallas", "panzio", "apartman", "vendeghaz", "hotel", "kemping"],
+  "chainMapsRentalListingRegex": "^(Lakás|Ház|Apartman|Villa|Szoba)\\W+\\d+ fő részére",
+  "chainPostcodeRegex": "\\d{4}",
+  "chainConsentRejectRole": ["Összes elutasítása", "Reject all", "Alle ablehnen"],
+  "chainConsentRejectText": ["Az összes elutasítása", "Reject all"],
+  "chainCaptchaTextRegex": "unusual traffic|szokatlan forgalm|nem robot|not a robot",
+  "chainMapsListEndRegex": "Elérted a lista végét|reached the end of the list",
+  "chainMapsWebsiteLabels": ["Webhely", "Website"],
+  "chainMapsAddressPrefix": "Cím:",
+  "chainMapsReviewWordsRegex": "vélemény|értékelés|review",
+  "chainMapsClosedRegex": "Véglegesen bezárt|Permanently closed",
   "tradeWords": [
     "szallas", "szallashely", "szallashelyek", "apartman", "apartmanok", "apartmanhaz",
     "kemping", "camping", "udulo", "vendeghaz", "vendeghazak", "haz", "panzio",
@@ -39,5 +105,102 @@
     "outlook.com", "outlook.hu", "live.com", "yahoo.com", "icloud.com", "gmx.net", "vipmail.hu",
     "chello.hu", "invitel.hu", "upcmail.hu", "indamail.hu"
   ],
-  "officialSiteWords": ["hivatalos oldal", "hivatalos honlap", "official website", "official site"]
+  "officialSiteWords": ["hivatalos oldal", "hivatalos honlap", "official website", "official site"],
+
+  "officialSiteQuery": "hivatalos oldal",
+  "placesTradeWords": [
+    "apartment", "apartments", "apartmanhazak", "house", "houses", "guesthouse", "guest",
+    "pension", "family", "suite", "suites", "room", "rooms", "breakfast", "holiday",
+    "residence", "home", "homes", "wellness", "lake", "view", "with", "terrace", "camp",
+    "resorts", "hotels", "bungalow", "bungalows", "szallo", "turistaszallo", "tanya",
+    "nyaralo", "nyaralohaz", "udulohaz", "udulotabor", "kft", "ltd"
+  ],
+  "typeWords": [
+    "vendeghaz", "haz", "panzio", "szallashely", "szallas", "guest", "guesthouse",
+    "guesthaus", "house", "apartman", "apartment", "camping", "hostel", "fogado",
+    "cottage", "birtok", "pinceszet", "szolobirtok", "villa", "hotel"
+  ],
+  "portalTypeWords": [
+    "haz", "hazak", "vendeghaz", "nyaralo", "udulohaz", "udulo", "apartman",
+    "apartmanhaz", "panzio", "hotel", "villa", "kastely", "fogado", "csarda",
+    "kemping", "camping", "hostel", "motel", "porta", "kuria", "pinceszet",
+    "birtok", "tanya", "faház", "fahaz", "chalet", "cottage", "studio", "lak"
+  ],
+  "genericSiteWords": [
+    "szallas", "szallashely", "apartman", "apartmanok", "apartmanhaz", "kemping",
+    "camping", "udulo", "uduloje", "vendeghaz", "vendeglo", "panzio", "hotel",
+    "tabor", "hely", "haz", "villa", "motel", "resort", "etterem", "nyaralohaz",
+    "kuria", "presshaz", "preshaz", "varos", "vendeghazak", "hostel"
+  ],
+  "nonOwnHosts": [
+    "szallas.hu", "szallashelyek", "hovamenjek", "zimmerinfo", "programturizmus", "utazzitthon",
+    "szallasinfo", "cegjegyzek", "nemzeticegtar", "ceginformacio", "port.hu", "hundidak", "nyaralas",
+    "apartmanok", "szallas.net", "olcsoszallas", "szallaskeres", "kiadoapartman", "szallashirdeto",
+    "szallas24", "iranymagyarorszag", "booked.hu", "tourinform", "badacsony.hu", "badacsony.com",
+    "szallasotletek", "hellomiskolc", "rendezvenyhelyszinek", "termeszetjaro.hu", "ittjartam.hu",
+    "lap.hu", "apartman.hu", "balaton.hu", "szepkartyat", "balatoniszallas", "szallas-kereso",
+    "myszallas", "lake-balaton.com", "gyertekvelem", "portadora"
+  ],
+  "reenrichGenericNameWords": [
+    "szallas", "szallashely", "apartman", "apartmanhaz", "kemping", "camping",
+    "udulo", "vendeghaz", "haz", "panzio", "hotel", "tabor", "hely", "ifjusagi",
+    "turistahaz", "motel", "resort", "vendeglo", "etterem", "szoba", "szobak",
+    "parton", "vadkempingezo", "diakszallas", "kozossegi", "faluhaz", "porta"
+  ],
+  "listingTitleGenericWords": [
+    "szallas", "szallashely", "apartman", "apartmanok", "kemping", "camping",
+    "udulo", "vendeghaz", "vendeghazak", "panzio", "hotel", "haz", "villa",
+    "tabor", "hely", "etterem", "vendeglo", "szoba", "szobak", "motel"
+  ],
+  "foreignLinkGenericWords": [
+    "hotel", "hotels", "szallo", "szalloda", "apartman", "apartmanok", "apartmanhaz", "apartment",
+    "apartments", "panzio", "pension", "vendeghaz", "vendeghazak", "guest", "house", "guesthouse",
+    "haz", "hazak", "villa", "nyaralo", "nyaralohaz", "szallas", "szallasok", "resort", "camping",
+    "kemping", "spa", "wellness", "etterem", "restaurant", "and", "es", "the", "family", "club",
+    "boutique", "lake", "balaton", "room", "rooms", "studio", "holiday", "home", "bed", "breakfast"
+  ],
+  "listingPathWords": [
+    "szallashelyek", "szallashely", "accommodation", "apartmanok", "panziok", "hotelek", "vendeghazak", "latnivalok"
+  ],
+  "descGenericWords": [
+    "apartman", "apartmanhaz", "vendeghaz", "haz", "panzio", "hotel", "villa",
+    "szallas", "szallashely", "udulo", "nyaralo", "kemping", "porta", "resort",
+    "balaton", "kiado", "szoba", "szobak"
+  ],
+  "relatedBlockPatterns": [
+    "hasonló\\s+szállás", "hasonlo\\s+szallas", "similar-listing", "similar_listing", "similar-hotel",
+    "related-listing", "related-item", "ajánlott\\s+szállás", "ezt\\s+is\\s+megnézhet", "önnek\\s+ajánljuk",
+    "más\\s+szálláshely", "nearby-?hotels", "other-?properties", "wide-listings-list", "places_nearby",
+    "közeli\\s+szállások"
+  ],
+  "amenityHeadingPatterns": [
+    "szolgáltatás", "szolgaltatas", "felszerelt", "ellátás", "ellatas", "amenit", "kényelem", "kenyelem"
+  ],
+  "nonAmenityItemPatterns": [
+    "bemutatkoz", "elérhetőség", "elerhetoseg", "értékel", "ertekel", "vélemény", "velemeny",
+    "szolgáltatások", "szolgaltatasok", "galéria", "galeria", "térkép", "terkep", "kapcsolat", "ajánlat",
+    "ajanlat", "csomagajánlat", "csomagajanlat", "árak", "arak", "foglal", "online szállásfoglal",
+    "online szallasfoglal", "nyitvatartás", "nyitvatartas", "leírás", "leiras", "hasonló", "hasonlo",
+    "tovább", "tovabb", "vissza", "kezdőlap", "kezdolap", "főoldal", "fooldal", "hírlevél", "hirlevel",
+    "adatvédel", "adatvedel", "cookie", "süti", "suti"
+  ],
+  "capacityUnitPatterns": ["fő"],
+  "capacityJoinPatterns": ["vagy", "és"],
+  "capacityContextPatterns": [
+    "fér", "elhelyez", "befogad", "szállás", "szallas", "vendég", "vendeg", "alkalmas", "részére", "reszere"
+  ],
+  "listHeadlinePatterns": [
+    ":\\s*\\d+\\s*(?:db|(?:szállás)?ajánlat|szállás(?:hely)?)(?![\\p{L}\\d])",
+    "(?<![\\p{L}])környéki\\s+(?:szállás|vendégház|apartman|nyaraló|panzió)"
+  ],
+  "freemailLabels": [
+    "gmail", "googlemail", "freemail", "citromail", "indamail", "vipmail", "hotmail", "outlook", "yahoo",
+    "t-online", "invitel", "upcmail", "digikabel", "chello", "axelero", "t-email", "gmx"
+  ],
+  "freemailExact": ["web.de"],
+  "duplicateGenericWords": [
+    "szallas", "apartman", "apartmanok", "apartmanhaz", "vendeghaz", "vendeghazak",
+    "panzio", "hotel", "haz", "villa", "kemping", "camping", "udulo", "tabor",
+    "hely", "etterem", "vendeglo", "szoba", "szobak", "motel", "resort", "porta"
+  ]
 }

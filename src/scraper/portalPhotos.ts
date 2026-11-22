@@ -7,6 +7,7 @@
 // zimmerinfo.hu answers with and without "www.". A full-URL key counted them twice: 9 leads,
 // 145 duplicate pairs, "129 kép" on a lead whose distinct portal set is 59. Every same-path
 // pair across hosts in that measurement was the same picture.
+import { lexListAll } from "../countryLexicon.js";
 import { looksLikeListingUrl } from "./sources/portals/registry.js";
 import { isCutSrcsetUrl } from "./srcset.js";
 import type { PortalProfile, QualifiedLead } from "./types.js";
@@ -134,10 +135,9 @@ export function usableProfiles<
 const FACET_COUNT = /\(\d+\)\s*$/u;
 /** Three counted facets: one stray „(2)” in a real amenity name is not a filter. */
 const MIN_FACETS = 3;
-const LIST_HEADLINE = [
-  /:\s*\d+\s*(?:db|(?:szállás)?ajánlat|szállás(?:hely)?)(?![\p{L}\d])/iu,
-  /(?<![\p{L}])környéki\s+(?:szállás|vendégház|apartman|nyaraló|panzió)/iu,
-];
+// The headline shapes are every country's (lexicon `listHeadlinePatterns`; HU verbatim): the
+// title is the PORTAL's language, whatever the lead's country.
+const LIST_HEADLINE = lexListAll("listHeadlinePatterns").map((p) => new RegExp(p, "iu"));
 export function multiPropertyPage(profile: {
   readonly title?: string;
   readonly amenities?: readonly string[];

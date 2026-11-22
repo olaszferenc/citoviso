@@ -1,3 +1,4 @@
+import { countryConfigSync, countryOf } from "../country.js";
 import { scoreMatch, type MatchConfidence } from "./confidence.js";
 import { classifyWebsite, isMvpLead } from "./qualify.js";
 import {
@@ -61,6 +62,7 @@ export async function enrichPlaces(
           lead.lon as number,
           apiKey,
           lead.city,
+          countryOf(lead),
         );
         if (match) {
           const conf = scoreMatch({
@@ -149,7 +151,7 @@ export function applyPlacesMatch(
             `csak közepes Places-egyezés („${match.placeName}”, ${Math.round(match.distanceMeters)} m) — ` +
             `a szomszédé is lehet, ellenőrizd, mielőtt átveszed`,
         },
-      ])
+      ], undefined, countryConfigSync(countryOf(l, match.country)))
     : l.contacts;
   const photoCount = Math.max(l.photoCount ?? 0, match.photoRefs.length);
   const status = classifyWebsite(website);

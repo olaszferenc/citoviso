@@ -42,6 +42,9 @@ import { braveText } from "../src/scraper/sources/webSearch.js";
 import { fullerEmail } from "../src/email/leadEmails.js";
 import type { QualifiedLead } from "../src/scraper/types.js";
 import { domEmail, domPhone } from "../src/scraper/sources/portals/extract.js";
+import { countryConfigSync } from "../src/country.js";
+// The extractors read numbers in the lead's country (nemzetközi A): these fixtures are Hungarian.
+const HU_ROW = countryConfigSync("HU");
 
 const selfTest = process.argv.includes("--self-test");
 const fails: string[] = [];
@@ -149,22 +152,22 @@ for (const [label, html] of ARTIFACT_PAGES) {
     check(OLD_RE.test(html), `self-test: a régi minta NEM talál számot itt: ${label} — a fixtúra semmit nem bizonyít`);
     continue;
   }
-  const { phones } = extractContacts(html);
+  const { phones } = extractContacts(html, HU_ROW);
   check(phones.length === 0, `④ enrichWebSearch számot „talált”: ${label} → ${JSON.stringify(phones)}`);
   const text = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<[^>]+>/g, " ");
-  const dom = domPhone(html, text);
+  const dom = domPhone(html, text, HU_ROW);
   check(dom === undefined, `④ portál domPhone számot „talált”: ${label} → ${dom}`);
 }
 if (!selfTest) {
   const real = `<p>Telefon: 06/30 123 4567</p><p>Cím: 8261 Badacsony</p>`;
   check(
-    extractContacts(real).phones.includes("06/30 123 4567"),
-    `④ a valódi szám elveszett: ${JSON.stringify(extractContacts(real).phones)}`,
+    extractContacts(real, HU_ROW).phones.includes("06/30 123 4567"),
+    `④ a valódi szám elveszett: ${JSON.stringify(extractContacts(real, HU_ROW).phones)}`,
   );
-  check(domPhone(real, "Telefon: 06/30 123 4567") === "06/30 123 4567", "④ portál domPhone a valódi számot nem találja");
+  check(domPhone(real, "Telefon: 06/30 123 4567", HU_ROW) === "06/30 123 4567", "④ portál domPhone a valódi számot nem találja");
   const glued = `<a href="tel:00368734269100363028317760036705331658">00 36 87 342 691</a>`;
   check(
-    extractContacts(glued).phones.some((p) => splitPhones(p).length === 3),
+    extractContacts(glued, HU_ROW).phones.some((p) => splitPhones(p).length === 3),
     "④ az összefűzött tel: link nem bontható három számra",
   );
 }
@@ -172,7 +175,7 @@ if (!selfTest) {
 if (!selfTest) {
   const labelled = `<p><a href="mailto:email%3Aharmonia.vendeghaz2020@gmail.com">email:harmonia.vendeghaz2020@gmail.com</a></p>`;
   const want = "harmonia.vendeghaz2020@gmail.com";
-  const got = extractContacts(labelled).emails;
+  const got = extractContacts(labelled, HU_ROW).emails;
   check(
     got.length > 0 && got.every((e) => e === want),
     `⑤ enrichWebSearch címkés mailto: → ${JSON.stringify(got)}, várt: ["${want}"]`,
@@ -180,7 +183,7 @@ if (!selfTest) {
   const dom = domEmail(labelled, "email:harmonia.vendeghaz2020@gmail.com");
   check(dom === want, `⑤ portál domEmail címkés mailto: → ${dom}, várt: ${want}`);
   const plain = `<a href="mailto:Info%40Pelda.hu">info</a>`;
-  check(extractContacts(plain).emails.includes("info@pelda.hu"), "⑤ a kódolt @-os sima mailto: elveszett");
+  check(extractContacts(plain, HU_ROW).emails.includes("info@pelda.hu"), "⑤ a kódolt @-os sima mailto: elveszett");
 }
 
 // ── ⑥ truncated addresses ────────────────────────────────────────────────────

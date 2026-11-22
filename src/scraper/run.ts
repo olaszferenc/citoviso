@@ -1,6 +1,7 @@
 // CLI runner for the lead-discovery scraper (Phase 4, the volume engine).
 // Usage: npm run scrape -- [regionId] [--out file.json] [--cap N]
 //        npm run scrape -- [regionId | --country HU] --dry-run   (OSM only, counts, NO writes)
+//        npm run scrape -- --country HR                        (whole country, OSM only, saved)
 // Runs all sources over the region+industry, dedupes, qualifies, enriches and saves
 // the leads BATCH BY BATCH (ADR-0331), prints a summary, and — only with --out —
 // writes the qualified leads as JSON.
@@ -31,7 +32,7 @@ import {
 import { dedupeAndQualify, partitionNewLeads } from "./dedupe.js";
 import { enrichLeads } from "./enrichChain.js";
 import { enrichAndSaveInBatches, geoBatches, runSourcePhase, SCRAPE_BATCH_SIZE } from "./batchedRun.js";
-import { distanceKm, getRegion, loadRegions } from "./regions.js";
+import { distanceKm, ensureCountryRegion, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
 import { applyScoutExtras, MagellanSource } from "./sources/magellan.js";
@@ -165,9 +166,15 @@ async function main(): Promise<void> {
   if (country && !countryArea(country)) {
     throw new Error(`--country ${country}: az ország nincs az ország-rétegben (ismert: ${allCountriesSync().map((c) => c.iso2).join(", ")}).`);
   }
-  // A whole-country WRITE has no region row to hang the leads on (lead.region, the
-  // console's area facet) — counts only, until that is decided.
-  if (country && !dry) throw new Error("--country egyelőre csak --dry-run mellett fut (országos mentéshez régió-döntés kell).");
+  // A whole-country WRITE (nemzetközi A, 2026-11-22): it used to be dry-only because the leads
+  // had no region row to hang on (lead.region → getRegion() in reenrich / photo attach, the
+  // console's area facet). The run now records its area as a region row of its own
+  // (`country-<cc>`, regions.ensureCountryRegion) before it starts. The safety stays: a
+  // whole country is FREE sources only — the paid Places walk over a country is refused.
+  if (country && !dry && config.scrapePaidApis) {
+    throw new Error("--country (országos mentés) csak SCRAPE_PAID_APIS=off mellett fut (egy egész ország Places-bejárása fizetős)."); // i18n-exempt: operátori hiba
+  }
+  if (country && scout) throw new Error("--country és --scout együtt nem értelmes (a munkalap egy csempe sorait dolgozza fel)."); // i18n-exempt: operátori hiba
   // Scout mode (ADR-0336, `/scout` tile close): the worksheet's rows are the ONLY source, and
   // the run is free by construction — refused outright if the paid switch is on.
   if (scout && config.scrapePaidApis) {
@@ -176,6 +183,10 @@ async function main(): Promise<void> {
   // Operator-defined areas live in the DB (0018); refresh before resolving.
   await loadRegions(true);
   const region = country ? countryArea(country)! : getRegion(regionId);
+  if (country && !dry) {
+    await ensureCountryRegion(region);
+    await loadRegions(true);
+  }
   if (dry) {
     try {
       await dryRun(region);

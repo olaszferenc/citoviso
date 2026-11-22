@@ -130,6 +130,6 @@ export async function enrichLeads(
   // Geo facets (ADR-0040): no lead leaves without a country. Source tags won
   // upstream; reverse-geocode fills the rest from coordinates; the region's
   // country closes the coordinate-less tail.
-  const withGeo = await enrichGeo(enrichContact(withWeb), region.country);
+  const withGeo = await enrichGeo(enrichContact(withWeb, region), region.country);
   return withGeo;
 }

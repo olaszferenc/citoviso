@@ -1,5 +1,6 @@
 import type { WebsiteStatus } from "./types.js";
 import { countryPortalDomains } from "../country.js";
+import { lexListAll, wordSetAll } from "../countryLexicon.js";
 
 /** The whole catalogue: the global list ∪ every country row's own portal hosts (ADR-0437).
  *  Every row, not just the lead's: a Hungarian listing site is a portal for any lead. */
@@ -100,8 +101,18 @@ const GLOBAL_PORTAL_DOMAINS = [
 // Only DIRECTORY FOLDERS, and only when a concrete entry follows them
 // (/szallashelyek/gizella_haz). A business's own site may well have a /szallas/
 // page — that is its own content, not a listing under someone else's roof.
-const LISTING_ENTRY_RE =
-  /\/(szallashelyek|szallashely|accommodation|apartmanok|panziok|hotelek|vendeghazak|latnivalok)\/[^/]+/;
+// The folder words are every country's (lexicon `listingPathWords`; HU verbatim): a URL has no
+// lead country, and a Croatian town portal's /smjestaj/<entry> is a listing for any lead.
+let listingEntryRe: RegExp | null = null;
+function listingEntryRe_(): RegExp {
+  if (!listingEntryRe) {
+    // lexListAll, not wordSetAll: a country without the key adds no folder (its trade words
+    // are not directory names — "/hotel/<x>" is an own site's page).
+    const words = lexListAll("listingPathWords").map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    listingEntryRe = new RegExp(`/(${words.join("|")})/[^/]+`);
+  }
+  return listingEntryRe;
+}
 
 /**
  * Is a bare HOST (a stored referrer: "booking.com", "www.szallas.hu") one of the catalogue's
@@ -133,7 +144,7 @@ function isPortalHost(url: string): boolean {
     return false; // unparsable → let the caller treat it as an own site candidate
   }
   // A directory ENTRY under someone else's domain is a portal entry, not an own site.
-  if (LISTING_ENTRY_RE.test(pathname)) return true;
+  if (listingEntryRe_().test(pathname)) return true;
   const labels = host.split(".");
   return portalDomains().some((entry) => {
     const d = entry.toLowerCase();
@@ -199,21 +210,18 @@ export function isShortLink(website: string): boolean {
  * in the host (abbazia-clubhotel.hu carries 7 buildings, all named "Abbázia" → not
  * foreign); a host is a candidate when ≥2 different businesses reach it that way.
  */
-const GENERIC_NAME_WORDS = new Set([
-  "hotel", "hotels", "szallo", "szalloda", "apartman", "apartmanok", "apartmanhaz", "apartment",
-  "apartments", "panzio", "pension", "vendeghaz", "vendeghazak", "guest", "house", "guesthouse",
-  "haz", "hazak", "villa", "nyaralo", "nyaralohaz", "szallas", "szallasok", "resort", "camping",
-  "kemping", "spa", "wellness", "etterem", "restaurant", "and", "es", "the", "family", "club",
-  "boutique", "lake", "balaton", "room", "rooms", "studio", "holiday", "home", "bed", "breakfast",
-]);
-
+// The generic words are every country's (lexicon `foreignLinkGenericWords`; HU verbatim): the
+// stock this runs over has no single country, and a trade word of any language is no brand.
+let genericNameWords: ReadonlySet<string> | null = null;
 function nameTokens(name: string): string[] {
+  genericNameWords ??= wordSetAll("foreignLinkGenericWords");
+  const generic = genericNameWords;
   return name
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length >= 2 && !GENERIC_NAME_WORDS.has(t));
+    .filter((t) => t.length >= 2 && !generic.has(t));
 }
 
 /** Does a distinctive word of the business name appear in the host? */

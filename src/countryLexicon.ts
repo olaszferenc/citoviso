@@ -103,3 +103,21 @@ export function wordSetAll(key: string): ReadonlySet<string> {
   for (const l of allCountryLexicons()) for (const w of wordSet(l.iso2, key)) out.add(w);
   return out;
 }
+
+/** A single string value of the lexicon by key (a query phrase); null when missing. */
+export function lexString(iso: string | null | undefined, key: string): string | null {
+  const v = countryLexicon(iso)?.[key];
+  return typeof v === "string" && v ? v : null;
+}
+
+/**
+ * The UNION of a regex-fragment list over every lexicon (allCountryLexicons() order),
+ * duplicates dropped. For a PAGE-TEXT matcher: the words to look for are the page's language,
+ * which is the portal's, not the lead's. Callers use it in tests / match POSITIONS only, so the
+ * order of the alternatives never changes a result.
+ */
+export function lexListAll(key: string): readonly string[] {
+  const out: string[] = [];
+  for (const l of allCountryLexicons()) for (const w of lexList(l.iso2, key)) if (!out.includes(w)) out.push(w);
+  return out;
+}

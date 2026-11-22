@@ -12,8 +12,10 @@
 
 import { T } from "../i18n/mail.js";
 import { PHONE_NORM_JS } from "../text/phone.js";
+import { phoneRulesJs } from "../text/phoneCountry.js";
+import { countryConfigSync } from "../country.js";
 import { ic } from "../ui/icons.js";
-import { SCOUT_KEYWORDS, SCOUT_SAT_THRESHOLD } from "../scout/rules.js";
+import { SCOUT_SAT_THRESHOLD } from "../scout/rules.js";
 import type { PlaceView, ScoutRegion, ScoutStats, TileView } from "../scout/store.js";
 import { consoleLang } from "./i18nCtx.js";
 import { esc, helpLink, layout } from "./views.js";
@@ -202,7 +204,7 @@ export function scoutPage(d: ScoutPageData): string {
     stats: d.stats,
     sel: d.sel,
     places: d.places,
-    kw: SCOUT_KEYWORDS,
+    kw: d.region.keywords,
     sat: SCOUT_SAT_THRESHOLD,
   };
   const body = `<div class="sc" id="scout">
@@ -261,7 +263,7 @@ export function scoutPage(d: ScoutPageData): string {
   </div>
 </div>
 <script>
-${PHONE_NORM_JS}
+${PHONE_NORM_JS}${phoneRulesJs(countryConfigSync(d.region.country))}
 var SC=${jsonForScript(state)};
 var L=${jsonForScript(scoutStrings(lang))};
 ${SCOUT_JS}

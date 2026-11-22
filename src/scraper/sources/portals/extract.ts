@@ -20,6 +20,25 @@ import { withoutStarRating } from "../../../text/starRating.js";
 import { mailtoAddress } from "../../../email/leadEmails.js";
 import { deaccent } from "../../enrichPresence.js";
 import { parseSrcset } from "../../srcset.js";
+import { lexListAll } from "../../../countryLexicon.js";
+import { matcherWords } from "../../genericWords.js";
+import { phoneTextRegexIn } from "../../../text/phoneCountry.js";
+import type { CountryConfig } from "../../../country.js";
+
+/**
+ * What the reader needs of the lead's country row (ADR-0437): its ISO code (the trade words
+ * that anchor a description) and its phone plan (the number pattern of the page text).
+ * null = unknown country: the trade words of every country, internationally written numbers only.
+ */
+export type ListingCountry = Pick<CountryConfig, "iso2" | "dialCode" | "trunkPrefix" | "phonePlan"> | null;
+
+// PAGE-TEXT patterns (nemzetközi A, ADR-XXXX): the words a portal page uses are the PORTAL's
+// language, not the lead's — a Hungarian lead's booking.com page is English, a Croatian portal
+// lists a Hungarian guest's favourite too. So these are every country's lexicon patterns
+// (lexListAll; HU = the former inline alternatives verbatim). They only ever answer a test or a
+// match POSITION, so adding another language's alternatives cannot reorder a Hungarian result.
+const altRe = (key: string, wrap: (alts: string) => string, flags: string): RegExp =>
+  new RegExp(wrap(lexListAll(key).join("|")), flags);
 
 import type {
   PortalPhoto,
@@ -483,8 +502,7 @@ export const IMAGE_EXT = /\.(jpe?g|png|webp|avif)(\?|#|$)/i;
  * „Közeli szállások” (div.places_nearby) — its neighbours' thumbs sat under most Keszthely
  * leads (MG21, 2026-10-26). The „Közeli helyek” list above it (sights, no photos) is not it.
  */
-const RELATED_BLOCK =
-  /(hasonló\s+szállás|hasonlo\s+szallas|similar-listing|similar_listing|similar-hotel|related-listing|related-item|ajánlott\s+szállás|ezt\s+is\s+megnézhet|önnek\s+ajánljuk|más\s+szálláshely|nearby-?hotels|other-?properties|wide-listings-list|places_nearby|közeli\s+szállások)/i;
+const RELATED_BLOCK = altRe("relatedBlockPatterns", (a) => `(${a})`, "i");
 
 /** The part of the page that is about THIS property — everything before the
  *  "similar listings" block. Returns the whole page when there is no such block. */
@@ -529,7 +547,7 @@ export function domImages(html: string, pageUrl: string): ExtractedListing["imag
  * falls back to the longest paragraphs on the page. Navigation, cookie banners
  * and "similar listings" blocks are short, so the length filter removes them.
  */
-export function domDescription(html: string, nameHint?: string): string | undefined {
+export function domDescription(html: string, nameHint?: string, country?: string | null): string | undefined {
   const body = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
   const marked = /<[^>]+class\s*=\s*["'][^"']*(full-description|description-text|listing-description|bemutatkozas|leiras|introduction)[^"']*["'][^>]*>([\s\S]{80,6000}?)<\/(?:div|p|section|article)>/i.exec(
     body,
@@ -551,7 +569,7 @@ export function domDescription(html: string, nameHint?: string): string | undefi
     const best = paragraphs.slice(0, 6).join("\n\n");
     if (best.length >= 120) return best.slice(0, MAX_DESCRIPTION);
   }
-  return tableEraDescription(body, nameHint);
+  return tableEraDescription(body, nameHint, country);
 }
 
 /**
@@ -569,14 +587,14 @@ export function domDescription(html: string, nameHint?: string): string | undefi
  * like sentences and must not be mostly links — otherwise a menu column would become the
  * property's introduction.
  */
-/** Words that identify no property on their own — never an entity anchor. */
-const GENERIC_DESC_WORD = new Set([
-  "apartman", "apartmanhaz", "vendeghaz", "haz", "panzio", "hotel", "villa",
-  "szallas", "szallashely", "udulo", "nyaralo", "kemping", "porta", "resort",
-  "balaton", "kiado", "szoba", "szobak",
-]);
+/** Words that identify no property on their own — never an entity anchor. The lead's country's
+ *  list (lexicon `descGenericWords`, HU verbatim; unknown country → every country's). */
+function genericDescWords(country: string | null | undefined): ReadonlySet<string> {
+  return matcherWords(country, "descGenericWords");
+}
 
-function tableEraDescription(body: string, nameHint?: string): string | undefined {
+function tableEraDescription(body: string, nameHint?: string, country?: string | null): string | undefined {
+  const generic = genericDescWords(country);
   // ENTITY ANCHOR (§F.17b, the rule this codebase already applies everywhere else): on a
   // page with no <p> and no class, "longest prose" is not enough — measured on the
   // turistautak POI page, the site's own legal footer ("A weboldal működése és tartalma…")
@@ -585,7 +603,7 @@ function tableEraDescription(body: string, nameHint?: string): string | undefine
   const brand = nameHint
     ? deaccent(nameHint.toLowerCase())
         .split(/[^a-z0-9]+/)
-        .filter((w) => w.length >= 4 && !GENERIC_DESC_WORD.has(w))
+        .filter((w) => w.length >= 4 && !generic.has(w))
     : [];
 
   // ONE PASS PER TAG, not a single alternation: with `(td|div|blockquote)` in one regex,
@@ -626,7 +644,7 @@ function tableEraDescription(body: string, nameHint?: string): string | undefine
   return best.text ? best.text.trim().slice(0, MAX_DESCRIPTION) : undefined;
 }
 
-const AMENITY_HEADING = /(szolgáltatás|szolgaltatas|felszerelt|ellátás|ellatas|amenit|kényelem|kenyelem)/i;
+const AMENITY_HEADING = altRe("amenityHeadingPatterns", (a) => `(${a})`, "i");
 
 /**
  * Page furniture that sits in the same markup as the amenity list — a portal's
@@ -634,8 +652,7 @@ const AMENITY_HEADING = /(szolgáltatás|szolgaltatas|felszerelt|ellátás|ellat
  * <ul> under a heading that matches, and its items would be published as
  * features of the property. They describe the PORTAL, not the place.
  */
-const NON_AMENITY_ITEM =
-  /^(bemutatkoz|elérhetőség|elerhetoseg|értékel|ertekel|vélemény|velemeny|szolgáltatások|szolgaltatasok|galéria|galeria|térkép|terkep|kapcsolat|ajánlat|ajanlat|csomagajánlat|csomagajanlat|árak|arak|foglal|online szállásfoglal|online szallasfoglal|nyitvatartás|nyitvatartas|leírás|leiras|hasonló|hasonlo|tovább|tovabb|vissza|kezdőlap|kezdolap|főoldal|fooldal|hírlevél|hirlevel|adatvédel|adatvedel|cookie|süti|suti)/i;
+const NON_AMENITY_ITEM = altRe("nonAmenityItemPatterns", (a) => `^(${a})`, "i");
 
 /**
  * Amenities from an explicit LIST that sits under an amenity heading. Deliberately
@@ -693,12 +710,19 @@ export function domPrices(text: string): PortalPrice[] {
   return out;
 }
 
-/** "6-8 fő", "4 fő részére" — only where the sentence is about accommodating guests. */
+/** "6-8 fő", "4 fő részére" — only where the sentence is about accommodating guests.
+ *  The person word, the "or/and" joiner and the guest-context words are every country's
+ *  (lexicon capacity*Patterns; HU "fő" · "vagy|és" · "fér|elhelyez|…" verbatim). */
+const CAPACITY_RE = new RegExp(
+  String.raw`([^.\n]{0,80}?\b(\d{1,2})\s*(?:-|–|—|\s*(?:${lexListAll("capacityJoinPatterns").join("|")})\s*)?\s*(\d{1,2})?\s*(?:${lexListAll("capacityUnitPatterns").join("|")})\b[^.\n]{0,80})`,
+  "gi",
+);
+const CAPACITY_CONTEXT = altRe("capacityContextPatterns", (a) => a, "i");
 export function domCapacity(text: string): SourcedValue<number> | undefined {
-  const re = /([^.\n]{0,80}?\b(\d{1,2})\s*(?:-|–|—|\s*(?:vagy|és)\s*)?\s*(\d{1,2})?\s*fő\b[^.\n]{0,80})/gi;
+  const re = new RegExp(CAPACITY_RE.source, CAPACITY_RE.flags);
   for (const m of text.matchAll(re)) {
     const sentence = m[1]!.replace(/\s+/g, " ").trim();
-    if (!/fér|elhelyez|befogad|szállás|szallas|vendég|vendeg|alkalmas|részére|reszere/i.test(sentence)) {
+    if (!CAPACITY_CONTEXT.test(sentence)) {
       continue;
     }
     const a = Number(m[2]);
@@ -735,17 +759,18 @@ const H1_RE = /<h1\b[^>]*>([\s\S]{2,200}?)<\/h1>/i;
 
 // Contact details as the pre-structured-data stock publishes them: a label and a
 // value, in a table cell ("Cím: 8261 Badacsony, Római út 200. Telefon: +36/30/…").
-// Bounded like enrichWebSearch's PHONE_RE: never a match inside a longer digit run.
-const DOM_PHONE_RE =
-  /(?<![\d/.])(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}(?!\d)/;
+// The number pattern is the lead's COUNTRY's (phoneTextRegexIn — the HU row's is the former
+// DOM_PHONE_RE verbatim, the same pattern enrichWebSearch uses): never a match inside a longer
+// digit run.
 const DOM_EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
 const DOM_ADDRESS_RE = /\b(?:cím|cim|address|anschrift)\s*:?\s*([^\n|]{6,120})/i;
 
-/** Phone from an explicit tel: link first — the owner's own declaration. */
-export function domPhone(html: string, text: string): string | undefined {
+/** Phone from an explicit tel: link first — the owner's own declaration. `cfg` = the lead's
+ *  country row (its number pattern for the page text). */
+export function domPhone(html: string, text: string, cfg: ListingCountry): string | undefined {
   const tel = /tel:([+0-9\s()./-]{7,})/i.exec(html)?.[1];
   if (tel) return clean(tel, 40);
-  return clean(DOM_PHONE_RE.exec(text)?.[0], 40);
+  return clean(phoneTextRegexIn(cfg).exec(text)?.[0], 40);
 }
 
 export function domEmail(html: string, text: string): string | undefined {
@@ -762,10 +787,10 @@ export function domAddress(text: string): string | undefined {
   return raw && /\d/.test(raw) ? raw : undefined;
 }
 
-export function fromDom(html: string, pageUrl: string, nameHint?: string): Partial<ExtractedListing> {
+export function fromDom(html: string, pageUrl: string, nameHint: string | undefined, cfg: ListingCountry): Partial<ExtractedListing> {
   const text = textOf(html);
   const times = domCheckTimes(text);
-  const description = domDescription(html, nameHint);
+  const description = domDescription(html, nameHint, cfg?.iso2);
   // CAPACITY and ROOM COUNT are read from the listing's own PROSE only, never
   // from the whole page. The booking widget on a portal page carries "Szobák és
   // Vendégek · 2 Vendég, 1 szoba" — the SEARCH FORM's default selection, which a
@@ -778,7 +803,7 @@ export function fromDom(html: string, pageUrl: string, nameHint?: string): Parti
     description,
     address,
     street: address,
-    phone: domPhone(html, text),
+    phone: domPhone(html, text, cfg),
     email: domEmail(html, text),
     amenities: domAmenities(html),
     prices: domPrices(text),
@@ -863,7 +888,7 @@ function mergeInto(base: ExtractedListing, patch: Partial<ExtractedListing> | nu
  * asserted facts win; OpenGraph fills the gaps; DOM adds what neither published
  * (galleries, full prose, amenity lists, prices).
  */
-export function extractListing(html: string, pageUrl: string, nameHint?: string): ExtractedListing {
+export function extractListing(html: string, pageUrl: string, nameHint: string | undefined, cfg: ListingCountry): ExtractedListing {
   const base: ExtractedListing = {
     rooms: [],
     amenities: [],
@@ -875,7 +900,7 @@ export function extractListing(html: string, pageUrl: string, nameHint?: string)
   };
   mergeInto(base, fromJsonLd(html, pageUrl));
   mergeInto(base, fromOpenGraph(html, pageUrl));
-  mergeInto(base, fromDom(html, pageUrl, nameHint));
+  mergeInto(base, fromDom(html, pageUrl, nameHint, cfg));
   if (base.description) base.description = withoutRatingCards(base.description);
   // A star classification in the listing's own title is no sourced fact (§B.17), and it would
   // ride into every caption („Panoráma Faház**** – Mohács fotó 32”, fd50391f, 2026-10-27).

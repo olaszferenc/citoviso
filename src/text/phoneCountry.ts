@@ -148,8 +148,13 @@ const escRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * decides whether it is a valid number of that plan.
  */
 export function phoneTextPatternIn(cfg: Pick<PhoneRules, "dialCode" | "trunkPrefix" | "phonePlan"> | null): string {
-  if (!cfg || cfg.phonePlan === "hu") {
+  if (cfg?.phonePlan === "hu") {
     return HU_PHONE_TEXT_PATTERN;
+  }
+  // No row (unknown country): only an internationally written number has a country of its
+  // own — a national one is not guessed into any plan (fail closed, ADR-0437).
+  if (!cfg) {
+    return String.raw`(?<![\d/.])(?:\+|00)[1-9]\d{0,2}[\s/().-]*\d{1,3}[\s/().-]*\d{2,4}[\s/().-]*\d{2,4}(?:[\s/-]?\d{1,4})?(?!\d)`;
   }
   const pre = [`\\+${cfg.dialCode}`, `00${cfg.dialCode}`, ...(cfg.trunkPrefix ? [escRe(cfg.trunkPrefix)] : [])].join("|");
   return String.raw`(?<![\d/.])(?:` + pre + String.raw`)[\s/().-]*\d{1,3}[\s/().-]*\d{2,4}[\s/().-]*\d{2,4}(?:[\s/-]?\d{1,4})?(?!\d)`;
@@ -164,11 +169,15 @@ export function phoneTextRegexIn(cfg: Pick<PhoneRules, "dialCode" | "trunkPrefix
 export function isMobileRawIn(phone: string, cfg: PhoneRules | null): boolean {
   if (!cfg) return false;
   if (cfg.phonePlan === "hu") {
+    // enrichContact's historic rule, spelled with the row's codes (HU: 36 / 06): 0036…, 36…,
+    // 06…, and a bare "6…" (the trunk without its leading 0) when 9+ digits long.
+    const dial = cfg.dialCode;
+    const trunk = cfg.trunkPrefix;
     let d = phone.replace(/\D/g, "");
-    if (d.startsWith("0036")) d = d.slice(4);
-    else if (d.startsWith("36")) d = d.slice(2);
-    else if (d.startsWith("06")) d = d.slice(2);
-    else if (d.startsWith("6") && d.length >= 9) d = d.slice(1);
+    if (d.startsWith(`00${dial}`)) d = d.slice(2 + dial.length);
+    else if (d.startsWith(dial)) d = d.slice(dial.length);
+    else if (trunk && d.startsWith(trunk)) d = d.slice(trunk.length);
+    else if (trunk.length > 1 && d.startsWith(trunk.slice(1)) && d.length >= 9) d = d.slice(trunk.length - 1);
     return cfg.mobilePrefixes.includes(d.slice(0, 2));
   }
   const e = normalizePhoneIn(phone, cfg);

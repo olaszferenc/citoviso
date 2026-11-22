@@ -17,7 +17,9 @@
 // is assessed for outdatedness in the same run). Without a search backend this is
 // a no-op, so the pipeline still works on the guess alone.
 
-import { leadCountryConfig } from "../country.js";
+import { countryConfigSync, leadCountryConfig } from "../country.js";
+import { countryLexicon, lexList, lexString } from "../countryLexicon.js";
+import { matcherWords } from "./genericWords.js";
 import {
   deaccent,
   fetchHtml,
@@ -40,29 +42,25 @@ const MAX_RESULTS = 5;
  * classifyWebsite (portal_only), but we must not even fetch them as candidates;
  * the rest are directories/social/maps that would produce false positives
  * (they mention both the brand and the region by construction).
+ *
+ * Nemzetközi A (ADR-XXXX): this is the CROSS-BORDER part. A country's own listing sites,
+ * directories and town portals are its data: the lexicon's calibrated `nonOwnHosts` when it
+ * has one (HU: the former seed list verbatim — the Brave trial 2026-08-18, the reenrich
+ * dry-runs 2026-08-19, ADR-0037), else the country row's `portal_domains`.
  */
-const NON_OWN_HOST = [
-  "booking.com", "szallas.hu", "szallashelyek", "airbnb.", "tripadvisor.",
-  "facebook.com", "instagram.com", "youtube.com", "google.", "maps.",
-  "hovamenjek", "zimmerinfo", "programturizmus", "utazzitthon", "szallasinfo",
-  "cegjegyzek", "nemzeticegtar", "ceginformacio", "yelp.", "foursquare",
-  "wikipedia.org", "port.hu", "hotels.com", "expedia.", "trivago.",
-  "hundidak", "nyaralas", "apartmanok", "szallas.net", "olcsoszallas",
-  // Brave trial run (2026-08-18): these smaller portals' listing pages passed
-  // verify() and got misfiled as own sites — never fetch them as candidates.
-  "szallaskeres", "kiadoapartman", "szallashirdeto",
-  "szallas24", "iranymagyarorszag", "booked.hu", "tourinform",
-  // Town tourism portals list local businesses under their own roof — the
-  // reenrich dry-run caught badacsony.COM too (2026-08-19), so exact domains,
-  // not one TLD. Region-specific seeds; the scalable fix is ADR-0037.
-  "badacsony.hu", "badacsony.com",
-  // Keszthely reenrich dry-run (2026-08-19): a new region = ~15 new listing
-  // hosts in one shot (the ADR-0037 thesis, live). Seeds until the registry:
-  "szallasotletek", "hellomiskolc", "rendezvenyhelyszinek", "termeszetjaro.hu",
-  "ittjartam.hu", "lap.hu", "apartman.hu", "balaton.hu", "szepkartyat",
-  "balatoniszallas", "camping.info", "szallas-kereso", "myszallas",
-  "lake-balaton.com", "gyertekvelem", "portadora",
+const CROSS_BORDER_NON_OWN_HOST = [
+  "booking.com", "airbnb.", "tripadvisor.", "facebook.com", "instagram.com", "youtube.com",
+  "google.", "maps.", "yelp.", "foursquare", "wikipedia.org", "hotels.com", "expedia.",
+  "trivago.", "camping.info",
 ];
+
+/** The non-own hosts for a lead of `country`: the cross-border list + the country's own. */
+export function nonOwnHosts(country: string | null | undefined): readonly string[] {
+  const own = countryLexicon(country)?.nonOwnHosts !== undefined
+    ? lexList(country, "nonOwnHosts")
+    : (countryConfigSync(country)?.portalDomains ?? []);
+  return [...CROSS_BORDER_NON_OWN_HOST, ...own];
+}
 
 /**
  * Entries are matched on the HOSTNAME, mirroring qualify.ts semantics — never
@@ -73,7 +71,7 @@ const NON_OWN_HOST = [
  *   "airbnb."      any TLD      → the label "airbnb" followed by anything
  *   "szallas24"    brand word   → appears anywhere in the host
  */
-function isCandidateHost(url: string): boolean {
+export function isCandidateHost(url: string, country: string | null | undefined): boolean {
   let host: string;
   try {
     host = new URL(url).hostname.toLowerCase();
@@ -81,7 +79,7 @@ function isCandidateHost(url: string): boolean {
     return false;
   }
   const labels = host.split(".");
-  return !NON_OWN_HOST.some((h) => {
+  return !nonOwnHosts(country).some((h) => {
     if (h.endsWith(".")) return labels.includes(h.slice(0, -1));
     if (h.includes(".")) return host === h || host.endsWith(`.${h}`);
     return host.includes(h);
@@ -125,6 +123,7 @@ export function domainCarriesBrand(
   url: string,
   name: string,
   geo: string[],
+  country?: string | null,
 ): boolean {
   let host: string;
   try {
@@ -136,10 +135,11 @@ export function domainCarriesBrand(
   // Balatonmáriafürdő would "match" balatonmariafurdo.hu (the town portal),
   // and "Balatonederics újhegyi vendégház" would match balatonederics.hu.
   // Substring, not equality — the town name contains the lead's word.
+  const generic = genericSiteWords(country);
   const brandTokens = tokens(name).filter(
     (t) =>
       t.length >= 4 &&
-      !GENERIC_SITE_WORD.has(t) &&
+      !generic.has(t) &&
       !geo.some((g) => g.includes(t) || t.includes(g)),
   );
   return brandTokens.some((t) => host.includes(t));
@@ -148,13 +148,11 @@ export function domainCarriesBrand(
 /**
  * Trade words that carry no identity — a host matching only these proves
  * nothing (kiadovendeghaz.hu "contains" vendeghaz for every guesthouse).
+ * The lead's country's list (lexicon `genericSiteWords`, HU verbatim).
  */
-const GENERIC_SITE_WORD = new Set([
-  "szallas", "szallashely", "apartman", "apartmanok", "apartmanhaz", "kemping",
-  "camping", "udulo", "uduloje", "vendeghaz", "vendeglo", "panzio", "hotel",
-  "tabor", "hely", "haz", "villa", "motel", "resort", "etterem", "nyaralohaz",
-  "kuria", "presshaz", "preshaz", "varos", "vendeghazak", "hostel",
-]);
+function genericSiteWords(country: string | null | undefined): ReadonlySet<string> {
+  return matcherWords(country, "genericSiteWords");
+}
 
 /**
  * Ask the open web for ONE lead's official site and return it only if confirmed.
@@ -175,14 +173,17 @@ export async function findOwnSite(
   apiKey: string,
   cseId: string,
 ): Promise<string | null> {
-  const query = `${lead.name} ${searchPlace(lead, region)} hivatalos oldal`;
   const terms = geoTerms(lead, region);
   // ADR-0437: the search runs in the lead's country's search language; no layer row = no search.
   const loc = leadCountryConfig(lead, region);
   if (!loc) return null;
+  // "… hivatalos oldal" in the lead's country's words (lexicon officialSiteQuery); a country
+  // that has none searches the bare name + town (no foreign-language phrase is guessed).
+  const official = lexString(loc.iso2, "officialSiteQuery");
+  const query = `${lead.name} ${searchPlace(lead, region)}${official ? ` ${official}` : ""}`;
   const results = await webSearch(query, apiKey, cseId, MAX_RESULTS, loc.searchLang);
   for (const r of results) {
-    if (!r.link || !isCandidateHost(r.link) || !isShallowUrl(r.link)) continue;
+    if (!r.link || !isCandidateHost(r.link, loc.iso2) || !isShallowUrl(r.link)) continue;
     const page = await fetchHtml(r.link);
     // Same geo-strict rule as the domain-guess pass: brand AND locality.
     // The redirect target must be shallow too (a root URL bouncing to a
@@ -191,9 +192,9 @@ export async function findOwnSite(
     // The domain must be NAMED after the business — a page about it on someone
     // else's domain passes both the geo anchor and verify(), so this is the
     // only thing standing between us and a town portal or a blog post.
-    if (!domainCarriesBrand(page.finalUrl, lead.name, terms)) continue;
+    if (!domainCarriesBrand(page.finalUrl, lead.name, terms, loc.iso2)) continue;
     // JavaScript-built sites show the town only after rendering (Dalma panzió).
-    if (!(await verifyOrRender(lead.name, terms, page, loc.browserLocale))) continue;
+    if (!(await verifyOrRender(lead.name, terms, page, loc.browserLocale, loc.iso2))) continue;
     // A search hit that resolves to a portal is not an own site.
     if (classifyWebsite(page.finalUrl) === "has_own") return page.finalUrl;
   }

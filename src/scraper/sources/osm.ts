@@ -1,6 +1,7 @@
 import type { Industry, RawLead, ScrapeQuery } from "../types.js";
 import type { LeadSource } from "./LeadSource.js";
 import { isValidEmail, splitEmailList } from "../../email/leadEmails.js";
+import { countryLexicon } from "../../countryLexicon.js";
 
 // OpenStreetMap via the Overpass API. Free, open data, legally clean — and it
 // carries the `website` tag, which is exactly our qualification signal.
@@ -141,6 +142,12 @@ function localityFromTags(tags: Record<string, string>): {
   return { country, city };
 }
 
+/** An OSM element's name: `name`, else the area country's local-language tag (ADR-0437 —
+ *  the lexicon's osmNameTag; no lexicon → `name` alone). */
+export function osmName(tags: Record<string, string>, nameTag: string | undefined): string | undefined {
+  return tags.name ?? (nameTag ? tags[nameTag] : undefined);
+}
+
 export class OsmSource implements LeadSource {
   readonly name = "osm";
   private lastWarnings: string[] = [];
@@ -210,9 +217,11 @@ export class OsmSource implements LeadSource {
     const data = await this.queryOverpass(buildQuery(query), serverTimeoutS(query), !!query.region.osmArea);
     const leads: RawLead[] = [];
     let unnamed = 0;
+    // The local-language name tag of the AREA's country (lexicon osmNameTag: "name:hu", "name:hr").
+    const nameTag = countryLexicon(query.region.country)?.osmNameTag;
     for (const el of data.elements) {
       const tags = el.tags ?? {};
-      const name = tags.name ?? tags["name:hu"];
+      const name = osmName(tags, nameTag);
       if (!name) {
         unnamed++; // unnamed POIs are useless as leads
         continue;

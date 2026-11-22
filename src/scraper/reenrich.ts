@@ -19,6 +19,8 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { enrichContact } from "./enrichContact.js";
 import { tokens } from "./enrichPresence.js";
+import { matcherWords } from "./genericWords.js";
+import { countryOf } from "../country.js";
 import { enrichOutdated } from "./enrichOutdated.js";
 import { enrichSiteSearch } from "./enrichSiteSearch.js";
 import { enrichWebSearch, isBusinessEmail } from "./enrichWebSearch.js";
@@ -40,15 +42,11 @@ const UPDATABLE_LIFECYCLES = ["qualified", "mock_curation"];
  * cannot identify the business and a backfill must not guess on its behalf.
  * (The live scrape path deserves the same guard — see the session note.)
  */
-const GENERIC_NAME_WORD = new Set([
-  "szallas", "szallashely", "apartman", "apartmanhaz", "kemping", "camping",
-  "udulo", "vendeghaz", "haz", "panzio", "hotel", "tabor", "hely", "ifjusagi",
-  "turistahaz", "motel", "resort", "vendeglo", "etterem", "szoba", "szobak",
-  "parton", "vadkempingezo", "diakszallas", "kozossegi", "faluhaz", "porta",
-]);
-
-function hasDistinctiveName(name: string): boolean {
-  return tokens(name).some((t) => t.length >= 4 && !GENERIC_NAME_WORD.has(t));
+// The list is the lead's COUNTRY's (lexicon `reenrichGenericNameWords`, the HU list verbatim;
+// genericWords.matcherWords — no country → every country's).
+function hasDistinctiveName(name: string, country: string | null | undefined): boolean {
+  const generic = matcherWords(country, "reenrichGenericNameWords");
+  return tokens(name).some((t) => t.length >= 4 && !generic.has(t));
 }
 
 function parseArgs(argv: string[]): { regionId?: string; apply: boolean } {
@@ -97,8 +95,8 @@ async function main(): Promise<void> {
   const updatable = parsed.filter((r) =>
     UPDATABLE_LIFECYCLES.includes(r.lifecycle_status),
   );
-  const skippedGeneric = updatable.filter((r) => !hasDistinctiveName(r.raw.name));
-  const targets = updatable.filter((r) => hasDistinctiveName(r.raw.name));
+  const skippedGeneric = updatable.filter((r) => !hasDistinctiveName(r.raw.name, countryOf(r.raw)));
+  const targets = updatable.filter((r) => hasDistinctiveName(r.raw.name, countryOf(r.raw)));
 
   console.log(
     `Backfill (${webSearchBackend()}): ${targets.length} no_site lead${regionId ? ` · régió: ${regionId}` : ""} — ${apply ? "ÉLES ÍRÁS" : "DRY-RUN (írás nélkül; --apply írna)"}`,
@@ -174,7 +172,7 @@ async function main(): Promise<void> {
       config.googleCseId,
       region,
     );
-    const after = enrichContact(withWeb).map((l, i) => keepCuratorEmail(before[i]!, l));
+    const after = enrichContact(withWeb, region).map((l, i) => keepCuratorEmail(before[i]!, l));
 
     for (let i = 0; i < group.length; i++) {
       const row = group[i]!;

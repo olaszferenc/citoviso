@@ -77,7 +77,9 @@ import {
 import { DEFAULT_LANG, langForCountry } from "../src/i18n/lang.js";
 import { SEND_WINDOW } from "../src/sms/sendWindow.js";
 import { DEFAULT_DAILY_CAP } from "../src/outreach/autoDispatch.js";
-import { SCOUT_KEYWORDS } from "../src/scout/rules.js";
+import { scoutKeywords, scoutTileLonDeg, SCOUT_TILE_LON_DEG } from "../src/scout/rules.js";
+import { osmAreaForRegion } from "../src/scraper/regions.js";
+import { allCountryLexicons, countryLexicon } from "../src/countryLexicon.js";
 import { APP_TZ, COUNTRY_DEFAULT_TIME_ZONE, defaultTimeZoneForCountry } from "../src/text/zoneTime.js";
 import { isHuMobileE164, normalizePhone } from "../src/text/phone.js";
 import { isMobileE164In, normalizePhoneIn } from "../src/text/phoneCountry.js";
@@ -143,8 +145,12 @@ if (hu) {
   check("HU.sendWindow = SEND_WINDOW", hu.sendWindowFrom === SEND_WINDOW.fromHour && hu.sendWindowTo === SEND_WINDOW.toHour,
     `${hu.sendWindowFrom}–${hu.sendWindowTo} vs ${SEND_WINDOW.fromHour}–${SEND_WINDOW.toHour}`);
   check("HU.dailyQuota = DEFAULT_DAILY_CAP", hu.dailyQuota === DEFAULT_DAILY_CAP, `${hu.dailyQuota} vs ${DEFAULT_DAILY_CAP}`);
-  check("HU kulcsszavak = SCOUT_KEYWORDS (a munkalap oszlopai)", same(hu.searchKeywords.accommodation ?? [], SCOUT_KEYWORDS),
-    JSON.stringify(hu.searchKeywords.accommodation));
+  // The worksheet reads the row now (scoutKeywords); the stored HU tiles' `kw` keys are these
+  // six strings — the guard's own frozen copy, so the row can never silently rename a column.
+  const HU_TILE_KW_KEYS = ["szállás", "hotel", "panzió", "apartman", "vendégház", "kemping"];
+  check("munkalap: scoutKeywords(HU) = a HU-sor kulcsszavai = a tárolt csempék kw-kulcsai",
+    same(scoutKeywords(HOME), hu.searchKeywords.accommodation ?? []) && same(scoutKeywords(HOME), HU_TILE_KW_KEYS),
+    JSON.stringify(scoutKeywords(HOME)));
   check("HU.phonePlan = 'hu' (a phone.ts teljes számozási terve)", hu.phonePlan === "hu");
   // The mobile ranges: every row prefix is a mobile to phone.ts, and no other two-digit range is.
   const rowMobile = new Set(hu.mobilePrefixes);
@@ -161,6 +167,30 @@ if (hu) {
   check("resolvePricingRegion: Accept-Language hu → HU.pricingRegion", resolvePricingRegion({ "accept-language": "hu-HU,hu;q=0.9" }) === hu.pricingRegion);
   check("a HU portál-hostok portálok (classifyWebsite)", hu.portalDomains.filter((d) => !d.includes("/") && !d.endsWith(".") && d.includes("."))
     .every((d) => classifyWebsite(`https://${d}/x`) === "portal_only"));
+}
+
+console.log("②b gyűjtés: a HU-válasz a régi, a szótár teljes (nemzetközi A)");
+check("csempe-szélesség: a magyar sávban (45,7–48,6° É) a kalibrált 0,145°",
+  [45.7, 46.08, 47, 48.1, 48.6].every((lat) => scoutTileLonDeg(lat) === SCOUT_TILE_LON_DEG));
+check("csempe-szélesség: Makarska (43,3° É) ≈ 11 km", Math.abs(scoutTileLonDeg(43.3) * 111.32 * Math.cos((43.3 * Math.PI) / 180) - 11.0) < 0.2,
+  String(scoutTileLonDeg(43.3)));
+check("megye-to → HU-TO, megye-xx → nincs (a HU szótár megyéi)", osmAreaForRegion("megye-to") === "HU-TO" && osmAreaForRegion("megye-xx") === undefined);
+check("terulet-hr-17 → HR-17, terulet-hr-99 → nincs", osmAreaForRegion("terulet-hr-17") === "HR-17" && osmAreaForRegion("terulet-hr-99") === undefined);
+check("a HU szótár megyéi = a 20 ISO 3166-2 HU-kód", (countryLexicon(HOME)?.subdivisions.length ?? 0) === 20);
+// Every purpose key a collection file reads must exist in the HU lexicon (else the HU matcher
+// would silently fall back to tradeWords and stop being the old one).
+const HU_PURPOSE_KEYS = [
+  "placesTradeWords", "typeWords", "portalTypeWords", "genericSiteWords", "nonOwnHosts", "reenrichGenericNameWords",
+  "listingTitleGenericWords", "foreignLinkGenericWords", "listingPathWords", "descGenericWords", "relatedBlockPatterns",
+  "amenityHeadingPatterns", "nonAmenityItemPatterns", "capacityUnitPatterns", "capacityJoinPatterns",
+  "capacityContextPatterns", "listHeadlinePatterns", "freemailLabels", "freemailExact", "officialSiteQuery", "contactWords",
+];
+const huLex = countryLexicon(HOME);
+const missing = HU_PURPOSE_KEYS.filter((k) => huLex?.[k] === undefined);
+check("a HU szótárban minden gyűjtési célkulcs megvan", missing.length === 0, missing.join(", "));
+for (const l of allCountryLexicons()) {
+  check(`${l.iso2}: osmNameTag = name:<nyelv>`, /^name:[a-z]{2,3}$/.test(l.osmNameTag));
+  check(`${l.iso2}: ISO 3166-2 területek`, l.subdivisions.length > 0 && l.subdivisions.every((d) => /^[A-Z0-9]{1,3}$/.test(d.code)));
 }
 
 console.log("③ ismeretlen ország = zárva");
@@ -221,13 +251,41 @@ const SCOPE = [
   "src/trial/start.ts",
   "src/intake/mockRequest.ts",
   "src/generator/generateEngine.ts",
+  // Nemzetközi A (2026-11-22): the rest of the lead-COLLECTION chain.
+  "src/scout/rules.ts",
+  "src/scout/store.ts",
+  "src/console/scoutViews.ts",
+  "src/scraper/regions.ts",
+  "src/scraper/sources/osm.ts",
+  "src/scraper/genericWords.ts",
+  "src/scraper/reenrich.ts",
+  "src/scraper/contactLedger.ts",
+  "src/scraper/enrichContact.ts",
+  "src/scraper/enrichPlaces.ts",
+  "src/scraper/portalPhotos.ts",
+  "src/scraper/sources/portals/extract.ts",
+  "src/scraper/sources/portals/registry.ts",
+  "src/scraper/sources/webSearchBrowser.ts",
 ];
-const BURNED = /["'`](?:HU|hu|HUF|hu-HU)["'`]|\+36|Europe\/Budapest|search_lang=hu|languageCode:\s*["']hu/;
+const BURNED = new RegExp(
+  [
+    /["'`](?:HU|hu|HUF|hu-HU)["'`]|\+36|Europe\/Budapest|search_lang=hu|languageCode:\s*["']hu/.source,
+    // the Hungarian phone prefixes as code (0036 / "36" / "06"), and the national-only text pattern
+    /0036|["'`](?:36|06)["'`]/.source,
+    // a Hungarian search-engine locale in a URL / parameter
+    String.raw`[?&](?:hl|gl)=hu\b|\bcc=HU\b|\b(?:hl|gl):\s*["']hu["']`,
+    // the OSM Hungarian name tag
+    String.raw`name:hu`,
+    // a burned county list (two ISO 3166-2 HU codes side by side in a list)
+    String.raw`["'](?:BA|BE|BK|BU|BZ|CS|FE|GS|HB|HE|JN|KE|NO|PE|SO|SZ|TO|VA|VE|ZA)["']\s*,\s*["'](?:BA|BE|BK|BU|BZ|CS|FE|GS|HB|HE|JN|KE|NO|PE|SO|SZ|TO|VA|VE|ZA)["']`,
+    // a burned Hungarian trade-word / keyword list (a list element, folded or not)
+    String.raw`["'](?:sz[aá]ll[aá]s|sz[aá]ll[aá]shely|vend[eé]gh[aá]z|panzi[oó]|apartmanh[aá]z|kemping)["']\s*[,\]]`,
+  ].join("|"),
+);
 // file → exact code fragment that may stay, and WHY.
 const ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
   { file: "src/outreach/draft.ts", frag: 'return !currency || currency.toUpperCase() === "HUF";', why: "ADR-0456: a FORINT-mondat ága („… forinttól”) — pénznem szerinti szöveg-ág, nem ország; más pénznem a saját jelével (formatMinor)" },
   { file: "src/scraper/persist.ts", frag: 'new Intl.DateTimeFormat("hu-HU"', why: "az operátori napló órája (platform-idő, APP_TZ) — nem a lead országa" },
-  { file: "src/scraper/enrichWebSearch.ts", frag: "(?:\\+36|0036|06)", why: "a webes kontakt-kinyerő HU-szám mintája; az ország-függő kinyerés a telefon-csoport következő lépése (ADR-0437 ⑤3)" },
   { file: "src/i18n/lang.ts", frag: 'const UI_LANGS: readonly string[] = ["hu"', why: "a saját felületeink lefordított NYELVEI (nem ország)" },
   { file: "src/i18n/lang.ts", frag: 'export const DEFAULT_LANG = "hu"', why: "a forrásnyelv (a T() kulcsa magyar) — nyelv, nem ország" },
   { file: "src/i18n/mail.ts", frag: 'case "hu":', why: "nyelvi elágazás (a levél nyelve), nem ország" },
@@ -235,6 +293,15 @@ const ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
   { file: "src/country.ts", frag: 'r.tourist_tax_model === "hu" ? "hu" : "none"', why: "ugyanaz (a kulcs olvasása a sorból)" },
   { file: "src/i18n/lang.ts", frag: '? "hu-HU" : lang;', why: "dateLocale(): a magyar olvasó locale-je EGY helyen (a felületek ezt hívják)" },
   { file: "src/text/phoneCountry.ts", frag: 'phonePlan === "hu"', why: "a számozási-terv KULCSA, amit a HU-sor phone_plan mezője választ" },
+  // Nemzetközi A (2026-11-22) — the collection chain:
+  { file: "src/scraper/sources/portalListing.ts", frag: 'rules.phonePlan === "hu"', why: "a számozási-terv KULCSA (a HU-terv a régi 9 jegyű kulcsot tartja)" },
+  { file: "src/scout/rules.ts", frag: 'lang = "hu"', why: "az operátori felület NYELVÉNEK alapértéke (a T() forrásnyelve), nem ország" },
+  { file: "src/scout/store.ts", frag: 'lang = "hu"', why: "az operátori felület NYELVÉNEK alapértéke (a T() forrásnyelve), nem ország" },
+  { file: "src/scraper/regions.ts", frag: 'country: "HU",', why: "a beépített tartalék-területek (Badacsony, Balaton, Gödöllő) valós magyar helyek — adat, nem alapértelmezés" },
+  { file: "src/scraper/regions.ts", frag: 'const COUNTY_PREFIX_COUNTRY = "hu";', why: "a régi `megye-<kód>` régió-azonosító a magyar megye-sorok tárolt formája; minden más ország `terulet-<cc>-<kód>`" },
+  { file: "src/scraper/contactLedger.ts", frag: 'const LEGACY_KEY_RULES: PhoneKeyRules = { dialCode: "36", trunkPrefix: "06" };', why: "az ország nélkül hívó, előbb E.164-re olvasó külső hívó (sharedContactGate) régi kulcsa; a gyűjtő hívók a lead sorát adják" },
+  { file: "src/scraper/sources/portals/extract.ts", frag: '.replace("FT", "HUF")', why: "a „Ft” árjel ISO 4217 kódja (szimbólum → pénznem), nem ország" },
+  { file: "src/scraper/sources/portals/registry.ts", frag: 'country: "HU",', why: "a dedikált adapter piaca (adat: a magyar portálok kalibrációja); minden más portált a generikus olvasó visz" },
 ];
 const stripComments = (line: string): string => {
   const t = line.trimStart();

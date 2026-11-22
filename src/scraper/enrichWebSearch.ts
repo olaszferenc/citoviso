@@ -6,10 +6,12 @@ import {
   tokens,
   verify,
 } from "./enrichPresence.js";
-import { leadCountryConfig } from "../country.js";
+import { leadCountryConfig, type CountryConfig } from "../country.js";
 import { mailtoAddress } from "../email/leadEmails.js";
-import { splitPhones } from "../text/phone.js";
-import { FOREIGN_DOMAIN_REASON, FREEMAIL, mergeContacts } from "./contactLedger.js";
+import { lexList } from "../countryLexicon.js";
+import { phoneTextRegexIn, splitPhonesIn, type PhoneRules } from "../text/phoneCountry.js";
+import { FOREIGN_DOMAIN_REASON, freemailRe, mergeContacts } from "./contactLedger.js";
+import { matcherWords } from "./genericWords.js";
 import { classifyWebsite } from "./qualify.js";
 import { webSearch, webSearchAvailable } from "./sources/webSearch.js";
 import type { ContactCandidate, PortalListing, QualifiedLead, Region } from "./types.js";
@@ -40,8 +42,8 @@ const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 // ("uploads/2023/06/37961736.jpg" → "06/37961736") and GPS coordinates
 // ("46.780604614546" → "0604614546") as the lead's phone — measured on 11 live
 // leads, 2026-10-05.
-const PHONE_RE =
-  /(?<![\d/.])(?:\+36|0036|06)[\s/().-]*\d{1,2}[\s/().-]*\d{3}[\s/().-]*\d{3,4}(?!\d)/;
+// The pattern is the lead's COUNTRY's (phoneTextRegexIn, ADR-0437): the HU row's is the former
+// PHONE_RE verbatim; another row's finds +CC / 00CC / its trunk prefix with the same bounds.
 
 // Snippet fishing grabs the FIRST email in the result text — which on a portal
 // listing is often the town's tourist office, not the business (the Brave trial
@@ -96,8 +98,10 @@ function firstBusinessEmail(text: string): string | undefined {
 export function isCorroboratedEmail(
   email: string,
   lead: Pick<QualifiedLead, "name" | "website">,
+  /** The lead's country (its freemail providers; unknown → every country's). */
+  country?: string | null,
 ): boolean {
-  if (FREEMAIL.test(email)) return true;
+  if (freemailRe(country).test(email)) return true;
   const domain = deaccent(email.split("@")[1]?.toLowerCase() ?? "");
   const nameTokens = tokens(lead.name).filter((t) => t.length >= 4);
   const siteHost = lead.website ? deaccent(lead.website.toLowerCase()) : "";
@@ -110,18 +114,18 @@ export function isCorroboratedEmail(
 function corroboratedEmail(
   email: string | undefined,
   lead: QualifiedLead,
+  country: string | null | undefined,
 ): string | undefined {
   if (!email) return undefined;
-  return isCorroboratedEmail(email, lead) ? email : undefined;
+  return isCorroboratedEmail(email, lead, country) ? email : undefined;
 }
 
 /** Trade words that identify nothing on their own — a portal's own landing page
- *  ("Szállás Keszthelyen") must not count as an entry about this lead. */
-const GENERIC_NAME_TOKEN = new Set([
-  "szallas", "szallashely", "apartman", "apartmanok", "kemping", "camping",
-  "udulo", "vendeghaz", "vendeghazak", "panzio", "hotel", "haz", "villa",
-  "tabor", "hely", "etterem", "vendeglo", "szoba", "szobak", "motel",
-]);
+ *  ("Szállás Keszthelyen") must not count as an entry about this lead. The lead's country's
+ *  list (lexicon `listingTitleGenericWords`, HU verbatim). */
+function genericNameTokens(country: string | null | undefined): ReadonlySet<string> {
+  return matcherWords(country, "listingTitleGenericWords");
+}
 
 /**
  * Is this URL a listing ABOUT the business rather than the business's own site?
@@ -164,7 +168,7 @@ function isListingHost(url: string, ownWebsite?: string): boolean {
  * stored as the lead's e-mail and used for outreach). Query parameters are
  * already cut by `?`, so no legitimate mailto loses anything here.
  */
-export function extractContacts(html: string): { emails: string[]; phones: string[] } {
+export function extractContacts(html: string, cfg: Pick<PhoneRules, "dialCode" | "trunkPrefix" | "phonePlan"> | null): { emails: string[]; phones: string[] } {
   const emails: string[] = [];
   for (const m of html.matchAll(/mailto:([^"'?>\s&]+)/gi)) {
     // The href is the site's own markup and can carry a label: balatonalmadi.hu links
@@ -184,7 +188,7 @@ export function extractContacts(html: string): { emails: string[]; phones: strin
 
   const phones: string[] = [];
   for (const m of html.matchAll(/tel:([+0-9\s()./-]{7,})/gi)) phones.push(m[1]!.trim());
-  const textPhone = text.match(PHONE_RE)?.[0];
+  const textPhone = text.match(phoneTextRegexIn(cfg))?.[0];
   if (textPhone) phones.push(textPhone);
 
   return { emails: [...new Set(emails)], phones: [...new Set(phones)] };
@@ -240,7 +244,7 @@ export async function enrichWebSearch(
   // to be unreachable; without an address the lead cannot be contacted at all,
   // which is the whole point of the pipeline.
   const targets = leads.filter(
-    (l) => force || !l.email || !isCorroboratedEmail(l.email, l),
+    (l) => force || !l.email || !isCorroboratedEmail(l.email, l, leadCountryConfig(l, region)?.iso2),
   );
   const found = new Map<
     QualifiedLead,
@@ -260,16 +264,20 @@ export async function enrichWebSearch(
         // Same geo rule as the site search: the lead's own town, not the region
         // label. "Tekergő keszthely és környéke kapcsolat" describes no business.
         // ADR-0437: in the lead's country's search language; no layer row = no search.
-        const loc = leadCountryConfig(lead, region);
-        const results = loc
-          ? await webSearch(`${lead.name} ${searchPlace(lead, region)} kapcsolat`, apiKey, cseId, 5, loc.searchLang)
+        const loc: CountryConfig | null = leadCountryConfig(lead, region);
+        const iso = loc?.iso2 ?? null;
+        // "… kapcsolat" in the lead's country's words (lexicon contactWords, first entry).
+        const contactWord = lexList(iso, "contactWords")[0];
+        const results = loc && contactWord
+          ? await webSearch(`${lead.name} ${searchPlace(lead, region)} ${contactWord}`, apiKey, cseId, 5, loc.searchLang)
           : [];
+        const phoneRe = phoneTextRegexIn(loc);
         // Every sighting is recorded with its verdict — including the drops.
         const seen: Omit<ContactCandidate, "firstSeen">[] = [];
         const noteEmail = (v: string, source: string, sourceUrl?: string): void => {
           const why = !isBusinessEmail(v)
             ? "nem üzleti cím (iroda / sablon / gépi)"
-            : !isCorroboratedEmail(v, lead)
+            : !isCorroboratedEmail(v, lead, iso)
               ? FOREIGN_DOMAIN_REASON
               : undefined;
           seen.push({ kind: "email", value: v, source, sourceUrl, accepted: !why, rejectedReason: why });
@@ -277,7 +285,7 @@ export async function enrichWebSearch(
         const notePhone = (v: string, source: string, sourceUrl?: string): void => {
           // A portal's tel: link can glue several numbers into one
           // ("tel:00368734269100363028317760036705331658") — file each one.
-          const many = splitPhones(v);
+          const many = splitPhonesIn(v, loc);
           const values = many.length > 1 ? many : [normalizePhone(v)];
           for (const n of values) {
             if (n) seen.push({ kind: "phone", value: n, source, sourceUrl, accepted: true });
@@ -287,12 +295,12 @@ export async function enrichWebSearch(
         // PASS 1 — snippets (free).
         const text = results.map((r) => `${r.title} ${r.snippet}`).join(" ");
         for (const m of text.match(EMAIL_RE) ?? []) noteEmail(m.toLowerCase(), "web_snippet");
-        const snippetPhone = text.match(PHONE_RE)?.[0];
+        const snippetPhone = text.match(phoneRe)?.[0];
         if (snippetPhone) notePhone(snippetPhone, "web_snippet");
-        let email = corroboratedEmail(firstBusinessEmail(text), lead);
+        let email = corroboratedEmail(firstBusinessEmail(text), lead, iso);
         let phone = lead.phone
           ? undefined
-          : normalizePhone(text.match(PHONE_RE)?.[0]);
+          : normalizePhone(text.match(phoneRe)?.[0]);
 
         const terms = geoTerms(lead, region);
         // DIGITAL FOOTPRINT, from the results we already have: portal pages that
@@ -301,8 +309,9 @@ export async function enrichWebSearch(
         // the portal's own landing page, not an entry about this lead) and the
         // host is not the lead's own site.
         const listings: PortalListing[] = [];
+        const genericTokens = genericNameTokens(iso);
         const brand = tokens(lead.name).filter(
-          (t) => t.length >= 4 && !GENERIC_NAME_TOKEN.has(t),
+          (t) => t.length >= 4 && !genericTokens.has(t),
         );
         for (const r of results) {
           if (!r.link || !isListingHost(r.link, lead.website)) continue;
@@ -320,8 +329,8 @@ export async function enrichWebSearch(
             const page = await fetchHtml(r.link);
             // The page must be ABOUT this business (brand AND locality) —
             // otherwise we would lift the neighbouring listing's details.
-            if (!page || !verify(lead.name, terms, page.html)) continue;
-            const { emails, phones } = extractContacts(page.html);
+            if (!page || !verify(lead.name, terms, page.html, iso)) continue;
+            const { emails, phones } = extractContacts(page.html, loc);
             // We READ this page and it checked out — promote it from "mentions
             // the name" to a verified listing (or add it if the title was terse).
             const known = listings.find((x) => x.url === r.link);
@@ -340,15 +349,15 @@ export async function enrichWebSearch(
             for (const p of phones) notePhone(p, host, r.link);
             if (!email) {
               email = emails.find(
-                (e) => isBusinessEmail(e) && isCorroboratedEmail(e, lead),
+                (e) => isBusinessEmail(e) && isCorroboratedEmail(e, lead, iso),
               );
             }
             if (!phone) {
               // A glued tel: link is stored the way multi-number fields already are
               // ("+36…;+36…"), so every reader splits it the same way.
-              const glued = phones.map(splitPhones).find((list) => list.length > 1);
+              const glued = phones.map((p) => splitPhonesIn(p, loc)).find((list) => list.length > 1);
               phone = normalizePhone(
-                phones.find((p) => PHONE_RE.test(p.replace(/\s/g, "")) || PHONE_RE.test(p)),
+                phones.find((p) => phoneRe.test(p.replace(/\s/g, "")) || phoneRe.test(p)),
               ) ?? glued?.join(";");
             }
             if (email && phone) break;
@@ -406,9 +415,10 @@ export async function enrichWebSearch(
   return leads.map((l) => {
     const f = found.get(l);
     if (!f) return l;
+    const cfg = leadCountryConfig(l, region);
     // A corroborated find BEATS an uncorroborated stored address (the portal's
     // own contact). Anything corroborated already stored is left alone.
-    const storedIsWeak = Boolean(l.email) && !isCorroboratedEmail(l.email!, l);
+    const storedIsWeak = Boolean(l.email) && !isCorroboratedEmail(l.email!, l, cfg?.iso2);
     const email = storedIsWeak ? (f.email ?? l.email) : (l.email ?? f.email);
     // The address we ALREADY had belongs in the ledger too — especially when we
     // just replaced it. "Why is this not the contact any more?" must be
@@ -437,7 +447,7 @@ export async function enrichWebSearch(
       email,
       phone: l.phone ?? f.phone,
       listings: byUrl.size ? [...byUrl.values()] : l.listings,
-      contacts: mergeContacts(l.contacts, sightings),
+      contacts: mergeContacts(l.contacts, sightings, undefined, cfg),
     };
   });
 }

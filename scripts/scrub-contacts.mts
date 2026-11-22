@@ -12,6 +12,7 @@
 // Deterministic and reversible in spirit: it only ever CLEARS a field the
 // current isBusinessEmail() rejects, and records why in lead_provenance.
 
+import { countryConfigSync, countryOf } from "../src/country.js";
 import { db } from "../src/db/client.js";
 import { isBusinessEmail } from "../src/scraper/enrichWebSearch.js";
 import { resolveChannel } from "../src/scraper/enrichContact.js";
@@ -54,6 +55,7 @@ for (const d of dirty) {
   (restored as { contactChannel?: string }).contactChannel = resolveChannel(
     undefined,
     restored.phone,
+    countryConfigSync(countryOf(restored)),
   );
   await db.transaction().execute(async (trx) => {
     await trx
