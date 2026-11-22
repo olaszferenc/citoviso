@@ -35,7 +35,7 @@ export interface PortalAdapter {
   readonly label: string;
   /**
    * The country whose listings this portal carries (ISO-2), or null for a cross-border one
-   * (booking.com). Nemzetközi A (ADR-XXXX): a dedicated adapter is a CALIBRATION for one
+   * (booking.com). Nemzetközi A (ADR-0467): a dedicated adapter is a CALIBRATION for one
    * market's portal; every other portal — any host a country row lists in `portal_domains`
    * (classifyWebsite → portal_only) — is read by the GENERIC adapter (schema.org JSON-LD →
    * OpenGraph → DOM), so a lead of a country without dedicated adapters still gets its

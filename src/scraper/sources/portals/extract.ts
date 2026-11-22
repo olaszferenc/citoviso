@@ -32,7 +32,7 @@ import type { CountryConfig } from "../../../country.js";
  */
 export type ListingCountry = Pick<CountryConfig, "iso2" | "dialCode" | "trunkPrefix" | "phonePlan"> | null;
 
-// PAGE-TEXT patterns (nemzetközi A, ADR-XXXX): the words a portal page uses are the PORTAL's
+// PAGE-TEXT patterns (nemzetközi A, ADR-0467): the words a portal page uses are the PORTAL's
 // language, not the lead's — a Hungarian lead's booking.com page is English, a Croatian portal
 // lists a Hungarian guest's favourite too. So these are every country's lexicon patterns
 // (lexListAll; HU = the former inline alternatives verbatim). They only ever answer a test or a

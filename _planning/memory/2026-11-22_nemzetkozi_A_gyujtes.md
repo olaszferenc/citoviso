@@ -1,6 +1,6 @@
 # 2026-11-22 — Nemzetközi A: a lead-gyűjtés országfüggő (repó + lánc-másolat)
 
-**Session:** SUB cit0b8e32e8 (koordinátor cit9b4690e3). **ADR:** ADR-XXXX.
+**Session:** SUB cit0b8e32e8 (koordinátor cit9b4690e3). **ADR:** ADR-0467.
 
 ## Elvégzett munka
 - Országszótár: `src/countryLexicon.ts` + `src/countryLexicon/{hu,hr}.json` (HU-listák szó szerint a kódból, HR horvát adat).

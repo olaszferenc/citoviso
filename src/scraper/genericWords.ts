@@ -2,7 +2,7 @@
 // neighbours. Lifted out of portalListing.ts (2026-09-28) so the Places lookup
 // uses the same list instead of a sixth copy.
 //
-// Nemzetközi A (2026-11-22, ADR-XXXX): the lists themselves are DATA of the lead's country —
+// Nemzetközi A (2026-11-22, ADR-0467): the lists themselves are DATA of the lead's country —
 // src/countryLexicon/<iso>.json, one purpose key per matcher (the Hungarian lists moved there
 // verbatim). This module is the one door the collection matchers read them through.
 import { countryLexicon, wordSet, wordSetAll } from "../countryLexicon.js";

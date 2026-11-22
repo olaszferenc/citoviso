@@ -1,4 +1,4 @@
-// Nemzetközi A (2026-11-22, ADR-XXXX) — the LEAD-COLLECTION regression: "every process can run
+// Nemzetközi A (2026-11-22, ADR-0467) — the LEAD-COLLECTION regression: "every process can run
 // country-specifically, and Hungarian behaviour stays byte/behaviour-identical".
 //
 //   ① HU IDENTITY — every collection function that moved its language-/country-bound words to

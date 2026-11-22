@@ -1,4 +1,4 @@
-// ADR-XXXX — the COUNTRY LEXICON: the language-bound word lists of the collection chain, ONE
+// ADR-0467 — the COUNTRY LEXICON: the language-bound word lists of the collection chain, ONE
 // file per country (src/countryLexicon/<iso2>.json). The country ROW (src/country.ts, ADR-0437)
 // carries the operational parameters (keywords, portals, TLDs, locale, phone plan); this file
 // carries the words a matcher, a crawler or a parser needs to read that country's pages: trade

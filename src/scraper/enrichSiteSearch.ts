@@ -43,7 +43,7 @@ const MAX_RESULTS = 5;
  * the rest are directories/social/maps that would produce false positives
  * (they mention both the brand and the region by construction).
  *
- * Nemzetközi A (ADR-XXXX): this is the CROSS-BORDER part. A country's own listing sites,
+ * Nemzetközi A (ADR-0467): this is the CROSS-BORDER part. A country's own listing sites,
  * directories and town portals are its data: the lexicon's calibrated `nonOwnHosts` when it
  * has one (HU: the former seed list verbatim — the Brave trial 2026-08-18, the reenrich
  * dry-runs 2026-08-19, ADR-0037), else the country row's `portal_domains`.

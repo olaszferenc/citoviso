@@ -110,7 +110,7 @@ export function phoneRulesJs(cfg: PhoneRules | null): string {
   );
 }
 
-// ── Collection-side helpers (nemzetközi A, ADR-XXXX): the scrapers' Hungarian-only pieces —
+// ── Collection-side helpers (nemzetközi A, ADR-0467): the scrapers' Hungarian-only pieces —
 // splitPhones, the digit-key of the de-dup ledgers, the "find a number in page text" regex,
 // the loose mobile test — each with the country row deciding. The 'hu' plan delegates to the
 // exact Hungarian code it replaces, so a Hungarian lead behaves byte-for-byte as before.

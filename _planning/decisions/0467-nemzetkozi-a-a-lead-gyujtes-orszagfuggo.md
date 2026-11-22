@@ -1,4 +1,4 @@
-## ADR-XXXX — Nemzetközi A: a lead-gyűjtés országfüggő — országszótár (adatfájl) + országfüggő telefon a gyűjtő kódban és a láncban
+## ADR-0467 — Nemzetközi A: a lead-gyűjtés országfüggő — országszótár (adatfájl) + országfüggő telefon a gyűjtő kódban és a láncban
 
 **Státusz:** ELFOGADVA (tulaj-cél 2026-11-22 a koordinátoron át, `cit9b4690e3`: „minden folyamat adott
 ország-specifikusan le tudjon futni”) · **Épít:** ADR-0437 (ország-réteg, egy sor országonként, zárt ismeretlen
