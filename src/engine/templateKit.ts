@@ -228,7 +228,16 @@ export function sampleRooms(d: SiteData): readonly Room[] {
     // room — §B.17 (5). Fact-check 2026-10-07 took them off named and whole-place cards;
     // Aranyhíd f5887927 (2026-10-26, 77 live mocks) showed them on numbered cards too.
     const { amenities: _chips, ...card } = proto;
-    return { ...card, name, amenities: [] };
+    // HR végpróba 2026-11-22: the sample card's description / note are buyer-visible text — they
+    // reached a Croatian mock in Hungarian (SAMPLE_ROOMS carries the Hungarian source). Translated
+    // HERE with literal keys (the catalog extractor reads literals); Hungarian byte-identical.
+    return {
+      ...card,
+      name,
+      ...(card.description ? { description: T(d, "Minta-leírás: ide kerül a szoba bemutatása a saját szavaival — hangulat, elrendezés, kilátás, kinek ajánlja. Az éles oldalon ezt Ön írja meg és cseréli.") } : {}),
+      ...(card.note ? { note: T(d, "Ide kerül a szoba neve és rövid leírása.") } : {}),
+      amenities: [],
+    };
   });
   // One card stands for the whole place or a kind — any inside photo fits it.
   const pick = (i: number): Photo | undefined => (n === 1 ? photos.single : photos.cards[i]);

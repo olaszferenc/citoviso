@@ -44,5 +44,6 @@ A nyelv nélküli mock a lead országának nyelvét adja (nem magyart).
 - A honlap nélküli HR lead $0 mellett nem kap képet (nincs ingyenes HR képforrás).
 
 ### Következmény
-Felület-változás (minta-szobakártya szövege `T()`-n át) a felület-kapu kivételére vár:
-`~/rc-briefs/nemzetkozi-hr-vegproba-felulet/01-minta-szobakartya-T.patch`.
+A minta-szobakártya leírása és jegyzete `T()`-n át (`src/engine/templateKit.ts` sampleRooms): a koordinátor
+(cit9b4690e3, 2026-11-23) döntése szerint §2b hibajavítás (csak fordítási burok, a magyar bájtra azonos), felület-kivétel
+nem kell — landolva a 0470 kiegészítéseként. Bábel-teendő: a két szöveg horvátul (és minden mock-nyelven).
