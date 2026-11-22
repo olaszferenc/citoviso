@@ -1,4 +1,4 @@
-## ADR-XXXX — Ország-réteg 3/10b: a horvát ár-réteg (a magyar csomagok egyszeri euró-másolata, .com) és a személyes levél minden országba
+## ADR-0465 — Ország-réteg 3/10b: a horvát ár-réteg (a magyar csomagok egyszeri euró-másolata, .com) és a személyes levél minden országba
 
 **Státusz:** ELFOGADVA (tulaj-döntések 2026-11-22 a koordinátoron át, `cit9b4690e3`; a végleges számokat a tulaj
 még látja) · **Épít:** ADR-0443 (pénz-út, saját pénznem), ADR-0360 (végződésenkénti domain), ADR-0461 (HR sor),
