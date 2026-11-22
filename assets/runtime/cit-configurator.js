@@ -32,6 +32,26 @@
   // (CFG.i18n, injected server-side). Hungarian → empty map → tr() is identity.
   var I18N = (CFG && CFG.i18n) || {};
   function tr(s) { return I18N[s] || s; }
+  // NEMZETKÖZI C (Bábel, 3/10): the plural-aware lookup — the same rule as cit-runtime.js trn():
+  // a translation value "plural:one=…;few=…;other=…" gives the form for `n` under the page
+  // language's Intl.PluralRules; a plain value (every Hungarian string) is returned as is.
+  function trn(s, n) {
+    var v = tr(s);
+    if (v.indexOf("plural:") !== 0) return v;
+    var forms = {};
+    v.slice(7).split(";").forEach(function (part) {
+      var i = part.indexOf("=");
+      if (i > 0) forms[part.slice(0, i).trim()] = part.slice(i + 1);
+    });
+    if (forms.other == null) return v;
+    var cat = "other";
+    try {
+      cat = new Intl.PluralRules(document.documentElement.lang || "hu").select(Number(n));
+    } catch (e) {
+      cat = "other";
+    }
+    return forms[cat] != null ? forms[cat] : forms.other;
+  }
 
   // ── instrumentation (PILOT.md §3) — only on the tracked /p/<token> route ────
   // Fire-and-forget beacons; measurement must never break the page. No cookies:
@@ -2495,7 +2515,7 @@
       tr("Havi") + "<small>" + tr("rugalmas, bármikor") + "</small></button>" +
       '<button class="cit-cfg-popt" type="button" data-period="annual">' +
       tr("Éves") + "<small>" +
-      tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) +
+      trn("{n} hónap ingyen", String(PRICING.annualFreeMonths)).replace("{n}", String(PRICING.annualFreeMonths)) +
       "</small></button>" +
       "</div>" +
       "</div>" +
@@ -2677,7 +2697,7 @@
       b.classList.toggle("cit-cfg-on", i < cfgStep);
     });
     var t = panel.querySelector(".cit-cfg-progtxt");
-    if (t) t.textContent = tr("{n}. / 3 — {step}").replace("{n}", String(cfgStep)).replace("{step}", names[cfgStep - 1]);
+    if (t) t.textContent = trn("{n}. / 3 — {step}", String(cfgStep)).replace("{n}", String(cfgStep)).replace("{step}", names[cfgStep - 1]);
     if (hBack) hBack.hidden = cfgStep !== 2;
   }
   function goStep(n) {
@@ -2727,7 +2747,7 @@
     var n = MODULES.filter(function (m) {
       return selected[m.id];
     }).length;
-    b.textContent = (p ? tr(p.label) : tr("Egyedi")) + " · " + tr("{n} szekció").replace("{n}", String(n));
+    b.textContent = (p ? tr(p.label) : tr("Egyedi")) + " · " + trn("{n} szekció", String(n)).replace("{n}", String(n));
   }
 
   // ── step 3 state + wiring (0029) ────────────────────────────────────────────
@@ -2814,7 +2834,7 @@
     payBtn.disabled = !all;
     payNote.textContent = all
       ? tr("Biztonságos fizetés a Barionnál.")
-      : tr("A folytatáshoz mind a {n} sort be kell jelölnie ({on}/{n}).")
+      : trn("A folytatáshoz mind a {n} sort be kell jelölnie ({on}/{n}).", rows.length)
           .replace(/\{n\}/g, String(rows.length))
           .replace("{on}", String(on));
     if (all) {
@@ -3151,7 +3171,7 @@
     }
     badge.hidden = false;
     badge.textContent =
-      "−" + fmt(annualSaving()) + " · " + tr("{n} hó ingyen").replace("{n}", String(free));
+      "−" + fmt(annualSaving()) + " · " + trn("{n} hó ingyen", String(free)).replace("{n}", String(free));
     var domOn = !!DOM && domainType === "citoviso_registered" && domainEligible();
     var yearly = annualTotal() + (domOn ? domainFeeMonthly() * 12 : 0);
     var paid = tr("{paid} hónap áráért 12")
@@ -3197,7 +3217,7 @@
       if (!OFFER) return "";
       var rows =
         row(tr("12 havi díj listaáron"), fmt(m * 12)) +
-        (free > 0 ? row(tr("Éves fizetés: {n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)), "−" + fmt(free)) : "") +
+        (free > 0 ? row(trn("Éves fizetés: {n} hónap ingyen", String(PRICING.annualFreeMonths)).replace("{n}", String(PRICING.annualFreeMonths)), "−" + fmt(free)) : "") +
         row(tr("{name} (−{p}%) az első évre").replace("{name}", offerName()).replace("{p}", String(OFFER.percent)), "−" + fmt(yOff));
       // Elek3 A5: on a phone the sticky foot (period + total + offer line + four rows) took
       // half the screen and left one and a half package cards to choose from. There the
@@ -3224,7 +3244,7 @@
           .replace("{a}", fmt(m - offerPrice(m)))
           .replace("{y}", fmt(free + yOff))
       : free > 0
-        ? tr("Évesen {n} hónap ingyen (−{a}).").replace("{n}", String(PRICING.annualFreeMonths)).replace("{a}", fmt(free))
+        ? trn("Évesen {n} hónap ingyen (−{a}).", String(PRICING.annualFreeMonths)).replace("{n}", String(PRICING.annualFreeMonths)).replace("{a}", fmt(free))
         : "";
     if (!text) return "";
     return (
@@ -3316,7 +3336,7 @@
         esc(tr(p.note)) +
         "</span>" +
         '<button class="cit-cfg-preset__more" type="button" aria-expanded="false">' +
-        tr("Mit tartalmaz? ({n} szekció)").replace("{n}", String(count)) +
+        trn("Mit tartalmaz? ({n} szekció)", String(count)).replace("{n}", String(count)) +
         '<span class="cit-cfg-chev" aria-hidden="true">' +
         I.chev +
         "</span></button></span>" +
@@ -3384,9 +3404,7 @@
   if (!detailRows) {
     customBox.hidden = true;
   } else {
-    panel.querySelector(".cit-cfg-customize__n").textContent = tr("{n} szekció").replace(
-      "{n}",
-      String(detailRows),
+    panel.querySelector(".cit-cfg-customize__n").textContent = trn("{n} szekció", String(detailRows)).replace("{n}", String(detailRows),
     );
   }
 
@@ -3829,7 +3847,7 @@
     var g = panel.querySelector(".cit-cfg-ppill__g");
     if (g) {
       var free = PRICING.annualFreeMonths;
-      g.textContent = free > 0 ? tr("−{n} hó").replace("{n}", String(free)) : "";
+      g.textContent = free > 0 ? trn("−{n} hó", String(free)).replace("{n}", String(free)) : "";
     }
   }
 
@@ -3923,7 +3941,7 @@
     if (!sub) return;
     var annual = period === "annual";
     sub.textContent = annual
-      ? tr("Citoviso honlap — éves előfizetés (12 hónap, ebből {n} hónap ingyen).")
+      ? trn("Citoviso honlap — éves előfizetés (12 hónap, ebből {n} hónap ingyen).", String(PRICING.annualFreeMonths))
           .replace("{n}", String(PRICING.annualFreeMonths))
       : tr("Citoviso honlap — havi előfizetés (bármikor lemondható).");
 
@@ -4077,7 +4095,7 @@
       var domA = domMonthly * 12;
       var permoA =
         '<span class="cit-cfg-permo">(' + fmt((offerPrice(a) + domA) / 12) + tr("/hó") + " · " +
-        tr("{n} hónap ingyen").replace("{n}", String(PRICING.annualFreeMonths)) + ")</span>";
+        trn("{n} hónap ingyen", String(PRICING.annualFreeMonths)).replace("{n}", String(PRICING.annualFreeMonths)) + ")</span>";
       sumEl.innerHTML = OFFER
         ? offerCardHtml(a, tr("/ év"), permoA, domA)
         : '<b>' + fmt(a + domA) + "</b> " + tr("/ év") + " " + permoA;
@@ -4093,7 +4111,7 @@
     } else {
       var m0 = monthlyTotal();
       var permoM =
-        '<span class="cit-cfg-permo">· ' + tr("{n} szekció").replace("{n}", String(n)) + "</span>";
+        '<span class="cit-cfg-permo">· ' + trn("{n} szekció", String(n)).replace("{n}", String(n)) + "</span>";
       sumEl.innerHTML = OFFER
         ? offerCardHtml(m0, tr("/ hó"), permoM, domMonthly)
         : '<b>' + fmt(m0 + domMonthly) + "</b> " + tr("/ hó") + " " + permoM;
@@ -4264,6 +4282,8 @@
         };
   /** "+36301234567" → "+36 30 123 4567" (src/tenant/contact.ts printing rule). */
   function trialPretty(e) {
+    // NEMZETKÖZI C: a non-Hungarian lead's page prints in its country's shape.
+    if (typeof window.CIT_PHONE_PRETTY === "function") return window.CIT_PHONE_PRETTY(e);
     if (String(e).indexOf("+36") !== 0) return e;
     var n = e.slice(3);
     if (n[0] === "1") return "+36 1 " + n.slice(1, 4) + " " + n.slice(4);
@@ -4325,7 +4345,7 @@
    */
   function trialWhatLine() {
     var pkg = TRIAL && TRIAL.pkg && TRIAL.pkg.modules && TRIAL.pkg.modules.length ? TRIAL.pkg : null;
-    if (!pkg) return trialN(tr("{n} napig minden funkció: foglalási naptár, szobák, árak, galéria, vélemények, programajánló"));
+    if (!pkg) return trialN(trn("{n} napig minden funkció: foglalási naptár, szobák, árak, galéria, vélemények, programajánló", TRIAL_DAYS));
     var list = pkg.modules
       .map(function (m) {
         return tr(m.label);
@@ -4333,8 +4353,8 @@
       .join(" · ");
     return (
       pkg.label
-        ? trialN(tr("{n} napig a próba csomagja ({pkg}): {list}")).replace("{pkg}", tr(pkg.label))
-        : trialN(tr("{n} napig a próbában: {list}"))
+        ? trialN(trn("{n} napig a próba csomagja ({pkg}): {list}", TRIAL_DAYS)).replace("{pkg}", tr(pkg.label))
+        : trialN(trn("{n} napig a próbában: {list}", TRIAL_DAYS))
     ).replace("{list}", list);
   }
 
@@ -4354,11 +4374,11 @@
         (PLANS ? '<div class="cit-pk-tpick"></div>' : "") +
         '<p class="cit-cfg-taddr">' + I.globe + "<b>" + esc(TRIAL.sub || "") + "</b></p>" +
         '<ul class="cit-cfg-tfacts">' +
-        "<li>" + I.okc + "<span>" + esc(trialN(tr("{n} napig ingyen, bankkártya nélkül"))) + "</span></li>" +
+        "<li>" + I.okc + "<span>" + esc(trialN(trn("{n} napig ingyen, bankkártya nélkül", TRIAL_DAYS))) + "</span></li>" +
         "<li>" + I.okc + "<span>" + esc(tr("Úgy indul, ahogy most látja: nincs mit beállítania")) + "</span></li>" +
         "<li>" + I.okc + "<span>" + esc(tr("A vendégek érdeklődése közvetlenül Önhöz érkezik, jutalék nélkül")) + "</span></li>" +
         '<li class="cit-cfg-tpause">' + I.pausec + "<span>" +
-        esc(trialN(tr("A {n}. nap után az oldal szünetel: nem terhelünk semmit, az adatai megmaradnak. Folytatni megrendeléssel lehet."))) +
+        esc(trialN(trn("A {n}. nap után az oldal szünetel: nem terhelünk semmit, az adatai megmaradnak. Folytatni megrendeléssel lehet.", TRIAL_DAYS))) +
         "</span></li>" +
         "</ul>" +
         '<div class="cit-cfg-tpkg"></div>' +
@@ -4371,7 +4391,7 @@
         '<em class="cit-cfg-terr" id="cit-cfg-te-name" data-e="name"></em></label>' +
         '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("Telefonszám")) + "</span>" +
         '<input class="cit-cfg-tin" name="phone" type="tel" inputmode="tel" autocomplete="tel" ' +
-        'placeholder="06 30 123 4567" aria-describedby="cit-cfg-te-phone">' +
+        'placeholder="' + esc(window.CIT_PHONE_EXAMPLE || "06 30 123 4567") + '" aria-describedby="cit-cfg-te-phone">' +
         '<small class="cit-cfg-thint">' + esc(tr("A próba vége előtt itt is szólunk.")) + "</small>" +
         '<em class="cit-cfg-terr" id="cit-cfg-te-phone" data-e="phone"></em></label>' +
         '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("E-mail-cím")) + "</span>" +
@@ -4406,7 +4426,7 @@
         "Az „Indítsa el” gombbal elfogadja a Citoviso Általános Szerződési Feltételeit, megismerte az Adatkezelési tájékoztatót, és kijelenti, hogy a honlapon megjelenítendő fényképek tekintetében felhasználási joggal rendelkezik, azok felhasználása harmadik személy jogát nem sérti, és az ebből eredő igények alól a Citoviso-t mentesíti.", // i18n-exempt: legal wording (TRIAL_CLICKWRAP_V1) — country LEGAL pack scope
     );
     tSheet.querySelector(".cit-cfg-tlbl").textContent = tr("Indítsa el");
-    tSheet.querySelector(".cit-cfg-tsmall").textContent = trialN(tr("{n} nap ingyen · kártya nélkül"));
+    tSheet.querySelector(".cit-cfg-tsmall").textContent = trialN(trn("{n} nap ingyen · kártya nélkül", TRIAL_DAYS));
     document.body.appendChild(tScrim);
     document.body.appendChild(tSheet);
     plapRender();
@@ -4462,7 +4482,9 @@
       emailEmpty: tr("Az e-mail-cím kell: ide küldjük a belépés linkjét."),
       email: tr("Ez nem tűnik e-mail-címnek. Pl.: nev@gmail.com"),
       phoneEmpty: tr("A telefonszám kell: a próba vége előtt SMS-ben is szólunk."),
-      phone: tr("Ezt a számot nem tudjuk értelmezni. Így írja: 06 30 123 4567"),
+      phone: window.CIT_PHONE_EXAMPLE
+        ? tr("Ezt a számot nem tudjuk értelmezni. Így írja: {pelda}").replace("{pelda}", window.CIT_PHONE_EXAMPLE)
+        : tr("Ezt a számot nem tudjuk értelmezni. Így írja: 06 30 123 4567"),
     };
     function setErr(key, msg) {
       var e = form.querySelector('[data-e="' + key + '"]');
@@ -5194,7 +5216,7 @@
     var foot = panel.querySelector(".cit-cfg-foot");
     foot.innerHTML =
       '<p class="cit-cfg-sum"><b>' + tr("Megkaptuk a rendelését.") + "</b> " +
-      tr("A választását ({n} szekció) rögzítettük, de a fizetést most nem tudtuk elindítani. Kollégánk átnézi és felveszi Önnel a kapcsolatot — ekkor kap egy fizetési linket, és a fizetés után élesítjük az oldalt.")
+      trn("A választását ({n} szekció) rögzítettük, de a fizetést most nem tudtuk elindítani. Kollégánk átnézi és felveszi Önnel a kapcsolatot — ekkor kap egy fizetési linket, és a fizetés után élesítjük az oldalt.", String(chosen.length))
         .replace("{n}", String(chosen.length)) +
       "</p>" +
       '<p class="cit-cfg-note">' +
@@ -6486,7 +6508,7 @@
         if (OFFER_PCT) out += "<p>" + esc(tr("Az első díjból −{p}% kedvezmény jár.").replace("{p}", String(OFFER_PCT))) + "</p>";
         if (PRICING.annualFreeMonths > 0)
           out += "<p>" + esc(tr("Éves fizetésnél {m} hónap ingyen.").replace("{m}", String(PRICING.annualFreeMonths))) + "</p>";
-        if (TRIAL) out += "<p>" + esc(trialN(tr("Most nem kell csomagot választania: az oldal {n} napig ingyen fut élesben, a csomagot a próba végén választja ki."))) + "</p>";
+        if (TRIAL) out += "<p>" + esc(trialN(trn("Most nem kell csomagot választania: az oldal {n} napig ingyen fut élesben, a csomagot a próba végén választja ki.", TRIAL_DAYS))) + "</p>";
         return out;
       },
     },
@@ -6502,7 +6524,7 @@
           "<p>" + esc(tr("Amit fizet, az a havi (vagy éves) díj.")) +
           (once ? " " + esc(tr("Külön tétel csak az, amit külön kér, például a többnyelvű oldal egyszeri díja ({price}-tól).").replace("{price}", fmt(once))) : "") +
           "</p>" +
-          (TRIAL ? "<p>" + esc(trialN(tr("A {n} napos próba alatt semmit nem fizet, bankkártyát sem kérünk."))) + "</p>" : "")
+          (TRIAL ? "<p>" + esc(trialN(trn("A {n} napos próba alatt semmit nem fizet, bankkártyát sem kérünk.", TRIAL_DAYS))) + "</p>" : "")
         );
       },
     },
@@ -6651,7 +6673,7 @@
       esc(SEL.touched ? tr("A csomag a próbába és a fizetési linkbe is így megy.") : small ? tr("A legkisebb csomag havi {price}.").replace("{price}", fmt(idsPrice(small.modules))) : "") +
       "</p>" +
       '<ul class="cit-ask__facts">' +
-      (TRIAL ? "<li>" + I.okc + "<span>" + esc(trialN(tr("{n} napig ingyen fut élesben, bankkártya nélkül"))) + "</span></li>" : "") +
+      (TRIAL ? "<li>" + I.okc + "<span>" + esc(trialN(trn("{n} napig ingyen fut élesben, bankkártya nélkül", TRIAL_DAYS))) + "</span></li>" : "") +
       "<li>" + I.okc + "<span>" + esc(tr("Nincs beállítási díj, nincs külön tárhelydíj")) + "</span></li>" +
       (TRIAL
         ? "<li>" + I.okc + "<span>" + esc(tr("A próba végén semmi nem terhelődik automatikusan")) + "</span></li>"
@@ -6660,7 +6682,7 @@
           : "") +
       "</ul>" +
       (TRIAL
-        ? '<button type="button" class="cit-ask__go" data-go="card"><span>' + esc(tr("Indítsa el")) + "</span><small>" + esc(trialN(tr("{n} nap ingyen · kártya nélkül"))) + "</small></button>" +
+        ? '<button type="button" class="cit-ask__go" data-go="card"><span>' + esc(tr("Indítsa el")) + "</span><small>" + esc(trialN(trn("{n} nap ingyen · kártya nélkül", TRIAL_DAYS))) + "</small></button>" +
           // p-lap-vegleges: an EQUAL, framed second button (owner: „le ne vedd a rendelési lehetőséget”)
           '<button type="button" class="cit-ask__alt cit-ask__alt--eq" data-order="card">' + esc(tr("Megrendelem most")) +
           "<small>" + esc(tr("próba nélkül")) + "</small></button>"
@@ -6681,7 +6703,7 @@
       q.html() +
       (TRIAL
         ? '<p class="cit-ask__then"><button type="button" class="cit-ask__go cit-ask__go--sm" data-go="ans-' + id + '">' + esc(tr("Indítsa el")) + "</button><span>" +
-          esc(trialN(tr("{n} nap ingyen, kártya nélkül"))) + "</span></p>"
+          esc(trialN(trn("{n} nap ingyen, kártya nélkül", TRIAL_DAYS))) + "</span></p>"
         : "")
     );
   }
@@ -6822,7 +6844,7 @@
       inp.disabled = true;
       btn.disabled = true;
       var left = sec;
-      hint.textContent = tr("Egy pillanat… {n} mp").replace("{n}", String(left));
+      hint.textContent = trn("Egy pillanat… {n} mp", String(left)).replace("{n}", String(left));
       var iv = setInterval(function () {
         left--;
         if (left <= 0) {
@@ -6832,7 +6854,7 @@
           btn.disabled = false;
           hint.textContent = "";
           inp.focus({ preventScroll: true });
-        } else if (!closed) hint.textContent = tr("Egy pillanat… {n} mp").replace("{n}", String(left));
+        } else if (!closed) hint.textContent = trn("Egy pillanat… {n} mp", String(left)).replace("{n}", String(left));
       }, 1000);
     }
     function closeForDay(msg) {
@@ -6862,7 +6884,7 @@
     function blocked(code, wait) {
       track("ask_blocked", { code: code });
       if (code === "long") {
-        hint.textContent = tr("Legfeljebb {n} karakter. Írja meg röviden, mire kíváncsi.").replace("{n}", String(ASK_LIMITS.maxLen));
+        hint.textContent = trn("Legfeljebb {n} karakter. Írja meg röviden, mire kíváncsi.", String(ASK_LIMITS.maxLen)).replace("{n}", String(ASK_LIMITS.maxLen));
         cnt.classList.add("cit-ask__over");
       } else if (code === "gap") lockFor(wait || ASK_LIMITS.minGapSec);
       else if (code === "dup") {
@@ -6872,7 +6894,7 @@
       } else if (code === "link") {
         say(esc(tr("Biztonsági okból linket, e-mail-címet vagy telefonszámot nem fogadunk a kérdésben. Írja meg szavakkal, mire kíváncsi.")));
       } else if (code === "day") {
-        closeForDay(tr("Mára elérte a {n} kérdést. A fenti kérdésekre továbbra is azonnal válaszolunk, holnap újra írhat.").replace("{n}", String(ASK_LIMITS.perDay)));
+        closeForDay(trn("Mára elérte a {n} kérdést. A fenti kérdésekre továbbra is azonnal válaszolunk, holnap újra írhat.", String(ASK_LIMITS.perDay)).replace("{n}", String(ASK_LIMITS.perDay)));
       } else if (code === "ip") {
         closeForDay(tr("Most túl sok kérdés érkezik erről a hálózatról. A fenti kérdésekre addig is válaszolunk, később újra írhat."));
       }
@@ -7002,7 +7024,7 @@
       mods + pkgTot() +
       '<div class="cit-ask__acts"><button type="button" class="cit-ask__ghost" data-pk="close">' + esc(tr("Kész, vissza")) + "</button>" +
       (TRIAL
-        ? '<button type="button" class="cit-ask__go" data-pk="go"><span>' + esc(tr("Indítsa el ezzel")) + "</span><small>" + esc(trialN(tr("{n} nap ingyen · kártya nélkül"))) + "</small></button>"
+        ? '<button type="button" class="cit-ask__go" data-pk="go"><span>' + esc(tr("Indítsa el ezzel")) + "</span><small>" + esc(trialN(trn("{n} nap ingyen · kártya nélkül", TRIAL_DAYS))) + "</small></button>"
         : '<button type="button" class="cit-ask__go" data-pk="order"><span>' + esc(tr("Megrendelem ezzel")) + "</span></button>") +
       "</div></div>"
     );
@@ -7127,8 +7149,8 @@
     launch.classList.add("cit-cfg-launch--ask");
     document.documentElement.classList.add("cit-ask-page");
     var tLbl = trialPill.querySelector(".cit-cfg-launch__lbl");
-    tLbl.innerHTML = esc(tr("Indítsa el")) + '<small class="cit-cfg-launch__from">' + esc(trialN(tr("{n} nap ingyen"))) + "</small>";
-    trialPill.setAttribute("aria-label", trialN(tr("Indítsa el az oldalát: {n} napig ingyen, bankkártya nélkül")));
+    tLbl.innerHTML = esc(tr("Indítsa el")) + '<small class="cit-cfg-launch__from">' + esc(trialN(trn("{n} nap ingyen", TRIAL_DAYS))) + "</small>";
+    trialPill.setAttribute("aria-label", trialN(trn("Indítsa el az oldalát: {n} napig ingyen, bankkártya nélkül", TRIAL_DAYS)));
   }
   /** The left pill on the ask page: to the card, not the panel (the card holds the order entry). */
   function toPriceCard() {
@@ -7172,7 +7194,7 @@
     return PLANS ? pickN() : undefined;
   }
   function planLbl(n) {
-    return tr("{n}. terv").replace("{n}", String(n));
+    return trn("{n}. terv", String(n)).replace("{n}", String(n));
   }
   /** Hungarian article before an ordinal numeral (az 1., a 2.); other languages: none. */
   function numArt(n) {
@@ -7266,14 +7288,14 @@
       plapSyncOrder();
     }
     var go = askBox && askBox.querySelector(".cit-ask__card .cit-ask__go[data-go] small");
-    if (go) go.textContent = (PLANS ? planLbl(s) + " · " : "") + trialN(tr("{n} nap ingyen · kártya nélkül"));
+    if (go) go.textContent = (PLANS ? planLbl(s) + " · " : "") + trialN(trn("{n} nap ingyen · kártya nélkül", TRIAL_DAYS));
     var ts = tSheet && tSheet.querySelector(".cit-cfg-tsmall");
-    if (ts) ts.textContent = (PLANS ? planLbl(s) + " · " : "") + trialN(tr("{n} nap ingyen · kártya nélkül"));
+    if (ts) ts.textContent = (PLANS ? planLbl(s) + " · " : "") + trialN(trn("{n} nap ingyen · kártya nélkül", TRIAL_DAYS));
     var alt = askBox && askBox.querySelector(".cit-ask__card .cit-ask__alt small");
     if (alt) alt.textContent = (PLANS ? planLbl(s) + " · " : "") + tr("próba nélkül");
     var bg = pbar && pbar.querySelector('[data-pbar="go"]');
     if (bg) {
-      bg.innerHTML = esc(tr("Indítsa el") + (PLANS ? " · " + planLbl(s) : "")) + "<small>" + esc(trialN(tr("{n} nap ingyen"))) + "</small>";
+      bg.innerHTML = esc(tr("Indítsa el") + (PLANS ? " · " + planLbl(s) : "")) + "<small>" + esc(trialN(trn("{n} nap ingyen", TRIAL_DAYS))) + "</small>";
     }
   }
   function plapSyncOrder() {

@@ -597,8 +597,8 @@ async function generateEngineMockInner(
   // regenerates from scratch and would otherwise bypass it). It reads the copy as a
   // demanding Hungarian guest would — calques, a review anecdote turned into a service,
   // a claim larger than its quote, tegezés on a magázó page — and has the writer fix
-  // exactly that. Hungarian only: the critic's language knowledge is the point, and a
-  // translated page gets no verdict rather than a meaningless one.
+  // exactly that. NEMZETKÖZI C: a page in another language is read by a native guest of
+  // that language (the same rules; guestCritic.ts languageNote) — no page ships unjudged.
   let criticInputs: Record<string, unknown> = {};
   const criticSource = criticSourceOf({
     name: lead.name,
@@ -612,10 +612,13 @@ async function generateEngineMockInner(
   if (curated) {
     // Curator mode: no critic either (ADR-0329) — Poe answers for these words, Vera judges them.
     console.log("  kurátori szöveg: AI-őr nem fut → Vera-ítélet kell a küldéshez"); // i18n-exempt: operator log
-  } else if (brief && lang === DEFAULT_LANG) {
+  } else if (brief) {
+    // NEMZETKÖZI C: a page in the lead's language is judged too — by a native guest of THAT
+    // language (guestCritic.ts languageNote); the Hungarian call is unchanged.
     const critic = await applyGuestCritic(
       { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
       criticSource,
+      lang,
     );
     brief = {
       ...brief,

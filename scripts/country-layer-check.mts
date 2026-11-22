@@ -805,7 +805,14 @@ console.log("⑩ Mock és nyelv (ország-réteg 3/6)");
       /countryName: foreignPage\.countryName/.test(genSrc) && /countryName: foreignPage\.countryName/.test(recSrc));
   const bgCritic = letterCriticSystem({ languageName: "bolgár (български)", countryName: "Bulgária" });
   check("levél-kritikus: magyar perszóna bájtra, idegen nyelven az ország szállásadója", letterCriticSystem() === LETTER_CRITIC_SYSTEM && !/balatoni/.test(bgCritic) && /Bulgária/.test(bgCritic));
-  check("a vendég-kritikus csak magyar lapon fut (nyelvtudása a lényeg — idegen lapon nincs ítélet, nem hamis)", /\} else if \(brief && lang === DEFAULT_LANG\) \{\s*const critic = await applyGuestCritic/.test(genSrc));
+  // NEMZETKÖZI C (brief 2026-11-22, felülírja a 3/6-os „idegen lapon nincs ítélet” szabályt): a vendég-kritikus
+  // a lap NYELVÉN fut (anyanyelvi vendég + szerkesztő), a magyar rendszer-prompt bájtra a régi, a nyelvi
+  // blokk csak nem-magyar lapon kerül a felhasználói körbe.
+  const criticSrc = src("src/generator/guestCritic.ts");
+  check("a vendég-kritikus a lap nyelvén fut (motor + újraírás a nyelvet átadja; magyarul a régi prompt)",
+    /applyGuestCritic\([\s\S]*?criticSource,\s*lang,\s*\)/.test(genSrc) && /reviews: \[\],\s*\}\),\s*lang,\s*\)/.test(recSrc) &&
+      /\(lang === "hu" \? "" : languageNote\(lang, "critic"\)\)/.test(criticSrc) && /\(lang === "hu" \? "" : languageNote\(lang, "writer"\)\)/.test(criticSrc) &&
+      /system: cachedSystem\(CRITIC_SYSTEM\)/.test(criticSrc) && /system: cachedSystem\(REWRITE_SYSTEM\)/.test(criticSrc));
 
   // ── nyelv-levezetés zártan ──
   const mailSrc = src("src/i18n/mail.ts");
@@ -1077,6 +1084,36 @@ console.log("\n⑬ NEMZETKÖZI B — utánkövetés, válasz, elutasító (2026-
   check("próba-kampány: a HU-levél (ország nélkül / HU) bájtra azonos, .hu-val és Szállás.hu-val", JSON.stringify(huP) === JSON.stringify(huP2) && huP.gets.some((g) => g.includes(".hu webcím")) && huP.gets.some((g) => g.includes("Szállás.hu")));
   check("próba-kampány: a HR-levélben nincs .hu és Szállás.hu, a .com a csomag-domain", !hrP.gets.some((g) => /\.hu\b|Szállás\.hu/.test(g)) && hrP.gets.some((g) => g.includes(".com")));
   check("próba-kampány: csomag-domain nélkül a pont kimarad, és „két dolog” változott", noTld.gets.length === 2 && /két dolog/.test(noTld.p2));
+}
+
+// ⑭ NEMZETKÖZI C — konverzió és üzem: nincs csendes HU, ismeretlen ország zár, csatorna, tárca, pénznem.
+console.log("\n⑭ nemzetközi C (konverzió, fizetés, számla, csatorna, jog)");
+{
+  const noHuDefault: readonly [string, RegExp][] = [
+    ["src/billing/buyer.ts", /buyer_country[^\n]*\|\|\s*"HU"/],
+    ["src/billing/prefill.ts", /\?\?\s*"HU"/],
+    ["src/billing/partner.ts", /buyer_country\s*\?\?\s*"HU"/],
+    ["assets/runtime/cit-configurator.js", /pf\.country \|\| "HU"|\("buyer_country"\) \|\| \{\}\)\.value \|\| "HU"/],
+  ];
+  const hits = noHuDefault.filter(([f, re]) => re.test(src(f))).map(([f]) => f);
+  check("nincs csendes „HU” a vevő-országban (validálás, előtöltés, partner, kliens)", !hits.length, hits.join(", "));
+  const li = src("src/tenant/legalIdentity.ts");
+  check("ismeretlen (sor nélküli) ország nem kap HU jogi csomagot (a kód és a sor külön)",
+    /const code = await countryCodeOfTenant\(tenantId\)/.test(li) && /const home = !country \|\| country === "HU"/.test(li) && /row\?\.iso2 \?\? code/.test(li));
+  check("a konfigurátor ismeretlen országra nem ad HU jogi csomagot (kód sor nélkül → countryLegalPack → zár)",
+    /if \(!cc \|\| cc === "HU"\) return homeLegalPack\(\);\s*return \(await import\("\.\.\/legalPackCountry\.js"\)\)\.countryLegalPack\(cc\)/.test(src("src/generator/configurator.ts")));
+  check("SMS és MMS az ország csatornája szerint (központi őr mindkét küldőben)",
+    /phoneChannelAllowed\(msg\.to, "sms"\)/.test(src("src/sms/sender.ts")) && /phoneChannelAllowed\(to, "mms"\)/.test(src("src/mms/sender.ts")));
+  const { phoneChannelAllowed } = await import("../src/sms/countryChannel.js");
+  check("HU szám: SMS és MMS mehet (bitre a régi)", phoneChannelAllowed("+36301234567", "sms") && phoneChannelAllowed("06 30 123 4567", "mms"));
+  check("sor nélküli ország száma: SMS nem mehet", !phoneChannelAllowed("+4915112345678", "sms"));
+  const svc = src("src/payment/service.ts");
+  check("euró-tárca: a pay-link a tárcát is nézi, az Országok lap tételt kap",
+    /const wallet = walletGap\(pv, oi\.currency\)/.test(svc) && /key: "wallet"/.test(src("src/countryReadiness.ts")));
+  check("megrekedt-rendelés riasztás: nem-forint összeg a saját szabályával (nincs „1300 Ft” 13,00 € helyett)",
+    /ccy === "HUF" \? `\$\{a\.amountHuf\} Ft` : formatMinor\(a\.amountHuf, ccy\)/.test(src("src/console/payLinkAlert.ts")));
+  check("nem-magyar számla: a szövege a számla nyelvén, hiányzó fordításnál a számla vár",
+    /buildInvoiceItemsIn\(lang, p, cadence, modCount, vatKey\)/.test(svc) && /language !== "hu" && texts\.fallbacks\.length/.test(svc));
 }
 
 await db.destroy();

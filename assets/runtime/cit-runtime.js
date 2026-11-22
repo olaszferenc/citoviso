@@ -408,8 +408,8 @@
       cn.textContent = cn.hidden
         ? ""
         : (multi && pickedUnits().length > 1
-          ? tr("A kiválasztott szobákba legfeljebb {n} vendég foglalhat.")
-          : tr("Ide legfeljebb {n} vendég foglalhat.")).replace("{n}", cap);
+          ? trn("A kiválasztott szobákba legfeljebb {n} vendég foglalhat.", cap)
+          : trn("Ide legfeljebb {n} vendég foglalhat.", cap)).replace("{n}", cap);
     }
 
     /* ── ADR-0378 meal plans ─────────────────────────────────────────────── */
@@ -476,7 +476,7 @@
       if (kids > guests - 1) kids = Math.max(0, guests - 1);
       form.querySelector("[data-kids]").textContent = String(kids);
       form.querySelector("[data-cit-kidage]").textContent = asksKids()
-        ? tr("({n} éves korig)").replace("{n}", meals.childAge)
+        ? trn("({n} éves korig)", meals.childAge).replace("{n}", meals.childAge)
         : tr("(18 év alatt)");
     }
     function syncMeals() {
@@ -737,20 +737,20 @@
       // weakest point of the box (tenyhuseg-or, 2026-09-26).
       // ADR-0393: on a multi-room sample the sample price is a ROOM's — never "a TELJES SZÁLLÁSRA".
       var basis = demo && multi
-        ? tr("A minta-ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).")
+        ? trn("A minta-ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).", guests)
         : demo
-        ? tr("A minta-ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).")
+        ? trn("A minta-ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).", guests)
         : multi && pickedUnits().length > 1
-        ? tr("Az ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).")
+        ? trn("Az ár szobánként, éjszakánként értendő — a létszám nem befolyásolja (jelenleg {n} fő).", guests)
         : q.perStay
-        ? tr("Az ár a TELJES TARTÓZKODÁSRA szól — a létszám nem befolyásolja (jelenleg {n} fő).")
+        ? trn("Az ár a TELJES TARTÓZKODÁSRA szól — a létszám nem befolyásolja (jelenleg {n} fő).", guests)
         : pricing.unit === "per_person_night"
-          ? tr("Az ár SZEMÉLYENKÉNT és éjszakánként értendő — {n} fővel számolva.")
+          ? trn("Az ár SZEMÉLYENKÉNT és éjszakánként értendő — {n} fővel számolva.", guests)
           : wholeUnit()
-            ? tr("Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).")
+            ? trn("Az ár a TELJES SZÁLLÁSRA szól éjszakánként — a létszám nem befolyásolja (jelenleg {n} fő).", guests)
             /* Elek V-2 (approved plan m1-elek-javitasok ③): a ROOM's price is the room's —
              * "a TELJES SZÁLLÁSRA" stood under every room's quote. The unit is named. */
-            : tr("Az ár a szoba egészére szól éjszakánként („{unit}”) — a létszám nem befolyásolja (jelenleg {n} fő).")
+            : trn("Az ár a szoba egészére szól éjszakánként („{unit}”) — a létszám nem befolyásolja (jelenleg {n} fő).", guests)
               .replace("{unit}", unitName());
       var included = priceIncludes
         ? '<span class="cit-book__qrow"><span>' + esc(priceIncludes) + "</span><b>" +
@@ -844,7 +844,7 @@
         : "";
       // The deadline is the module's real setting, not a hard-coded 48.
       var when = s.expireHours
-        ? tr("A szállásadó legkésőbb {n} órán belül válaszol. Ha addig nem dönt, a kérés lejár, és erről is e-mailt küldünk Önnek.")
+        ? trn("A szállásadó legkésőbb {n} órán belül válaszol. Ha addig nem dönt, a kérés lejár, és erről is e-mailt küldünk Önnek.", s.expireHours)
             .replace("{n}", s.expireHours)
         : tr("A szállásadó személyesen igazolja vissza. Amint döntött, azonnal e-mailt küldünk.");
       /* ⛔ KONTRAKTUS ⑤: a nyugta TEENDŐT ad, nem csak kódot — de CSAK azt ígérheti,
@@ -1075,8 +1075,8 @@
           esc(free.every(function (u) { return picked[u.id]; })
             ? tr("Jelölések törlése")
             : free.length === units.length
-              ? tr("Mind a {n} szobát kérem (az egész ház)").replace("{n}", free.length)
-              : tr("Mind a {n} szabad szobát kérem").replace("{n}", free.length)) +
+              ? trn("Mind a {n} szobát kérem (az egész ház)", free.length).replace("{n}", free.length)
+              : trn("Mind a {n} szabad szobát kérem", free.length).replace("{n}", free.length)) +
           "</button>"
         : "");
       // The list is rebuilt on every change: the keyboard focus goes back where it was.
@@ -1196,8 +1196,8 @@
       var n = nights(a, b);
       if (n < 1) return tr("A távozás legyen későbbi az érkezésnél.");
       var minHere = minFor(a, b);
-      if (n < minHere) return tr("Legalább {n} éjszakára lehet foglalni.").replace("{n}", minHere);
-      if (n > maxN) return tr("Legfeljebb {n} éjszakára lehet foglalni.").replace("{n}", maxN);
+      if (n < minHere) return trn("Legalább {n} éjszakára lehet foglalni.", minHere).replace("{n}", minHere);
+      if (n > maxN) return trn("Legfeljebb {n} éjszakára lehet foglalni.", maxN).replace("{n}", maxN);
       for (var i = 0; i < n; i++) {
         if (blocked[shift(a, i)]) return tr("Sajnos ezek a napok már foglaltak. Válasszon másik időpontot.");
       }
@@ -1291,7 +1291,7 @@
         cells += '<button type="button" class="' + cls + '" data-day="' + isoDay + '"' +
           ((busy && !out) || off || short ? " disabled" : "") +
           ' aria-label="' + isoDay + (busy ? " — " + (viaPortal ? tr("a portálon foglalták") : tr("foglalt")) : "") +
-          (short && !busy ? ", " + tr("legalább {n} éjszaka").replace("{n}", shortMin) : "") +
+          (short && !busy ? ", " + trn("legalább {n} éjszaka", shortMin).replace("{n}", shortMin) : "") +
           (out ? ", " + tr("távozási napnak választható") : "") + '">' + day + "</button>";
       }
       return '<div class="cit-book__month"><p class="cit-book__mlabel">' + esc(label) + "</p>" +
@@ -1322,7 +1322,7 @@
         var minA = a && !b ? minFor(a, shift(a, 1)) : 0;
         nightsEl.textContent = n > 0
           ? trn("{n} éjszaka", n).replace("{n}", n)
-          : minA > 1 ? tr("legalább {n} éjszaka").replace("{n}", minA) : "";
+          : minA > 1 ? trn("legalább {n} éjszaka", minA).replace("{n}", minA) : "";
         if (multi) renderRooms();
         renderQuote(a, b, n);
       }
@@ -1428,7 +1428,7 @@
         : needRoom()
         ? tr("Jelöljön ki legalább egy szobát")
         : a && b
-          ? tr("Tovább a kérés adataihoz ({n})").replace("{n}", n)
+          ? trn("Tovább a kérés adataihoz ({n})", n).replace("{n}", n)
           : tr("Válassza ki a napokat a naptárban");
       var q = form.querySelector("[data-quote]");
       // ADR-0393: a PARTIAL quote (a room without a price) keeps its lines and subtotal.

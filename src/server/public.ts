@@ -102,7 +102,7 @@ import { bookingSetupPage, bookingSetupQuestions } from "./bookingSetupViews.js"
 import { capacityError, overCapacity, siteTouristTax, stayIsTaken, stayQuote, stayRuleErrors } from "../booking/requests.js";
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
-import { countryOfTenant, siteCurrency } from "../tenant/siteCountry.js";
+import { countryOfSite, countryOfTenant, siteCurrency } from "../tenant/siteCountry.js";
 import { minorDigits } from "../text/money.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
@@ -3396,7 +3396,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       question,
       ctx: typeof body.ctx === "string" ? body.ctx.slice(0, 20) : null,
       history,
-      questions: bookingSetupQuestions(ctx.lang, state.mode),
+      questions: bookingSetupQuestions(ctx.lang, state.mode, (await countryOfSite(ctx.siteId))?.touristTaxModel === "none" ? "none" : "hu"),
       // Elek 10-13 T-1: the saved meal setting is part of what the helper knows.
       facts: helperFacts(
         state,
@@ -4773,6 +4773,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
             },
             backUrl: "/admin?tab=modulok&m=booking",
             today: await todayForSite(ctx.siteId),
+            taxModel: (await countryOfSite(ctx.siteId))?.touristTaxModel === "none" ? "none" : "hu",
             trialMeals: await (async () => {
               // Elek 10-13 T-4: the trial booking offers the meal plans and the child count
               // the guest's form offers (the same predicates: offeredPlans / asksChildren).

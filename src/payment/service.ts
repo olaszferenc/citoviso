@@ -1751,9 +1751,11 @@ function buildInvoiceItemsIn(
 ): ReturnType<typeof buildInvoiceItems> {
   const line = (name: string, amount: number) => ({ name, quantity: 1, unitNet: amount, vatKey, net: amount, vat: 0, gross: amount });
   const period = cadence === "once" ? T(lang, "egyszeri") : cadence === "annual" ? T(lang, "éves") : T(lang, "havi");
-  const domainLabel = p.domainName
-    ? T(lang, "Citoviso saját domain ({domain}) — éves díj", { domain: p.domainName })
-    : T(lang, "Citoviso saját domain — éves díj");
+  // Lazy: a label that is not printed must not count as a missing translation (it would hold the invoice).
+  const domainLabel = (): string =>
+    p.domainName
+      ? T(lang, "Citoviso saját domain ({domain}) — éves díj", { domain: p.domainName })
+      : T(lang, "Citoviso saját domain — éves díj");
   if (p.kind === "domain_settlement") {
     return [
       line(
@@ -1764,10 +1766,10 @@ function buildInvoiceItemsIn(
       ),
     ];
   }
-  if (p.kind === "domain_upgrade") return [line(domainLabel, p.amount)];
+  if (p.kind === "domain_upgrade") return [line(domainLabel(), p.amount)];
   if (cadence === "once") return [line(T(lang, "Citoviso többnyelvű honlap (egyszeri generálási díj)"), p.amount)];
   const kedv = p.offerPercent ? ` — ${T(lang, "{szazalek}% kedvezménnyel", { szazalek: p.offerPercent })}` : "";
-  const domainLines = p.domainFee && p.domainFee > 0 ? [line(domainLabel, p.domainFee)] : [];
+  const domainLines = p.domainFee && p.domainFee > 0 ? [line(domainLabel(), p.domainFee)] : [];
   if (p.kind === "upsell") {
     const mods = p.moduleLines ?? [];
     const base = p.amount - (p.domainFee ?? 0);

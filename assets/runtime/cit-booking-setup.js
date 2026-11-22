@@ -147,7 +147,8 @@
     { id: "seasonal", sec: "prices", skip: function () { return !bookable().some(function (u) { return u.seasons.length; }); } },
     { id: "stay", sec: "rules" },
     { id: "ahead", sec: "rules" },
-    { id: "tax", sec: "guest" },
+    // NEMZETKÖZI C: no tourist-tax question where the country states no rule (taxModel 'none').
+    { id: "tax", sec: "guest", skip: function () { return D.taxModel === "none"; } },
     { id: "includes", sec: "guest", optional: true },
     { id: "notify", sec: "notify" },
     { id: "check", sec: "check" }

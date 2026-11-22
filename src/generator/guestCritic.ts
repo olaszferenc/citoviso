@@ -32,6 +32,7 @@ import type { EditorialCopy } from "../engine/copywriter.js";
 import type { SectionCopy } from "../engine/recipe.js";
 import { familiarForms } from "./addressRegister.js";
 import { lintOpening, type OpeningKind } from "./lyricOpening.js";
+import { langName } from "../i18n/lang.js";
 
 const MODEL = "claude-opus-4-8";
 /** Rewrite rounds after the first critique. Not a loop to convergence: if two targeted
@@ -547,6 +548,30 @@ function registerRule(r: Register): string {
     : "Az oldal a vendéget TEGEZI. Minden magázó alak BLOKKOLÓ. A ház T/1-ben („mi”) beszélhet magáról — az NEM megszólítás-hiba.";
 }
 
+/**
+ * NEMZETKÖZI C: the page is in the LEAD's language (ADR-0457). The critic and the writer keep
+ * their Hungarian system prompts byte for byte (the Hungarian mock's verdict is unchanged);
+ * a non-Hungarian page adds this block to the stable user turn: the same rules, judged by a
+ * native guest and editor of THAT language, the Hungarian examples naming only the error type.
+ */
+function languageNote(lang: string, role: "critic" | "writer"): string {
+  const name = langName(lang);
+  return role === "critic"
+    ? `NYELV (felülírja a magyar keretet): a bírálandó szöveg ${name} nyelvű, a vendég ${name} anyanyelvű, igényes ottani vendég, a szerkesztő ${name} anyanyelvű szövegíró („kiírná-e EZT egy normális ottani szállásadó a saját honlapjára?”). ` +
+        `Minden szabály ugyanaz; a nyelvi tételeket (nem_letezo_fogalom, tukorforditas, nyelvtan, ai_sablon, megszolitas) a ${name} nyelv szerint ítéld — a magyar példák csak a hibatípust mutatják. ` +
+        `A „quote” a ${name} szövegből SZÓ SZERINT kimásolt részlet; a „fix” új megfogalmazása ${name} nyelvű; a „guestReaction” és a „summary” magyarul (az operátor olvassa).\n\n`
+    : `NYELV (felülírja a magyar keretet): a szöveg ${name} nyelvű. Úgy javíts, ahogy egy jó ízlésű ${name} anyanyelvű szállásadó írná a saját honlapjára; minden visszaadott mező ${name} nyelvű (a "plan" lehet magyar).\n\n`;
+}
+
+/** The address rule of a non-Hungarian page: the language's formal address (owner ruling: MAGÁZÁS = formal). */
+function registerRuleIn(lang: string, r: Register): string {
+  if (lang === "hu") return registerRule(r);
+  const name = langName(lang);
+  return r === "magaz"
+    ? `Az oldal a vendéget a ${name} nyelv UDVARIAS, formális megszólításával szólítja meg (a magyar magázás megfelelője). Minden bizalmas, tegező alak BLOKKOLÓ. A ház többes szám első személyben beszélhet magáról — az NEM megszólítás-hiba.`
+    : `Az oldal a vendéget a ${name} nyelv bizalmas (tegező) alakjával szólítja meg. Minden formális alak BLOKKOLÓ.`;
+}
+
 const CRITIC_SYSTEM = `Két ember vagy egyszerre, és EGY szállás-honlap szövegét olvasod.
 1. VENDÉG: Kovács Judit, 46 éves, évente 5–6 belföldi utat foglal, Szallas.hu-n és Google-on keres, sok szállásoldalt látott már. Pontosan tudja, mit ígér egy szöveg, és számon is kéri.
 2. SZERKESZTŐ: igényes magyar szövegíró, aki minden mondatra megkérdezi: „kiírná-e EZT egy normális magyar szállásadó a saját honlapjára?”
@@ -689,19 +714,28 @@ export async function critiqueCopy(
   register: Register,
   /** The version before the last rewrite: anything the rewrite ADDED is judged hardest. */
   previous?: CopySurface,
+  /** NEMZETKÖZI C: the page language (default Hungarian — the old call, byte for byte). */
+  lang = "hu",
 ): Promise<{ objections: Objection[]; summary: string }> {
-  const lint = [
-    ...lintCopy(copy, register),
-    ...lintOffers(copy, source),
-    ...lintAddedDetail(copy, source),
-    ...lintAddedObject(copy, source),
-    ...lintPlacedClaim(copy, source),
-    ...lintOpeningCopy(copy, source),
-  ];
+  // The deterministic twins are HUNGARIAN pattern sets (register forms, calques, object and
+  // place words, lyric openers): on a page in another language they would see nothing — or
+  // misread a word — so there the AI critic, told the language, is the judge.
+  const lint =
+    lang === "hu"
+      ? [
+          ...lintCopy(copy, register),
+          ...lintOffers(copy, source),
+          ...lintAddedDetail(copy, source),
+          ...lintAddedObject(copy, source),
+          ...lintPlacedClaim(copy, source),
+          ...lintOpeningCopy(copy, source),
+        ]
+      : [];
   // Identical on every critic round of one mock → cached prefix; only the copy under
   // judgement (`judged`) changes between rounds.
   const stable =
-    `MEGSZÓLÍTÁS (a ház szabálya): ${registerRule(register)}\n\n` +
+    (lang === "hu" ? "" : languageNote(lang, "critic")) +
+    `MEGSZÓLÍTÁS (a ház szabálya): ${registerRuleIn(lang, register)}\n\n` +
     `═══ FORRÁSOK ═══\n${describeSource(source)}\n\n`;
   const judged =
     (previous
@@ -813,6 +847,8 @@ export async function rewriteCopy(
   objections: readonly Objection[],
   source: CriticSource,
   register: Register,
+  /** NEMZETKÖZI C: the page language (default Hungarian — the old call, byte for byte). */
+  lang = "hu",
 ): Promise<CopySurface> {
   const c = await client();
   const hero = copy.editorial.hero as (SectionCopy & { lead?: string }) | undefined;
@@ -830,7 +866,8 @@ export async function rewriteCopy(
       {
         role: "user",
         content:
-          `MEGSZÓLÍTÁS (a ház szabálya): ${registerRule(register)}\n\n` +
+          (lang === "hu" ? "" : languageNote(lang, "writer")) +
+          `MEGSZÓLÍTÁS (a ház szabálya): ${registerRuleIn(lang, register)}\n\n` +
           `═══ FORRÁSOK ═══\n${describeSource(source)}\n\n` +
           `═══ A JELENLEGI SZÖVEG (JSON) ═══\n${JSON.stringify(current, null, 1)}\n\n` +
           `═══ A VENDÉG-KRITIKUS KIFOGÁSAI ═══\n` +
@@ -878,6 +915,7 @@ export async function runGuestCritic(
   copy: CopySurface,
   source: CriticSource,
   register: Register,
+  lang = "hu",
 ): Promise<CriticLoopResult> {
   if (!config.anthropicApiKey) return { rounds: [], final: copy, verdict: "error", reason: "nincs AI-kulcs" };
   const rounds: CriticRound[] = [];
@@ -885,14 +923,14 @@ export async function runGuestCritic(
   let previous: CopySurface | undefined;
   try {
     for (let i = 0; i <= MAX_ROUNDS; i++) {
-      const { objections, summary } = await critiqueCopy(current, source, register, previous);
+      const { objections, summary } = await critiqueCopy(current, source, register, previous, lang);
       const blocking = objections.filter((o) => o.severity === "blokkolo");
       rounds.push({ copy: current, objections, verdict: blocking.length ? "flag" : "pass", summary });
       // Minor objections are worth a rewrite too while rounds remain (measured: "a főszereplő",
       // "Bőséges" survived because the loop stopped at the first clean pass).
       if (objections.length === 0 || i === MAX_ROUNDS) break;
       previous = current;
-      current = await rewriteCopy(current, objections, source, register);
+      current = await rewriteCopy(current, objections, source, register, lang);
     }
   } catch (err) {
     if (!rounds.length) return { rounds, final: copy, verdict: "error", reason: (err as Error).message };
@@ -997,8 +1035,10 @@ export function criticSourceOf(args: {
 export async function applyGuestCritic(
   copy: CopySurface,
   source: CriticSource,
+  /** NEMZETKÖZI C: the page language — a non-Hungarian page is judged in ITS language. */
+  lang = "hu",
 ): Promise<{ copy: CopySurface; inputs: Record<string, unknown> }> {
-  const r = await runGuestCritic(copy, source, HOUSE_REGISTER);
+  const r = await runGuestCritic(copy, source, HOUSE_REGISTER, lang);
   const best = r.rounds.find((x) => x.copy === r.final);
   return {
     copy: r.final,

@@ -23,6 +23,8 @@ import { APP_TZ } from "../text/zoneTime.js";
 import { callCostUsd, recordAiUsage } from "./usage.js";
 import { setupBookable, type SetupState } from "../tenant/bookingSetup.js";
 import { MODULE_CATALOG } from "../modules.js";
+import { countryOfSite } from "../tenant/siteCountry.js";
+import { calendarSyncPortals } from "../country.js";
 import { offeredPlans, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
 
 /**
@@ -96,8 +98,21 @@ export async function helperCallsToday(siteId: string): Promise<number> {
  * fields, src/tenant/prices.ts, src/booking/requests.ts, ADR-0049/0114/0208/0222/0257) — and
  * what the system does NOT do is stated as plainly, so the helper never promises it.
  */
-export function helperSystemPrompt(lang: string): string {
-  return [
+/**
+ * NEMZETKÖZI C: what the helper must know of the lodging's COUNTRY — its tourist-tax rule
+ * (country.tourist_tax_model), the portals whose calendar sync we verified for it
+ * (calendarSyncPortals) and its currency. null = a tenant with no country (legacy Hungarian):
+ * the Hungarian prompt, byte for byte.
+ */
+export interface HelperCountry {
+  readonly taxModel: "hu" | "none";
+  readonly portals: readonly string[];
+  readonly currency: string;
+}
+
+export function helperSystemPrompt(lang: string, country: HelperCountry | null = null): string {
+  const hu = !country || (country.taxModel === "hu" && country.currency === "HUF");
+  const lines = [
     "Ön a Citoviso szállásadói kezelőfelületének Segítője a „Foglalás beállítása” oldalon.", // i18n-exempt: model prompt
     "A felhasználó egy szállásadó (gyakran nem jártas az informatikában), aki a saját honlapján a foglalást állítja be.", // i18n-exempt: model prompt
     "",
@@ -131,7 +146,27 @@ export function helperSystemPrompt(lang: string): string {
     "- A „Kipróbálás” rész egy kitalált foglalással megmutatja, mit lát a vendég, és mi akadályozná; ez semmit nem küld el.", // i18n-exempt: model prompt
     "",
     `VÁLASZ: ${langName(lang)} nyelven, udvarias magázással, legfeljebb 4 rövid mondatban, felsorolás és formázás nélkül. A „go” mezőbe annak a kérdésnek az azonosítóját írja, ahol a felhasználó a szóban forgó dolgot megadja (ha nincs ilyen, „none”). Az „advanced” mezőbe akkor írjon „rooms”, „pricing” vagy „booking” értéket, ha a dolog csak a Haladó beállítások Szobák / Árak / Online foglalás képernyőjén adható meg; különben „none”.`, // i18n-exempt: model prompt
-  ].join("\n");
+  ];
+  if (hu) return lines.join("\n");
+  // NEMZETKÖZI C: a lodging outside Hungary — the same rules, with ITS country's facts in place
+  // of the Hungarian ones (no Hungarian tax rule, no Szállás.hu, its own currency).
+  return lines
+    .map((l) => {
+      if (l.startsWith("- Az ár mire szól:")) {
+        return l.replace("Pénznem: forint vagy euró.", `Pénznem: ${country!.currency} (a szállás országának pénzneme).`); // i18n-exempt: model prompt
+      }
+      if (l.startsWith("- Idegenforgalmi adó:") && country!.taxModel === "none") {
+        return "- Idegenforgalmi adó: ebben az országban a honlap NEM számol idegenforgalmi adót és nem ír róla szabályt (a helyi szabály településenként más) — ezen az oldalon nincs is ilyen kérdés. Ha a vendég kérdezi, a szállásadó tájékoztatja; adótanácsot ne adjon."; // i18n-exempt: model prompt
+      }
+      if (l.startsWith("- Gyerek vagy felnőtt:") && country!.taxModel === "none") {
+        return "- Gyerek vagy felnőtt: a vendég a foglalásnál mindig megadja, hányan gyermekek („Ebből gyermek”). Ez csak az ellátás felárát érinti: ha a mentett ellátásnál van gyerekár „N éves korig”, aki legfeljebb N éves, gyermek-árat fizet, aki idősebb, felnőtt-árat; ha nincs gyerekár, az ellátásban nincs különbség. Idegenforgalmi adóról ebben az országban a honlap nem ír szabályt. Ha a korhatár nincs megadva, ezt mondja ki, és hogy hol adható meg."; // i18n-exempt: model prompt
+      }
+      if (l.startsWith("- Más oldalak (Booking, Airbnb, Szállás.hu)")) {
+        return l.replace("(Booking, Airbnb, Szállás.hu)", `(${country!.portals.join(", ")})`);
+      }
+      return l;
+    })
+    .join("\n");
 }
 
 /**
@@ -176,7 +211,9 @@ export function helperFacts(s: SetupState, mealsFact = ""): string {
         `csak az időszakokban: ${u.seasonalOnly ? "igen" : "nem"}; időszakok: ${seasons || "nincs"}`, // i18n-exempt: model prompt
     );
   }
-  const tax = s.taxState === "amount" ? `${s.tax} Ft / fő / éj` : s.taxState === "none" ? "nincs" : s.taxState === "unknown" ? "még nem tudja" : "nincs megválaszolva"; // i18n-exempt: model prompt
+  // NEMZETKÖZI C: the amount in the site's currency („Ft” for a forint site, as before).
+  const taxUnit = s.currency === "HUF" ? "Ft" : s.currency;
+  const tax = s.taxState === "amount" ? `${s.tax} ${taxUnit} / fő / éj` : s.taxState === "none" ? "nincs" : s.taxState === "unknown" ? "még nem tudja" : "nincs megválaszolva"; // i18n-exempt: model prompt
   lines.push(
     `Legrövidebb foglalás: ${s.minNights} éj; leghosszabb: ${s.maxNights} éj`, // i18n-exempt: model prompt
     `Előre legfeljebb ${s.horizon} hónap; legkorábbi érkezés: ${s.lead} nap múlva`, // i18n-exempt: model prompt
@@ -250,6 +287,13 @@ async function recordCall(siteId: string, usage: Parameters<typeof callCostUsd>[
   return cost;
 }
 
+/** NEMZETKÖZI C: the lodging's country facts for the prompt; null = no country (legacy Hungarian). */
+async function helperCountryOf(siteId: string): Promise<HelperCountry | null> {
+  const row = await countryOfSite(siteId);
+  if (!row) return null;
+  return { taxModel: row.touristTaxModel, portals: calendarSyncPortals(row.iso2), currency: row.currency };
+}
+
 /** Ask the helper. Refuses BEFORE any API call when the site's daily limit is reached. */
 export async function askBookingHelper(r: HelperRequest): Promise<HelperResult> {
   if (!config.anthropicApiKey) return { ok: false, reason: "unavailable" };
@@ -272,7 +316,7 @@ export async function askBookingHelper(r: HelperRequest): Promise<HelperResult> 
       model: HELPER_MODEL,
       // Haiku 5.5 thinks adaptively by default and thinking counts here: room for both.
       max_tokens: 1500,
-      system: helperSystemPrompt(r.lang),
+      system: helperSystemPrompt(r.lang, await helperCountryOf(r.siteId)),
       messages: [{ role: "user", content: helperUserTurn(r) }],
       output_config: { effort: "low", format: { type: "json_schema", schema } },
     });

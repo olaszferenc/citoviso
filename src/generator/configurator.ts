@@ -111,7 +111,8 @@ async function configuratorBlock(): Promise<string> {
   // server applies (src/text/phone.ts PHONE_NORM_JS, the one client mirror that
   // phone-normalize-check runs against the server). Handed over as a function instead
   // of a second hand-copied table inside the runtime file.
-  const phoneNorm = `window.CIT_PHONE_NORM=(function(){${PHONE_NORM_JS};return norm;})();`;
+  // NEMZETKÖZI C: a non-Hungarian lead's page sets its country's rule first (phoneScriptForArtifact).
+  const phoneNorm = `window.CIT_PHONE_NORM=window.CIT_PHONE_NORM||(function(){${PHONE_NORM_JS};return norm;})();`;
   cached =
     `<style data-cit-configurator-css>\n${css}\n</style>\n` +
     `<script data-cit-configurator-js>window.CIT_PAY_BANNER=${jsonForScript(banner.trim())};\n${phoneNorm}\n${money}\n${js}\n</script>\n`;
@@ -711,9 +712,34 @@ export async function injectConfigurator(
     `<script type="application/json" data-cit-configurator>` +
     jsonForScript(manifest) +
     `</script>\n`;
-  const block = manifestTag + (await configuratorBlock());
+  const block = manifestTag + (await phoneScriptForArtifact(artifactId)) + (await configuratorBlock());
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);
   return html + "\n" + block; // no </body> — append as a safe fallback
+}
+
+/**
+ * NEMZETKÖZI C: the trial form's phone rule in the LEAD's country (a Croatian „091 234 5678”
+ * was refused on the page before the server ever saw it). The browser twin of the server's
+ * normalizePhoneIn / prettyPhoneIn (phoneCountry.ts phoneRulesJs) and the country's sample
+ * number for the placeholder and the error. Hungarian plan / no row → nothing: the page keeps
+ * the Hungarian rule of the cached block.
+ */
+async function phoneScriptForArtifact(artifactId: string): Promise<string> {
+  const { db } = await import("../db/client.js");
+  const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  if (!a) return "";
+  const { countryConfig, countryOfLead } = await import("../country.js");
+  const row = await countryConfig(await countryOfLead(a.lead_id));
+  if (!row || row.phonePlan === "hu") return "";
+  const { phoneExampleIn, phoneRulesJs } = await import("../text/phoneCountry.js");
+  const rules = phoneRulesJs(row);
+  return (
+    `<script data-cit-phone-rules>` +
+    `window.CIT_PHONE_NORM=(function(){${rules};return norm;})();` +
+    `window.CIT_PHONE_PRETTY=(function(){${rules};return pretty;})();` +
+    `window.CIT_PHONE_EXAMPLE=${jsonForScript(phoneExampleIn(row))};` +
+    `</script>\n`
+  );
 }
 
 /** ORSZÁG-RÉTEG 3/7: the legal pack of an artifact's lodging (HU / unknown → the Hungarian pack). */

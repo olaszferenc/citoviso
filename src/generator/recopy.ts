@@ -216,7 +216,8 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
   // Facts: the listing set used above, plus the first generation's review-backed facts
   // (sourcePanel) so a review quote is still recognised as a REVIEW (ruling B) here.
   let criticInputs: Record<string, unknown> = {};
-  if (lang === DEFAULT_LANG) {
+  // NEMZETKÖZI C: in the lead's language too (the same rule as generateEngine).
+  {
     const facts = criticFactsOf(sources, inputs, sellingPoints);
     const critic = await applyGuestCritic(
       { tagline: brief.tagline, intro: brief.intro, highlights: brief.highlights, editorial },
@@ -229,6 +230,7 @@ async function recopyInner(artifactId: string, curatorPrompt?: string): Promise<
         descriptions,
         reviews: [],
       }),
+      lang,
     );
     brief = { ...brief, tagline: critic.copy.tagline, intro: critic.copy.intro, highlights: [...critic.copy.highlights] };
     editorial = critic.copy.editorial;

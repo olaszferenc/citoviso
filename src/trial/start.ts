@@ -32,12 +32,13 @@ import { isValidEmail } from "../email/leadEmails.js";
 import { PHOTO_RIGHTS_DECLARATION_V1, TERMS_ACCEPTANCE_V1, TRIAL_CLICKWRAP_V1 } from "../legal.js";
 import { isMarketApproved } from "../markets.js";
 import { countryLegalPack } from "../legalPackCountry.js";
-import { countryConfig, countryOfLead } from "../country.js";
+import { countryConfig, countryOfLead, type CountryConfig } from "../country.js";
 import { issueAndSendTenantLogin } from "../tenant/credentials.js";
 import { paidModuleIds } from "../tenant/paidEntitlements.js";
 import { rerenderTenantSnapshot } from "../tenant/editor.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
+import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { listProspectPlans } from "../outreach/planSet.js";
 import { getFreeTrialConfig, trialUntilFrom } from "./config.js";
 import { loadPricing } from "../pricing.js";
@@ -107,12 +108,16 @@ export { trialModuleIds };
 /** A claimed trial younger than this with no tenant yet is assumed to be in flight. */
 const IN_FLIGHT_MS = 2 * 60_000;
 
-function validate(input: TrialInput): TrialError | { name: string; email: string; phone: string } {
+function validate(input: TrialInput, phoneRules: CountryConfig | null): TrialError | { name: string; email: string; phone: string } {
   const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 120) return "invalid_name";
   const email = String(input.email ?? "").trim().toLowerCase();
   if (!isValidEmail(email)) return "invalid_email";
-  const phone = normalizePhone(String(input.phone ?? ""));
+  // NEMZETKÖZI C: the number is read in the LEAD's country (a Croatian „091 234 5678” was
+  // refused as an invalid Hungarian number). The Hungarian plan — and a lead with no country
+  // row — keeps the Hungarian reading exactly.
+  const rawPhone = String(input.phone ?? "");
+  const phone = phoneRules ? normalizePhoneIn(rawPhone, phoneRules) : normalizePhone(rawPhone);
   if (!phone) return "invalid_phone";
   if (input.aszfAccepted !== true) return "terms_required";
   if (input.photoRightsAccepted !== true) return "photo_rights_required";
@@ -160,7 +165,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   if (picked === "not_found" || picked === "not_available") return { ok: false, error: picked };
   const artifactId = picked;
 
-  const v = validate(input);
+  const v = validate(input, await countryConfig(await countryOfLead(p.lead_id)));
   if (typeof v === "string") return { ok: false, error: v };
 
   // 1. An existing trial of this lead answers first — it is the idempotency door.

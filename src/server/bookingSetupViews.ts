@@ -11,6 +11,7 @@
 
 import { readFileSync } from "node:fs";
 import { T } from "../i18n/mail.js";
+import { currencySign, formatMoney } from "../text/money.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { icAdmin as ic } from "../ui/icons.js";
 import { HELPER_MAX_QUESTION } from "../ai/bookingHelper.js";
@@ -28,8 +29,8 @@ export interface SetupLinks {
 }
 
 /** The page's questions with the title the owner reads — the Segítő may only point at these. */
-export function bookingSetupQuestions(lang: string, mode: SetupMode): { id: string; title: string }[] {
-  return [
+export function bookingSetupQuestions(lang: string, mode: SetupMode, taxModel: "hu" | "none" = "hu"): { id: string; title: string }[] {
+  const all = [
     { id: "mode", title: T(lang, "Hogyan adja ki a szállását?") },
     { id: "rooms", title: mode === "single" ? T(lang, "Hány vendég fér el?") : T(lang, "Melyek a kiadó szobái?") },
     { id: "unit", title: T(lang, "Mire szól az ára?") },
@@ -43,9 +44,26 @@ export function bookingSetupQuestions(lang: string, mode: SetupMode): { id: stri
     { id: "notify", title: T(lang, "Hová küldjük a foglalási kéréseket?") },
     { id: "check", title: T(lang, "Próbáljuk ki: így foglalna egy vendég") },
   ];
+  // NEMZETKÖZI C: the tourist-tax question exists only where the lodging's country has a rule
+  // the site states (country.tourist_tax_model 'hu'); elsewhere it is not asked at all.
+  return taxModel === "none" ? all.filter((q) => q.id !== "tax") : all;
 }
 
-function strings(lang: string): Record<string, string> {
+/**
+ * NEMZETKÖZI C: the price examples in the lodging's currency — a forint site keeps its
+ * „19 000 Ft” examples byte for byte; another currency gets amounts of its own size.
+ */
+function priceExamples(lang: string, currency: string | undefined): Record<string, string> {
+  if (!currency || currencySign(currency) === "Ft") return {};
+  const m = (n: number): string => formatMoney(n, currency, lang);
+  return {
+    unitNightSub: T(lang, "Pl. {ar} egy éjszakára, akárhányan vannak.", { ar: m(80) }),
+    unitPersonSub: T(lang, "Pl. {ar} / fő / éj — 2 fő 3 éjre {osszeg}.", { ar: m(25), osszeg: m(150) }),
+    pricePh: T(lang, "Pl. {szam}", { szam: "80" }),
+  };
+}
+
+function strings(lang: string, currency?: string): Record<string, string> {
   const qs = Object.fromEntries(
     bookingSetupQuestions(lang, "rooms").map((q) => [`q_${q.id}`, q.title]),
   );
@@ -210,6 +228,7 @@ function strings(lang: string): Record<string, string> {
     chatHello: T(lang, "Jó napot! Kérdezzen bármit a foglalás beállításáról — elmagyarázom, és megmutatom, hol adhatja meg. Az adatokat Ön írja be, én nem módosítok semmit."),
     chatError: T(lang, "Most nem tudok válaszolni. Próbálja újra kicsit később, vagy nézze meg a Súgót."),
     showWhere: T(lang, "Mutasd, hol adom meg: {q}"),
+    ...priceExamples(lang, currency),
   };
 }
 
@@ -349,11 +368,14 @@ export function bookingSetupPage(o: {
     readonly childAge: number | null;
     readonly off: readonly string[];
   } | null;
+  /** NEMZETKÖZI C: the lodging country's tourist-tax model ('none' = the question is not asked). */
+  readonly taxModel?: "hu" | "none";
 }): string {
   const { lang } = o;
   const data = {
     lang,
-    L: strings(lang),
+    L: strings(lang, o.state.currency),
+    taxModel: o.taxModel ?? "hu",
     state: o.state,
     adv: o.links,
     chips: chips(lang),

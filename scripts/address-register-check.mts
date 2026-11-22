@@ -118,6 +118,10 @@ const CONSOLE_FAMILIAR = new Set([
   // 2026-11-12 reviewed: approvalCopy (the approval page, ADR-0430) addresses the operator —
   // „… egyik sincs kiválasztva — … ezt a levelet, amíg nem választasz” · „Ha átírod a lenti SMS-t …”.
   "választasz", "átírod",
+  // 2026-11-22 reviewed (Nemzetközi C, the gate was red on clean main): the Országok lap
+  // (countryReadiness.ts / countryViews.ts, ADR-0460) addresses the operator — „nincs ország-sor —
+  // vedd fel az országot” · „… ha nem töltöd ki …” · „Nem zár, de figyelj:”.
+  "vedd", "töltöd", "figyelj",
 ]);
 
 /** The seven measured eyebrows, as the critic's lint sees them (features.eyebrow). */
