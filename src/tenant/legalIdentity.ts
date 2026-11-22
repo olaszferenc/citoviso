@@ -22,7 +22,7 @@ import type { CountryLegalLocal, HostingProviderIdentity, TenantLegalIdentity } 
 import { legalLocalFor, missingImprintFields, NO_LOCAL_ITEMS } from "../legal.js";
 import { countryLegalPack } from "../legalPackCountry.js";
 import { homeLegalPack, type LegalPack } from "../legalPack.js";
-import { countryOfTenant } from "./siteCountry.js";
+import { countryCodeOfTenant, countryOfTenant } from "./siteCountry.js";
 
 export interface TenantLegalState {
   readonly who: TenantLegalIdentity;
@@ -127,10 +127,12 @@ export async function loadTenantLegal(tenantId: string): Promise<TenantLegalStat
 
   const buyerType = (buyer?.buyer_type as "individual" | "business" | null | undefined) ?? null;
   // ORSZÁG-RÉTEG 3/7: the lodging's country decides the pack and the local items. A tenant
-  // whose country has no layer row keeps the Hungarian behaviour it always had (null country
-  // → HU pack) — the same rule as countryOfTenant's other callers; a non-HU row needs its pack.
-  const row = await countryOfTenant(tenantId);
-  const country = row?.iso2 ?? null;
+  // with NO country at all (no lead, or a legacy lead without one) keeps the Hungarian
+  // behaviour it always had. NEMZETKÖZI C: a country CODE without a layer row ("DE") is not
+  // "no country" — it gets no pack (countryLegalPack → null: do not publish), never the HU one.
+  const code = await countryCodeOfTenant(tenantId);
+  const row = code ? await countryOfTenant(tenantId) : null;
+  const country = row?.iso2 ?? code;
   const home = !country || country === "HU";
   const local = home ? NO_LOCAL_ITEMS : legalLocalFor(country);
   const pack = home ? homeLegalPack() : await countryLegalPack(country);

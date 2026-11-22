@@ -37,13 +37,13 @@ import { buyerCatalog, missingBuyerPackStrings } from "./i18n/packs.js";
 import { consumerAdrValue, legalPackStatus, type LegalPackStatus } from "./legalPack.js";
 import { LEGAL_LOCAL } from "./legal.js";
 import { channelEnabled, modemPairBlocks } from "./outreach/countryOutreach.js";
-import { marketOpenGaps, paymentProviderIds } from "./payment/providers.js";
+import { marketOpenGaps, paymentProviderIds, walletGap } from "./payment/providers.js";
 import { loadPricing, pricingRegions, regionPriceGaps } from "./pricing.js";
 
 /** The home market (markets.ts HOME_MARKET — repeated: markets.ts imports this module). */
 const HOME = "HU";
 
-export type ReadinessKey = "data" | "prices" | "babel" | "legal" | "adr" | "holidays" | "channel";
+export type ReadinessKey = "data" | "prices" | "wallet" | "babel" | "legal" | "adr" | "holidays" | "channel";
 export type ReadinessState = "ok" | "bad" | "warn";
 
 export interface ReadinessItem {
@@ -159,6 +159,23 @@ export async function countryReadiness(country: string | null | undefined, opts:
           ccy: cfg!.currency,
           provider: cfg!.paymentProvider,
         }),
+  });
+
+  // ── ①b the wallet (NEMZETKÖZI C): the provider takes the currency, but can WE receive it? ──
+  const walletMissing = cfg ? walletGap(cfg.paymentProvider, cfg.currency) : null;
+  items.push({
+    key: "wallet",
+    gating: true,
+    title: T(lang, "Fizetési tárca"),
+    state: !cfg || walletMissing ? "bad" : "ok",
+    detail: !cfg
+      ? T(lang, "nincs ország-sor")
+      : walletMissing
+        ? T(lang, "nincs {ccy} pénztárca a {provider} fiókban — {ccy} fizetés addig nem fogadható; a tárca nyitása a tulaj döntése", {
+            ccy: cfg.currency,
+            provider: cfg.paymentProvider,
+          })
+        : T(lang, "{ccy} pénztárca megvan ({provider})", { ccy: cfg.currency, provider: cfg.paymentProvider }),
   });
 
   // ── ② the language pack, buyer-side (the send gates' own measure) ──────────────────────────

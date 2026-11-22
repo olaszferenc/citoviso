@@ -271,7 +271,7 @@ export async function loadDomainAdmin(
     // rule as the lead configurator (console /configure/…/domains).
     // ORSZÁG-RÉTEG 3/6: only the lodging country's own endings (+ generic ones) — see endingsForCountry.
     const siteCountry = await countryOfTenant(tenantId);
-    const candidates = suggestDomains(displayName, endingsForCountry(offeredTlds(regionId).map((t) => t.tld), siteCountry?.ownSiteTlds ?? null));
+    const candidates = suggestDomains(displayName, endingsForCountry(offeredTlds(regionId).map((t) => t.tld), siteCountry?.ownSiteTlds ?? null), siteCountry);
     const checks = await Promise.all(
       candidates.map(async (d) => ({
         availability: await checkWebcimAvailability(d),

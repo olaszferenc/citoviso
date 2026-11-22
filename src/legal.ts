@@ -1078,8 +1078,10 @@ export interface CountryLegalLocal {
   readonly taxIdLabel?: string;
   /** Who owes the tax id on the imprint; the Hungarian rule (business only) when unset. */
   readonly taxIdRequired?: "always" | "business";
-  /** 3/10: the offline check digit of the tax id (billing/taxId.ts nationalTaxIdProblem). */
-  readonly taxIdCheck?: "hr_oib";
+  /** 3/10: the offline check digit of the tax id (billing/taxId.ts nationalTaxIdProblem). NEMZETKÖZI C:
+   *  a country with a check also lets a BUSINESS buyer order with this id instead of an EU VAT
+   *  number (owner 2026-11-22) — billing/buyer.ts reads it from here, the configurator shows the field. */
+  readonly taxIdCheck?: "hr_oib" | "it_piva_cf" | "es_nif" | "pt_nif" | "fr_siren" | "bg_eik";
   /** false = the HU NTAK row is not offered (it is a Hungarian register). Unset = HU behaviour. */
   readonly ntak?: boolean;
   readonly fields: readonly LocalLegalField[];
@@ -1107,6 +1109,7 @@ export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
   IT: {
     taxIdLabel: "Olasz adószám (Partita IVA)", // i18n-exempt: legal pack (§H.22)
     taxIdRequired: "business",
+    taxIdCheck: "it_piva_cf",
     ntak: false,
     fields: [
       { id: "cin", label: "Nemzeti szálláshely-azonosító (CIN)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
@@ -1116,6 +1119,7 @@ export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
   ES: {
     taxIdLabel: "Spanyol adóazonosító (NIF)", // i18n-exempt: legal pack (§H.22)
     taxIdRequired: "always",
+    taxIdCheck: "es_nif",
     ntak: false,
     fields: [
       { id: "nrua", label: "Országos egységes nyilvántartási szám (NRUA)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
@@ -1125,6 +1129,7 @@ export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
   PT: {
     taxIdLabel: "Portugál adóazonosító (NIF)", // i18n-exempt: legal pack (§H.22)
     taxIdRequired: "always",
+    taxIdCheck: "pt_nif",
     ntak: false,
     fields: [
       { id: "al", label: "Helyi szálláshely nyilvántartási száma (AL)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)
@@ -1136,6 +1141,7 @@ export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
   FR: {
     taxIdLabel: "Francia cégazonosító (SIREN)", // i18n-exempt: legal pack (§H.22)
     taxIdRequired: "business",
+    taxIdCheck: "fr_siren",
     ntak: false,
     hostContactRequired: true,
     fields: [
@@ -1146,6 +1152,7 @@ export const LEGAL_LOCAL: Readonly<Record<string, CountryLegalLocal>> = {
   BG: {
     taxIdLabel: "Bolgár cégazonosító (ЕИК)", // i18n-exempt: legal pack (§H.22)
     taxIdRequired: "business",
+    taxIdCheck: "bg_eik",
     ntak: false,
     fields: [
       { id: "bg_reg", label: "Kategorizálási / nyilvántartási szám (Nemzeti Turisztikai Nyilvántartás)", required: "always", where: ["imprint", "strip"], kind: "text" }, // i18n-exempt: legal pack (§H.22)

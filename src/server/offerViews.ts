@@ -40,11 +40,14 @@ function addDays(iso: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function huDateTime(d: Date, lang: string): string {
+function huDateTime(d: Date, lang: string, tz?: string): string {
   // ADR-0450: only numeric parts are read; the day itself is formatDay in the page's language.
+  // NEMZETKÖZI C: the guest's offer deadline is the ACCOMMODATION's wall clock (ADR-0290 — the
+  // mail of the same offer already says it so, booking/requests.ts); a Portuguese house was
+  // shown Budapest time, one hour off. No zone known → the platform zone (legacy behaviour).
   const parts = new Intl.DateTimeFormat(lang || undefined, {
     numberingSystem: "latn",
-    timeZone: APP_TZ, // a lead's offer is platform business (ADR-0290)
+    timeZone: tz || APP_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -413,7 +416,7 @@ export function ownerOfferSentPage(r: SendOfferResult, hostName: string): string
       : r.savedAs === "base"
         ? T(lang, "Alapárként bekerült az árlistába: {price}.", { price })
         : T(lang, "Az árlistája nem változott — ahol nincs ára, ott továbbra is árajánlatot kérnek.");
-  const expires = r.expiresAt ? ` ${T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(r.expiresAt, lang) })}` : "";
+  const expires = r.expiresAt ? ` ${T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(r.expiresAt, lang, r.timeZone) })}` : "";
   return pageShell(
     T(lang, "Ajánlat elküldve"),
     `<div class="of-card" style="max-width:560px;margin:40px auto"><p class="of-host">${esc(hostName)}</p>` +
@@ -463,7 +466,7 @@ export function guestOfferPage(v: GuestOfferView, offerToken: string): string {
     priceBox(v) +
     (v.note ? `<div class="of-quote" style="text-align:left"><b>${T(lang, "A szállásadó üzenete")}</b>„${esc(v.note)}”</div>` : "") +
     `<p style="font-size:.88rem;color:var(--citui-muted);line-height:1.5;margin:14px 0">` +
-    (v.expiresAt ? esc(T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(v.expiresAt, lang) })) + " " : "") +
+    (v.expiresAt ? esc(T(lang, "Az ajánlat {when}-ig érvényes.", { when: huDateTime(v.expiresAt, lang, v.timeZone) })) + " " : "") +
     T(lang, "Az elfogadással a foglalás végleges. A lemondás módját a visszaigazoló levélben találja.") +
     `</p>` +
     `<form method="POST" action="/ajanlat/${esc(offerToken)}/elfogadom" style="margin:0 0 10px">` +

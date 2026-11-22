@@ -13,8 +13,9 @@ import { sql } from "kysely";
 import { db, pool } from "../db/client.js";
 import { isMarketApproved, normalizeCountryCode } from "../markets.js";
 import { allCountriesSync, countryConfigSync } from "../country.js";
-import { langForLead, langForTenant } from "../i18n/mail.js";
-import { providerAccepts, providerLocale } from "./providers.js";
+import { T, langForLead, langForTenant, prepareMailLang } from "../i18n/mail.js";
+import { collectFallbacks } from "../i18n/packs.js";
+import { providerAccepts, providerLocale, walletGap } from "./providers.js";
 import { isOssCountedSale, isTaxableBuyerCountry, ossStatus } from "../billing/taxCounters.js";
 import { mnbRate } from "../billing/fxRate.js";
 import { currencySign, formatMinor } from "../text/money.js";
@@ -131,6 +132,10 @@ async function paymentMoneyBlock(oi: {
     if (!providerAccepts(pv, oi.currency)) {
       return `a(z) ${pv} fizetési szolgáltató nem fogad ${oi.currency} pénznemet (régió: ${oi.pricing_region}) — a piac nem nyitható`;
     }
+    // NEMZETKÖZI C: the provider takes the currency, but OUR wallet must hold an account in it
+    // (owner 2026-11-22: no euro wallet yet) — no pay-link the gateway would refuse at the end.
+    const wallet = walletGap(pv, oi.currency);
+    if (wallet) return wallet;
   }
   if (isOssCountedSale(oi)) {
     const oss = await ossStatus();
@@ -340,26 +345,33 @@ export async function requestPayment(
     .executeTakeFirstOrThrow();
 
   const base = process.env.PUBLIC_BASE_URL ?? "";
+  // NEMZETKÖZI C: the item name / description the gateway shows is in the BUYER's language too
+  // (the pay page already is, ADR-0443); Hungarian: the same strings as before.
+  const payLang = await prepareMailLang(await buyerLangOfOrder(orderIntentId));
   const link = await gw.createPayLink({
     paymentId: payment.id,
     amount: oi.price,
     currency: oi.currency,
     // ADR-0443: the pay page speaks the BUYER's language.
-    locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
+    locale: providerLocale(providerOfGateway(gw.name), payLang),
     period: oi.billing_period,
     // ADR-0063: a one-time purchase must not read "előfizetés" on the pay screen.
     description:
       oi.kind === "multilang"
-        ? "Citoviso többnyelvű honlap — egyszeri generálási díj"
+        ? T(payLang, "Citoviso többnyelvű honlap — egyszeri generálási díj")
         : oi.kind === "domain_settlement"
-          ? "Citoviso lemondás-elszámolás (hűségidő-kötbér és díjak)"
+          ? T(payLang, "Citoviso lemondás-elszámolás (hűségidő-kötbér és díjak)")
           : oi.kind === "upsell"
-            ? "Citoviso modul-bővítés — időarányos első díj"
+            ? T(payLang, "Citoviso modul-bővítés — időarányos első díj")
             : oi.kind === "card_update"
-              ? "Citoviso kártya-megerősítés — azonnal visszautalva"
+              ? T(payLang, "Citoviso kártya-megerősítés — azonnal visszautalva")
               : oi.kind === "domain_upgrade"
-                ? `Citoviso saját webcím${oi.domain_name ? ` (${oi.domain_name})` : ""} — csak sikeres regisztráció után terheljük`
-                : `Citoviso előfizetés (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+                ? oi.domain_name
+                  ? T(payLang, "Citoviso saját webcím ({domain}) — csak sikeres regisztráció után terheljük", { domain: oi.domain_name })
+                  : T(payLang, "Citoviso saját webcím — csak sikeres regisztráció után terheljük")
+                : oi.billing_period === "annual"
+                  ? T(payLang, "Citoviso előfizetés (éves)")
+                  : T(payLang, "Citoviso előfizetés (havi)"),
     callbackUrl: `${base}/pay/webhook/${gw.name}`,
     returnUrl: `${base}/pay/done`,
     ...(wantsToken ? { initiateRecurrence: true, recurrenceId: payment.id } : {}),
@@ -1040,8 +1052,17 @@ export async function chargeRenewalWithToken(
       paymentId: payment.id,
       amount: oi.price,
       currency: oi.currency,
-      locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
-      description: `Citoviso előfizetés megújítás (${oi.billing_period === "annual" ? "éves" : "havi"})`,
+      ...(await (async () => {
+        // NEMZETKÖZI C: the renewal's description in the buyer's language (Hungarian: unchanged).
+        const l = await prepareMailLang(await buyerLangOfOrder(orderIntentId));
+        return {
+          locale: providerLocale(providerOfGateway(gw.name), l),
+          description:
+            oi.billing_period === "annual"
+              ? T(l, "Citoviso előfizetés megújítás (éves)")
+              : T(l, "Citoviso előfizetés megújítás (havi)"),
+        };
+      })()),
       recurrenceId: recurrenceToken,
       traceId,
       callbackUrl: `${base}/pay/webhook/${gw.name}`,
@@ -1211,8 +1232,11 @@ export async function chargeUpsellWithToken(
       paymentId: payment.id,
       amount: oi.price,
       currency: oi.currency,
-      locale: providerLocale(providerOfGateway(gw.name), await buyerLangOfOrder(orderIntentId)),
-      description: "Citoviso modul-bővítés — időarányos első díj",
+      ...(await (async () => {
+        // NEMZETKÖZI C: the upsell charge's description in the buyer's language (Hungarian: unchanged).
+        const l = await prepareMailLang(await buyerLangOfOrder(orderIntentId));
+        return { locale: providerLocale(providerOfGateway(gw.name), l), description: T(l, "Citoviso modul-bővítés — időarányos első díj") };
+      })()),
       recurrenceId: recurrenceToken,
       traceId,
       callbackUrl: `${base}/pay/webhook/${gw.name}`,
@@ -1556,8 +1580,15 @@ export function invoiceComment(
    * invoice, BOTH community VAT numbers (ours from config, the buyer's VIES-verified one).
    * Absent / a forint invoice → the historic forint wording, byte for byte.
    */
-  ctx?: { readonly currency?: string; readonly sellerEuVat?: string | null; readonly buyerEuVat?: string | null },
+  ctx?: {
+    readonly currency?: string;
+    readonly sellerEuVat?: string | null;
+    readonly buyerEuVat?: string | null;
+    /** NEMZETKÖZI C: the invoice language (country.invoice_lang via invoiceLanguageFor); absent / hu = the Hungarian text. */
+    readonly lang?: string;
+  },
 ): string {
+  if (ctx?.lang && ctx.lang !== "hu") return invoiceCommentIn(ctx.lang, reverse, offerPercent, listPrice, amount, offerKind, ctx);
   const legal = reverse
     ? "Fordított adózás / Reverse charge — a szolgáltatás teljesítési helye a megrendelő tagállama (Áfa tv. 37. §)." +
       (ctx?.sellerEuVat ? ` Eladó közösségi adószáma: ${ctx.sellerEuVat}.` : "") +
@@ -1573,6 +1604,36 @@ export function invoiceComment(
     `${legal} ${offerKind ? offerLabel("hu", offerKind) : "Kedvezmény"}: a ${fee} ` +
     `−${offerPercent}%, így a fizetendő ${due}.`
   );
+}
+
+/**
+ * NEMZETKÖZI C (owner 2026-11-22: „a számla az ország nyelvén, ha a számlázó tudja, különben
+ * angol”): the comment of a NON-Hungarian invoice — the same sentences, each through T() in the
+ * invoice language, amounts in the invoice currency's own rule. A missing translation is caught
+ * by the issuer (collectFallbacks) and HOLDS the invoice — never a Hungarian sentence on it.
+ */
+function invoiceCommentIn(
+  lang: string,
+  reverse: boolean,
+  offerPercent: number | null | undefined,
+  listPrice: number | null | undefined,
+  amount: number,
+  offerKind: OfferNameKind | null | undefined,
+  ctx: { readonly currency?: string; readonly sellerEuVat?: string | null; readonly buyerEuVat?: string | null },
+): string {
+  const legal = reverse
+    ? T(lang, "Fordított adózás / Reverse charge — a szolgáltatás teljesítési helye a megrendelő tagállama (Áfa tv. 37. §).") +
+      (ctx.sellerEuVat ? ` ${T(lang, "Eladó közösségi adószáma: {szam}.", { szam: ctx.sellerEuVat })}` : "") +
+      (ctx.buyerEuVat ? ` ${T(lang, "Vevő közösségi adószáma: {szam}.", { szam: ctx.buyerEuVat })}` : "")
+    : T(lang, "Alanyi adómentes.");
+  if (!offerPercent || !listPrice || listPrice <= amount) return legal;
+  const ccy = ctx.currency;
+  return `${legal} ${T(lang, "{kedvezmeny}: a {dij} díjból −{szazalek}%, így a fizetendő {osszeg}.", {
+    kedvezmeny: offerKind ? offerLabel(lang, offerKind) : T(lang, "Kedvezmény"),
+    dij: formatMinor(listPrice, ccy, lang),
+    szazalek: offerPercent,
+    osszeg: formatMinor(amount, ccy, lang),
+  })}`;
 }
 
 /**
@@ -1622,7 +1683,10 @@ export function buildInvoiceItems(
   periodLabel: string,
   modCount: number,
   vatKey: string,
+  /** NEMZETKÖZI C: the invoice language; absent / hu = the Hungarian lines, byte for byte. */
+  lang?: string,
 ): { name: string; quantity: number; unitNet: number; vatKey: string; net: number; vat: number; gross: number }[] {
+  if (lang && lang !== "hu") return buildInvoiceItemsIn(lang, p, cadence, modCount, vatKey);
   const line = (name: string, amount: number) => ({
     name,
     quantity: 1,
@@ -1671,6 +1735,59 @@ export function buildInvoiceItems(
   return p.domainFee && p.domainFee > 0
     ? [subscriptionLine, line(domainLabel, p.domainFee)]
     : [subscriptionLine];
+}
+
+/**
+ * NEMZETKÖZI C: the lines of a NON-Hungarian invoice — the Hungarian lines' structure and
+ * amounts exactly (one split rule, no discount row), each name through T() in the invoice
+ * language. Module names are the catalogue's Hungarian labels, translated the same way.
+ */
+function buildInvoiceItemsIn(
+  lang: string,
+  p: Parameters<typeof buildInvoiceItems>[0],
+  cadence: "monthly" | "annual" | "once",
+  modCount: number,
+  vatKey: string,
+): ReturnType<typeof buildInvoiceItems> {
+  const line = (name: string, amount: number) => ({ name, quantity: 1, unitNet: amount, vatKey, net: amount, vat: 0, gross: amount });
+  const period = cadence === "once" ? T(lang, "egyszeri") : cadence === "annual" ? T(lang, "éves") : T(lang, "havi");
+  const domainLabel = p.domainName
+    ? T(lang, "Citoviso saját domain ({domain}) — éves díj", { domain: p.domainName })
+    : T(lang, "Citoviso saját domain — éves díj");
+  if (p.kind === "domain_settlement") {
+    return [
+      line(
+        p.settlementTakeDomain
+          ? T(lang, "Citoviso lemondás-elszámolás (hűségidő-kötbér + webcím-vételár)")
+          : T(lang, "Citoviso lemondás-elszámolás (hűségidő-kötbér)"),
+        p.amount,
+      ),
+    ];
+  }
+  if (p.kind === "domain_upgrade") return [line(domainLabel, p.amount)];
+  if (cadence === "once") return [line(T(lang, "Citoviso többnyelvű honlap (egyszeri generálási díj)"), p.amount)];
+  const kedv = p.offerPercent ? ` — ${T(lang, "{szazalek}% kedvezménnyel", { szazalek: p.offerPercent })}` : "";
+  const domainLines = p.domainFee && p.domainFee > 0 ? [line(domainLabel, p.domainFee)] : [];
+  if (p.kind === "upsell") {
+    const mods = p.moduleLines ?? [];
+    const base = p.amount - (p.domainFee ?? 0);
+    const split = splitInvoiceAmount(base, mods.map((m) => m.weight));
+    const moduleItems = split
+      ? mods.map((m, i) => line(`${T(lang, "Citoviso modul: {modul} ({idoszak})", { modul: T(lang, m.label), idoszak: period })}${kedv}`, split[i]!))
+      : [
+          line(
+            `${T(lang, "Citoviso modul-bővítés ({idoszak})", { idoszak: period })}` +
+              `${mods.length ? `: ${mods.map((m) => T(lang, m.label)).join(", ")}` : ""}${kedv}`,
+            base,
+          ),
+        ];
+    return [...moduleItems, ...domainLines];
+  }
+  const subscriptionLine = line(
+    `${T(lang, "Citoviso előfizetés ({idoszak}, {n} modul)", { idoszak: period, n: modCount })}${kedv}`,
+    p.amount - (p.domainFee ?? 0),
+  );
+  return [subscriptionLine, ...domainLines];
 }
 
 /** What one issuance attempt ended in — the console action shows it to the operator. */
@@ -1922,6 +2039,40 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
   // A non-HUF invoice is issued with the MNB rate of its fulfilment day (Számlázz arfolyamBank
   // MNB); the rate is passed explicitly when we have it, so the tax counters use the SAME one.
   const fx = currencySign(p.currency) === "Ft" ? null : await mnbRate(p.currency, today);
+  // NEMZETKÖZI C: a non-Hungarian invoice's own texts (lines, payment method, comment) are in
+  // its language; every string must be translated — a gap HOLDS the invoice (retried by the
+  // daily tick once Bábel's pack has it), it never prints a Hungarian line on a foreign invoice.
+  // A Hungarian invoice (language "hu") is built exactly as before.
+  const offerKindForInvoice = (await isTrialOffer(p.offerId)) ? "trial" : p.offerKind;
+  if (language !== "hu") await prepareMailLang(language);
+  const texts = collectFallbacks(() => ({
+    items: buildInvoiceItems(
+      {
+        ...p,
+        ...(p.kind === "upsell"
+          ? { moduleLines: invoiceModuleLines((p.modules as unknown as string[]) ?? [], p.pricingRegion) }
+          : {}),
+      },
+      cadence,
+      periodLabel,
+      modCount,
+      vatKey,
+      language,
+    ),
+    paymentMethod: language === "hu" ? "Bankkártya" : T(language, "Bankkártya"),
+    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, offerKindForInvoice, {
+      currency: p.currency,
+      sellerEuVat: reverse ? sellerEuVat : null,
+      buyerEuVat: reverse ? p.euVatNumber : null,
+      lang: language,
+    }),
+  }));
+  if (language !== "hu" && texts.fallbacks.length) {
+    return recordFailure(
+      `A számla szövege (${language}) nincs teljesen lefordítva — a számla vár, amíg Bábel lefordítja: ${texts.fallbacks.map((f) => `„${f}”`).join(", ")}`,
+      false,
+    );
+  }
   const input = {
     buyer: {
       name: p.buyerName,
@@ -1934,31 +2085,16 @@ async function issueInvoiceLocked(paymentId: string, trigger: InvoiceTrigger): P
       euVatNumber: p.euVatNumber,
       country: p.country,
     },
-    items: buildInvoiceItems(
-      {
-        ...p,
-        ...(p.kind === "upsell"
-          ? { moduleLines: invoiceModuleLines((p.modules as unknown as string[]) ?? [], p.pricingRegion) }
-          : {}),
-      },
-      cadence,
-      periodLabel,
-      modCount,
-      vatKey,
-    ),
+    items: texts.value.items,
     currency: p.currency,
     language,
     ...(fx ? { fxBank: "MNB", fxRate: fx.rate } : currencySign(p.currency) === "Ft" ? {} : { fxBank: "MNB" }),
     issueDate: today,
     fulfillmentDate: today,
     dueDate: today,
-    paymentMethod: "Bankkártya",
+    paymentMethod: texts.value.paymentMethod,
     paid: true,
-    comment: invoiceComment(reverse, p.offerPercent, p.listPrice, p.amount, (await isTrialOffer(p.offerId)) ? "trial" : p.offerKind, {
-      currency: p.currency,
-      sellerEuVat: reverse ? sellerEuVat : null,
-      buyerEuVat: reverse ? p.euVatNumber : null,
-    }),
+    comment: texts.value.comment,
     // ADR-0283: provider-side idempotency — a retry can never mint a second document.
     externalId: `citoviso-payment-${paymentId}`,
   };

@@ -1097,7 +1097,7 @@ async function serveConfigure(res: http.ServerResponse, artifactId: string): Pro
       await injectConfigurator(html, artifactId, a.leadName, {
         pricingRegion,
         ...(lang ? { lang } : {}),
-        billingPrefill: leadBillingPrefill(a.leadAddress, a.leadRaw),
+        billingPrefill: leadBillingPrefill(a.leadAddress, a.leadRaw, null, pricingRegion),
       }),
     );
   } catch {
@@ -1114,6 +1114,7 @@ function leadBillingPrefill(
   address: string | null,
   raw: unknown,
   contactEmail?: string | null,
+  pricingRegion?: string | null,
 ): BillingPrefill {
   const facets = (raw ?? {}) as { country?: string; city?: string };
   return buildBillingPrefill(
@@ -1123,6 +1124,7 @@ function leadBillingPrefill(
       city: facets.city ?? null,
     },
     contactEmail ?? null,
+    pricingRegion ?? null,
   );
 }
 
@@ -1598,6 +1600,7 @@ async function handleOrderRequest(
         orderIntentId: rec.orderIntentId,
         leadName: rec.leadName ?? null,
         amountHuf: price ?? null,
+        currency: money.currency,
         billingPeriod,
         buyerEmail: buyer.buyerEmail,
         reason: failReason,
@@ -4118,7 +4121,7 @@ async function handle(
     // ORSZÁG-RÉTEG 3/6: only endings of the LEAD's country (+ the generic ones) — never another
     // country's national ending the market happens to carry.
     const sugCountry = countryConfigSync(await countryOfLead(a.leadId));
-    const candidates = suggestDomains(a.leadName, endingsForCountry(offeredTlds(sugRegion).map((t) => t.tld), sugCountry?.ownSiteTlds ?? null));
+    const candidates = suggestDomains(a.leadName, endingsForCountry(offeredTlds(sugRegion).map((t) => t.tld), sugCountry?.ownSiteTlds ?? null), sugCountry);
     const verdicts = await Promise.all(candidates.map((d) => checkWebcimAvailability(d)));
     const suggestions = candidates.map((domain, i) => ({ domain, availability: verdicts[i]! }));
     return send(res, 200, JSON.stringify({ suggestions }), "application/json");
@@ -4635,7 +4638,7 @@ async function handle(
           preset: (await tenantTrialPackage(trial.tenantId)).tier,
         },
         ...(p.lang ? { lang: p.lang } : {}),
-        billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null),
+        billingPrefill: leadBillingPrefill(pf.leadAddress ?? null, pf.leadRaw, pf.contactEmail ?? null, contRegion),
         // proba-C: ONE name for the trial's discount on every surface („Próba-kedvezmény”).
         ...(coupon ? { offer: { ...offerForPage(coupon, contLang), label: T(contLang, "Próba-kedvezmény") } } : {}),
       });
@@ -4780,6 +4783,7 @@ async function handle(
           pf?.leadAddress ?? null,
           pf?.leadRaw,
           pf?.contactEmail ?? null,
+          planRegion,
         ),
         ...(offer
           ? {
@@ -5650,6 +5654,7 @@ async function handle(
       .innerJoin("lead", "lead.id", "prospect.lead_id")
       .select([
         "order_intent.price as price",
+        "order_intent.currency as currency",
         "order_intent.billing_period as period",
         "order_intent.buyer_email as buyerEmail",
         "lead.name as leadName",
@@ -5666,6 +5671,7 @@ async function handle(
         orderIntentId: d.orderIntentId,
         leadName: oi?.leadName ?? null,
         amountHuf: oi?.price ?? null,
+        currency: oi?.currency ?? null,
         billingPeriod: oi?.period === "annual" ? "annual" : "monthly",
         buyerEmail: oi?.buyerEmail ?? null,
         reason: "paylink_reissue_refused",

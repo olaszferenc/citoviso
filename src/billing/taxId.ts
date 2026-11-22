@@ -161,21 +161,152 @@ export function hrOibProblem(raw: string, lang = "hu"): string | null {
 }
 
 /** The offline national tax-id checks a country's legal schema can name (legal.ts taxIdCheck). */
-export type NationalTaxIdCheck = "hr_oib";
+export type NationalTaxIdCheck = "hr_oib" | "it_piva_cf" | "es_nif" | "pt_nif" | "fr_siren" | "bg_eik";
+
+/** Luhn over a digit string (FR SIREN/SIRET, the IT Partita IVA). */
+function luhnOk(digits: string): boolean {
+  let sum = 0;
+  for (let i = 0; i < digits.length; i++) {
+    let d = Number(digits[digits.length - 1 - i]);
+    if (i % 2 === 1) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+
+/** IT codice fiscale (16 characters): the check letter over the first fifteen (DM 23/12/1976). */
+const CF_ODD: Readonly<Record<string, number>> = {
+  "0": 1, "1": 0, "2": 5, "3": 7, "4": 9, "5": 13, "6": 15, "7": 17, "8": 19, "9": 21,
+  A: 1, B: 0, C: 5, D: 7, E: 9, F: 13, G: 15, H: 17, I: 19, J: 21, K: 2, L: 4, M: 18,
+  N: 20, O: 11, P: 3, Q: 6, R: 8, S: 12, T: 14, U: 16, V: 10, W: 22, X: 25, Y: 24, Z: 23,
+};
+function itCfOk(cf: string): boolean {
+  if (!/^[A-Z0-9]{15}[A-Z]$/.test(cf)) return false;
+  let sum = 0;
+  for (let i = 0; i < 15; i++) {
+    const ch = cf[i]!;
+    sum += i % 2 === 0 ? CF_ODD[ch]! : /\d/.test(ch) ? Number(ch) : ch.charCodeAt(0) - 65;
+  }
+  return String.fromCharCode(65 + (sum % 26)) === cf[15];
+}
+
+/** ES NIF: DNI (8 digits + letter), NIE (X/Y/Z + 7 digits + letter) or CIF (entity letter + 7 digits + control). */
+const DNI_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE";
+function esNifOk(n: string): boolean {
+  const dni = /^(\d{8})([A-Z])$/.exec(n);
+  if (dni) return DNI_LETTERS[Number(dni[1]) % 23] === dni[2];
+  const nie = /^([XYZ])(\d{7})([A-Z])$/.exec(n);
+  if (nie) return DNI_LETTERS[Number(`${"XYZ".indexOf(nie[1]!)}${nie[2]}`) % 23] === nie[3];
+  const cif = /^([ABCDEFGHJNPQRSUVW])(\d{7})([0-9A-J])$/.exec(n);
+  if (!cif) return false;
+  const d = cif[2]!;
+  let sum = 0;
+  for (let i = 0; i < 7; i++) {
+    const v = Number(d[i]);
+    if (i % 2 === 1) sum += v;
+    else sum += Math.floor((v * 2) / 10) + ((v * 2) % 10);
+  }
+  const c = (10 - (sum % 10)) % 10;
+  return cif[3] === String(c) || cif[3] === "JABCDEFGHI"[c];
+}
+
+/** PT NIF: 9 digits, mod-11 check digit (weights 9…2). */
+function ptNifOk(n: string): boolean {
+  if (!/^\d{9}$/.test(n)) return false;
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += Number(n[i]) * (9 - i);
+  const r = sum % 11;
+  return (r < 2 ? 0 : 11 - r) === Number(n[8]);
+}
+
+/** BG ЕИК / BULSTAT: 9 digits (legal entity) or 13 (branch), the official two-pass mod-11 check. */
+function bgEikOk(n: string): boolean {
+  const pass = (digits: string, w1: readonly number[], w2: readonly number[]): number => {
+    let s = 0;
+    for (let i = 0; i < w1.length; i++) s += Number(digits[i]) * w1[i]!;
+    let r = s % 11;
+    if (r === 10) {
+      s = 0;
+      for (let i = 0; i < w2.length; i++) s += Number(digits[i]) * w2[i]!;
+      r = s % 11;
+      if (r === 10) r = 0;
+    }
+    return r;
+  };
+  if (!/^\d{9}(?:\d{4})?$/.test(n)) return false;
+  if (pass(n, [1, 2, 3, 4, 5, 6, 7, 8], [3, 4, 5, 6, 7, 8, 9, 10]) !== Number(n[8])) return false;
+  if (n.length === 9) return true;
+  return pass(n.slice(8), [2, 7, 3, 5], [4, 9, 5, 7]) === Number(n[12]);
+}
+
+/** A national tax id as typed → its stored form (upper case, no separators, no VAT prefix). */
+export function normalizeNationalTaxId(check: NationalTaxIdCheck, raw: string): string {
+  const prefix: Record<NationalTaxIdCheck, RegExp> = {
+    hr_oib: /^HR/, it_piva_cf: /^IT/, es_nif: /^ES/, pt_nif: /^PT/, fr_siren: /^FR/, bg_eik: /^BG/,
+  };
+  const s = (raw ?? "").trim().toUpperCase().replace(/[\s.\-/]/g, "");
+  // The VAT prefix is stripped only where what follows still has the id's own shape (an ES NIF
+  // may itself start with a letter, but never with "ES" + 9 characters of a NIF).
+  return check === "es_nif" ? (/^ES[0-9A-Z]{9}$/.test(s) ? s.slice(2) : s) : s.replace(prefix[check], "");
+}
+
+/** Is the (normalized) id valid for its check? */
+export function nationalTaxIdOk(check: NationalTaxIdCheck, id: string): boolean {
+  switch (check) {
+    case "hr_oib":
+      return hrOibChecksumOk(id);
+    case "it_piva_cf":
+      return /^\d{11}$/.test(id) ? luhnOk(id) : itCfOk(id);
+    case "es_nif":
+      return esNifOk(id);
+    case "pt_nif":
+      return ptNifOk(id);
+    case "fr_siren":
+      return /^\d{9}$|^\d{14}$/.test(id) && luhnOk(id);
+    case "bg_eik":
+      return bgEikOk(id);
+  }
+}
+
+/** The shape each id has, as the error names it (the digits/letters a buyer can count). */
+const NATIONAL_ID_SHAPE: Record<Exclude<NationalTaxIdCheck, "hr_oib">, RegExp> = {
+  it_piva_cf: /^(?:\d{11}|[A-Z0-9]{16})$/,
+  es_nif: /^[0-9XYZA-W]\d{7}[0-9A-Z]$/,
+  pt_nif: /^\d{9}$/,
+  fr_siren: /^(?:\d{9}|\d{14})$/,
+  bg_eik: /^(?:\d{9}|\d{13})$/,
+};
 
 /**
  * The national tax-id check named by a country's legal schema: the problem (in `lang`) or
  * null. No check named → any value is accepted (the imprint shows what the tenant typed;
- * VIES stays the VAT authority).
+ * VIES stays the VAT authority). HR keeps its own OIB wording (byte-identical); the other
+ * countries share three sentences — empty, wrong shape (with a valid example), wrong check.
  */
 export function nationalTaxIdProblem(check: NationalTaxIdCheck | undefined, raw: string, lang = "hu"): string | null {
-  switch (check) {
-    case "hr_oib":
-      return hrOibProblem(raw, lang);
-    default:
-      return null;
+  if (!check) return null;
+  if (check === "hr_oib") return hrOibProblem(raw, lang);
+  const id = normalizeNationalTaxId(check, raw);
+  if (!id) return T(lang, "Adja meg az adóazonosítót.");
+  if (!NATIONAL_ID_SHAPE[check].test(id)) {
+    return T(lang, "Ez nem tűnik adóazonosítónak — a helyes alak például: {pelda}.", { pelda: NATIONAL_ID_EXAMPLE[check] });
   }
+  if (!nationalTaxIdOk(check, id)) return T(lang, "Az adóazonosító ellenőrző jele nem stimmel — valószínűleg elgépelés.");
+  return null;
 }
+
+/** A VALID example per check (the form's placeholder and the shape error; selftested). */
+export const NATIONAL_ID_EXAMPLE: Readonly<Record<NationalTaxIdCheck, string>> = {
+  hr_oib: "69435151530",
+  it_piva_cf: "12345678903",
+  es_nif: "12345678Z",
+  pt_nif: "123456789",
+  fr_siren: "732829320",
+  bg_eik: "121759222",
+};
 
 export interface ParsedEuVat {
   /** VIES member-state code (Greece = 'EL'). */

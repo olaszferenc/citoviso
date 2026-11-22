@@ -61,6 +61,8 @@ import { renewalQuoteForLead, type RenewalQuote } from "../payment/renewalQuote.
 import { EU_VAT_COUNTRIES } from "../billing/taxId.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { homeLegalPack, type LegalPack } from "../legalPack.js";
+import { LEGAL_LOCAL } from "../legal.js";
+import { NATIONAL_ID_EXAMPLE } from "../billing/taxId.js";
 
 /**
  * Countries selectable at checkout: Hungary first (the pilot market), then the
@@ -185,6 +187,12 @@ export interface ConfiguratorManifest {
     readonly prefill: BillingPrefill;
     /** Selectable countries (HU first, then the EU member states). */
     readonly countries: readonly { readonly code: string; readonly label: string }[];
+    /**
+     * NEMZETKÖZI C: the countries whose business buyer may order with a NATIONAL tax id instead
+     * of an EU VAT number — country → { check, example } from the legal schema (LEGAL_LOCAL
+     * taxIdCheck), so the form and billing/buyer.ts cannot disagree on which countries.
+     */
+    readonly nationalIds: Readonly<Record<string, { readonly check: string; readonly example: string }>>;
     /**
      * Public ÁSZF URL, or null while the document does not exist. Null hides the
      * acceptance row entirely — a tick-box pointing at a missing document is
@@ -551,6 +559,11 @@ export async function buildManifest(
     billing: {
       prefill: opts.billingPrefill ?? {},
       countries: BILLING_COUNTRIES,
+      nationalIds: Object.fromEntries(
+        Object.entries(LEGAL_LOCAL).flatMap(([cc, l]) =>
+          l.taxIdCheck ? [[cc, { check: l.taxIdCheck, example: NATIONAL_ID_EXAMPLE[l.taxIdCheck] }]] : [],
+        ),
+      ),
       termsUrl: withC(config.termsUrl || null),
       // Same single-source rule as §A above: what they read is what we stamp.
       termsText: lp.t(TERMS_ACCEPTANCE_V1),

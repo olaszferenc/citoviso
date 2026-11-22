@@ -2383,11 +2383,37 @@
     );
   }
 
+  /** NEMZETKÖZI C: the national tax id a business of `cc` may order with (null = none). */
+  function natId(cc) {
+    var m = (CFG.billing || {}).nationalIds || {};
+    return cc && m[cc] ? m[cc] : null;
+  }
+  function natIdLabel(cc) {
+    var n = natId(cc);
+    var check = n ? n.check : "hr_oib";
+    if (check === "it_piva_cf") return tr("Partita IVA vagy codice fiscale (olasz adóazonosító)");
+    if (check === "es_nif") return tr("NIF (spanyol adóazonosító)");
+    if (check === "pt_nif") return tr("NIF (portugál adóazonosító)");
+    if (check === "fr_siren") return tr("SIREN (francia cégazonosító)");
+    if (check === "bg_eik") return tr("ЕИК (bolgár cégazonosító)");
+    return tr("OIB (horvát adóazonosító)");
+  }
+  function natIdExample(cc) {
+    var n = natId(cc);
+    return n ? n.example : "69435151530";
+  }
+  function natIdMode(cc) {
+    var n = natId(cc);
+    return n && (n.check === "it_piva_cf" || n.check === "es_nif") ? "text" : "numeric";
+  }
+
   function billingStepHtml() {
     var B = CFG.billing || {};
     var pf = B.prefill || {};
     var list = B.countries && B.countries.length ? B.countries : [{ code: "HU", label: tr("Magyarország") }];
-    var home = pf.country || "HU";
+    // NEMZETKÖZI C: no known country → the buyer chooses (an empty first option the server
+    // refuses), never a silent Hungary. The server sends the lead's country wherever it knows it.
+    var home = pf.country || "";
     // 3/10 (Elek HR: 27 Hungarian country names in a Croatian order form): a non-Hungarian page
     // names the countries in ITS language (Intl.DisplayNames; VIES' EL is ISO GR), the buyer's
     // own country first, the rest in that language's order. Hungarian page: the list as sent.
@@ -2407,7 +2433,7 @@
         /* no Intl region names → the list as sent */
       }
     }
-    var opts = list
+    var opts = (home ? "" : '<option value="" selected>—</option>') + list
       .map(function (c) {
         return (
           '<option value="' + esc(c.code) + '"' + (c.code === home ? " selected" : "") + ">" +
@@ -2497,9 +2523,10 @@
       }) +
       // 3/10 (Elek HR): a Croatian business is identified by its OIB (checked offline, ISO 7064
       // MOD 11,10 — billing/taxId.ts); its community VAT number is optional (many obrt are
-      // outside VAT). Shown for HR only, same shape as the HU adószám field above.
-      bField("buyer_national_tax_id", tr("OIB (horvát adóazonosító)"), {
-        hidden: true, mode: "numeric", placeholder: "69435151530", cls: "cit-cfg-f--wide",
+      // outside VAT). NEMZETKÖZI C: the same field for every country whose legal schema names a
+      // national id (IT, ES, PT, FR, BG — CFG.billing.nationalIds); label + example follow the country.
+      bField("buyer_national_tax_id", natIdLabel(home), {
+        hidden: true, mode: natIdMode(home), placeholder: natIdExample(home), cls: "cit-cfg-f--wide",
       }) +
       bField("buyer_eu_vat_number", tr("Közösségi adószám"), {
         hidden: true, placeholder: home === "HR" ? "HR69435151530" : "DE123456789", cls: "cit-cfg-f--wide",
@@ -2909,18 +2936,26 @@
 
   /** Which fields are legal depends on buyer type AND country (HU vs other EU). */
   function syncBillingFields() {
-    var country = (bInput("buyer_country") || {}).value || "HU";
+    var country = (bInput("buyer_country") || {}).value || "";
     var isBusiness = buyerType === "business";
     showField("buyer_tax_number", isBusiness && country === "HU");
-    showField("buyer_national_tax_id", isBusiness && country === "HR");
+    var hasNat = !!natId(country);
+    showField("buyer_national_tax_id", isBusiness && hasNat);
     showField("buyer_eu_vat_number", isBusiness && country !== "HU");
+    var natLabel = panel.querySelector('[data-fw="buyer_national_tax_id"] span');
+    if (natLabel && hasNat) natLabel.textContent = natIdLabel(country);
+    var natInput = bInput("buyer_national_tax_id");
+    if (natInput && hasNat) {
+      natInput.setAttribute("placeholder", natIdExample(country));
+      natInput.setAttribute("inputmode", natIdMode(country));
+    }
     var vatLabel = panel.querySelector('[data-fw="buyer_eu_vat_number"] span');
     if (vatLabel) {
-      vatLabel.textContent = country === "HR" ? tr("Közösségi adószám (ha van)") : tr("Közösségi adószám");
+      vatLabel.textContent = hasNat ? tr("Közösségi adószám (ha van)") : tr("Közösségi adószám");
     }
     var vatGiven = !!((bInput("buyer_eu_vat_number") || {}).value || "").trim();
-    // HR without a VAT number: no VIES, no reverse charge — the AAM sentence (billing/buyer.ts).
-    var reverse = isBusiness && country !== "HU" && (country !== "HR" || vatGiven);
+    // A national-id country without a VAT number: no VIES, no reverse charge — the AAM sentence (billing/buyer.ts).
+    var reverse = isBusiness && country !== "HU" && (!hasNat || vatGiven);
     var nameLabel = panel.querySelector('[data-fw="buyer_name"] span');
     if (nameLabel) {
       nameLabel.textContent = isBusiness ? tr("Cégnév vagy egyéni vállalkozó neve") : tr("Teljes név");
@@ -2938,7 +2973,7 @@
         if (wf) wf.setAttribute("hidden", "");
       } else consent.removeAttribute("hidden");
     }
-    billNote.textContent = isBusiness && country !== "HU" && (country !== "HR" || vatGiven)
+    billNote.textContent = isBusiness && country !== "HU" && (!hasNat || vatGiven)
       ? tr("A közösségi adószámot a beküldéskor a VIES-ben ellenőrizzük.")
       : "";
     // §B.17: the VAT sentence must match what the invoice will actually carry —
@@ -2981,7 +3016,7 @@
   function syncTaxHint() {
     var box = panel.querySelector("[data-taxhint]");
     if (!box) return;
-    var country = (bInput("buyer_country") || {}).value || "HU";
+    var country = (bInput("buyer_country") || {}).value || "";
     var keys = ["buyer_address", "buyer_city", "buyer_name"], hit = null;
     if (country === "HU") {
       for (var i = 0; i < keys.length && !hit; i++) {

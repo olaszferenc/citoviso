@@ -49,6 +49,7 @@ import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
 import { applyOffer, bestActiveCouponForTenant } from "./offers.js";
 import { payEntryUrl } from "./payEntryUrl.js";
+import { phoneChannelAllowed, phoneChannelRefusal } from "../sms/countryChannel.js";
 
 type DunningStep = "pre_notice" | "charge" | "reminder" | "final_warning" | "freeze" | "cancel";
 
@@ -748,7 +749,11 @@ async function notify(
   // exactly the case the freeze warning must survive.
   if (step === "final_warning" && payUrl && !(await stepDone(order.id, step, "sms"))) {
     const phone = await billingPhone(sub.tenantId);
-    if (phone) {
+    if (phone && !phoneChannelAllowed(phone, "sms")) {
+      // NEMZETKÖZI C: the number's country has no SMS (HR: e-mail only) — the letter above
+      // is the warning; nothing is stamped, nothing is logged as sent.
+      console.warn(`[billing] ${sub.displayName}: ${phoneChannelRefusal(phone, "sms")} — az SMS-láb kimarad`); // i18n-exempt: operátori napló
+    } else if (phone) {
       const smsText = buildFinalWarningSmsText({
         siteName: sub.displayName,
         freezeDate,

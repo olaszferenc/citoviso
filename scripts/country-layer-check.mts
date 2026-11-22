@@ -387,6 +387,7 @@ const PAY_ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
   { file: "src/pricing.ts", frag: 'currency: "HUF",', why: "a 'hu' régió KÓD-alapértéke (a pricing_config-sor előtti seed) — maga a régió definíciója" },
   { file: "src/pricing.ts", frag: 'String(o.costCurrency ?? "HUF")', why: "a konzol végződés-táblájának régi (pénznem nélküli) sora a forintos beszerzés volt" },
   { file: "src/payment/providers.ts", frag: '"en-US", "hu-HU",', why: "a Barion UILocale értékkészlete (forrás: barion-web-php) — adat, nem választás" },
+  { file: "src/payment/providers.ts", frag: 'BARION_WALLET_CURRENCIES ?? "HUF"', why: "NEMZETKÖZI C: a bolt Barion-tárcájának MAI számlája (tulaj 2026-11-22: euró-tárca nincs) — üzemi tény, a config írja felül, nem a vevő pénzneme" },
   { file: "src/billing/fxRate.ts", frag: 'if (c === "HUF") return { rate: 1', why: "az MNB-árfolyam egysége maga a forint (Ft / egység) — az adótörvény pénzneme" },
   { file: "src/billing/taxCounters.ts", frag: 'if (i.currency === "HUF") return i.net;', why: "az AAM-keret és az A60 forintban számol (Áfa tv.) — a forint itt az adó pénzneme" },
   { file: "src/payment/service.ts", frag: 'export const VAT_KEY_AAM = "AAM";', why: "a Számlázz.hu áfakulcs-kódja (EGY definíció; a kiválasztás a vat_treatment-ből)" },

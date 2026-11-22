@@ -53,6 +53,9 @@ export async function upsertPartnerFromOrder(
     .where("id", "=", orderIntentId)
     .executeTakeFirst();
   if (!oi?.buyer_name) return null;
+  // NEMZETKÖZI C: the country comes from the buyer's own declaration (validateBuyer always sets
+  // it); a row without one gets no partner rather than a silent "HU" — the same rule as the name.
+  if (!oi.buyer_country) return null;
 
   // Match an existing row before inserting. Tenant first (this is our own
   // customer), then tax number (the same company may already be on file as a
@@ -78,7 +81,7 @@ export async function upsertPartnerFromOrder(
     is_customer: true,
     tax_number: oi.buyer_tax_number,
     eu_vat_number: oi.buyer_eu_vat_number,
-    country: oi.buyer_country ?? "HU",
+    country: oi.buyer_country,
     zip: oi.buyer_zip,
     city: oi.buyer_city,
     address: oi.buyer_address,

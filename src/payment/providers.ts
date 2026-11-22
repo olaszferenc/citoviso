@@ -80,6 +80,38 @@ export function marketPaymentGaps(row: { readonly paymentProvider: string; reado
 }
 
 /**
+ * NEMZETKÖZI C — THE WALLET. Barion takes a currency only into a shop wallet that has an account
+ * in it (one per currency, docs.barion.com/Supported_currencies). Accepting a currency (above) is
+ * the PROVIDER's fact; holding a wallet account in it is OURS, and it changes when the owner opens
+ * one — so it is configuration, not code: `BARION_WALLET_CURRENCIES` (comma list, default "HUF").
+ * Owner 2026-11-22: there is NO euro wallet yet — euro payments are not taken until there is.
+ * Read on every call (a test world sets it for its own process).
+ */
+export function walletCurrencies(provider: string | null | undefined): readonly string[] {
+  if (String(provider ?? "").trim().toLowerCase() !== "barion") return [];
+  // The MOCK gateway (dev, every test world) has no wallet to lack: unless a run names the
+  // wallet explicitly, it holds every currency the provider takes. The real gateway without
+  // the setting has exactly the forint account.
+  if (process.env.BARION_WALLET_CURRENCIES === undefined && (process.env.PAYMENT_GATEWAY ?? "mock").toLowerCase() !== "barion") {
+    return Object.keys(BARION.currencies);
+  }
+  return (process.env.BARION_WALLET_CURRENCIES ?? "HUF")
+    .split(",")
+    .map((c) => c.trim().toUpperCase())
+    .filter((c) => /^[A-Z]{3}$/.test(c));
+}
+
+/** Why the shop cannot RECEIVE this currency (null = it can) — the pay-link gate and the „Országok” lap read it. */
+export function walletGap(provider: string | null | undefined, currency: string | null | undefined): string | null {
+  const c = String(currency ?? "").trim().toUpperCase();
+  if (walletCurrencies(provider).includes(c)) return null;
+  return (
+    `a(z) ${String(provider ?? "?")} fiókban nincs ${c} pénztárca — ${c} fizetés addig nem fogadható ` + // i18n-exempt: operátori napló
+    `(teendő: ${c} pénztárca nyitása a Barion-fiókban, utána BARION_WALLET_CURRENCIES-be: ${c})` // i18n-exempt: operátori napló
+  );
+}
+
+/**
  * The card-verification amount (ADR-0226/0228) in a currency: the provider's own minimum —
  * the smallest charge it takes, refunded at once. null = the provider does not take it.
  */

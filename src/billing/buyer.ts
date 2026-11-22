@@ -13,6 +13,8 @@ import {
   hrOibProblem,
   huTaxNumberProblem,
   normalizeHrOib,
+  normalizeNationalTaxId,
+  nationalTaxIdProblem,
   findHuTaxNumberInText,
   normalizeHuTaxNumber,
   parseEuVat,
@@ -21,6 +23,7 @@ import {
   type VatTreatment,
   type ViesStatus,
 } from "./taxId.js";
+import { legalLocalFor } from "../legal.js";
 
 /** Raw, untrusted payload as it arrives from the configurator. */
 export interface BuyerInput {
@@ -142,6 +145,16 @@ function nameRoughlyMatches(a: string, b: string): boolean {
   return x.includes(y) || y.includes(x);
 }
 
+/** A well-formed community VAT number per country, the error's example (HR byte-identical). */
+const VAT_EXAMPLE: Readonly<Record<string, string>> = {
+  HR: "HR69435151530",
+  IT: "IT12345678903",
+  ES: "ES12345678Z",
+  PT: "PT123456789",
+  FR: "FR40303265045",
+  BG: "BG121759222",
+};
+
 /**
  * Validate a buyer declaration. Async because a foreign business buyer's VAT
  * number is checked against VIES — but VIES being down NEVER fails validation
@@ -171,7 +184,8 @@ export async function validateBuyer(
         : T(lang, "Adja meg a teljes nevét.");
   }
 
-  const buyerCountry = (str(raw.buyer_country, 2) || "HU").toUpperCase();
+  // NEMZETKÖZI C: a missing country is an error, never a silent "HU" (the form always sends one).
+  const buyerCountry = str(raw.buyer_country, 2).toUpperCase();
   if (!/^[A-Z]{2}$/.test(buyerCountry)) errors.buyer_country = T(lang, "Válasszon országot.");
 
   const buyerZip = str(raw.buyer_zip, 16);
@@ -241,18 +255,33 @@ export async function validateBuyer(
       // there: without one, no VIES call and no reverse charge (vatTreatmentFor: not_checked).
       const vatRaw = str(raw.buyer_eu_vat_number, 32);
       let vatOptional = false;
-      if (buyerCountry === "HR") {
+      // NEMZETKÖZI C (owner 2026-11-22: a business WITHOUT an EU VAT number may order with its
+      // national id): the country's legal schema names the id and its offline check
+      // (legal.ts LEGAL_LOCAL.taxIdCheck — IT P.IVA/CF, ES NIF, PT NIF, FR SIREN, BG ЕИК, HR OIB).
+      // Then the VAT number is optional; without it there is no VIES call and no reverse charge,
+      // so the sale runs the consumer path (AAM, counted toward the OSS threshold — taxCounters.ts).
+      // HR keeps its 3/10 rule: the OIB is required even next to a VAT number (HR VAT = "HR" + OIB).
+      const natCheck = legalLocalFor(buyerCountry).taxIdCheck;
+      if (natCheck === "hr_oib") {
         const oibRaw = str(raw.buyer_national_tax_id, 32);
         const oibProblem = hrOibProblem(oibRaw, lang);
         if (oibProblem) errors.buyer_national_tax_id = oibProblem;
         else buyerNationalTaxId = normalizeHrOib(oibRaw);
+        vatOptional = true;
+      } else if (natCheck) {
+        const natRaw = str(raw.buyer_national_tax_id, 32);
+        if (natRaw || !vatRaw) {
+          const natProblem = nationalTaxIdProblem(natCheck, natRaw, lang);
+          if (natProblem) errors.buyer_national_tax_id = natProblem;
+          else buyerNationalTaxId = normalizeNationalTaxId(natCheck, natRaw);
+        }
         vatOptional = true;
       }
       const parsed = vatOptional && !vatRaw ? null : parseEuVat(vatRaw, buyerCountry);
       if (!parsed) {
         if (!(vatOptional && !vatRaw)) {
           errors.buyer_eu_vat_number = T(lang, "Adja meg az érvényes közösségi adószámot (pl. {pelda}).", {
-            pelda: buyerCountry === "HR" ? "HR69435151530" : "DE123456789",
+            pelda: VAT_EXAMPLE[buyerCountry] ?? "DE123456789",
           });
         }
       } else if (buyerCountry === "HR" && parsed.country === "HR" && !hrOibChecksumOk(parsed.number)) {

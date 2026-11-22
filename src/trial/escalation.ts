@@ -44,6 +44,7 @@ import { helperFromName, helperName } from "./helperPersona.js";
 import { liveHeading, renderLiveShot, type LiveShotResult } from "./liveShot.js";
 import { loginContext, ownerHasLoggedIn, sendLoggedSms, type LoginSmsSender } from "./loginReminders.js";
 import { trialDaysLeft } from "./notices.js";
+import { phoneChannelAllowed, phoneChannelRefusal } from "../sms/countryChannel.js";
 
 export type EscalationStep = "e4" | "m5" | "h7" | "s10";
 /** The trial day each step comes due on (day 1 = the start day). */
@@ -182,6 +183,10 @@ export async function runTrialEscalation(
       if (await claim(t.id, "m5", "mms", "skipped", pairBlock.slice(0, 500))) out.skipped++;
     } else if (!t.contact_phone) {
       if (await claim(t.id, "m5", "mms", "skipped", "nincs telefonszám")) out.skipped++;
+    } else if (!phoneChannelAllowed(t.contact_phone, "mms")) {
+      // NEMZETKÖZI C: the number's country has no MMS (HR: e-mail only) — h7's letter below
+      // is the escalation there; the ledger says why m5 did not go.
+      if (await claim(t.id, "m5", "mms", "skipped", phoneChannelRefusal(t.contact_phone, "mms"))) out.skipped++;
     } else if (!siteUrl) {
       if (await claim(t.id, "m5", "mms", "skipped", "nincs élő oldal")) out.skipped++;
     } else if (await claim(t.id, "m5", "mms", "claimed", null)) {

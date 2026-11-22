@@ -11,6 +11,7 @@
 // the line and must never drift back.
 
 import type { BillingPrefill } from "../generator/configurator.js";
+import { allCountriesSync, resolveCountryCode } from "../country.js";
 
 /**
  * Split a single-string address into HU invoice parts. Handles the Google Maps
@@ -53,12 +54,28 @@ export function buildBillingPrefill(lead: {
   address?: string | null;
   country?: string | null;
   city?: string | null;
-}, contactEmail?: string | null): BillingPrefill {
+}, contactEmail?: string | null, pricingRegion?: string | null): BillingPrefill {
   const out: {
     email?: string;
     country?: string;
   } = {};
   if (contactEmail) out.email = contactEmail;
-  out.country = (lead.country ?? "HU").toUpperCase();
+  const country = prefillCountry(lead.country, pricingRegion ?? null);
+  if (country) out.country = country;
   return out;
+}
+
+/**
+ * NEMZETKÖZI C: the country the checkout preselects — the lead's own country value as ISO-2
+ * ("HU", or an alias the layer knows: "MAGYARORSZÁG" → "HU"), else the ONE country whose layer
+ * row buys in the page's pricing region (the region was itself picked from the lead's country).
+ * Neither → nothing: the buyer chooses, and a missing country is a validation error — never a
+ * silent "HU" (that default sent a Croatian buyer's invoice to the Hungarian path).
+ */
+export function prefillCountry(raw: string | null | undefined, pricingRegion: string | null): string | null {
+  const own = resolveCountryCode(raw);
+  if (own) return own;
+  if (!pricingRegion) return null;
+  const inRegion = allCountriesSync().filter((c) => c.pricingRegion === pricingRegion);
+  return inRegion.length === 1 ? inRegion[0]!.iso2 : null;
 }

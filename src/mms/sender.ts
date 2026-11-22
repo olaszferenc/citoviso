@@ -223,6 +223,14 @@ export async function sendMms(msg: MmsMessage): Promise<MmsSendResult> {
       return { ok: false, error: detail, provider: currentProvider() };
     }
   }
+  // NEMZETKÖZI C: the destination country's channel rule (src/sms/countryChannel.ts) — no MMS
+  // to a country whose layer row does not list it (HR: e-mail only). Lazy: see sms/sender.ts.
+  const channel = await import("../sms/countryChannel.js");
+  if (!channel.phoneChannelAllowed(to, "mms")) {
+    const detail = channel.phoneChannelRefusal(to, "mms");
+    console.warn(`[mms] NEM MEGY KI → ${msg.to}: ${detail}`); // i18n-exempt: operátori napló
+    return { ok: false, error: detail, provider: currentProvider() };
+  }
   const provider = currentProvider();
   try {
     return provider === "cli"

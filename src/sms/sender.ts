@@ -168,6 +168,14 @@ export async function sendSms(msg: SmsMessage): Promise<SmsSendResult> {
       return { id: "failed", provider: "blocked" };
     }
   }
+  // NEMZETKÖZI C: the destination country's channel rule (src/sms/countryChannel.ts) — a
+  // country whose layer row has no SMS (HR and every non-HU country today) gets none. Lazy
+  // import: the layer loads the country table, and this module must stay importable without it.
+  const channel = await import("./countryChannel.js");
+  if (!channel.phoneChannelAllowed(msg.to, "sms")) {
+    console.warn(`[sms] NEM MEGY KI → ${msg.to}: ${channel.phoneChannelRefusal(msg.to, "sms")}`); // i18n-exempt: operátori napló
+    return { id: "failed", provider: "blocked" };
+  }
   try {
     return await getSender().send(msg);
   } catch (err) {

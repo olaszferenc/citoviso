@@ -15,29 +15,43 @@
 import { getEmailSender } from "../email/sender.js";
 import { sendOperatorSms } from "./operatorSms.js";
 import { getAlertRecipients } from "./appSettings.js";
+import { formatMinor } from "../text/money.js";
 
 export interface StuckOrderAlert {
   readonly orderIntentId: string;
   readonly leadName: string | null;
+  /** The order price in its currency's STORED unit (HUF: forint; EUR: cent — ADR-0443). */
   readonly amountHuf: number | null;
+  /** NEMZETKÖZI C: the order's currency; absent/HUF = the old forint text, byte for byte. */
+  readonly currency?: string | null;
   readonly billingPeriod: "monthly" | "annual";
   readonly buyerEmail: string | null;
   /** Machine reason the pay-link was refused (mock_rejected / gateway_error / …). */
   readonly reason: string;
 }
 
+/**
+ * NEMZETKÖZI C (13,00 € was „1300 Ft”): the amount with its own currency's sign and decimal
+ * rule (formatMinor reads the minor unit). A forint order keeps the old text exactly.
+ */
+function amountText(a: StuckOrderAlert): string | null {
+  if (a.amountHuf == null) return null;
+  const ccy = (a.currency ?? "HUF").toUpperCase();
+  return ccy === "HUF" ? `${a.amountHuf} Ft` : formatMinor(a.amountHuf, ccy);
+}
+
 /** Internal operator text — outside the §B.18 customer-facing i18n scope. */
 function smsText(a: StuckOrderAlert): string {
-  const amount = a.amountHuf == null ? "?" : String(a.amountHuf);
+  const amount = amountText(a) ?? "? Ft";
   return (
-    `Citoviso: MEGREKEDT RENDELES — ${a.leadName ?? "ismeretlen lead"}, ${amount} Ft. ` +
+    `Citoviso: MEGREKEDT RENDELES — ${a.leadName ?? "ismeretlen lead"}, ${amount}. ` +
     `A vevo megrendelt, de fizetesi linket nem kapott (${a.reason}). Teendo a konzolon: ` +
     `rendezd az okot, majd a lead Csomag es fizetes fulen: Fizetesi keres kuldese.`
   );
 }
 
 function emailParts(a: StuckOrderAlert): { subject: string; text: string } {
-  const amount = a.amountHuf == null ? "ismeretlen összeg" : `${a.amountHuf} Ft`;
+  const amount = amountText(a) ?? "ismeretlen összeg";
   const period = a.billingPeriod === "annual" ? "év" : "hó";
   return {
     subject: `Citoviso — megrekedt rendelés: ${a.leadName ?? "ismeretlen lead"} (${amount})`,
@@ -74,7 +88,7 @@ export async function alertStuckOrder(a: StuckOrderAlert): Promise<void> {
       // would recreate exactly the blind spot this module was written for.
       console.error(
         `[pay-link] MEGREKEDT RENDELÉS ${a.orderIntentId} (${a.leadName ?? "?"}, ` +
-          `${a.amountHuf ?? "?"} Ft, ok: ${a.reason}), de nincs riasztási címzett ` +
+          `${amountText(a) ?? "? Ft"}, ok: ${a.reason}), de nincs riasztási címzett ` +
           `(konzol /settings vagy OWNER_ALERT_PHONE) — az operátor NEM lett értesítve.`,
       );
       return;

@@ -57,12 +57,28 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
 /** ASCII slug from a business name: Cyrillic/Greek transliterated (ORSZÁG-RÉTEG 3/6 —
  *  src/text/translit.ts; a Latin name is untouched), accents stripped, non-alnum → hyphen. */
 export function slugify(name: string): string {
-  return transliterate(name)
+  return foldLatinLetters(transliterate(name))
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * NEMZETKÖZI C (Elek HR: „Đurđa” → „ur-a”): Latin letters that NFD does NOT split into a base
+ * letter + accent — they are letters of their own (Croatian đ, Polish ł, Danish ø, German ß,
+ * Icelandic þ/ð, Maltese ħ, Turkish ı …) and the accent strip below would drop them whole.
+ * Spelled the way each language romanizes them. Every Hungarian letter decomposes, so a
+ * Hungarian name is untouched.
+ */
+const LATIN_FOLD: Readonly<Record<string, string>> = {
+  đ: "d", Đ: "D", ð: "d", Ð: "D", ł: "l", Ł: "L", ø: "o", Ø: "O", æ: "ae", Æ: "AE",
+  œ: "oe", Œ: "OE", ß: "ss", ẞ: "SS", þ: "th", Þ: "TH", ħ: "h", Ħ: "H", ı: "i", ŀ: "l", Ŀ: "L",
+  ŧ: "t", Ŧ: "T", ŋ: "ng", Ŋ: "NG", ĸ: "k",
+};
+function foldLatinLetters(s: string): string {
+  return s.replace(/[đĐðÐłŁøØæÆœŒßẞþÞħĦıŀĿŧŦŋŊĸ]/g, (c) => LATIN_FOLD[c] ?? c);
 }
 
 /** The tenant's default platform host: <slug>.citoviso.com. */
@@ -151,33 +167,62 @@ export function endingsForCountry(offered: readonly string[], ownSiteTlds: reado
   });
 }
 
-export function suggestDomains(name: string, endings?: readonly string[]): string[] {
+/** What suggestDomains needs of the lodging's country (a layer row satisfies it). */
+export interface DomainCountry {
+  readonly iso2: string;
+  readonly searchKeywords: Readonly<Record<string, readonly string[]>>;
+}
+
+/**
+ * NEMZETKÖZI C: the type words of a NON-Hungarian lodging's name — its country's discovery
+ * keywords (country.search_keywords, the one per-country dictionary on the layer row:
+ * „apartmani”, „sobe”, „pansion” …) split into words, plus the cross-border trade words a
+ * name carries in any country. Hungary keeps TYPE_WORDS above (its suggestion is unchanged).
+ */
+const CROSS_BORDER_TYPE_WORDS = ["villa", "hotel", "apartment", "apartments", "rooms", "house", "guesthouse", "camping", "resort", "hostel"];
+export function countryTypeWords(country: DomainCountry | null | undefined): ReadonlySet<string> | null {
+  if (!country || country.iso2 === "HU") return null;
+  const words = Object.values(country.searchKeywords)
+    .flat()
+    .flatMap((k) => slugify(k).split("-"))
+    .filter((w) => w.length >= 3);
+  return new Set([...words, ...CROSS_BORDER_TYPE_WORDS]);
+}
+
+export function suggestDomains(name: string, endings?: readonly string[], country?: DomainCountry | null): string[] {
   const slug = slugify(name);
   if (!slug) return [];
   const joined = slug.replace(/-/g, "");
   const words = slug.split("-").filter(Boolean);
-  const core = words.filter((w) => !TYPE_WORDS.has(w)).join("") || joined;
+  // NEMZETKÖZI C: a non-Hungarian lodging strips ITS country's type words, and every offered
+  // ending — .com and .eu too — gets the name variants (a HR market offers only .com).
+  const foreignTypes = countryTypeWords(country);
+  const typeWords = foreignTypes ?? TYPE_WORDS;
+  const core = words.filter((w) => !typeWords.has(w)).join("") || joined;
 
   const out: string[] = [];
   const push = (d: string) => {
     if (d.length >= 7 && d.length <= 40 && !out.includes(d)) out.push(d);
   };
-  push(`${joined}.hu`);
-  push(`${slug}.hu`);
-  if (core !== joined) push(`${core}.hu`);
-  // „szállás” is a Hungarian word: this variant exists only under .hu (filtered out below for
-  // any market that does not offer .hu — ORSZÁG-RÉTEG 3/6).
-  push(`${core}szallas.hu`);
-  push(`${joined}.com`);
-  push(`${joined}.eu`);
+  if (!foreignTypes) {
+    push(`${joined}.hu`);
+    push(`${slug}.hu`);
+    if (core !== joined) push(`${core}.hu`);
+    // „szállás” is a Hungarian word: this variant exists only under .hu (filtered out below for
+    // any market that does not offer .hu — ORSZÁG-RÉTEG 3/6).
+    push(`${core}szallas.hu`);
+    push(`${joined}.com`);
+    push(`${joined}.eu`);
+  }
   if (!endings) return out.slice(0, 5);
   const offered = endings.map((e) => e.toLowerCase());
   for (const e of offered) {
     push(`${joined}${e}`);
     // ORSZÁG-RÉTEG 3/6: a market's OWN ending (.bg, .cz, …) gets the same name variants the
     // Hungarian .hu always had — not one lone candidate behind .com/.eu. The legacy endings
-    // above keep their exact list (the Hungarian suggestion is unchanged).
-    if (!LEGACY_ENDINGS.has(e)) {
+    // above keep their exact list (the Hungarian suggestion is unchanged). NEMZETKÖZI C: for a
+    // non-Hungarian lodging every ending gets them (its .com is its only one in HR).
+    if (foreignTypes || !LEGACY_ENDINGS.has(e)) {
       push(`${slug}${e}`);
       if (core !== joined) push(`${core}${e}`);
     }
@@ -189,7 +234,7 @@ export function suggestDomains(name: string, endings?: readonly string[]): strin
   const result = ok.filter((d) => picked.includes(d));
   // A market with its OWN ending (.bg, .cz) lists in the market's order — its own ending first,
   // not behind .com. Legacy-only markets (HU) keep the generation order exactly.
-  if (offered.every((e) => LEGACY_ENDINGS.has(e))) return result;
+  if (!foreignTypes && offered.every((e) => LEGACY_ENDINGS.has(e))) return result;
   const rank = (d: string): number => offered.findIndex((e) => d.endsWith(e));
   return result.map((d, i) => ({ d, i })).sort((a, b) => rank(a.d) - rank(b.d) || a.i - b.i).map((x) => x.d);
 }

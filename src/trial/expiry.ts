@@ -19,6 +19,7 @@ import { addIsoDays, budapestIsoDay, budapestWeekday } from "../text/budapestTim
 import { mockOutreachWindowOpen } from "../sms/sendWindow.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { CONTACT_BLOCK_DETAIL, trialContactBlocked } from "./contactBlock.js";
+import { phoneChannelAllowed, phoneChannelRefusal } from "../sms/countryChannel.js";
 
 export interface LapseResult {
   readonly lapsed: number;
@@ -266,6 +267,10 @@ export async function runTrialNotices(
       console.log(`[trial] ${step} SMS száraz (nem küld, nem foglal) · próba ${t.id}`); // i18n-exempt: operátori napló
     } else if (!t.contact_phone) {
       if (await claim(t.id, step!, "sms", "skipped", "nincs telefonszám")) out.skipped++;
+    } else if (!phoneChannelAllowed(t.contact_phone, "sms")) {
+      // NEMZETKÖZI C: the number's country has no SMS (HR: e-mail only) — the letter above is
+      // the notice; the ledger says why the SMS leg did not go, instead of a failed send.
+      if (await claim(t.id, step!, "sms", "skipped", phoneChannelRefusal(t.contact_phone, "sms"))) out.skipped++;
     } else if (await claim(t.id, step!, "sms", "claimed", null)) {
       try {
         await sendSms({ ...target, phone: t.contact_phone });

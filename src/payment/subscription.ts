@@ -10,9 +10,11 @@
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { redeemOffer } from "./offers.js";
-import { addIsoDays, budapestIsoDay } from "../text/budapestTime.js";
+import { addIsoDays } from "../text/budapestTime.js";
 import { announceRestore } from "./restoreNotice.js";
 import { alertHeldCancellations, heldCancellations } from "../tenant/moduleRequirements.js";
+import { tenantTimeZone } from "../tenant/timeZone.js";
+import { isoDayIn } from "../text/zoneTime.js";
 
 /**
  * Is the tenant's site switched off for non-payment right now (ADR-0080 ⑤, T+10)?
@@ -135,9 +137,12 @@ export async function ensureSubscriptionForOrder(
     .where("tenant_id", "=", tenantId)
     .where("status", "in", ["active", "lapsed"])
     .executeTakeFirst();
-  const trialLastDay = trial ? budapestIsoDay(new Date(trial.trial_until as unknown as string)) : null;
+  // NEMZETKÖZI C: the calendar days are the ACCOMMODATION's (tenant zone, ADR-0437 ②) — a
+  // Lisbon trial's last day is a Lisbon day; Hungary's zone gives exactly the old Budapest days.
+  const tz = await tenantTimeZone(tenantId);
+  const trialLastDay = trial ? isoDayIn(new Date(trial.trial_until as unknown as string), tz) : null;
   const startDay =
-    trialLastDay && trialLastDay >= budapestIsoDay(anchor) ? addIsoDays(trialLastDay, 1) : null;
+    trialLastDay && trialLastDay >= isoDayIn(anchor, tz) ? addIsoDays(trialLastDay, 1) : null;
   await db
     .insertInto("subscription")
     .values(

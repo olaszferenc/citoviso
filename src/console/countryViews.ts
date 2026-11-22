@@ -165,7 +165,8 @@ function stepTitle(lang: string, s: CountryStep): string {
 
 const STEP_KEYS: Readonly<Record<CountryStep, readonly ReadinessItem["key"][]>> = {
   data: ["data"],
-  prices: ["prices"],
+  // NEMZETKÖZI C: the wallet box stands on the price step beside the price sheet (no new column).
+  prices: ["prices", "wallet"],
   babel: ["babel"],
   legal: ["legal", "adr"],
   outreach: ["holidays", "channel"],
@@ -223,7 +224,7 @@ export function countryCard(e: CountryListEntry): string {
   const items = e.readiness.items;
   const next = items.find((i) => i.gating && i.state === "bad");
   const warn = items.find((i) => i.state === "warn");
-  const step = next ? (COLS.find((c) => c.key === next.key)?.step ?? "data") : "open";
+  const step = next ? ((Object.keys(STEP_KEYS) as CountryStep[]).find((s) => STEP_KEYS[s].includes(next.key)) ?? "data") : "open";
   const href = e.hasRow ? hrefOf(e.iso, step) : `/countries?new=${encodeURIComponent(e.iso)}`;
   const line = next
     ? `${esc(T(lang, "Következő:"))} <b>${esc(next.title)}</b> — ${esc(next.detail)}`

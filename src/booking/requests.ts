@@ -2830,6 +2830,8 @@ export interface SendOfferResult {
   /** per_night | per_person_night | per_stay — what one `amount` means. */
   readonly unitMode?: string;
   readonly expiresAt?: Date | null;
+  /** NEMZETKÖZI C: the accommodation's zone — the deadline is printed on ITS wall clock. */
+  readonly timeZone?: string;
   readonly lang: string;
   readonly unitName?: string;
 }
@@ -3020,6 +3022,7 @@ export async function sendOffer(
     runs: save === "dates" ? runs : undefined,
     unitMode,
     expiresAt,
+    timeZone: await siteTimeZone(req.site_id),
     lang,
     unitName: req.unit_name ?? "",
   };
@@ -3129,6 +3132,8 @@ export interface GuestOfferView {
   readonly lines?: { label: string; nights: number; per_night: number; guests: number; sum: number }[];
   readonly note?: string | null;
   readonly expiresAt?: Date | null;
+  /** NEMZETKÖZI C: the accommodation's zone — the deadline is printed on ITS wall clock. */
+  readonly timeZone?: string;
 }
 
 async function loadByOfferToken(offerToken: string): Promise<RequestRow | null> {
@@ -3169,6 +3174,7 @@ export async function peekGuestOffer(offerToken: string): Promise<GuestOfferView
     lines: req.quoted_lines ?? [],
     note: req.decision_note ?? null,
     expiresAt: offerExpiresAt(req.offered_at, ctx.expireHours),
+    timeZone: await siteTimeZone(req.site_id),
   };
 }
 
