@@ -246,9 +246,18 @@ interface EmailState {
 }
 
 const SENT_FALLBACK = "Elk&APw-ld&APY-tt";
-async function sentFolder(imap: ImapReader): Promise<string> {
+// Names a mailbox may use for its Sent folder when it does not flag it \Sent (modified UTF-7 as LISTed).
+const SENT_NAMES = /^(INBOX[./])?(Sent|Sent Items|Sent Messages|Elk&APw-ld&APY-tt)$/i;
+/**
+ * The mailbox's Sent folder, or null when it has none. The cold lane's hosting mailbox (Websupport) has
+ * no \Sent flag and no Zoho-style „Elküldött” folder: the old fixed fallback made EXAMINE fail, the whole
+ * round threw before saveState, and no cold-lane reply was collected from 2026-11-19 to 11-22 (measured:
+ * 2 872 failed rounds in citoviso-replies-email.log). Without a Sent folder the replies are still collected;
+ * only the "which letter did it answer" lookup and the Sent-folder auto-answer detection are skipped.
+ */
+async function sentFolder(imap: ImapReader): Promise<string | null> {
   const all = await imap.list();
-  return all.find((f) => /\\Sent\b/i.test(f.flags))?.name ?? SENT_FALLBACK;
+  return all.find((f) => /\\Sent\b/i.test(f.flags))?.name ?? all.find((f) => SENT_NAMES.test(f.name))?.name ?? null;
 }
 
 /** One mailbox, one state file: the platform mailbox and the cold lane's each keep their own UIDs. */
@@ -277,13 +286,14 @@ async function collectEmail(creds: ImapCreds, stateName: string): Promise<void> 
 
     // What each reply answers: its In-Reply-To in the Sent folder.
     const sent = await sentFolder(imap);
-    await imap.examine(sent);
+    if (sent) await imap.examine(sent);
+    else console.log(`[replies-email] ${stateName}: nincs Elküldött mappa — a válaszok bejönnek, a „melyik levelünkre” párosítás kimarad.`);
     const items: Item[] = [];
     for (const { uid, at, mail } of mails) {
       const text = stripQuoted(mail.text);
       if (!text) continue;
       let ours: Item["ours"] = null;
-      if (mail.inReplyTo) {
+      if (sent && mail.inReplyTo) {
         const hit = await imap.uidSearch(`HEADER Message-ID ${imapQuote(mail.inReplyTo)}`);
         if (hit.length) {
           const [o] = await imap.uidFetch([hit[hit.length - 1]!], "(UID INTERNALDATE BODY.PEEK[])");
@@ -311,7 +321,7 @@ async function collectEmail(creds: ImapCreds, stateName: string): Promise<void> 
     const cutoff = Date.now() - 30 * DAY * 1000;
     const pending = state.pending.filter((p) => Date.parse(p.receivedAt) > cutoff);
     const answered: { key: string; at: string }[] = [];
-    for (const p of pending) {
+    for (const p of sent ? pending : []) {
       const recv = new Date(p.receivedAt);
       const hit = await imap.uidSearch(`TO ${imapQuote(p.address)} SINCE ${imapDate(recv)}`);
       if (!hit.length) continue;
