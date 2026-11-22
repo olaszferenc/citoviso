@@ -220,7 +220,8 @@ import {
   newRegionErrors,
 } from "../pricing.js";
 import { a60Csv, a60Summary, parseA60Period } from "../billing/a60.js";
-import { countryConfigSync, countryOf, countryOfLead } from "../country.js";
+import { allCountriesSync, countryConfigSync, countryOf, countryOfLead } from "../country.js";
+import { loadPack } from "../i18n/packs.js";
 import { consumerAdrValue, homeLegalPack, legalTextForLang, type LegalPack } from "../legalPack.js";
 import { UNSUBSCRIBE_TEXT_V1 } from "../legal.js";
 import { countryLegalPack } from "../legalPackCountry.js";
@@ -429,7 +430,7 @@ import { getNavNumbers, resetNavCountsCache } from "./navCounts.js";
 import { getAiSpend } from "./aiSpend.js";
 import { runStaggered } from "./staggeredBatch.js";
 import { HUB_PREFIX } from "./nav.js";
-import { langForCountry, uiLangs } from "../i18n/lang.js";
+import { DEFAULT_LANG, langForCountry, uiLangs } from "../i18n/lang.js";
 import { MULTILANG_TIERS } from "../modules.js";
 import { langForLead, prepareRenderLang, T } from "../i18n/mail.js";
 import { loginLocked, recordLoginFailure } from "../auth/loginGuard.js";
@@ -1673,6 +1674,39 @@ async function regionForArtifactOrNull(artifactId: string): Promise<string | nul
     throw e;
   }
 }
+
+/**
+ * HR végpróba 2026-11-22 (Elek IT): the language of a BUYER-side visitor we cannot tie to a lead or
+ * an order (an unknown pay reference, a stale link). `?l=` / `?lang=` first, then the browser's
+ * Accept-Language — only a language some country row speaks; anything else → null (the caller keeps
+ * its Hungarian default, so a Hungarian visitor sees exactly what they saw before).
+ */
+async function visitorLang(req: http.IncomingMessage, url: URL): Promise<string | null> {
+  const known = new Set(allCountriesSync().map((c) => c.defaultLang));
+  const asked = (url.searchParams.get("l") ?? url.searchParams.get("lang") ?? "").trim().toLowerCase();
+  let lang: string | null = known.has(asked) ? asked : null;
+  if (!lang) {
+    for (const part of String(req.headers["accept-language"] ?? "").split(",")) {
+      const tag = part.split(";")[0]!.trim().toLowerCase().split("-")[0]!;
+      if (tag && known.has(tag)) {
+        lang = tag;
+        break;
+      }
+    }
+  }
+  if (lang && lang !== "hu") await loadPack(lang).catch(() => null);
+  return lang;
+}
+
+/** A buyer-side „no such page” in the visitor's language, without the console chrome (Hungarian
+ *  visitor → the same text as before). */
+async function buyerNotFound(req: http.IncomingMessage, url: URL): Promise<string> {
+  const vl = (await visitorLang(req, url)) ?? DEFAULT_LANG;
+  return layout("404", `<p>${T(vl, "Nincs ilyen oldal.")}</p>`, { chrome: false, lang: vl });
+}
+
+/** The buyer-side paths a lead or customer reaches without an operator login. */
+const BUYER_PATH = /^\/(p|pay|configure|mock|site)\//;
 
 /** Neutral page after unsubscribe (no tracking, no sell). ADR-0322 ④/B: UNDER the
  *  confirmation, the same one-tap question as everywhere — a plain POST form (works
@@ -4189,6 +4223,22 @@ async function handle(
       const own = await serveOwnLegalPage(path, url.searchParams);
       if (own) return send(res, own.status, own.html);
     }
+    // HR végpróba (Elek IT): the mock templates link a bare /adatvedelem — opened from a foreign
+    // lead's mock it showed the Hungarian notice. The referring mock's language decides (same-origin
+    // click → full Referer); a Hungarian mock, or no mock behind it, keeps the page as it was.
+    const refPath = (() => {
+      try {
+        return new URL(String(req.headers.referer ?? "")).pathname;
+      } catch {
+        return "";
+      }
+    })();
+    const refTok = /^\/p\/([A-Za-z0-9_-]{16,})(?:\/|$)/.exec(normalizeProspectPath(refPath));
+    if (refTok) {
+      const rp = await getProspectByToken(refTok[1]!);
+      const rl = rp ? await feedbackLang(rp.lang ?? null, rp.leadId ?? null) : null;
+      if (rl && rl !== DEFAULT_LANG) return redirect(res, `${path}?l=${encodeURIComponent(rl)}`);
+    }
     return send(res, 200, privacyPage(config.outreachSender));
   }
   if (method === "GET" && (url.searchParams.get("c") || url.searchParams.get("l"))) {
@@ -4369,7 +4419,7 @@ async function handle(
       });
     }
     if (isJson) return send(res, 204, "");
-    if (!p || !lang) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    if (!p || !lang) return send(res, 404, await buyerNotFound(req, url));
     return send(
       res,
       200,
@@ -4381,9 +4431,9 @@ async function handle(
   const pWhyMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/why$/.exec(pPath);
   if (method === "GET" && pWhyMatch) {
     const p = await getProspectByToken(pWhyMatch[1]);
-    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    if (!p) return send(res, 404, await buyerNotFound(req, url));
     const lang = await feedbackLang(p.lang, p.leadId);
-    if (!lang) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    if (!lang) return send(res, 404, await buyerNotFound(req, url));
     // ADR-0348: the retroactive trial letter's answer links carry `forras=proba` and the
     // tapped answer — shown pre-selected; the GET still records nothing.
     if (url.searchParams.get("forras") === "proba") {
@@ -4587,7 +4637,7 @@ async function handle(
   const pContMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/folytatas$/.exec(pPath);
   if (method === "GET" && pContMatch) {
     const p = await getProspectByToken(pContMatch[1]);
-    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    if (!p) return send(res, 404, await buyerNotFound(req, url));
     const pf = await db
       .selectFrom("prospect")
       .innerJoin("lead", "lead.id", "prospect.lead_id")
@@ -4656,7 +4706,7 @@ async function handle(
     // Unknown token: no prospect, so no opt-out to offer (there is nothing to opt
     // out OF) — but the operator console's navigation must not be shown to whoever
     // is standing here either.
-    if (!p) return send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>", { chrome: false }));
+    if (!p) return send(res, 404, await buyerNotFound(req, url));
     // OWN VIEW (owner's request, 2026-10-05): the pilot copies, the console link and
     // the e-mail preview carry ?sajat=1 (prospectPath.ts). Same page and same framing
     // the lead gets — the owner wants to see what THEY see — but nothing measured:
@@ -5645,7 +5695,11 @@ async function handle(
     const d = await resolvePayEntry(payGoMatch[1]!, { reissue: method === "POST" });
     if (d.kind === "redirect") return redirect(res, d.url);
     if (d.kind === "renew") return send(res, 200, payLinkRenewPage(payGoMatch[1]!));
-    if (d.kind === "unknown") return send(res, 404, payUnknownRefPage(payGoMatch[1]!, config.supportEmail || null));
+    if (d.kind === "unknown") {
+      const vl = await visitorLang(req, url);
+      if (vl) setConsoleLang(vl);
+      return send(res, 404, payUnknownRefPage(payGoMatch[1]!, config.supportEmail || null));
+    }
     // Already theirs: nothing to fix, nobody to alert — say so and show the way in.
     if (d.kind === "owned") return send(res, 200, payAlreadyOwnedPage(d.owned.siteUrl, d.owned.loginUrl));
     const oi = await db
@@ -5715,7 +5769,11 @@ async function handle(
     // ⛔ ISMERETLEN VAGY ELAVULT HIVATKOZÁS: a vevő ne egy csupasz 404-en kössön ki.
     // A lap megmondja, MI TÖRTÉNT (nem találjuk ezt a fizetést), és HOVA MEHET
     // tovább — de NEM állít semmit a fizetésről, mert nem tudunk róla semmit (§B.17).
-    if (!p) return send(res, 404, payUnknownRefPage(ref, config.supportEmail || null));
+    if (!p) {
+      const vl = await visitorLang(req, url);
+      if (vl) setConsoleLang(vl);
+      return send(res, 404, payUnknownRefPage(ref, config.supportEmail || null));
+    }
     // ADR-0251: a custom-domain order ends on the Webcím tab whatever happened — a
     // HOLD is not a purchase, so neither the welcome page nor a receipt applies; the
     // tab shows where the registration is and what happened to the money.
@@ -6098,6 +6156,12 @@ async function handle(
       : send(res, 404, layout("404", "<p>Nincs ilyen tenant.</p>"));
   }
 
+  // HR végpróba (Elek IT): a stale or mistyped BUYER link (a /p/ token, a pay page) used to land on
+  // the operator console's 404 — Hungarian, with the console navigation. The buyer gets a plain page
+  // in their language; the operator's own 404 below is unchanged.
+  if (BUYER_PATH.test(path)) {
+    return send(res, 404, await buyerNotFound(req, url));
+  }
   send(res, 404, layout("404", "<p>Nincs ilyen oldal.</p>"));
 }
 

@@ -196,6 +196,9 @@ try {
         const { loadTenantLegal } = await import("../src/tenant/legalIdentity.js");
         const lg = await loadTenantLegal(t2.id);
         check("a rendelésnél megadott OIB a Jogi adatok előtöltése", lg.who.taxNumber === "69435151530", String(lg.who.taxNumber));
+        // HR végpróba (Elek IT): the first order is the lead's — name, address, e-mail prefill from it too.
+        check("az első (lead-)rendelés neve, címe, e-mailje is előtöltődik a Jogi adatokba",
+          lg.who.legalName === "Ivan Babić" && !!lg.who.address && /Makarska/.test(lg.who.address) && lg.who.email === "elek@citoviso.com", JSON.stringify(lg.who));
       }
     }
     {

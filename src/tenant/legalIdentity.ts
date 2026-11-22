@@ -70,22 +70,36 @@ export async function loadTenantLegal(tenantId: string): Promise<TenantLegalStat
   // The buyer record of the most recent order that actually carries buyer data —
   // an abandoned intent may have none, and inheriting nulls from it would hide a
   // perfectly good earlier record.
-  const buyer = await db
-    .selectFrom("order_intent")
-    .select([
-      "buyer_name",
-      "buyer_type",
-      "buyer_tax_number",
-      "buyer_national_tax_id",
-      "buyer_zip",
-      "buyer_city",
-      "buyer_address",
-      "buyer_email",
-    ])
-    .where("tenant_id", "=", tenantId)
-    .where("buyer_name", "is not", null)
-    .orderBy("created_at", "desc")
-    .executeTakeFirst();
+  const BUYER_COLS = [
+    "order_intent.buyer_name as buyer_name",
+    "order_intent.buyer_type as buyer_type",
+    "order_intent.buyer_tax_number as buyer_tax_number",
+    "order_intent.buyer_national_tax_id as buyer_national_tax_id",
+    "order_intent.buyer_zip as buyer_zip",
+    "order_intent.buyer_city as buyer_city",
+    "order_intent.buyer_address as buyer_address",
+    "order_intent.buyer_email as buyer_email",
+  ] as const;
+  const buyer =
+    (await db
+      .selectFrom("order_intent")
+      .select(BUYER_COLS)
+      .where("order_intent.tenant_id", "=", tenantId)
+      .where("order_intent.buyer_name", "is not", null)
+      .orderBy("order_intent.created_at", "desc")
+      .executeTakeFirst()) ??
+    // HR végpróba 2026-11-22 (Elek IT): the FIRST order — the one that created the tenant — is the
+    // lead's (prospect, no tenant_id), so a fresh tenant's panel said „prefilled from your order”
+    // over empty fields. Without a tenant-owned order with buyer data, the lead's newest one is read.
+    (await db
+      .selectFrom("order_intent")
+      .innerJoin("prospect", "prospect.id", "order_intent.prospect_id")
+      .innerJoin("tenant", "tenant.lead_id", "prospect.lead_id")
+      .select(BUYER_COLS)
+      .where("tenant.id", "=", tenantId)
+      .where("order_intent.buyer_name", "is not", null)
+      .orderBy("order_intent.created_at", "desc")
+      .executeTakeFirst());
 
   // 3/10 (Elek HR: the OIB given at the order did not reach the panel): a Croatian business
   // buyer's OIB lives on its FIRST order (the lead's, no tenant_id) — and a later module

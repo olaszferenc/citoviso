@@ -248,6 +248,21 @@ try {
   const oi = await db.selectFrom("order_intent").selectAll().where("prospect_id", "=", w.prospectId).orderBy("created_at", "desc").executeTakeFirst();
   check("a rendelés euróban, a kedvezményes áron", oi?.currency === "EUR" && oi.price === price, JSON.stringify({ c: oi?.currency, p: oi?.price, want: price }));
 
+  // ── Elek IT leletei (HR végpróba): ismeretlen fizetés, hibás link, adatvédelem a mockról ─────────
+  console.log("⑥b vevő-oldali zsákutcák a látogató nyelvén");
+  const hrHdr = { "accept-language": "hr-HR,hr;q=0.9" };
+  const bogusPay = await (await fetch(`${w.consoleOrigin}/pay/done?paymentId=nincsilyenfizetes123`, { headers: hrHdr })).text();
+  check("/pay/done ismeretlen fizetés: horvát böngészőnek horvátul", !/Ezt a fizetést nem találjuk/.test(bogusPay) && /<html lang="hr"/.test(bogusPay), bogusPay.match(/<h2[^>]*>[^<]*/)?.[0] ?? bogusPay.slice(0, 120));
+  const bogusPayHu = await (await fetch(`${w.consoleOrigin}/pay/done?paymentId=nincsilyenfizetes123`)).text();
+  check("/pay/done ismeretlen fizetés: nyelvi jel nélkül a régi magyar lap", /Ezt a fizetést nem találjuk/.test(bogusPayHu));
+  const bogusTok = await fetch(`${w.consoleOrigin}/p/apartmani-lavanda/nincsilyentoken12345678`, { headers: hrHdr });
+  const bogusTokHtml = await bogusTok.text();
+  check("hibás mock-link: 404, horvátul, konzol-navigáció nélkül", bogusTok.status === 404 && /<html lang="hr"/.test(bogusTokHtml) && !/Irányítópult|Pénzügy|Nincs ilyen oldal/.test(bogusTokHtml), bogusTokHtml.slice(0, 160));
+  const privFromMock = await fetch(`${w.consoleOrigin}/adatvedelem`, { redirect: "manual", headers: { referer: `${w.consoleOrigin}/p/apartmani-lavanda/${w.token}` } });
+  check("a mock adatvédelmi linkje (/adatvedelem) a mock nyelvére visz (?l=hr)", privFromMock.status >= 301 && privFromMock.status <= 308 && /[?&]l=hr\b/.test(privFromMock.headers.get("location") ?? ""), `${privFromMock.status} ${privFromMock.headers.get("location")}`);
+  const privBare = await fetch(`${w.consoleOrigin}/adatvedelem`, { redirect: "manual" });
+  check("/adatvedelem hivatkozó nélkül: a magyar tájékoztató, mint eddig", privBare.status === 200);
+
   // ── ⑦ domain ─────────────────────────────────────────────────────────────────────────────
   console.log("⑦ domain");
   const { suggestDomains } = await import("../src/domains.js");
