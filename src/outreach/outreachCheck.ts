@@ -637,7 +637,17 @@ function foreignGateMarks(lang: string): { identity: string; legal: string; fram
   // („… megnézte a honlap-tervét”) — without it every translated follow-up failed KERETEZÉS, so
   // no foreign follow-up could ever go out. The Hungarian rule (FRAMING_PATTERN) is untouched.
   const followup = T(lang, "Köszönjük, hogy többször is megnézte a honlap-tervét.");
-  const framing = [...new Set([mail, followup, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
+  // HR végpróba 2026-11-22: the NON-OPENER letter (email/nonOpenerEmail.ts) frames the page in its own
+  // opening („Készítettünk Önnek egy honlaptervet …”) — the Hungarian rule passes on „terv”, a translated
+  // one failed KERETEZÉS, so no foreign non-opener letter could go out (Elek HR végpróba, levélolvasó).
+  const vn = { n: Z, days: Z };
+  const nonOpener = [
+    T(lang, "Érdekli a megoldásunk? Készítettünk Önnek egy honlaptervet, amit {days} napig ingyen próbára tehet.", vn),
+    T(lang, "Érdekli a megoldásunk? Készítettünk Önnek egy honlaptervet."),
+    T(lang, "Érdekli a megoldásunk? Készítettünk Önnek {n} honlaptervet, amit {days} napig ingyen próbára tehet.", vn),
+    T(lang, "Érdekli a megoldásunk? Készítettünk Önnek {n} honlaptervet.", vn),
+  ].map(longest);
+  const framing = [...new Set([mail, followup, ...nonOpener, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
   return {
     identity: longest(T(lang, "A megkeresés küldője: {who}", v)).toLowerCase(),
     // ORSZÁG-RÉTEG 3/9: the letter takes its legal line from the COUNTRY LEGAL PACK (draft.ts →
