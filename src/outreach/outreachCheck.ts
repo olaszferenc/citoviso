@@ -34,6 +34,12 @@ export interface MarketVerdict {
   /** ISO-2, or null when we do not know where the lead is. */
   readonly country: string | null;
   readonly approved: boolean;
+  /**
+   * HR végpróba 2026-11-22: WHY the market is closed (marketGate's readiness reasons). Without it a
+   * market closed by a missing euro wallet read as „the legal pack is not approved” to the operator.
+   * Absent = the old sentence (a caller that only knows approved / not approved).
+   */
+  readonly reasons?: readonly string[];
 }
 
 export interface OutreachCheckResult {
@@ -700,6 +706,12 @@ function countryGateReason(
   if (market) {
     if (market.approved) return null;
     const where = market.country ?? (lang ? `"${lang}" nyelvterület` : "ismeretlen ország");
+    if (market.reasons?.length) {
+      return (
+        `PIAC: ${huArticleLower(where)} ${where} piac nincs nyitva (${market.reasons.join(" · ")}) — ` +
+        `outreach erre az országra tiltva`
+      );
+    }
     return (
       `PIAC: ${huArticleLower(where)} ${where} piac jogi csomagja nincs jóváhagyva — ` +
       `outreach erre az országra tiltva`

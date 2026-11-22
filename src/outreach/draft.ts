@@ -30,7 +30,7 @@ import { calendarSyncPortals, countryConfig, countryConfigSync, countryOf } from
 import { gsm7FoldableLang, outreachLangOf } from "./countryOutreach.js";
 import { crossBorderSyncSentence } from "./portalSentence.js";
 import { foreignOfferSentence } from "./foreignPrice.js";
-import { isMarketApproved, normalizeCountryCode } from "../markets.js";
+import { marketGate, normalizeCountryCode } from "../markets.js";
 import { HU_PRICING_REGION, loadPricing } from "../pricing.js";
 import { cheapestOfferedMonthly, cheapestOfferedMonthlyFrom } from "../packageOffer.js";
 import { trialDaysOnOffer } from "../trial/config.js";
@@ -817,7 +817,7 @@ export async function buildDraftForProspect(
       lang: string;
       leadId: string;
       /** ADR-0111: the lead's country and whether that market's legal pack is approved. */
-      market: { country: string | null; approved: boolean };
+      market: { country: string | null; approved: boolean; reasons?: readonly string[] };
     }
   | null
 > {
@@ -907,9 +907,11 @@ export async function buildDraftForProspect(
   // check) and fails closed when this field is absent. ADR-0437 ③: a country the layer
   // does not know is shut as well, whatever the market table says.
   const marketCountry = normalizeCountryCode(country);
+  const gate = (await countryConfig(marketCountry)) !== null ? await marketGate(marketCountry) : null;
   const market = {
     country: marketCountry,
-    approved: (await countryConfig(marketCountry)) !== null && (await isMarketApproved(marketCountry)),
+    approved: !!gate?.open,
+    ...(gate && !gate.open && gate.reasons.length ? { reasons: gate.reasons } : {}),
   };
   return {
     draft: renderDraft(input),

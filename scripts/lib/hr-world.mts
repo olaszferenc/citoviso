@@ -20,7 +20,7 @@ import pg from "pg";
 import http from "node:http";
 import { execFileSync } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import { registerScratchDrop, scratchDbName, sweepStaleScratchDbs } from "./scratch-db.mts";
 
@@ -32,6 +32,27 @@ export interface HrWorldOptions {
   readonly publicPort?: number;
   /** One-port nginx-like front; omitted = none. */
   readonly frontPort?: number;
+  /**
+   * HR végpróba: "barion-test" = the REAL Barion gateway against the SANDBOX (api/secure.test.barion.com,
+   * the dev .env's test shop); the fetch fence then lets exactly those two hosts through. Refuses to
+   * run when the .env points anywhere else. The wallet is whatever BARION_WALLET_CURRENCIES says in the
+   * caller's env (unset = the production default: forint only). Omitted = the mock gateway.
+   */
+  readonly payment?: "mock" | "barion-test";
+}
+
+/** The dev .env's Barion sandbox settings — only when they really point at the test hosts. */
+function barionSandboxEnv(repo: string): Record<string, string> {
+  const file = path.resolve(repo, ".env");
+  const out: Record<string, string> = {};
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const m = /^(BARION_(?:POSKEY|PAYEE|URL|PAY_URL))=(.*)$/.exec(line.trim());
+    if (m) out[m[1]!] = m[2]!.replace(/^["']|["']$/g, "");
+  }
+  if (out.BARION_URL !== "https://api.test.barion.com" || out.BARION_PAY_URL !== "https://secure.test.barion.com" || !out.BARION_POSKEY) {
+    throw new Error("hr-world: a Barion-TESZT mód csak a sandboxra mutató .env-vel indul (api.test.barion.com + secure.test.barion.com + POSKey)");
+  }
+  return out;
 }
 
 export interface HrWorld {
@@ -107,6 +128,11 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   process.env.EMAIL_BCC = "";
   process.env.LEGAL_ENTITY_EU_VAT_NUMBER = process.env.LEGAL_ENTITY_EU_VAT_NUMBER || "HU00000000";
   for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_MAPS_API_KEY", "SZAMLAZZ_AGENT_KEY", "BARION_POSKEY", "OUTREACH_SMS_ALLOWLIST"]) process.env[k] = "";
+  const barionTest = o.payment === "barion-test";
+  if (barionTest) {
+    Object.assign(process.env, barionSandboxEnv(REPO));
+    process.env.PAYMENT_GATEWAY = "barion";
+  }
 
   const scratch = scratchDbName(o.base);
   await sweepStaleScratchDbs(PG, o.base);
@@ -121,6 +147,7 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (/^https?:\/\/(127\.0\.0\.1|localhost)/.test(url)) return realFetch(input, init);
+    if (barionTest && /^https:\/\/(api|secure)\.test\.barion\.com\//.test(url)) return realFetch(input, init);
     return new Response("blocked by hr-world fence", { status: 599 });
   }) as typeof fetch;
 

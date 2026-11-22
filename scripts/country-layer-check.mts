@@ -220,7 +220,8 @@ check("mock: ismeretlen országra NEM generál (throw a nyelv előtt)",
   /const lang = langForCountry\(leadCountry\);\s*\/\/[^\n]*\n\s*if \(!lang\) throw/.test(gen));
 const draft = src("src/outreach/draft.ts");
 check("levél: a kapu a lead országából + a réteg sorából",
-  /const country = countryOf\(r\.raw/.test(draft) && /\(await countryConfig\(marketCountry\)\) !== null && \(await isMarketApproved\(marketCountry\)\)/.test(draft));
+  /const country = countryOf\(r\.raw/.test(draft) && /\(await countryConfig\(marketCountry\)\) !== null \? await marketGate\(marketCountry\) : null/.test(draft) &&
+    /approved: !!gate\?\.open/.test(draft));
 const trial = src("src/trial/start.ts");
 check("próba: a lead országa, nincs ?? \"HU\"", /countryOfLead\(p\.lead_id\)/.test(trial) && !/\?\? "HU"/.test(trial));
 const persist = src("src/scraper/persist.ts");
