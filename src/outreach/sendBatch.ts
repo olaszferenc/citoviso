@@ -40,7 +40,6 @@ import { planCountStill } from "./planSet.js";
 import { assignVariants, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
 import { mailHeroUrl, remoteHeroActive, storeMailHero } from "./emailOpen.js";
 import { composePersonalBody, personalParts, personalSenderName } from "./experimentCopy.js";
-import { coldHost } from "./coldLane.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -450,6 +449,7 @@ export async function sendOutreachMail(
     city: p.leadCity,
     price: d.draft.parts.priceList,
     offerPrice: d.draft.parts.priceOffer,
+    country: d.market.country,
     // The owner's own wording for this lead (copyOverride) is never experimented on.
     participate: !testLead && !opts.dryRun && !opts.probe && !override,
   });
@@ -461,7 +461,7 @@ export async function sendOutreachMail(
     if (v.bodyStyle === "personal") {
       // The personal first-person letter (experimentCopy.ts): its own parts and body, the price line
       // in its place; today's price sentence keeps its discount footnote.
-      const parts = personalParts(d.input, out, v.priceLine, personalSenderName(), coldHost());
+      const parts = personalParts(d.input, out, v.priceLine, personalSenderName());
       return { ...out, parts, body: composePersonalBody(parts, links, d.lang) };
     }
     if (v.priceLine !== undefined) {

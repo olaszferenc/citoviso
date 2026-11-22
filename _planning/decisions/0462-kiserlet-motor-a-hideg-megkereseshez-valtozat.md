@@ -77,6 +77,15 @@ kattintott) nem választható szét, és minden szöveg-ötlet tulaj-kör maradt
    {offerPrice} Ft-tól.” (a „… az Öné” reklámfordulatot a tulaj/Elek korábban elvetette). A személyes
    levélnek nincs felső (első-sor) szövege, az első látható szöveg a megszólítás; az első-sor dimenzió
    csak a dobozos levélre vonatkozik (a sima és a személyes levélen nem kísérletezik, nem is rögzül).
+   **A tulaj végleges szövege (2026-11-22, migráció 0147 a feliratokra):** „Elkészítettem a szállása
+   honlapját: teljesen működik, csak Ön látja…”, a Cornell „billboard” bekezdés forrás-linkkel, az
+   ár-mondat „Ha tetszik: havi {offerPrice} Ft-tól, saját .hu címmel.” (nem HU: „saját címmel”),
+   aláírás csak névvel; KIESETT a csillag-mondat, a „kollégám beállítja” és a próba-mondat. A tulaj
+   kifejezetten NEM kérte a „még nem nyilvános” szót: a §C keretezés-szabály (`FRAMING_PATTERN`) a
+   „csak Ön látja” fordulatot is keretezésnek számítja (igaz: a link nem nyilvános). Lelet: a megadott
+   Cornell-oldal 2026-11-22-én 404-et ad, és a 75% egy 2011-es, nagy szállodalánc-foglalókra és az
+   Expediára vonatkozó vizsgálatból származik (a 2017-es jelentés idézi, és gyengülő hatást mér) —
+   jelezve a koordinátornak.
 
 ### Elvetett alternatívák
 

@@ -66,7 +66,9 @@ const MISLEADING_PATTERNS: readonly RegExp[] = [
 /** Framing words that make the preview nature explicit (§A demo-framing). */
 // „nem nyilvános” (owner's wording 2026-11-13): the letter frames the site by the true fact
 // that it is not public yet, instead of calling a working page a „látványterv”.
-const FRAMING_PATTERN = /terv|előzetes|látványterv|minta|demó|preview|nem nyilvános/iu;
+// „csak Ön látja” (owner 2026-11-22, the personal experiment letter, ADR-0462): the same TRUE fact —
+// the link is not public, only the recipient sees the site — said from the reader's side.
+const FRAMING_PATTERN = /terv|előzetes|látványterv|minta|demó|preview|nem nyilvános|csak Ön látja/iu;
 
 /**
  * ADR-0366: a GSM-7 SMS carries Hungarian WITHOUT accents (toGsm7: „elkészült” → „elkeszult”),

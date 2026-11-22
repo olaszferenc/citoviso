@@ -280,13 +280,18 @@ function buildPersonalMail(heroSrc: string | null, t: OutreachParts, l: MailLink
     `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">${esc(t.hook)}<br>${link(l.cta)}</p></td></tr>` +
     hero +
     (t.planNote ? row(p(t.planNote)) : "") +
-    row(p(t.p1)) +
-    row(p(t.p2)) +
+    // p1 may cite a source URL (the billboard study) — it is made clickable, the text stays the gated one.
+    row(
+      `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">` +
+        esc(t.p1).replace(/https?:\/\/[^\s()<>"]+/g, (u) => `<a href="${u}" style="color:${NAVY};word-break:break-all">${u}</a>`) +
+        `</p>`,
+    ) +
+    (t.p2 ? row(p(t.p2)) : "") +
     (t.p3 ? row(p(t.p3)) : "") +
     row(p(t.p4)) +
     row(
       `<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">` +
-        `${esc(T(lang, "Üdvözlettel,"))}<br>${esc(t.sigName)}<br>${esc(t.sigCo)}</p>`,
+        `${esc(T(lang, "Üdvözlettel,"))}<br>${esc(t.sigName)}${t.sigCo ? `<br>${esc(t.sigCo)}` : ""}</p>`,
     ) +
     `<tr><td style="padding:0 ${PAD}px 22px"><div style="padding-top:14px;border-top:1px solid ${LINE}">` +
     (t.fine ? small(t.fine) : "") +

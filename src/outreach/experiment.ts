@@ -525,6 +525,8 @@ export async function assignVariants(input: {
   /** The letter's list / offer price as printed (draft parts) — for a `price_line` sentence template. */
   readonly price?: string | null;
   readonly offerPrice?: string | null;
+  /** The lead's ISO-2 — the personal price line names the „.hu” domain only for HU. */
+  readonly country?: string | null;
   readonly participate: boolean;
   readonly now?: Date;
 }): Promise<LetterVariants> {
@@ -578,7 +580,7 @@ export async function assignVariants(input: {
       if (dim === "image" && key === "none") image = false;
       if (dim === "price_line")
         priceLine =
-          key === "none" ? "" : key === "mondat" ? priceSentence(input.lang, input.offerPrice ?? "") : row?.template ? renderTemplate(row.template, vars) ?? undefined : undefined;
+          key === "none" ? "" : key === "mondat" ? priceSentence(input.lang, input.offerPrice ?? "", input.country) : row?.template ? renderTemplate(row.template, vars) ?? undefined : undefined;
     }
     return {
       keys,

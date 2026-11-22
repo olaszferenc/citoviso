@@ -141,7 +141,7 @@ const LETTERS: readonly { name: string; html: string }[] = [
     name: "hideg megkereső levél — személyes változat (kísérlet-motor)",
     html: buildOutreachEmail(
       (() => {
-        const parts = personalParts(PERSONAL_INPUT, draft, undefined, "Kovács Anna", "getcitoviso.com");
+        const parts = personalParts(PERSONAL_INPUT, draft, undefined, "Kovács Anna");
         return { ...draft, parts, body: composePersonalBody(parts, { cta: draft.link, unsub: draft.unsubscribeLink, privacy: draft.privacyLink }, lang) };
       })(),
       "teszt@example.com",
