@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-11-22_orszag_reteg_3_10_horvat_javitokor.md](2026-11-22_orszag_reteg_3_10_horvat_javitokor.md) — 2026-11-22 — Ország-réteg 3/10: horvát javítókör (Elek HR leletei) + Elek ismétlés
+- [2026-11-22_nemzetkozi_hr_vegproba.md](2026-11-22_nemzetkozi_hr_vegproba.md) — 2026-11-22 — Nemzetközi: HR végpróba (felderítéstől a számláig) + Elek négy szerepben
 - [2026-11-22_nemzetkozi_c_konverzio_uzem.md](2026-11-22_nemzetkozi_c_konverzio_uzem.md) — 2026-11-22 — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin, üzem országfüggően
 - [2026-11-22_nemzetkozi_c_ket_felulet.md](2026-11-22_nemzetkozi_c_ket_felulet.md) — 2026-11-22 — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban)
 - [2026-11-22_nemzetkozi_b_kikuldes_valasz.md](2026-11-22_nemzetkozi_b_kikuldes_valasz.md) — 2026-11-22 — Nemzetközi B: kiküldés, utánkövetés, válasz, elutasító országfüggően (`cit4ddfda9e`)
