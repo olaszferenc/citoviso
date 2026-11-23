@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-23_hr_jogi_variant_tervezet.md](2026-11-23_hr_jogi_variant_tervezet.md) — 2026-11-23 — HR jogi csomag: horvát jogra honosított tervezet (kikapcsolva)
 - [2026-11-22_orszag_reteg_3_10_horvat_javitokor.md](2026-11-22_orszag_reteg_3_10_horvat_javitokor.md) — 2026-11-22 — Ország-réteg 3/10: horvát javítókör (Elek HR leletei) + Elek ismétlés
 - [2026-11-22_nemzetkozi_hr_vegproba.md](2026-11-22_nemzetkozi_hr_vegproba.md) — 2026-11-22 — Nemzetközi: HR végpróba (felderítéstől a számláig) + Elek négy szerepben
 - [2026-11-22_nemzetkozi_c_konverzio_uzem.md](2026-11-22_nemzetkozi_c_konverzio_uzem.md) — 2026-11-22 — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin, üzem országfüggően

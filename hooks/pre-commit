@@ -1258,6 +1258,14 @@ if [ -f scripts/tenant-legal-check.mts ] && \
   echo "[pre-commit] tenant-legal-check (ADR-0110: jogi lábazat a generált oldalon)…"
   npx tsx scripts/tenant-legal-check.mts >"$GATE_LOG" || gate_failed
 fi
+# HR jogi variáns (lásd a src/legalVariantHR.ts fejlécét) — a HORVÁT jogi variáns TERVEZET (src/legalVariantHR.ts) kikapcsolva marad, élő modul
+# nem importálja, a mai HR-csomag forrás-egységeire illik, és a mai HR-csomag bájtra azonos.
+# Bármely jogi forrás változása elavulttá teheti a tervezetet → ugyanezekre a fájlokra fut.
+if [ -f scripts/legal-variant-hr-check.mts ] && \
+   changed_files | grep -qE '^(src/legal\.ts|src/legalPack\.ts|src/legalVariantHR\.ts|src/server/legalViews\.ts|src/engine/legalPages\.ts|src/console/views\.ts|src/i18n/babel/legal/)|^scripts/legal-variant-hr-check'; then
+  echo "[pre-commit] legal-variant-hr-check (HR jogi variáns tervezet, kikapcsolva)…"
+  npx tsx scripts/legal-variant-hr-check.mts >"$GATE_LOG" || gate_failed
+fi
 # „Mentettem, de az oldalon nem látszik" (2026-09-08, a tulaj oldalán mérve): a publikus
 # oldal statikus pillanatkép, így a DB-írás önmagában nem változtat semmit a vendégnek.
 # Az őr minden tenant-admin POST route-tól DÖNTÉST követel: renderel, vagy indokkal a
