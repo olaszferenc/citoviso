@@ -68,7 +68,13 @@ export function textureUrlFor(cover: string, sourceArtifactId: string): string |
 }
 
 // One background job per (tenant, cover) at a time; the snapshot re-render follows a success.
-const scheduled = new Set<string>();
+const scheduled = new Map<string, Promise<void>>();
+
+/** Resolves when every background map job (and its snapshot re-render) has finished. The guard
+ *  waits on it, so a late re-render can never overwrite the state it restores. */
+export async function settleHeroMotionJobs(): Promise<void> {
+  while (scheduled.size) await Promise.allSettled([...scheduled.values()]);
+}
 
 async function coverBytes(tenantId: string, cover: string): Promise<Buffer | null> {
   if (isUpload(cover)) {
@@ -84,8 +90,7 @@ async function coverBytes(tenantId: string, cover: string): Promise<Buffer | nul
 function scheduleDepth(tenantId: string, cover: string): void {
   const key = `${tenantId}|${cover}`;
   if (scheduled.has(key)) return;
-  scheduled.add(key);
-  void ensureDepthMap(cover, () => coverBytes(tenantId, cover))
+  const job = ensureDepthMap(cover, () => coverBytes(tenantId, cover))
     .then(async (r) => {
       if (!r?.ok) return;
       // Dynamic import: editor.ts imports this module (no import cycle at load time).
@@ -94,6 +99,7 @@ function scheduleDepth(tenantId: string, cover: string): void {
     })
     .catch((e: unknown) => console.warn(`  ⚠️ mozgó nyitókép: a mélységkép nem készült el (${e instanceof Error ? e.message : String(e)})`)) // i18n-exempt: operator log
     .finally(() => scheduled.delete(key));
+  scheduled.set(key, job);
 }
 
 /**
