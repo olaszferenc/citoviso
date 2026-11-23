@@ -2648,6 +2648,15 @@ if [ -f scripts/hero-contrast-check.mts ] && \
   echo "[pre-commit] hero-contrast-check (hero-cím olvasható világos fotón)…"
   npx tsx scripts/hero-contrast-check.mts
 fi
+# DEPTH HERO gate (ADR-XXXX, "térhatású borítókép"): the cover moves in depth only with a
+# valid map for the photo shown; no map / a stale map → byte-identical page; reduced-motion,
+# data-cit-no-motion and a cross-origin (portal) texture → static photo, no canvas, no JS error.
+# Headless WebGL (~15s), so only when the depth layer, the engine templates or the renderer is staged.
+if [ -f scripts/depth-hero-check.mts ] && \
+   changed_files | grep -qE '^src/engine/(depthHero\.ts|templates/|render\.ts|recipe\.ts)|^scripts/depth-hero-check'; then
+  echo "[pre-commit] depth-hero-check (térhatású borítókép: csak érvényes mélységképpel, hibánál állókép)…"
+  npx tsx scripts/depth-hero-check.mts
+fi
 # Hero title FIT gate (2026-09-30, templateKit.ts HERO TITLE FIT): the hero <h1> — the
 # lead's long unique sentence — must not cross the masthead, leave the page or eat more
 # than 60% of the first screen, at a 150%-scaled laptop (1320×570), 1366×650, 1920×960 and

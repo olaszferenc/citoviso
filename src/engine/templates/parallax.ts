@@ -10,6 +10,7 @@
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
 import { amenityIconSvg } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
+import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
@@ -294,7 +295,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 
   // -- hero panel (photo → fixed bg; none → token gradient) -------------------
   const heroPanelOpen = heroPhoto
-    ? `<header class="t-par t-par--hero" id="top" style="background-image:url('${esc(heroPhoto)}')">`
+    ? `<header class="t-par t-par--hero" id="top"${depthHeroAttr(data, heroPhoto)} style="background-image:url('${esc(heroPhoto)}')">`
     : `<header class="t-par t-par--hero t-par--flat" id="top">`;
   const hero = `${heroPanelOpen}
     ${mast}
@@ -568,7 +569,8 @@ ${MOBCTA_CSS}
     ${slotMarker("closing")}
     ${footer}
     ${mobcta}
-    <script>${PARALLAX_JS}</script>
+    <script>${PARALLAX_JS}</script>${depthHeroJs(data, heroPhoto) ? `
+    <script>${depthHeroJs(data, heroPhoto)}</script>` : ""}
 </body>
 </html>`;
 }

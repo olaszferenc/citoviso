@@ -282,6 +282,19 @@ export interface SiteData {
    * it is never the hero (gateOpening.gatePhotoOf). Absent on other templates / older mocks.
    */
   readonly gatePhoto?: Photo;
+  /**
+   * ADR-XXXX depth hero ("térhatású borítókép"): the cover photo moves in depth (engine/depthHero.ts).
+   * `source` = the photo URL the map was computed for — the renderer animates ONLY when it equals
+   * the hero it is about to show (a stale map never moves a different cover). `img` = the same
+   * photo on a same-origin / CORS-enabled URL (WebGL cannot read portal photos), `depth` = the
+   * grayscale depth PNG. Absent → no animation, the page is byte-identical to before. Set by the
+   * generator (experiment arm) or the live re-render (tenant switch on); never by a template.
+   */
+  readonly heroDepth?: {
+    readonly source: string;
+    readonly img: string;
+    readonly depth: string;
+  };
   readonly contact: {
     readonly email?: string;
     readonly phone?: string;
