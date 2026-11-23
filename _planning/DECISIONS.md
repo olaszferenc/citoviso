@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-fooldal-a-bongeszo-nyelven.md) — A főoldal a látogató böngészőjének nyelvén (magyar = a mai oldal, más nyelv = euró + .com)
+- [ADR-0473](decisions/0473-a-fooldal-a-latogato-bongeszojenek-nyelven.md) — A főoldal a látogató böngészőjének nyelvén (magyar = a mai oldal, más nyelv = euró + .com)
 - [ADR-0472](decisions/0472-terhatasu-boritokep-melysegkep-webgl-a-mockon.md) — Térhatású borítókép (mélységkép + WebGL) a mockon és a tenant-oldalon, kísérletként
 - [ADR-0471](decisions/0471-horvat-jogra-honositott-jogi-csomag-forras.md) — Horvát jogra honosított jogi csomag: forrás-variáns TERVEZETKÉNT, kikapcsolva
 - [ADR-0470](decisions/0470-nemzetkozi-hr-vegproba-felderitestol-a.md) — Nemzetközi: HR végpróba (felderítéstől a fizetésig) + vevő-oldali zsákutcák a látogató nyelvén

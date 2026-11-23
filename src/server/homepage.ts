@@ -103,7 +103,7 @@ export function homepagePlansHtml(
   return `<div class="plans" data-full-year="${formatPrice(top.monthly * yearMonths, currency)}">${cards.join("")}</div>`;
 }
 
-// ── The page language (owner 2026-11-23, ADR-XXXX; overrides ADR-0452 for the homepage) ──────
+// ── The page language (owner 2026-11-23, ADR-0473; overrides ADR-0452 for the homepage) ──────
 // The homepage speaks the visitor's BROWSER language: the first Accept-Language entry the page
 // is completely translated into, else English. Hungarian = today's page (Ft, .hu); every other
 // language = the euro list (ADR-0465 layer, 7/13/18 €) and .com. No picker, no band, no URL

@@ -1,4 +1,4 @@
-## ADR-XXXX — A főoldal a látogató böngészőjének nyelvén (magyar = a mai oldal, más nyelv = euró + .com)
+## ADR-0473 — A főoldal a látogató böngészőjének nyelvén (magyar = a mai oldal, más nyelv = euró + .com)
 
 **Státusz:** ELFOGADVA. Tulaj-döntés 2026-11-23, a koordinátoron (`cit9b4690e3`) át: „a fordításhoz nem kell jóváhagyás”. A viselkedés kontraktusa a c2 mock (`assets/design-refs/_drafts/fooldal-orszag/c2-valodi-fooldal.html`, 23 nyelv).
 **Épít:** ADR-0465 (euró ár-réteg, 7/13/18 €, .com), ADR-0103 (a domaint a Citoviso regisztrálja), ADR-0412 (fordítás csak Bábel), ADR-0036 (T()/tr()).

@@ -12,7 +12,7 @@
  *     calculator (every other language), mobile menu, FAQ (native <details>), the
  *     sample-request form (map pin + POST /api/mock-request).
  *
- * Language (ADR-XXXX): the server renders the page in the visitor's browser language and,
+ * Language (ADR-0473): the server renders the page in the visitor's browser language and,
  * on a non-Hungarian page, hands this script window.CIT_HOME = {lang, s: {hu: translation}}.
  * Every runtime text goes through tr()/trn(); the Hungarian page carries no CIT_HOME and
  * reads its source strings.
