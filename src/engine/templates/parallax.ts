@@ -1,5 +1,5 @@
 // "parallax" art template (ADR-0027) — the 06-immersive-parallax reference direction.
-// Full-height fixed-background photo panels (scroll fallback on mobile/touch), a side dot-nav,
+// Full-height fixed-background photo panels (pinned by script on mobile/touch, 2026-11-23), a side dot-nav,
 // loud uppercase display type, an accent-ruled stat band (REAL stats only), alternating
 // photo+highlight feature rows, an amenity grid, a dark review band, the booking slot embedded
 // in a dark dock under the hero, a scrolled menu bar (desktop), and a rich dark footer.
@@ -49,7 +49,8 @@ const PARALLAX_CSS = `
   .cit-btn-ghost{background:transparent;border-color:rgba(255,255,255,.55);color:#fff}
   .cit-btn-ghost:hover{border-color:#fff;filter:none;box-shadow:none}
 
-  /* PARALLAX PANELS — fixed background on desktop; scroll fallback on touch/small/reduced-motion */
+  /* PARALLAX PANELS — fixed background on desktop; on touch/small screens PARALLAX_PIN_JS keeps the
+     photo behind (owner 2026-11-23); reduced motion: plain scroll */
   .t-par{min-height:92svh;background-size:cover;background-position:center;background-attachment:fixed;display:flex;align-items:center;position:relative}
   .t-par--band{min-height:60svh}
   .t-par::after{content:"";position:absolute;inset:0;background:rgba(10,12,14,.48)}
@@ -226,6 +227,41 @@ const PARALLAX_CSS = `
 // never reached a 40% ratio, and a section LEAVING the screen also fired as intersecting,
 // so the first dot stayed lit down to the booking block (owner 2026-10-04). At the very
 // bottom the last section on screen wins (a short closing section never reaches the line).
+// THE PHOTO STAYS BEHIND ON EVERY SCREEN (owner 2026-11-23, plan
+// design-refs/tenant-site/generator-javitas: „Mehet”). Desktop keeps the browser's own
+// background-attachment:fixed; where the browser cannot (phones, iOS, ≤900px — the CSS falls back to
+// `scroll` there), each panel's photo moves into a layer the script pins to the viewport, so the
+// content slides over it exactly as on desktop. The moving hero (ADR-0472 depth canvas) is pinned
+// the same way on every size — inside the hero it would otherwise scroll away with the content.
+// Reduced motion / data-cit-no-motion → nothing moves (the static fallback stays).
+const PARALLAX_PIN_JS = `
+  (function(){
+    var root=document.documentElement;
+    try{if(root.hasAttribute('data-cit-no-motion')||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))return;}catch(e){return;}
+    var panels=[].slice.call(document.querySelectorAll('.t-par'));if(!panels.length)return;
+    var items=[];
+    panels.forEach(function(p){
+      var cs=getComputedStyle(p),bg=cs.backgroundImage;
+      if(cs.backgroundAttachment==='fixed'||!bg||bg.indexOf('url(')<0)return;
+      var l=document.createElement('div');l.setAttribute('aria-hidden','true');
+      l.style.cssText='position:absolute;left:0;top:0;width:100%;z-index:-1;background:'+bg+' center/cover no-repeat;will-change:transform;pointer-events:none';
+      p.style.isolation='isolate';p.style.overflow='hidden';p.style.backgroundImage='none';
+      p.insertBefore(l,p.firstChild);items.push({p:p,l:l});
+    });
+    var hero=document.querySelector('.t-par--hero');
+    function tick(){
+      var vh=innerHeight;
+      for(var i=0;i<items.length;i++){var it=items[i],r=it.p.getBoundingClientRect();if(r.bottom<-50||r.top>vh+50)continue;
+        it.l.style.height=vh+'px';it.l.style.transform='translate3d(0,'+(-r.top)+'px,0)';}
+      var c=hero&&hero.querySelector('canvas');
+      if(c){var hr=hero.getBoundingClientRect();hero.style.overflow='hidden';c.style.transform='translate3d(0,'+Math.max(0,-hr.top)+'px,0)';}
+    }
+    var queued=false;function on(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;tick();});}
+    addEventListener('scroll',on,{passive:true});addEventListener('resize',on);tick();
+    // the depth canvas arrives after its textures load — pin it from its first frame
+    if(hero&&'MutationObserver' in window)new MutationObserver(on).observe(hero,{childList:true});
+  })();`;
+
 const PARALLAX_JS = `
   (function(){
     var dots=[].slice.call(document.querySelectorAll('.t-dots a'));if(!dots.length)return;
@@ -569,7 +605,7 @@ ${MOBCTA_CSS}
     ${slotMarker("closing")}
     ${footer}
     ${mobcta}
-    <script>${PARALLAX_JS}</script>${depthHeroJs(data, heroPhoto) ? `
+    <script>${PARALLAX_JS}${PARALLAX_PIN_JS}</script>${depthHeroJs(data, heroPhoto) ? `
     <script>${depthHeroJs(data, heroPhoto)}</script>` : ""}
 </body>
 </html>`;

@@ -27,6 +27,7 @@ import {
   parallax,
   words,
 } from "../motion.js";
+import { isSamePicture } from "../samePicture.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
@@ -501,12 +502,11 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const intro = {
     name: esc(data.name),
     place: esc(place || data.tagline),
-    // the cycle ENDS on this template's own hero photo — the intro hands its last
-    // frame to the hero, so the page must not snap to a different picture
-    photos: [
-      ...photos.filter((p) => p.url !== hero?.url).slice(0, 3).map((p) => p.url),
-      ...(hero ? [hero.url] : []),
-    ],
+    // Owner 2026-11-23 (variant B, design-refs/tenant-site/generator-javitas): FOUR photos
+    // cycle in the big frame, none of them the hero; the hero fades in inside the frame as it
+    // starts to grow, and is the picture the page keeps — what grows is never what stays.
+    photos: photos.filter((p) => p.url !== hero?.url && !isSamePicture(p.dhash, hero?.dhash)).slice(0, 4).map((p) => p.url),
+    ...(hero ? { hero: hero.url } : {}),
   };
 
   return `<!doctype html>
@@ -523,7 +523,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
 ${WORD_CSS}
 ${bookingCardCss("wordmark-grow", "0 0 clamp(70px,10vh,124px)")}
 ${motionCss("calm")}
-${intro.photos.length ? introCss() : ""}
+${intro.photos.length || intro.hero ? introCss() : ""}
   </style>
 </head>
 <body class="cit-tpl-wordmark-grow">
@@ -540,8 +540,8 @@ ${intro.photos.length ? introCss() : ""}
   ${bandMid ? "" : bookingSlot(data, phase)}
   ${slotMarker("closing")}
   ${footer}
-  ${intro.photos.length ? introHtml(intro) : ""}
-  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>${hero && !backdrop && depthHeroJs(data, hero.url) ? `\n  <script>${depthHeroJs(data, hero.url)}</script>` : ""}
+  ${intro.photos.length || intro.hero ? introHtml(intro) : ""}
+  <script>${motionJs()}${intro.photos.length || intro.hero ? introJs(intro) : ""}</script>${hero && !backdrop && depthHeroJs(data, hero.url) ? `\n  <script>${depthHeroJs(data, hero.url)}</script>` : ""}
 </body>
 </html>`;
 }

@@ -371,7 +371,7 @@ async function generateEngineMockInner(
   // no gate photo at all: its Kapunyitás renders without the leaves, as the approved plan shows.
   if (opts.template === GATE_OPENING.id && !townPhoto && !gatePhotoOf(photos as never)) {
     throw new Error(
-      "Kapunyitás: nincs a nyitóképtől különböző második kép (a kapu képe az admin második képe, és nem lehet ugyanaz, mint ami az animáció után ott marad) — a tervet elutasítottam, nem generáltam.", // i18n-exempt: operator-facing generation error (console)
+      "Kapunyitás: nincs a nyitóképtől eltérő témájú kép (a kapu szárnyain más témájú fotó kell, mint ami az animáció után ott marad) — a tervet elutasítottam, nem generáltam.", // i18n-exempt: operator-facing generation error (console)
     );
   }
   const groundImages = photos.map((p) => p.url);
@@ -697,7 +697,7 @@ async function generateEngineMockInner(
   const gateWanted = opts.template === GATE_OPENING.id && photos.length > 0;
   const gatePick = gateWanted ? gatePhotoOf(baseSiteData.photos) : null;
   if (gateWanted && !gatePick) {
-    throw new Error("Kapunyitás: a második kép a nyitóképpel azonos — a tervet elutasítottam, nem generáltam."); // i18n-exempt: operator-facing generation error (console)
+    throw new Error("Kapunyitás: nincs a nyitóképtől eltérő témájú kép — a tervet elutasítottam, nem generáltam."); // i18n-exempt: operator-facing generation error (console)
   }
   let siteData: SiteData = gatePick ? { ...baseSiteData, gatePhoto: gatePick } : baseSiteData;
 

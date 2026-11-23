@@ -120,11 +120,13 @@ async function cachedShot(artifactId: string): Promise<HeroShotResult | null> {
     return { path: null, fail: { code: "no-mock-file", detail: a.path } };
   }
   const mtime = Math.floor((await stat(mockAbs)).mtimeMs / 1000);
-  // v5 cache-busts v4: those shots opened the mock from disk without serving
+  // v6 cache-busts v5: those shots caught the wordmark-grow OPENING INTRO (cream screen, small
+  // frame) instead of the hero — 2026-11-23, owner: „az emailben ne ezt mutassuk”.
+  // v5 cache-busted v4: those shots opened the mock from disk without serving
   // /assets/stock, so a no-photo mock's hero showed the placeholder icon.
   // v4 cache-busted v3: those shots were taken without verifying the first
   // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
-  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v5.png`);
+  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v6.png`);
   return (await fileExists(dest)) ? { path: dest } : null;
 }
 
@@ -215,7 +217,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
     const ribbonLang = await prepareMailLang(shotLang);
     const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
-    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v5.png`);
+    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v6.png`);
 
     await mkdir(SHOT_DIR, { recursive: true });
     // Declared OUTSIDE the browser block: it is the reason the operator reads on
@@ -250,6 +252,14 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
           userAgent: PORTAL_USER_AGENT,
         });
         try {
+          // THE LETTER SHOWS THE FINISHED HERO, NEVER THE OPENING INTRO (owner 2026-11-23: the
+          // 09-14 „kapcsold ki a nyitó-animációt” was about THIS picture — „az emailben ne ezt
+          // mutassuk, mert nem látszik semmi”). Measured: 773 wordmark-grow letters (11-09…11-23)
+          // carried the cream intro screen with a small frame (Margaret 715c4a8a, Károly). The
+          // motion layer's own switch, set the moment <html> exists — before any page script.
+          await page.addInitScript(
+            "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
+          );
           // Network log for CSS background images (their load state is not
           // readable from the DOM the way <img>.complete/naturalWidth is).
           const failedNet = new Set<string>();

@@ -214,8 +214,11 @@ export interface IntroOptions {
   readonly name: string;
   /** Small line under the wordmark (place), already escaped. */
   readonly place: string;
-  /** Photos cycled in the frame. The first is also the hero. */
+  /** Photos cycled in the frame — never the hero (owner 2026-11-23, plan
+   *  design-refs/tenant-site/generator-javitas: what grows must not be what stays behind it). */
   readonly photos: readonly string[];
+  /** The hero photo: it fades in INSIDE the frame as the frame starts to grow, and stays. */
+  readonly hero?: string;
   /**
    * Playback speed. The owner picked 0.6 after comparing 1 / 0.8 / 0.6 / 0.4:
    * the whole sequence then ran ~5.8 s; since the slower grow (2026-10-03) ~7.5 s.
@@ -321,8 +324,10 @@ export function introCss(): string {
   background:var(--cit-bg);padding:0 18px;z-index:1}
 /* The frame the photo grows from is sized by the SCREEN, not by a letter (owner,
    2026-10-03: "nagyon kicsi a kép amiből kinő" — measured 70×86 px on a 1440×900
-   desktop, 14×18 px on a 390 phone). The type shrinks to leave it room on the line. */
-.cit-intro-name{--cit-slot-h:min(34vh,24vw);font-family:var(--cit-font-display);
+   desktop, 14×18 px on a 390 phone). The type shrinks to leave it room on the line.
+   2026-11-23 (owner, variant B of design-refs/tenant-site/generator-javitas): still too
+   small → the BIG frame, min(54vh,38vw) / portrait min(82vw,54vh). */
+.cit-intro-name{--cit-slot-h:min(54vh,38vw);font-family:var(--cit-font-display);
   font-size:min(clamp(26px,9.5vw,116px),calc((88vw - var(--cit-slot-h) * .8) / var(--cit-intro-chars,10) * 1.5));
   line-height:1;letter-spacing:.02em;color:var(--cit-ink);display:flex;align-items:center;
   justify-content:center;white-space:nowrap}
@@ -334,7 +339,7 @@ export function introCss(): string {
   margin:0 .16em;vertical-align:middle;opacity:0;transition:opacity .45s ease}
 /* portrait: name half / frame / name half, stacked — one line left no room for a frame */
 @media (max-aspect-ratio:4/5){
-  .cit-intro-name{--cit-slot-h:min(56vw,40vh);flex-direction:column;gap:.22em;
+  .cit-intro-name{--cit-slot-h:min(82vw,54vh);flex-direction:column;gap:.22em;
     font-size:min(clamp(26px,9.5vw,116px),calc(88vw / var(--cit-intro-half,10) * 1.5))}
   .cit-slot{margin:0}
   .cit-il:empty{display:none}
@@ -356,7 +361,8 @@ export function introCss(): string {
  */
 export function introJs(o: IntroOptions): string {
   const k = 1 / (o.speed ?? 0.6);
-  const shots = jsonForScript(o.photos);
+  const shots = jsonForScript(o.photos.length ? o.photos : o.hero ? [o.hero] : []);
+  const hero = jsonForScript(o.hero ?? null);
   return `(function(){
   var intro=document.getElementById('cit-intro');
   if(!intro)return;
@@ -372,6 +378,7 @@ export function introJs(o: IntroOptions): string {
 
   var K=${k.toFixed(4)};
   var SHOTS=${shots};
+  var HERO=${hero};
   var word=document.getElementById('cit-intro-word');
   var slot=document.getElementById('cit-slot');
   var grow=document.getElementById('cit-grow');
@@ -391,32 +398,38 @@ export function introJs(o: IntroOptions): string {
     var idx=0,cur=document.createElement('img');
     cur.src=SHOTS[0];cur.alt='';grow.appendChild(cur);
 
-    function swap(){
-      idx=(idx+1)%SHOTS.length;
+    function add(src,blur,dur){
       var nx=document.createElement('img');
-      nx.src=SHOTS[idx];nx.alt='';nx.style.opacity='0';
+      nx.src=src;nx.alt='';nx.style.opacity='0';
       // the approved transition: DEFOCUS. Rule 7 bans a full-screen blur, but this
-      // frame is one letter wide — the filter costs nothing at this size.
-      nx.style.filter='blur(10px)';
-      nx.style.transition='opacity '+(.5*K)+'s ease, filter '+(.6*K)+'s ease';
+      // frame is small — the filter costs nothing at this size.
+      if(blur)nx.style.filter='blur(10px)';
+      nx.style.transition='opacity '+(dur*K)+'s ease, filter '+(dur*1.2*K)+'s ease';
       grow.appendChild(nx);
       void nx.offsetWidth;                       // rule 6
       requestAnimationFrame(function(){nx.style.opacity='1';nx.style.filter='none';});
-      at(760,function(){if(cur.parentNode)cur.parentNode.removeChild(cur);cur=nx;});
+      return nx;
     }
-    at(0,swap);at(760,swap);at(1520,swap);
+    function swap(){
+      idx++;if(idx>=SHOTS.length)return;
+      var nx=add(SHOTS[idx],true,.5);
+      at(760,function(){if(cur.parentNode&&cur!==nx)cur.parentNode.removeChild(cur);cur=nx;});
+    }
+    for(var i=1;i<SHOTS.length;i++)at(760*i,swap);
 
-    at(2200,function(){
+    var GROW_AT=760*(SHOTS.length-1)+900;
+    at(GROW_AT,function(){
       // only the LETTERING fades — the page ground stays until the frame fills
       // the screen, otherwise the finished hero shows through behind it
       var name=word.querySelector('.cit-intro-name'),sub=word.querySelector('.cit-intro-sub');
       name.style.transition=sub.style.transition='opacity '+(.45*K)+'s ease';
       name.style.opacity=sub.style.opacity='0';
-      // Owner, 2026-10-03: "a transition a fix képpé túl gyors". The grow was 1.15
-      // (1.9 s at 0.6×) and ended on the FULL WINDOW, so removing the overlay snapped
-      // the picture into the smaller hero box under the nav. Now: 1.8 (3.0 s), and
-      // the frame grows into the hero's OWN box, then the overlay fades instead of
-      // vanishing — the photo never jumps.
+      // Owner, 2026-11-23 (variant B, design-refs/tenant-site/generator-javitas): the frame
+      // turns INTO the hero as it starts to grow — what grows is never what stood in the
+      // frame, and the hero it ends on is the page's own (no picture swap at the end).
+      if(HERO)add(HERO,false,.6);
+      // Owner, 2026-10-03: "a transition a fix képpé túl gyors" — the grow is 1.8 (3.0 s),
+      // into the hero's OWN box, then the overlay fades instead of vanishing.
       var heroImg=document.querySelector('[data-cit-hero-img]');
       var box=heroImg&&heroImg.parentElement?heroImg.parentElement.getBoundingClientRect():null;
       if(!box||box.height<40)box={left:0,top:0,width:window.innerWidth,height:window.innerHeight};
@@ -426,18 +439,15 @@ export function introJs(o: IntroOptions): string {
       grow.style.width=box.width+'px';
       grow.style.height=box.height+'px';
       grow.style.borderRadius='0px';
-    });
 
-    at(4050,function(){
-      document.documentElement.style.overflow='';
-      // hand the grown photo over to the hero BEFORE the overlay fades
-      var heroImg=document.querySelector('[data-cit-hero-img]');
-      if(heroImg&&cur&&cur.src)heroImg.src=cur.src;
-      var h=document.querySelector('[data-cit-hero-copy]');
-      if(h)h.classList.add('cit-in');
-      intro.style.transition='opacity '+(.45*K)+'s ease';
-      intro.style.opacity='0';
-      at(450,function(){if(intro.parentNode)intro.parentNode.removeChild(intro);});
+      at(1850,function(){
+        document.documentElement.style.overflow='';
+        var h=document.querySelector('[data-cit-hero-copy]');
+        if(h)h.classList.add('cit-in');
+        intro.style.transition='opacity '+(.45*K)+'s ease';
+        intro.style.opacity='0';
+        at(450,function(){if(intro.parentNode)intro.parentNode.removeChild(intro);});
+      });
     });
   });
 })();`;
