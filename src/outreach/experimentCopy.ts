@@ -21,19 +21,21 @@
 // and the §C gate judge it exactly like today's letter. composePersonalBody is its plain-text body.
 
 import { T } from "../i18n/mail.js";
+import { collectFallbacks } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { pricingRegionForCountry } from "../country.js";
 import { carriesCurrencySign } from "../email/outreachEmail.js";
 import { getDomainFreeInPackage, offeredTlds } from "../pricing.js";
-import type { DraftInput, OutreachDraft, OutreachParts } from "./draft.js";
+import { composeBody, type DraftInput, type OutreachDraft, type OutreachParts } from "./draft.js";
+import type { OwnerLayout } from "../email/outreachEmail.js";
 
 /**
  * The source the billboard paragraph cites (owner's text, 2026-11-22) — ONE place, so a moved page is
- * a one-line fix. Cornell's 2017 news article on the study (coordinator 2026-11-22; measured 200). The
- * first address (…/research-publications/billboard-effect-still-alive-and-well) answered 404, and the
- * eCommons record answers 429 to bots. The sentence itself stays as the owner wrote it (his decision).
+ * a one-line fix. The study itself on Cornell eCommons („The Billboard Effect: Still Alive and Well”,
+ * owner 2026-11-23: the 11-22 news-article link „nem nyitja meg a kutatást”). eCommons answers 429 to
+ * bots, a browser opens it (checked 2026-11-23). The sentence itself stays as the owner wrote it.
  */
-export const CORNELL_BILLBOARD_URL = "https://business.cornell.edu/news/2017/04/14/online-travel-sites-still-important-hotel/";
+export const CORNELL_BILLBOARD_URL = "https://ecommons.cornell.edu/entities/publication/cc99c641-5795-4e66-b35b-9795385c6f52";
 
 /** The personal sender's name (config), or "" when unset → the personal variants do not apply. */
 export function personalSenderName(): string {
@@ -128,4 +130,54 @@ export function composePersonalBody(t: OutreachParts, l: { cta: string; unsub: s
     "",
     t.identity,
   ].join("\n");
+}
+
+/**
+ * THE OWNER'S LETTER (owner 2026-11-23: „a javított szöveg kell a régi kinézettel”; the sample sent to
+ * the owner that evening, with his three fixes: link under the picture, „Ha tetszik:” in the price box,
+ * the Cornell words linking to the study). The owner's 11-22 text in the boxed design: sender = the
+ * personal sender name, subject „Ez az Ön szállása? (név, település)”, no inbox line, no multi-plan
+ * caption. The body is composed from the parts (§I: the HTML shows nothing the gated text lacks).
+ * Null when it cannot be built in full (no sender name configured, or an untranslated sentence in a
+ * foreign letter) — the caller then holds the lead: the OLD letter never goes out again.
+ */
+export function ownerLetter(
+  d: DraftInput,
+  base: OutreachDraft,
+  lang: string,
+  country: string | null | undefined,
+  city: string | null | undefined,
+): { draft: OutreachDraft; layout: OwnerLayout; fromName: string; untranslated: readonly string[] } | null {
+  const sender = personalSenderName();
+  if (!sender) return null;
+  const { value, fallbacks } = collectFallbacks(() => {
+    const priceLine = priceSentence(lang, base.parts.priceOffer ?? "", country);
+    const pp = personalParts(d, base, priceLine, sender);
+    const cc = (country ?? "").toUpperCase();
+    const tld = cc === "HU" ? ".hu" : packageDomainTld(country);
+    const priceTail = tld ? T(lang, "saját {tld} címmel", { tld }) : T(lang, "saját címmel");
+    const layout: OwnerLayout = { priceTail, researchUrl: CORNELL_BILLBOARD_URL, researchWords: T(lang, "A Cornell Egyetem kutatása") };
+    const subject = subjectIsThisYours(lang, d.leadName, city);
+    return { pp, layout, subject, priceLine };
+  });
+  const { pp, layout, subject, priceLine } = value;
+  // greet · hook · [hero, link, button] · billboard paragraph (p2) · price sentence (trial: plain text
+  // only — the HTML shows it in the box) · „not mine” (p4) · today's discount sentence (p3) + its footnote.
+  const parts: OutreachParts = {
+    ...base.parts,
+    greet: pp.greet,
+    hook: pp.hook,
+    p1: "",
+    p2: pp.p1,
+    trial: priceLine,
+    p4: pp.p4,
+    planNote: undefined,
+    sigName: sender,
+    sigCo: "",
+    sigMail: "",
+  };
+  const links = { cta: base.link, unsub: base.unsubscribeLink, privacy: base.privacyLink, ...(base.whyLink ? { why: base.whyLink } : {}) };
+  // The emptied parts (p1, sigCo, sigMail) leave runs of blank lines in the plain text — one blank line is enough.
+  const body = composeBody(parts, links, lang).replace(/\n{3,}/g, "\n\n");
+  return { draft: { ...base, parts, body, subject }, layout, fromName: sender, untranslated: fallbacks };
 }

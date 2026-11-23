@@ -385,6 +385,15 @@ const CLAIM_SCAN = 500;
  * One tick: at most ONE lead. `force` skips only the master switch (for a supervised first
  * run); the window and the cap always hold.
  */
+/** Owner 2026-11-23 („csak azoknak akiknek min 5 saját képük van”, again „csak a sok minőségi
+ *  képpel ellátott leadek”): the automatic dispatch takes only leads with at least this many OWN
+ *  photos (Places + portal + own website — the same sum as the console's lead stock, leadStock.ts). */
+export const DISPATCH_MIN_OWN_PHOTOS = 5;
+const OWN_PHOTOS_SQL = sql<number>`(
+  case when jsonb_typeof(l.raw->'material'->'placesPhotos') = 'number' then (l.raw->'material'->>'placesPhotos')::int else 0 end
+  + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end
+  + case when jsonb_typeof(l.raw->'material'->'websiteImages') = 'number' then (l.raw->'material'->>'websiteImages')::int else 0 end)`;
+
 export async function runDispatchTick(now: Date, opts: { force?: boolean } = {}): Promise<TickOutcome> {
   // A tick that died mid-send leaves `sending`: it may or may not have sent, so a person
   // looks (held), never an automatic retry.
@@ -430,6 +439,9 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .selectFrom("outreach_dispatch")
       .select(["id", "lead_id", "artifact_id", "note"])
       .where("status", "=", "queued")
+      // Owner 2026-11-23: only leads with at least DISPATCH_MIN_OWN_PHOTOS own photos go out; the
+      // rest stay QUEUED, untouched, until the rule changes (no hold churn, no lost place).
+      .where(sql<boolean>`exists (select 1 from lead l where l.id = outreach_dispatch.lead_id and ${OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS})`)
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(CLAIM_SCAN)

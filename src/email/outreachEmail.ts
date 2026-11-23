@@ -105,6 +105,9 @@ function buildMail(
   sig: SignatureBlock,
   // Experiment `price_line`: false = no navy box; the p3 sentence (if any) stands as a paragraph.
   priceBoxOn = true,
+  // THE OWNER'S LETTER (owner 2026-11-23, approved sample „a javított szöveg kell a régi kinézettel”):
+  // the boxed design with the owner's text — see OwnerLayout.
+  owner?: OwnerLayout,
 ): string {
   // ── header: two cells, NOT float (Outlook drops float) ───────────────────
   // `brand` = the E4 logo from bandBrand() (owner, 2026-09-25).
@@ -127,15 +130,21 @@ function buildMail(
       `<img src="${heroSrc}" alt="${esc(T(lang, "A honlap nyitóképe"))}" width="${W - 2 * PAD}" ` +
       `style="display:block;width:100%;max-width:${W - 2 * PAD}px;height:auto;border:1px solid ${LINE}" border="0"></a>` +
       // Multi-plan link: the letter shows ONE of several plans — and says so (§I).
-      (t.planNote
+      (t.planNote && !owner
         ? `<div style="padding:8px 0 0;font-family:${FONT};font-size:13px;line-height:1.5;color:${MUTED}">${esc(t.planNote)}</div>`
         : "") +
       `</td></tr>`
     : "";
 
   // ── button: bgcolor ON THE TD (Outlook can drop the CSS background) ───────
+  // Owner's letter: the openable link right UNDER the picture (owner 2026-11-23), as a real link.
+  const linkUnderHero = owner && heroSrc
+    ? `<tr><td style="padding:8px ${PAD}px 4px;font-family:${FONT};font-size:13px;line-height:1.5;word-break:break-all">` +
+      `<a href="${esc(l.cta)}" style="color:${NAVY};text-decoration:underline">${esc(l.cta)}</a></td></tr>`
+    : "";
+
   const cta =
-    `<tr><td style="padding:14px ${PAD}px 6px">` +
+    `<tr><td style="padding:${owner ? `12px ${PAD}px 18px` : `14px ${PAD}px 6px`}">` +
     tbl(
       `cellpadding="0"`,
       `<tr><td bgcolor="${NAVY}" style="background:${NAVY};border-radius:8px">` +
@@ -154,10 +163,13 @@ function buildMail(
     tbl(
       `width="100%" bgcolor="${NAVY_DEEP}"`,
       `<tr><td style="background:${NAVY_DEEP};border-radius:10px;padding:16px 18px;font-family:${FONT}">` +
-        `<span style="font-size:12px;letter-spacing:1px;color:${CYAN};text-transform:uppercase">${esc(T(lang, "Bemutatkozó ajánlat"))}</span><br>` +
+        (owner
+          ? `<span style="font-size:15px;color:#ffffff">${esc(T(lang, "Ha tetszik:"))}</span><br>`
+          : `<span style="font-size:12px;letter-spacing:1px;color:${CYAN};text-transform:uppercase">${esc(T(lang, "Bemutatkozó ajánlat"))}</span><br>`) +
         `<span style="font-size:15px;color:#a9bdd0;text-decoration:line-through">${esc(perMonth(lang, t.priceList))}</span> ` +
         `<span style="font-size:24px;font-weight:700;color:#ffffff">${esc(perMonthFrom(lang, t.priceOffer))}</span> ` +
         `<span style="font-size:12px;font-weight:700;color:${CYAN}">&nbsp;−${esc(t.percent)}%</span>` +
+        (owner?.priceTail ? `<br><span style="font-size:15px;color:#ffffff">${esc(owner.priceTail)}</span>` : "") +
         `</td></tr>`,
     ) +
     `</td></tr>`;
@@ -186,6 +198,24 @@ function buildMail(
   // NOTE: `p3` (the price as a sentence) is intentionally absent from the HTML — the
   // navy box above states the same numbers visually. The plain-text part carries p3,
   // so neither format hides a price the other shows.
+  if (owner) {
+    // The owner's order: greet · hook · HERO · link · BUTTON · billboard paragraph · PRICE BOX
+    // (with „Ha tetszik:” and the domain line — the separate price sentence lives in the plain
+    // text only) · „not mine” · signature.
+    return frame(
+      header +
+        `<tr><td style="padding:20px ${PAD}px 0">${p(t.greet, ";font-size:17px;line-height:1.55")}${p(t.hook)}${t.p1 ? p(t.p1) : ""}</td></tr>` +
+        hero +
+        linkUnderHero +
+        cta +
+        `<tr><td style="padding:0 ${PAD}px">${researchLinked(p(t.p2), owner)}</td></tr>` +
+        priceBox +
+        `<tr><td style="padding:0 ${PAD}px">${p(t.p4)}</td></tr>` +
+        signature +
+        footer,
+    );
+  }
+
   const body =
     header +
     // Salutation FIRST (owner's ruling 2026-09-11, overriding ADR-0101 ①), still its
@@ -202,6 +232,30 @@ function buildMail(
     signature +
     footer;
 
+  return frame(body);
+}
+
+/** The owner's letter's extras (buildMail). */
+export interface OwnerLayout {
+  /** The line under the from-price in the box („saját .hu címmel”). */
+  readonly priceTail: string;
+  /** The research the billboard paragraph cites: its raw address leaves the visible text and the
+   *  words naming the study link to it. */
+  readonly researchUrl: string;
+  readonly researchWords: string;
+}
+
+/** The billboard paragraph with the research named by a link instead of a raw address. When the
+ *  words are not in the sentence (an untranslated phrase), the raw address stays — linked. */
+function researchLinked(html: string, o: OwnerLayout): string {
+  const a = (inner: string) => `<a href="${esc(o.researchUrl)}" style="color:${NAVY};text-decoration:underline">${inner}</a>`;
+  const raw = esc(o.researchUrl);
+  const words = esc(o.researchWords);
+  if (o.researchWords && html.includes(words)) return html.replace(` (${raw})`, "").replace(words, a(words));
+  return html.replace(raw, a(raw));
+}
+
+function frame(body: string): string {
   // ── GHOST TABLE ──────────────────────────────────────────────────────────
   // The fixed width="600" fixes Outlook but CUTS TEXT OFF on mobile (measured: at
   // 390px the right edge of the line disappeared). So the fixed table goes to Outlook
@@ -355,6 +409,8 @@ export function buildOutreachEmail(
     firstLine?: string;
     fromName?: string;
     bodyStyle?: "boxed" | "plain" | "personal";
+    /** THE OWNER'S LETTER (bodyStyle boxed): the boxed design with the owner's text, no inbox line. */
+    owner?: OwnerLayout;
     noImage?: boolean;
     /** Experiment `price_line`: the parts carry a plain price sentence (or none) — no navy box. */
     noPriceBox?: boolean;
@@ -397,7 +453,7 @@ export function buildOutreachEmail(
     ? buildPersonalMail(heroSrc, draft.parts, links, opts.lang)
     : plain
     ? buildPlainMail(heroSrc, draft.parts, links, opts.lang)
-    : buildMail(heroSrc, draft.parts, links, opts.lang, brand.html, sig, !opts.noPriceBox);
+    : buildMail(heroSrc, draft.parts, links, opts.lang, brand.html, sig, !opts.noPriceBox, opts.owner);
 
   const html =
     `<!DOCTYPE html><html lang="${opts.lang || "hu"}"><body style="margin:0;padding:0;background:${plain ? "#ffffff" : PAGE_BG}">` +
@@ -406,7 +462,8 @@ export function buildOutreachEmail(
     // spam placement): hidden text is a classic spam signal, so nothing in this letter may be hidden.
     // The personal letter has no such line: its first visible text is the greeting, so the Gmail
     // preview reads „Tisztelt {név}! Elkészítettem…” (coordinator 2026-11-22).
-    (opts.bodyStyle === "personal"
+    // The owner's letter has no such line either (owner 2026-11-23: the preview starts with the greeting).
+    (opts.bodyStyle === "personal" || opts.owner
       ? ""
       : `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:${plain ? "left" : "center"};padding:12px ${plain ? PAD : 16}px 0">` +
         `${esc(opts.firstLine ?? T(opts.lang, "Elkészült a honlapja, nézze meg!"))}</div>`) +
