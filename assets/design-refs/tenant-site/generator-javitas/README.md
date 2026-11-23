@@ -1,6 +1,6 @@
 # Generátor-javítás — kapunyitás · névből növő · parallax · levélkép (JÓVÁHAGYOTT TERV, 2026-11-23)
 
-**Státusz:** a tulaj jóváhagyta · **Kapu:** CLAUDE.md §2b · **Döntés:** ADR-XXXX (generátor-javítás) ·
+**Státusz:** a tulaj jóváhagyta · **Kapu:** CLAUDE.md §2b · **Döntés:** ADR-0474 (generátor-javítás) ·
 **Session:** `cite2d1c9b4` · **Hatókör:** `src/engine/templates/gateOpening.ts`,
 `src/engine/motion.ts`, `src/engine/templates/wordmarkGrow.ts`, `src/engine/templates/parallax.ts`,
 `src/engine/depthHero.ts`, `src/outreach/heroShot.ts`, `src/console/server.ts`
