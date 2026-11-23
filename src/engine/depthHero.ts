@@ -24,6 +24,8 @@
 //     uploaded, so a failure never leaves an empty frame.
 //   · An intro that grows INTO the hero (wordmark-grow `#cit-intro`) is waited out; a hero
 //     image that settles with its own CSS animation is waited out via `data-cit-depth-delay`.
+//   · The motion eases in over 1.5 s from zoom 1 / offset 0, so the canvas fades in exactly over
+//     the static photo — no visible jump when it takes over.
 //   · Off-screen → the loop stops drawing; the canvas backing store is capped in pixels.
 //
 // WHY `img` IS A SEPARATE URL from the photo `src`: WebGL can only read a same-origin or
@@ -87,7 +89,7 @@ gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,n
 var loc=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
 function U(n){return gl.getUniformLocation(pr,n);}
 gl.uniform1i(U('img'),0);gl.uniform1i(U('dep'),1);
-var iw=1,ih=1,ready=0,dead=false,visible=true,phase=0,last=0,mx=0,my=0,shown=false;
+var iw=1,ih=1,ready=0,dead=false,visible=true,phase=0,last=0,t0=0,mx=0,my=0,shown=false;
 function tex(unit,src,cb){var im=new Image();im.crossOrigin='anonymous';im.decoding='async';
 im.onload=function(){if(dead)return;try{gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,gl.createTexture());
 gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im);}catch(e){dead=true;return;}
@@ -98,10 +100,10 @@ function size(){var r=host.getBoundingClientRect();if(!r.width||!r.height)return
 var dpr=Math.min(2,window.devicePixelRatio||1),w=r.width*dpr,h=r.height*dpr,k=Math.min(1,Math.sqrt(MAXPX/(w*h)));
 w=Math.round(w*k);h=Math.round(h*k);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;gl.viewport(0,0,w,h);}
 var ca=r.width/r.height,ia=iw/ih;gl.uniform2f(U('cover'),ca>ia?1:ca/ia,ca>ia?ia/ca:1);}
-function draw(now){if(dead)return;if(last)phase+=(now-last)/1000*SPEED;last=now;
-if(visible){size();var t=phase,a=AMP;
-gl.uniform2f(U('off'),Math.sin(t*2*Math.PI/14)*0.022*a+mx*0.02*a,Math.cos(t*2*Math.PI/14)*0.010*a+my*0.012*a);
-gl.uniform1f(U('zoom'),1.04+0.03*a+0.04*a*(0.5+0.5*Math.sin(t*2*Math.PI/28)));
+function draw(now){if(dead)return;if(!t0)t0=now;if(last)phase+=(now-last)/1000*SPEED;last=now;
+if(visible){size();var t=phase,a=AMP,e=Math.min(1,(now-t0)/1500);e=e*e*(3-2*e);
+gl.uniform2f(U('off'),e*(Math.sin(t*2*Math.PI/14)*0.022*a+mx*0.02*a),e*(Math.cos(t*2*Math.PI/14)*0.010*a+my*0.012*a));
+gl.uniform1f(U('zoom'),1+e*(0.04+0.03*a+0.04*a*(0.5+0.5*Math.sin(t*2*Math.PI/28))));
 gl.drawArrays(gl.TRIANGLE_STRIP,0,4);if(!shown){shown=true;cv.style.opacity='1';}}
 requestAnimationFrame(draw);}
 function go(){var delay=+el.getAttribute('data-cit-depth-delay')||0;
