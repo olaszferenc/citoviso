@@ -23,6 +23,8 @@ import {
 } from "./mockVerdictGate.js";
 import { buildOutreachEmail } from "../email/outreachEmail.js";
 import { getEmailSender } from "../email/sender.js";
+import { tagLink } from "./openVia.js";
+import { markOwnViewLinks } from "../console/prospectPath.js";
 import { sql } from "kysely";
 import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
@@ -37,7 +39,8 @@ import { isTestLeadName } from "./ownerTestPhone.js";
 import { planCountStill } from "./planSet.js";
 import { assignVariants, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
 import { mailHeroUrl, remoteHeroActive, storeMailHero } from "./emailOpen.js";
-import { composePersonalBody, personalParts, personalSenderName } from "./experimentCopy.js";
+import { composePersonalBody, ownerLetter, personalParts, personalSenderName } from "./experimentCopy.js";
+import type { OwnerLayout } from "../email/outreachEmail.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -303,7 +306,10 @@ export async function describeMailSendability(prospectId: string): Promise<MailS
  */
 export async function sendOutreachMail(
   prospectId: string,
-  opts: { dryRun?: boolean; probe?: boolean } = {},
+  // `sampleTo`: build the letter EXACTLY as the send would, then mail it to this address only (the
+  // owner's check of the coded letter, 2026-11-23) — no claim, no stamp, no variant record, every
+  // mock link own-view marked, outside the send window. Never set by the dispatcher.
+  opts: { dryRun?: boolean; probe?: boolean; sampleTo?: string } = {},
 ): Promise<SendReport> {
   const p = await db
     .selectFrom("prospect")
@@ -448,11 +454,21 @@ export async function sendOutreachMail(
     offerPrice: d.draft.parts.priceOffer,
     country: d.market.country,
     // The owner's own wording for this lead (copyOverride) is never experimented on.
-    participate: !testLead && !opts.dryRun && !opts.probe && !override,
+    participate: !testLead && !opts.dryRun && !opts.probe && !override && !opts.sampleTo,
   });
+  // THE OWNER'S LETTER replaces the old boxed letter (owner 2026-11-23: „a javított szöveg kell a
+  // régi kinézettel”; the old letter must never go out again). Built for every boxed letter — the
+  // control included; the plain / personal experiment layouts keep their own builders.
+  let owner: { layout: OwnerLayout; fromName: string } | null = null;
   // The letter the variants make: subject, and for `price_line` the price part of the body (the
   // body is RE-COMPOSED from the parts, so the HTML and the gated text stay one, §I).
-  const letterOf = (v: LetterVariants): OutreachDraft => {
+  const letterOf = (v: LetterVariants): OutreachDraft | null => {
+    if (v.bodyStyle === "boxed") {
+      const o = ownerLetter(d.input, d.draft, d.lang, d.market.country, p.leadCity);
+      if (!o) return null;
+      owner = { layout: o.layout, fromName: o.fromName };
+      return v.subject ? { ...o.draft, subject: v.subject } : o.draft;
+    }
     let out: OutreachDraft = v.subject ? { ...d.draft, subject: v.subject } : d.draft;
     const links = { cta: out.link, unsub: out.unsubscribeLink, privacy: out.privacyLink, ...(out.whyLink ? { why: out.whyLink } : {}) };
     if (v.bodyStyle === "personal") {
@@ -469,19 +485,25 @@ export async function sendOutreachMail(
     }
     return out;
   };
+  // The owner's letter has no inbox line (its first visible text is the greeting).
+  if (variants.bodyStyle === "boxed" && variants.firstLine) variants = { ...variants, firstLine: undefined };
+  const gated = (l: OutreachDraft) =>
+    checkOutreachDraft({ ...l, body: variants.firstLine ? `${variants.firstLine}\n\n${l.body}` : l.body }, d.input.leadName, d.lang, d.market);
   let letter = letterOf(variants);
-  if (letter !== d.draft || variants.firstLine) {
-    const vcheck = checkOutreachDraft(
-      { ...letter, body: variants.firstLine ? `${variants.firstLine}\n\n${letter.body}` : letter.body },
-      d.input.leadName,
-      d.lang,
-      d.market,
-    );
-    if (vcheck.verdict === "FLAG") {
-      console.warn(`[experiment] a változat elbukott a §C-kapun (${JSON.stringify(variants.keys)}): ${vcheck.reasons.join(" · ")} → kontroll-levél`);
-      variants = controlOf(variants);
-      letter = d.draft;
-    }
+  let vcheck = letter ? gated(letter) : null;
+  if (!letter || vcheck?.verdict === "FLAG") {
+    if (vcheck) console.warn(`[experiment] a változat elbukott a §C-kapun (${JSON.stringify(variants.keys)}): ${vcheck.reasons.join(" · ")} → kontroll-levél`);
+    // The control is the OWNER'S letter — never the old one (owner 2026-11-23).
+    variants = controlOf(variants);
+    owner = null;
+    letter = letterOf(variants);
+    vcheck = letter ? gated(letter) : null;
+  }
+  if (!letter) {
+    return { ...base, outcome: { kind: "skipped", reason: "a tulaj levele nem állítható össze (nincs beállítva a személyes feladónév: OUTREACH_FOLLOWUP_SENDER_NAME, vagy nem magyar a levél) — a régi levél nem mehet ki" } };
+  }
+  if (vcheck?.verdict === "FLAG") {
+    return { ...base, outcome: { kind: "flagged", reasons: vcheck.reasons, gate: "legal", confirmable: false } };
   }
 
   // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).
@@ -622,13 +644,15 @@ export async function sendOutreachMail(
   // 9–16 Budapest. Below the dryRun line ON PURPOSE, unlike the content gates above:
   // it is a pure function of the clock, not of the prospect — „Mehet ki most?” and the
   // dry-run guards judge the MAIL, and the send itself says when the hour is wrong.
-  if (!testLead) {
+  if (!testLead && !opts.sampleTo) {
     const mockBlock = mockOutreachWindowBlocks(new Date());
     if (mockBlock) return { ...base, outcome: { kind: "skipped", reason: mockBlock } };
   }
 
   // Hero shot of the mock's opening screen (best-effort — its absence must never
   // block a §C-PASS send; the mail is valid text+link without it).
+  // Set inside letterOf (a closure): TS cannot see the assignment, so it is re-typed here.
+  const ownerNow = owner as { layout: OwnerLayout; fromName: string } | null;
   const heroShotPath = p.artifactId && variants.image ? await ensureHeroShot(p.artifactId) : null;
   // Mail open without a pixel (emailOpen.ts): on the cold lane the hero loads from the cold host
   // on the lead's own URL — frozen as a JPEG under the prospect token. A failed conversion keeps
@@ -646,8 +670,9 @@ export async function sendOutreachMail(
       openVia: "e",
       ...(heroUrl ? { heroUrl } : {}),
       ...(variants.firstLine ? { firstLine: variants.firstLine } : {}),
-      ...(variants.fromName ? { fromName: variants.fromName } : {}),
+      ...(variants.fromName ? { fromName: variants.fromName } : ownerNow ? { fromName: ownerNow.fromName } : {}),
       bodyStyle: variants.bodyStyle,
+      ...(ownerNow ? { owner: ownerNow.layout } : {}),
       noImage: !variants.image,
       ...(variants.priceLine !== undefined ? { noPriceBox: true } : {}),
     },
@@ -676,6 +701,23 @@ export async function sendOutreachMail(
         reason: "OUTREACH_LIST_UNSUBSCRIBE=on, de a fejléc nem került rá a levélre",
       },
     };
+  }
+
+  // The owner's check of the coded letter (`sampleTo`): this exact message, to that address only —
+  // own-view links (nothing measured, no funnel move), no List-Unsubscribe. Nothing is claimed,
+  // stamped or recorded: it returns before the claim.
+  if (opts.sampleTo) {
+    const headers = Object.fromEntries(Object.entries(msg.headers ?? {}).filter(([k]) => !/^list-unsubscribe/i.test(k)));
+    const strip = (x: string) => x.split(tagLink(d.draft.link, "e")).join(d.draft.link);
+    const sample = {
+      ...msg,
+      to: opts.sampleTo,
+      text: markOwnViewLinks(strip(msg.text)),
+      ...(msg.html ? { html: markOwnViewLinks(strip(msg.html)) } : {}),
+      headers,
+    };
+    await getEmailSender().send(sample);
+    return { ...base, to: opts.sampleTo, outcome: { kind: "dry-run", subject: msg.subject } };
   }
 
   // Atomic CLAIM before the send: stamp email_sent_at only if still NULL, so a concurrent
