@@ -2664,6 +2664,18 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     res.writeHead(302, { Location: `https://${PLATFORM_DOMAIN}/` });
     return void res.end();
   }
+  // ADR-0472: the moving cover's two textures are same-origin console routes on EVERY host
+  // (the depth map /configure/depth/<24 hex>.png and the mock photo /configure/<artifact>/
+  // photo/<24 hex>) — nginx sends /configure/ to the console on citoviso.com, *.citoviso.com
+  // and every custom-domain block. Without nginx (dev, Elek) the tenant page and the admin
+  // preview got a 404 here and the cover never moved. Same reasoning as above: unreachable
+  // in production, so behaviour there is identical. Narrow on purpose: read-only image GETs.
+  if (
+    (req.method === "GET" || req.method === "HEAD") &&
+    /^\/configure\/(depth\/[0-9a-f]{24}\.png|[0-9a-f-]{36}\/photo\/[0-9a-f]{24})$/i.test(pathname)
+  ) {
+    return proxyEdgeToConsole(req, res, pathname);
+  }
   // ⛔ EXCEPT the routes our mails link to (+ the assets their pages load): the mail
   // was built from THIS host (publicBaseUrl), and the tenant handler answered them
   // with "Nincs ilyen oldal." — every owner/guest mail link was dead in production
