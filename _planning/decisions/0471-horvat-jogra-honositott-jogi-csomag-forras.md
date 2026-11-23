@@ -1,4 +1,4 @@
-## ADR-XXXX — Horvát jogra honosított jogi csomag: forrás-variáns TERVEZETKÉNT, kikapcsolva
+## ADR-0471 — Horvát jogra honosított jogi csomag: forrás-variáns TERVEZETKÉNT, kikapcsolva
 
 **Státusz:** JAVASLAT (tulaj 2026-11-23 „Mehet a jogi csomag” = a tervezet elkészítése; élesítés CSAK tulaj- és ügyvédi
 jóváhagyás után; brief `hr-jogi-csomag-tervezet-20261123.md`, koordinátor `cit9b4690e3`) ·

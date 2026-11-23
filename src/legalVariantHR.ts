@@ -1,4 +1,4 @@
-// HR LEGAL VARIANT — DRAFT, SWITCHED OFF (ADR-XXXX, status JAVASLAT; brief
+// HR LEGAL VARIANT — DRAFT, SWITCHED OFF (ADR-0471, status JAVASLAT; brief
 // hr-jogi-csomag-tervezet-20261123.md, owner 2026-11-23 „Mehet a jogi csomag”).
 //
 // Today's HR pack (ADR-0458) is the HUNGARIAN legal wording translated by Bábel into Croatian; the

@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-hr-jogi-variant-tervezet.md) — Horvát jogra honosított jogi csomag: forrás-variáns TERVEZETKÉNT, kikapcsolva
+- [ADR-0471](decisions/0471-horvat-jogra-honositott-jogi-csomag-forras.md) — Horvát jogra honosított jogi csomag: forrás-variáns TERVEZETKÉNT, kikapcsolva
 - [ADR-0470](decisions/0470-nemzetkozi-hr-vegproba-felderitestol-a.md) — Nemzetközi: HR végpróba (felderítéstől a fizetésig) + vevő-oldali zsákutcák a látogató nyelvén
 - [ADR-0469](decisions/0469-nemzetkozi-c-a-ket-nem-magyar-felulet.md) — Nemzetközi C: a két nem-magyar felület (szobatípus a mockon, ország-portálok a szállás-adminban) felület-kapu kivétellel
 - [ADR-0468](decisions/0468-nemzetkozi-c-konverzio-fizetes-szamla-domain.md) — Nemzetközi C: konverzió, fizetés, számla, domain, szállás-admin és üzem országfüggően + öt új ország

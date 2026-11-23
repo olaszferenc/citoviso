@@ -1,7 +1,7 @@
 # 2026-11-23 — HR jogi csomag: horvát jogra honosított tervezet (kikapcsolva)
 
 **Session:** `cit2efb4736` (SUB), koordinátor `cit9b4690e3`, brief `~/rc-briefs/hr-jogi-csomag-tervezet-20261123.md`.
-**ADR:** ADR-XXXX „HR jogi variáns tervezet” (JAVASLAT). **Élesen:** semmi.
+**ADR:** ADR-0471 „HR jogi variáns tervezet” (JAVASLAT). **Élesen:** semmi.
 
 ## Elvégzett munka
 - Leltár: a mai HR csomag 227 forrás-egységéből 53 tartalmaz magyar-specifikus jogi elemet; ebből 18 cserére javasolt,

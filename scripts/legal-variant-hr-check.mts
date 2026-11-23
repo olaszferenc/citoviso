@@ -1,4 +1,4 @@
-// HR LEGAL VARIANT — DRAFT GUARD (ADR-XXXX, JAVASLAT). The Croatian-law draft of the legal pack
+// HR LEGAL VARIANT — DRAFT GUARD (ADR-0471, JAVASLAT). The Croatian-law draft of the legal pack
 // (src/legalVariantHR.ts) is a set of SOURCE-unit replacements that stays SWITCHED OFF until the
 // owner (and the lawyer) approve it. This check proves the draft is harmless and still current:
 //
