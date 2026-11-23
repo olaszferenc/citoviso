@@ -2648,7 +2648,7 @@ if [ -f scripts/hero-contrast-check.mts ] && \
   echo "[pre-commit] hero-contrast-check (hero-cím olvasható világos fotón)…"
   npx tsx scripts/hero-contrast-check.mts
 fi
-# TENANT MOVING COVER gate (ADR-XXXX): default follows the mock (§23), switch on → map made in the
+# TENANT MOVING COVER gate (térhatású borítókép ADR, *-terhatasu-borito-kiserlet.md): default follows the mock (§23), switch on → map made in the
 # background → the served snapshot moves; switch off → static again; the park tenant is restored
 # byte-for-byte. Narrow trigger (it re-renders a park tenant): only the feature's own files.
 if [ -f scripts/hero-motion-tenant-check.mts ] && \
@@ -2656,7 +2656,7 @@ if [ -f scripts/hero-motion-tenant-check.mts ] && \
   echo "[pre-commit] hero-motion-tenant-check (mozgó nyitókép a tenant-oldalon)…"
   npx tsx scripts/hero-motion-tenant-check.mts
 fi
-# DEPTH MAP gate (ADR-XXXX): the experiment coin splits ~50/50 and is stable per lead; switch off
+# DEPTH MAP gate (térhatású borítókép ADR, *-terhatasu-borito-kiserlet.md): the experiment coin splits ~50/50 and is stable per lead; switch off
 # → siteData untouched; Places covers are never fetched; the worker makes a real map (when the
 # model is installed) and the cache answers the second call. ~10s with the model, ~1s without.
 if [ -f scripts/depth-map-check.mts ] && \
@@ -2664,7 +2664,7 @@ if [ -f scripts/depth-map-check.mts ] && \
   echo "[pre-commit] depth-map-check (mélységkép + kísérleti ág)…"
   npx tsx scripts/depth-map-check.mts
 fi
-# DEPTH HERO gate (ADR-XXXX, "térhatású borítókép"): the cover moves in depth only with a
+# DEPTH HERO gate (térhatású borítókép — _planning/decisions/*-terhatasu-borito-kiserlet.md): the cover moves in depth only with a
 # valid map for the photo shown; no map / a stale map → byte-identical page; reduced-motion,
 # data-cit-no-motion and a cross-origin (portal) texture → static photo, no canvas, no JS error.
 # Headless WebGL (~15s), so only when the depth layer, the engine templates or the renderer is staged.
