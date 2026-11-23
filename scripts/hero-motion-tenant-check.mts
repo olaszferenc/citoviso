@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 // gate-runner: shared-park — switches ONE wordmark-grow / parallax / gate-opening tenant on the shared park and restores it exactly
 /**
- * TENANT MOVING COVER guard (ADR-XXXX; contract design-refs/tenant-admin/terhatas-kapcsolo).
+ * TENANT MOVING COVER guard (ADR-0472; contract design-refs/tenant-admin/terhatas-kapcsolo).
  *
  *   npx tsx scripts/hero-motion-tenant-check.mts
  *

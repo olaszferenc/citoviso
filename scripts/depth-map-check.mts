@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 // gate-runner: self-overlap-safe — own url keys (depth-map-check:…), deleted at the end; own PNG names
 /**
- * DEPTH MAP guard (ADR-XXXX depth hero) — the maps behind the moving cover, and the experiment
+ * DEPTH MAP guard (ADR-0472 depth hero) — the maps behind the moving cover, and the experiment
  * arm that decides who gets one.
  *
  *   npx tsx scripts/depth-map-check.mts [--self-test]

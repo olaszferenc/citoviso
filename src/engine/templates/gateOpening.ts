@@ -456,7 +456,7 @@ p{margin:0 0 1em}
 /** Set before first paint so the gate is closed when the page first shows. No class (JS off,
  *  reduced motion, tooling's data-cit-no-motion) → no gate, no choreography, all visible. */
 // The hero photo settles (koSettle 2.2s after .1s) while the leaves open — the depth hero
-// (ADR-XXXX) takes over only after that, so the two motions never fight.
+// (ADR-0472) takes over only after that, so the two motions never fight.
 const GATE_SETTLE_MS = 2400;
 const GATE_BOOT = `(function(){var r=document.documentElement;try{if(r.hasAttribute('data-cit-no-motion')||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches))return;}catch(e){}r.classList.add('ko-anim');})();`;
 

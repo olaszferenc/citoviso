@@ -1,4 +1,4 @@
-// Depth-map worker (ADR-XXXX depth hero) — runs in its OWN process, one photo per run.
+// Depth-map worker (ADR-0472 depth hero) — runs in its OWN process, one photo per run.
 //
 // Why a separate process: the ONNX session holds ~300 MB while it runs (measured 336 MB RSS on the
 // dev box). The console and the public server live on a 4 GB box; keeping that resident in either

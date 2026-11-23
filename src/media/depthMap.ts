@@ -1,4 +1,4 @@
-// DEPTH MAPS for the depth hero (ADR-XXXX) — make once per photo, cache, serve.
+// DEPTH MAPS for the depth hero (ADR-0472) — make once per photo, cache, serve.
 //
 // One entry point, `ensureDepthMap(source, bytes)`: the photo URL is the key (photoKey(), the same
 // normalisation as photo_hero_score), the PNG lands in sites/_depth/<sha24>.png and a
