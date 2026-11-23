@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-generator-javitas-kapu-novo-parallax-levelkep.md) — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro
+- [ADR-0474](decisions/0474-generator-javitas-kapunyitas-mas-temaju.md) — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro
 - [ADR-0473](decisions/0473-a-fooldal-a-latogato-bongeszojenek-nyelven.md) — A főoldal a látogató böngészőjének nyelvén (magyar = a mai oldal, más nyelv = euró + .com)
 - [ADR-0472](decisions/0472-terhatasu-boritokep-melysegkep-webgl-a-mockon.md) — Térhatású borítókép (mélységkép + WebGL) a mockon és a tenant-oldalon, kísérletként
 - [ADR-0471](decisions/0471-horvat-jogra-honositott-jogi-csomag-forras.md) — Horvát jogra honosított jogi csomag: forrás-variáns TERVEZETKÉNT, kikapcsolva

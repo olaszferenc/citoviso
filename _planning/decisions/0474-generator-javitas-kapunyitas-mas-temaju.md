@@ -1,4 +1,4 @@
-## ADR-XXXX — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro
+## ADR-0474 — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro
 
 **Dátum:** 2026-11-23 · **Státusz:** elfogadva (tulaj) · **Session:** `cite2d1c9b4`
 **Terv (kontraktus):** `assets/design-refs/tenant-site/generator-javitas/`
