@@ -46,6 +46,7 @@ import {
 } from "../email/platformLayout.js";
 import { displayPhone, effectiveContact } from "../tenant/contact.js";
 import { T, langForSite, prepareMailLang } from "../i18n/mail.js";
+import { DEFAULT_UNIT_NAME } from "../tenant/units.js";
 import { effectiveModuleConfig } from "../moduleConfig.js";
 import { logTenantMessage } from "../tenant/messages.js";
 import { footerReasonForTenant } from "../trial/footer.js";
@@ -72,6 +73,21 @@ import { siteTimeZone, todayForSite } from "../tenant/timeZone.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { formatDay } from "../text/day.js";
 import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
+
+/**
+ * A stored unit name as the reader sees it: our default „A szállás egésze” (units.ts DEFAULT_UNIT_NAME, the
+ * whole-place unit) in the letter's / page's language; a name the owner typed stays as typed. Several units
+ * come joined with „, ” (UNIT_NAMES). HR dev-próba 2026-11-23 (Elek): a Croatian guest read „Smještaj: A szállás
+ * egésze” on the confirmation page and in the letter — the admin had this rule (bookingViews.unitLabel), the
+ * guest side did not.
+ */
+export function shownUnitName(names: string | null | undefined, lang: string): string | null {
+  if (!names) return names ?? null;
+  return names
+    .split(", ")
+    .map((n) => (n === DEFAULT_UNIT_NAME ? T(lang, "A szállás egésze") : n))
+    .join(", ");
+}
 
 export interface BookingRequestInput {
   readonly siteId: string;
@@ -446,7 +462,7 @@ function stayRows(req: RequestRow, lang: string, rule: boolean): MailDetailRow[]
   const to = dayStr(req.date_to);
   return [
     { label: T(lang, "Hivatkozás"), value: bookingRef(req.id), mono: true, rule },
-    ...(req.unit_name ? [{ label: T(lang, "Szállás"), value: req.unit_name }] : []),
+    ...(req.unit_name ? [{ label: T(lang, "Szállás"), value: shownUnitName(req.unit_name, lang)! }] : []),
     { label: T(lang, "Érkezés"), value: formatDay(from, lang) },
     { label: T(lang, "Távozás"), value: formatDay(to, lang), note: T(lang, "({n} éj)", { n: nights(from, to) }) },
     {
@@ -991,7 +1007,7 @@ export async function createBookingRequest(
     id: row.id,
     summary: {
       ref: bookingRef(row.id),
-      unitName: unitIds.map(nameOf).join(", ") || null,
+      unitName: shownUnitName(unitIds.map(nameOf).join(", "), lang) || null,
       dateFrom,
       dateTo,
       nights: n,
@@ -1023,7 +1039,7 @@ async function sendGuestAck(id: string): Promise<void> {
   const lang = ctx.lang;
   const from = formatDay(dayStr(req.date_from), lang);
   const to = formatDay(dayStr(req.date_to), lang);
-  const unit = req.unit_name ? ` (${req.unit_name})` : "";
+  const unit = req.unit_name ? ` (${shownUnitName(req.unit_name, lang)})` : "";
 
   // Booking-offer ⑭: no frozen price = the guest asked for a QUOTE (the page said so,
   // ADR-0208). The letter must say the same thing the page did, not "foglalási kérés".
@@ -1229,10 +1245,9 @@ export async function notifyOwner(
   const until = dayStr(req.date_to);
   const yes = `${base}/foglalas/${token}/elfogadom`;
   const no = `${base}/foglalas/${token}/elutasitom`;
-  const unit = req.unit_name ? ` — ${req.unit_name}` : "";
-
   // ADR-0067: the owner is written to in their own site's language.
   const lang = await prepareMailLang(await langForSite(req.site_id));
+  const unit = req.unit_name ? ` — ${shownUnitName(req.unit_name, lang)}` : "";
 
   // Booking-offer ①–②: NO frozen price = the guest saw no amount and asked for a
   // quote. The letter says so, names the unpriced nights, and offers the offer page
@@ -1550,7 +1565,7 @@ export async function peekDecision(token: string, verdict: "accepted" | "decline
     dateFrom: dayStr(req.date_from),
     dateTo: dayStr(req.date_to),
     lang: await prepareMailLang(await langForSite(req.site_id)),
-    unitName: req.unit_name,
+    unitName: shownUnitName(req.unit_name, await langForSite(req.site_id)) ?? undefined,
     guests: req.guests,
     ref: bookingRef(req.id),
     ...(req.quoted_total ? { quotedTotal: req.quoted_total, currency: req.quoted_currency ?? LEGACY_CURRENCY } : {}),
@@ -1703,7 +1718,7 @@ async function sendGuestVerdict(
   const from = formatDay(dayStr(req.date_from), lang);
   const to = formatDay(dayStr(req.date_to), lang);
   const host = ctx.hostName;
-  const unit = req.unit_name ? ` (${req.unit_name})` : "";
+  const unit = req.unit_name ? ` (${shownUnitName(req.unit_name, lang)})` : "";
   const cancelUrl = publicBaseUrl
     ? `${publicBaseUrl}/foglalas/${req.action_token}/lemondom`
     : null;
@@ -3061,7 +3076,7 @@ async function sendGuestOffer(req: RequestRow, publicBaseUrl: string | null): Pr
   const lang = ctx.lang;
   const from = formatDay(dayStr(req.date_from), lang);
   const to = formatDay(dayStr(req.date_to), lang);
-  const unit = req.unit_name ? ` (${req.unit_name})` : "";
+  const unit = req.unit_name ? ` (${shownUnitName(req.unit_name, lang)})` : "";
   const url = `${publicBaseUrl ?? ""}/ajanlat/${req.offer_token}`;
   const expires = offerExpiresAt(req.offered_at, ctx.expireHours);
   const body =

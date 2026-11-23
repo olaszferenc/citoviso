@@ -39,6 +39,9 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // Legal wording is a per-country LEGAL pack (§B.18, ADR-0067 ②): a mistranslated
   // ÁSZF is a liability, not a UI bug. Never machine translation.
   "src/legal.ts": "jogi szöveg — országonkénti JOGI csomag, nem gépi fordítás",
+  // HR dev-próba 2026-11-23: booking/requests.ts imports DEFAULT_UNIT_NAME to translate it for the guest
+  // (shownUnitName). The literal is a STORED identifier (the whole-place unit's DB name), never printed as is.
+  "src/tenant/units.ts": "tárolt egység-azonosító („A szállás egésze” a site_unit.name-ben) — kiírásnál shownUnitName / unitLabel fordítja",
   // ADR-0450 (ország-réteg 3/2): the guest letter's tax row asks the lodging's country
   // (tenant/siteCountry.ts → country.ts), and the inbound request reads its pin's country
   // (intake/mockRequest.ts → scraper/enrichGeo.ts). Their Hungarian literals are operator

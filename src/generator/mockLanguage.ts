@@ -22,7 +22,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { renderSite } from "../engine/render.js";
 import type { Recipe, RenderPhase, SiteData } from "../engine/recipe.js";
-import { collectFallbacks } from "../i18n/packs.js";
+import { collectFallbacks, loadPack } from "../i18n/packs.js";
 import { injectRuntime, runtimeUntranslated } from "./runtime.js";
 
 /** What the gate stores on mock_artifact.inputs for a non-Hungarian mock. */
@@ -60,6 +60,10 @@ export async function renderMockMeasured(
   extra: Iterable<string> = [],
 ): Promise<{ html: string; language: MockLanguageInputs | null }> {
   const lang = siteData.lang;
+  // T() is synchronous: a foreign page needs its pack in memory BEFORE the render, or every label falls
+  // back to Hungarian and the language gate holds the mock (HR dev-próba 2026-11-23: rerender-mock.mts on a
+  // Croatian mock wrote „Galéria” ×4 — the generator warms the pack itself, the re-render paths did not).
+  if (lang && lang !== "hu") await loadPack(lang).catch(() => null);
   const { value: base, fallbacks } = collectFallbacks(() => renderSite(recipe, siteData, opts));
   const html = await injectRuntime(base, lang, opts?.phase ?? "mock");
   const runtime = await runtimeUntranslated(lang, opts?.phase ?? "mock");

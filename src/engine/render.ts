@@ -779,6 +779,27 @@ function withMockNotes(html: string, data: SiteData): string {
   return out;
 }
 
+/**
+ * The generated alt „<név> — N. kép” (siteData.toSitePhotos / neutralAlt) in the PAGE's language, on the
+ * finished HTML (HR dev-próba 2026-11-23, Elek: a Croatian mock's lightbox read „Hotel Palma Makarska — 2. kép”
+ * under every photo). The stored alt and every rule that recognises it (photoCaption's GENERATED_ALT) stay as
+ * they are; only the attribute values the visitor or a screen reader meets are translated, with the existing
+ * „{n}. kép” key — and the map frame's „— térkép” title with „Térkép”. A Hungarian page is returned untouched.
+ */
+function localizedGeneratedAlts(page: string, data: SiteData): string {
+  if (!data.lang || data.lang === "hu") return page;
+  return page
+    .replace(/((?:alt|aria-label|title|data-[a-z-]+)=")([^"<>]*?) — (\d+)\. kép"/g, (_m, attr: string, name: string, n: string) =>
+      `${attr}${name} — ${esc(T(data, "{n}. kép", { n }))}"`,
+    )
+    // The gallery list the lightbox reads (withGalleryPhotoList: JSON `"alt":"<név> — N. kép"`).
+    .replace(/("alt":")((?:[^"\\]|\\.)*?) — (\d+)\. kép"/g, (_m, head: string, name: string, n: string) =>
+      `${head}${name} — ${JSON.stringify(T(data, "{n}. kép", { n })).slice(1, -1)}"`,
+    )
+    // The map frame's title (primitives.mapEmbed: „<név> — térkép”), read out by a screen reader.
+    .replace(/(<iframe\b[^>]*\btitle=")([^"<>]*?) — térkép"/g, (_m, head: string, name: string) => `${head}${name} — ${esc(T(data, "Térkép"))}"`);
+}
+
 export function renderSite(
   recipe: Recipe,
   data: SiteData,
@@ -811,7 +832,7 @@ export function renderSite(
     // Owner 2026-11-16 („Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): the
     // sample pictures and the town photo the mock showed stay on the trial / live page too, with
     // the same sample note and licence credit, until the owner's own photos replace them.
-    const noted = phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data);
+    const noted = localizedGeneratedAlts(phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data), data);
     // ORSZÁG-RÉTEG 3/6: a Cyrillic/Greek page gets fonts that carry its script (fontScripts.ts);
     // a Latin-script page — the Hungarian mock — is returned untouched.
     return localizeFonts(noted, data.lang);

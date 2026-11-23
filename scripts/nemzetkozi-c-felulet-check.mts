@@ -128,6 +128,23 @@ try {
   const enHtml = renderSite({ template: "parallax", skin: TEMPLATES.parallax!.skins[0]!, archetype: "stacked", sections: [] } as never, { ...base, lang: "en" } as never, { phase: "mock" });
   check("⛔ angol mockon az angol név marad", /Private Bathroom Twin Room/.test(enHtml));
 
+  // HR dev-próba 2026-11-23 (Elek): the generated alt „<név> — N. kép” (and the lightbox list) in the page language.
+  const altBase = { ...base, photos: base.photos.map((p, i) => ({ ...p, alt: `Apartmani Lavanda — ${i + 1}. kép` })) };
+  const pRecipe = { template: "parallax", skin: TEMPLATES.parallax!.skins[0]!, archetype: "stacked", sections: [{ kind: "hero" }, { kind: "gallery" }] } as never;
+  const hrAlt = renderSite(pRecipe, { ...altBase, lang: "hr" } as never, { phase: "mock" });
+  const huAlt = renderSite(pRecipe, { ...altBase, lang: "hu" } as never, { phase: "mock" });
+  const slika = Tk({ lang: "hr" }, "{n}. kép", { n: 2 });
+  check("HR mock: a generált alt a lap nyelvén (nincs „— N. kép”)", !/— \d+\. kép/.test(hrAlt) && (slika === "2. kép" || hrAlt.includes(`Apartmani Lavanda — ${slika}`)), slika);
+  check("⛔ HU mock: a generált alt bájtra változatlan („— 2. kép”)", huAlt.includes("Apartmani Lavanda — 2. kép"));
+
+  // HR dev-próba 2026-11-23 (Elek, IT): the guest's booking page / letter showed „Smještaj: A szállás egésze”.
+  const { shownUnitName } = await import("../src/booking/requests.js");
+  const { prepareMailLang } = await import("../src/i18n/mail.js");
+  const hrMail = await prepareMailLang("hr");
+  const whole = shownUnitName("A szállás egésze", hrMail);
+  check("HR vendég: az alap-egység neve a levél nyelvén", whole !== "A szállás egésze" || hrMail === "hu", whole);
+  check("⛔ a tulaj adta egységnév érintetlen, a lista tagonként", shownUnitName("Studio Lavanda, A szállás egésze", hrMail) === `Studio Lavanda, ${whole}` && shownUnitName("A szállás egésze", "hu") === "A szállás egésze");
+
   const mockFile = path.join(OUT, "hr-mock-parallax.html");
   writeFileSync(mockFile, renderSite({ template: "parallax", skin: TEMPLATES.parallax!.skins[0]!, archetype: "stacked", sections: [{ kind: "hero" }, { kind: "rooms" }] } as never, { ...base, lang: "hr" } as never, { phase: "mock" }));
 
