@@ -81,6 +81,11 @@ tudtam róla. ② **Kinézet és funkcionalitás alaptétele ELDŐLJÖN, mielőt
    ül gép előtt, és egy csak-mobilra tervezett felület asztali gépen szétesik vagy üresen kong.
    A két méret KÉT KÜLÖN TERVEZŐI DÖNTÉS (elrendezés, oszlopok, mit visz a szélesebb hely) —
    nem ugyanaz a terv kétszer lelőve.
+   ⛔ **TÖBB VÁLTOZAT = EGY KÖRBEN EGY FÁJL, A VÁLTOZATOK A FÁJLON BELÜL VÁLTHATÓK** (tulajdonosi
+   rendelet, 2026-11-23). Egy terv-kör változatai (A/B/C, erősség, sebesség, méret…) EGYETLEN
+   megnyitható fájlban élnek, a fájlon belüli váltógombokkal — nem változatonként külön fájl,
+   külön link vagy külön levél. 2026-11-23: a térhatás két erőssége 6 külön levélben és 6 külön
+   fájlban ment ki, a tulajnak egyenként kellett nyitogatnia és fejben összevetnie őket.
 2. **Ellenőrzés a saját szemeddel:** `npx tsx scripts/ui-shot.mts <fájl|/route>` → 390px + desktop,
    és a képeket **Read-del meg is nézed** (nem elég legyártani). ⭐ EZ az ① cél eszköze — nem eszköz
    hiányzott hozzá soha, hanem hogy kötelező legyen.
