@@ -77,6 +77,8 @@ import {
 import { kbCategoriesFor } from "../kb/kbCategories.js";
 import { lockup, markThemed } from "../ui/brand.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { depthHeroRuntime } from "../engine/depthHero.js";
+import type { HeroMotionState } from "../tenant/heroMotion.js";
 import { LEGACY_CURRENCY } from "../text/legacyCurrency.js";
 
 /** Cache-busting asset version: stamped at module load so each deploy serves
@@ -658,11 +660,73 @@ function photoRow(
 }
 
 /** Photos tab (README ⑥⑦). `view` = grid | list (GET `v=`, remembered by the script). */
+/**
+ * ADR-XXXX — the "Mozgó nyitókép" card (contract: design-refs/tenant-admin/terhatas-kapcsolo,
+ * variant A). Live preview with the page's own runtime, the shared admin switch (adm-vis), saved
+ * in place; while a new cover's map is made the card polls and the preview stays still.
+ */
+function heroMotionCard(st: HeroMotionState | null, lang: string): string {
+  if (!st || st.kind === "unsupported") return "";
+  const on = st.wanted;
+  const pending = st.kind === "pending";
+  const moving = on && !pending && Boolean(st.preview);
+  const label = !on ? T(lang, "Álló kép") : pending ? T(lang, "Álló kép, amíg készül") : T(lang, "Így látják a vendégek");
+  const stateLine = pending
+    ? T(lang, "Új nyitókép: a térhatása készül, általában 1 percen belül kész. Addig álló kép látszik.")
+    : on && st.skip === "small"
+      ? T(lang, "Ez a nyitókép túl kicsi a mozgáshoz, ezért álló kép marad. Egy nagyobb fotóval mozogni fog.")
+      : on && st.skip
+        ? T(lang, "Ennél a nyitóképnél a mozgás nem érhető el, ezért álló kép marad.")
+        : "";
+  const depthAttrs = st.preview
+    ? ` data-cit-depth="${esc(st.preview.depth)}" data-cit-depth-img="${esc(st.preview.img)}"`
+    : "";
+  const L = {
+    on: T(lang, "Bekapcsolva"),
+    off: T(lang, "Kikapcsolva"),
+    saving: T(lang, "Mentés…"),
+    savedOn: T(lang, "Mentve. Az oldalán a nyitókép most már mozog."),
+    savedOnPending: T(lang, "Mentve. Amint elkészül, a nyitókép mozogni kezd."),
+    savedOff: T(lang, "Mentve. Az oldalán a nyitókép most álló kép."),
+    fail: T(lang, "Nem sikerült menteni. Próbálja újra."),
+    ready: T(lang, "Elkészült, a nyitókép mozog."),
+    readyOff: T(lang, "Elkészült. Bekapcsolhatja, ha szeretné."),
+    pending: T(lang, "Új nyitókép: a térhatása készül, általában 1 percen belül kész. Addig álló kép látszik."),
+    lblStill: T(lang, "Álló kép"),
+    lblPending: T(lang, "Álló kép, amíg készül"),
+    lblLive: T(lang, "Így látják a vendégek"),
+  };
+  return (
+    `<div class="adm-card adm-hm" id="adm-hm" data-on="${on ? 1 : 0}" data-pending="${pending ? 1 : 0}">` +
+    `<div class="adm-hm__prev" id="adm-hm-prev"><img src="${esc(st.cover)}" alt="${T(lang, "A nyitókép előnézete")}"${depthAttrs}${moving ? "" : ` data-still="1"`}>` +
+    `<span class="adm-hm__lbl" id="adm-hm-lbl">${label}</span></div>` +
+    `<div class="adm-hm__body"><h2>${T(lang, "Mozgó nyitókép")}</h2>` +
+    `<p>${T(lang, "A nyitókép finoman, térhatással mozog, mintha a kamera lassan közelítene. A fotóhoz nem teszünk hozzá semmit, csak a saját képe mozog.")}</p>` +
+    `<form method="POST" action="/admin/hero-motion" id="adm-hm-form"><input type="hidden" name="on" value="${on ? "0" : "1"}">` +
+    `<button type="submit" class="adm-vis${on ? " is-on" : ""}" role="switch" aria-checked="${on ? "true" : "false"}" id="adm-hm-sw" aria-label="${T(lang, "Mozgó nyitókép")}">` +
+    `<span class="adm-vis__t" aria-hidden="true"></span><span id="adm-hm-txt">${on ? L.on : L.off}</span></button></form>` +
+    `<p class="adm-hm__state${pending ? " is-wait" : ""}" id="adm-hm-state" aria-live="polite">${stateLine}</p>` +
+    `<p class="adm-hm__hint">${T(lang, "Akinek a telefonján a mozgás ki van kapcsolva, annak álló kép jelenik meg.")}</p></div></div>` +
+    `<script>(function(){var L=${jsonForScript(L)},RT=${jsonForScript(depthHeroRuntime())};` +
+    `var card=document.getElementById('adm-hm');if(!card)return;var form=document.getElementById('adm-hm-form'),sw=document.getElementById('adm-hm-sw'),txt=document.getElementById('adm-hm-txt'),st=document.getElementById('adm-hm-state'),lbl=document.getElementById('adm-hm-lbl'),prev=document.getElementById('adm-hm-prev'),img=prev.querySelector('img');` +
+    `var started=false;function start(){if(started||!img.hasAttribute('data-cit-depth'))return;started=true;var s=document.createElement('script');s.textContent=RT;document.body.appendChild(s);}` +
+    `function paint(){var on=card.dataset.on==='1',pend=card.dataset.pending==='1',c=prev.querySelector('canvas.cit-depth');if(on&&!pend)start();if(c)c.style.visibility=on&&!pend?'visible':'hidden';` +
+    `sw.classList.toggle('is-on',on);sw.setAttribute('aria-checked',on?'true':'false');txt.textContent=on?L.on:L.off;form.elements.on.value=on?'0':'1';lbl.textContent=!on?L.lblStill:pend?L.lblPending:L.lblLive;}` +
+    `function apply(state){if(!state||state.kind==='unsupported')return;card.dataset.on=state.wanted?'1':'0';card.dataset.pending=state.kind==='pending'?'1':'0';` +
+    `if(state.preview&&!img.hasAttribute('data-cit-depth')){img.setAttribute('data-cit-depth',state.preview.depth);img.setAttribute('data-cit-depth-img',state.preview.img);}paint();if(state.kind==='pending')poll();}` +
+    `var polling=false;function poll(){if(polling)return;polling=true;var n=0;(function tick(){if(++n>40){polling=false;return;}setTimeout(function(){fetch('/admin/hero-motion',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(j){var s=j&&j.state;if(s&&s.kind!=='pending'){polling=false;apply(s);st.className='adm-hm__state';st.textContent=s.wanted?L.ready:L.readyOff;}else tick();}).catch(tick);},3000);})();}` +
+    `form.addEventListener('submit',function(e){if(!window.fetch)return;e.preventDefault();var want=form.elements.on.value;st.className='adm-hm__state';st.textContent=L.saving;` +
+    `fetch('/admin/hero-motion',{method:'POST',credentials:'same-origin',headers:{'x-requested-with':'fetch','content-type':'application/x-www-form-urlencoded'},body:'on='+want}).then(function(r){return r.json();}).then(function(j){if(!j||!j.ok){st.textContent=L.fail;return;}apply(j.state);var s=j.state||{};st.textContent=!s.wanted?L.savedOff:s.kind==='pending'?L.savedOnPending:L.savedOn;if(s.kind==='pending')st.className='adm-hm__state is-wait';}).catch(function(){st.textContent=L.fail;});});` +
+    `new MutationObserver(paint).observe(prev,{childList:true});paint();if(card.dataset.pending==='1')poll();})();</script>`
+  );
+}
+
 function photosCard(
   content: NonNullable<AdminContent>,
   units: readonly { id: string; name: string }[] = [],
   lang = "hu",
   view: "grid" | "list" = "grid",
+  heroMotion: HeroMotionState | null = null,
 ): string {
   const photos = content.photos ?? [];
   const own = content.usingOwnPhotos;
@@ -699,6 +763,7 @@ function photosCard(
     `<div class="adm-ph"><div class="adm-ph__row"><div><h1>${T(lang, "Fotók")}${helpLink("admin.photos", lang)}</h1>` +
     `<p>${T(lang, "{n} kép · az első a nyitókép · húzással rendezhető", { n })}</p></div></div></div>` +
     notice +
+    heroMotionCard(heroMotion, lang) +
     `<div class="adm-photos" id="adm-photos" data-view="${view}" data-own="${own ? 1 : 0}" data-count="${n}">` +
     `<div class="adm-dropbar">${drop}</div>` +
     `<div class="adm-tb">${seg}<span class="adm-sp"></span>${selBtns}</div>` +
@@ -6471,6 +6536,8 @@ export interface AdminOpts {
   readonly siteSlug?: string | null;
   /** ADR-0224 ⑥: the Fotók tab's layout (GET `v=`; the script remembers the choice). */
   readonly photosView?: "grid" | "list";
+  /** ADR-XXXX: the "Mozgó nyitókép" card on the Fotók tab (null → no card). */
+  readonly heroMotion?: HeroMotionState | null;
   /** „Now" for the date-relative copy (subscription card, message dates). ADR-0220: the
    *  KB shot pins it, so the same commit always renders the same picture. */
   readonly now?: Date;
@@ -6907,7 +6974,7 @@ export function adminDashboard(
           ? contactSection(opts.contact)
           : `<div class="adm-card"><p class="citui-hint">${T(lang, "Az elérhetőségek akkor szerkeszthetők, ha a honlapja már elkészült.")}</p></div>`)
       : tab === "fotok"
-        ? photosCard(content, opts.units ?? [], lang, opts.photosView ?? "grid")
+        ? photosCard(content, opts.units ?? [], lang, opts.photosView ?? "grid", opts.heroMotion ?? null)
         : tab === "modulok"
           ? // ADR-0044: ?m=<id> opens that module's own settings screen; without it
             // the tab is the on/off list. One screen = one decision.

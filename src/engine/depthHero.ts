@@ -63,6 +63,11 @@ export function depthHeroAttr(data: SiteData, heroUrl: string | undefined, opts:
   return ` data-cit-depth="${esc(d.depth)}" data-cit-depth-img="${esc(d.img)}"${delay}`;
 }
 
+/** The bare runtime, for a surface that wires its own element (the tenant admin's preview card). */
+export function depthHeroRuntime(): string {
+  return DEPTH_HERO_JS;
+}
+
 /** The runtime, or "" when the page has no depth hero. Emit once, before </body>. */
 export function depthHeroJs(data: SiteData, heroUrl: string | undefined): string {
   return activeDepth(data, heroUrl) ? DEPTH_HERO_JS : "";

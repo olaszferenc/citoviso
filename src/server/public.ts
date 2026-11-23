@@ -63,6 +63,8 @@ import {
   getTenantContact,
   saveTenantContact,
   setTenantPhotoCaption,
+  setTenantHeroMotion,
+  tenantHeroMotionState,
   setTenantPhotoUnits,
   setTenantUnitPhotos,
   setTenantUnitCover,
@@ -1637,6 +1639,8 @@ async function serveAdmin(
   const lookNow = planSet
     ? { n: planSet.plans.find((p) => p.artifactId === planSet.currentArtifactId)?.n ?? 1, count: planSet.plans.length }
     : null;
+  // ADR-XXXX — the "Mozgó nyitókép" card on the Fotók tab (the page's own assembly decides).
+  const heroMotion: AdminOpts["heroMotion"] = tab === "fotok" ? await tenantHeroMotionState(session.tenantId) : null;
   let look: AdminOpts["look"] = null;
   if (tab === "kinezet" && planSet && site) {
     const q = new URL(req.url ?? "/", "http://x").searchParams;
@@ -2465,6 +2469,7 @@ async function serveAdmin(
       lookNow,
       siteSlug: site?.slug ?? null,
       photosView: new URL(req.url ?? "/", "http://x").searchParams.get("v") === "list" ? "list" : "grid",
+      heroMotion,
     }),
   );
 }
@@ -3722,6 +3727,25 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       await moveTenantPhoto(session.tenantId, form.get("url") ?? "", Number(to));
     }
     return redirect(res, "/admin?tab=fotok&saved=1");
+  }
+  // POST /admin/hero-motion — ADR-XXXX "Mozgó nyitókép" switch (plan: design-refs/tenant-admin/
+  // terhatas-kapcsolo, variant A). Saved in place (fetch → JSON with the new state); without JS
+  // the form posts and comes back to the Fotók tab.
+  if (req.method === "POST" && pathname === "/admin/hero-motion") {
+    const session = await currentTenant(req);
+    if (!session) return redirect(res, "/login");
+    const form = await readFormBody(req);
+    const r = await setTenantHeroMotion(session.tenantId, form.get("on") === "1");
+    if (String(req.headers["x-requested-with"] ?? "") === "fetch")
+      return send(res, r.ok ? 200 : 400, JSON.stringify({ ok: r.ok, state: r.state }), MIME[".json"]);
+    return redirect(res, "/admin?tab=fotok&saved=1");
+  }
+  // GET /admin/hero-motion — the card's poll while a new cover's map is being made ("készül").
+  if (req.method === "GET" && pathname === "/admin/hero-motion") {
+    const session = await currentTenant(req);
+    if (!session) return send(res, 401, JSON.stringify({ ok: false }), MIME[".json"]);
+    const state = await tenantHeroMotionState(session.tenantId);
+    return send(res, 200, JSON.stringify({ ok: true, state }), MIME[".json"]);
   }
   // POST /admin/photos/caption — the photo's alt text (templates, lightbox, screen readers).
   if (req.method === "POST" && pathname === "/admin/photos/caption") {

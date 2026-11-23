@@ -6,6 +6,7 @@
 // recipe + siteData. Editing = storing tenant overrides on site.edited_site_data and
 // re-rendering the snapshot.
 
+import { resolveHeroMotion, type HeroMotionSetting, type HeroMotionState } from "./heroMotion.js";
 import { childPricing, offeredPlans, readMeals } from "./meals.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -129,6 +130,8 @@ type Overrides = {
   contact?: { email?: string; phone?: string; address?: string };
   /** ADR-0241 — the owner-placed map pin. */
   geo?: { lat: number; lon: number };
+  /** ADR-XXXX — the owner's "Mozgó nyitókép" switch; absent = what the mock carried (§23). */
+  heroMotion?: HeroMotionSetting;
 };
 
 export interface SiteForEdit {
@@ -143,6 +146,8 @@ export interface SiteForEdit {
   /** §A.1/b — the tenant's photo-rights self-declaration is on file (order_intent). */
   rightsDeclared: boolean;
   tenantId: string;
+  /** The artifact the site renders from (plan 1, or the plan the owner switched to). */
+  sourceArtifactId: string;
 }
 
 /**
@@ -686,6 +691,7 @@ async function loadSiteForEdit(tenantId: string): Promise<SiteForEdit | null> {
     path: site.path,
     status: site.status,
     tenantId,
+    sourceArtifactId: site.source_artifact_id,
     rightsDeclared: Boolean(decl?.declaredAt ?? trialDecl?.declaredAt),
     overrides: (site.edited_site_data as Overrides | null) ?? {},
     recipe: inputs.recipe as unknown as Recipe,
@@ -704,6 +710,8 @@ export interface EffectiveSiteContent {
   readonly hideGallery: boolean;
   /** LV-1: anchors of the not-bought modules, cut from the page at render. */
   readonly hideAnchors: readonly string[];
+  /** ADR-XXXX: the moving cover's state (the Fotók tab card reads it). */
+  readonly heroMotion: HeroMotionState;
 }
 
 async function assembleEffective(
@@ -713,7 +721,11 @@ async function assembleEffective(
   /** ADR-0089 — preview-only module set; see moduleContentFor. Never persisted. */
   overrideActive?: ReadonlySet<string>,
 ): Promise<EffectiveSiteContent> {
-  const mergedRaw: SiteData = { ...s.baseSiteData, ...(overrides as Partial<SiteData>) };
+  // ADR-XXXX: the mock's depth map and the owner's switch are NOT page data as such —
+  // resolveHeroMotion decides below, against the FINAL cover.
+  const { heroDepth: mockDepth, ...baseNoDepth } = s.baseSiteData;
+  const { heroMotion: motionSetting, ...pageOverrides } = overrides;
+  const mergedRaw: SiteData = { ...baseNoDepth, ...(pageOverrides as Partial<SiteData>) };
   // Más cég hirdetése SOHA nem a szállás fotója — a `baseSiteData` egy régi generálás
   // befagyott listája, amiben ott ülhet egy `ad_banner`-nek ítélt kép (mérve 2026-09-11:
   // egy Mirabella-kemping banner ment ki így a galériában ÉS a JSON-LD `image` tömbjében).
@@ -760,11 +772,18 @@ async function assembleEffective(
     scoutUrl && merged3.rating ? { ...merged3, rating: { ...merged3.rating, url: scoutUrl } } : merged3;
   // The photo cap runs LAST: only here is the final list known (base photos, the
   // tenant's uploads, then the live rights filter).
-  const effective: SiteData =
+  const capped: SiteData =
     moduleContent.photoCap && merged2.photos.length > moduleContent.photoCap
       ? { ...merged2, photos: merged2.photos.slice(0, moduleContent.photoCap) }
       : merged2;
+  // ADR-XXXX moving cover — last, against the final cover (photos[0]).
+  const motion = await resolveHeroMotion(
+    { tenantId: s.tenantId, sourceArtifactId: s.sourceArtifactId, template: s.recipe.template, setting: motionSetting, mockDepth },
+    capped,
+  );
+  const effective: SiteData = motion.heroDepth ? { ...capped, heroDepth: motion.heroDepth } : capped;
   return {
+    heroMotion: motion.state,
     effective,
     units: moduleContent.units ?? [],
     hideGallery: Boolean(moduleContent.hideGallery),
@@ -1210,6 +1229,23 @@ export async function moveTenantPhoto(
           : Math.min(current.length, i + 1);
   current.splice(target, 0, item!);
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
+}
+
+/** ADR-XXXX — the owner's "Mozgó nyitókép" switch; re-renders the snapshot. */
+export async function setTenantHeroMotion(tenantId: string, on: boolean): Promise<{ ok: boolean; state: HeroMotionState | null }> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s || !s.path) return { ok: false, state: null };
+  const overrides: Overrides = { ...s.overrides, heroMotion: on ? "on" : "off" };
+  const ok = await renderAndPersist(s, overrides);
+  const after = await assembleEffective({ ...s, overrides }, overrides, s.status);
+  return { ok, state: after.heroMotion };
+}
+
+/** ADR-XXXX — the moving cover's state for the Fotók tab card (the same assembly the page renders). */
+export async function tenantHeroMotionState(tenantId: string): Promise<HeroMotionState | null> {
+  const s = await loadSiteForEdit(tenantId);
+  if (!s) return null;
+  return (await assembleEffective(s, s.overrides, s.status)).heroMotion;
 }
 
 /** Set a photo's caption (its alt text — used by templates, the lightbox and screen readers). */

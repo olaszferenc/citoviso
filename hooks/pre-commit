@@ -2648,6 +2648,14 @@ if [ -f scripts/hero-contrast-check.mts ] && \
   echo "[pre-commit] hero-contrast-check (hero-cím olvasható világos fotón)…"
   npx tsx scripts/hero-contrast-check.mts
 fi
+# TENANT MOVING COVER gate (ADR-XXXX): default follows the mock (§23), switch on → map made in the
+# background → the served snapshot moves; switch off → static again; the park tenant is restored
+# byte-for-byte. Narrow trigger (it re-renders a park tenant): only the feature's own files.
+if [ -f scripts/hero-motion-tenant-check.mts ] && \
+   changed_files | grep -qE '^src/tenant/heroMotion\.ts|^scripts/hero-motion-tenant-check'; then
+  echo "[pre-commit] hero-motion-tenant-check (mozgó nyitókép a tenant-oldalon)…"
+  npx tsx scripts/hero-motion-tenant-check.mts
+fi
 # DEPTH MAP gate (ADR-XXXX): the experiment coin splits ~50/50 and is stable per lead; switch off
 # → siteData untouched; Places covers are never fetched; the worker makes a real map (when the
 # model is installed) and the cache answers the second call. ~10s with the model, ~1s without.
