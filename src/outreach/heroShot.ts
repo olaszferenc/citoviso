@@ -257,8 +257,11 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
           // mutassuk, mert nem látszik semmi”). Measured: 773 wordmark-grow letters (11-09…11-23)
           // carried the cream intro screen with a small frame (Margaret 715c4a8a, Károly). The
           // motion layer's own switch, set the moment <html> exists — before any page script.
+          // data-cit-no-motion too: the Kapunyitás gate opens over 3,5 s since 2026-11-23 (ADR-0474)
+          // and the shot is taken ~0,8 s after load — the letter must show the open hero, not the
+          // closed leaves; the depth canvas and the parallax pin stay off as well (a still photo).
           await page.addInitScript(
-            "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
+            "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');document.documentElement.setAttribute('data-cit-no-motion','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
           );
           // Network log for CSS background images (their load state is not
           // readable from the DOM the way <img>.complete/naturalWidth is).
