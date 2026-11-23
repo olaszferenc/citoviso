@@ -8,7 +8,8 @@
  * On a park tenant whose site renders through one of the three depth templates:
  *   ① default (no switch stored): the state follows the mock (§23) — a mock without depth → OFF,
  *      and the snapshot carries no depth attribute
- *   ② switch ON → saved as edited_site_data.heroMotion = "on"; the state is 'pending' or 'on'
+ *   ② switch ON (the cover's cached map forgotten first) → saved as edited_site_data.heroMotion =
+ *      "on"; the state is 'pending' — the map is being made in the background
  *   ③ within 60 s the map is ready (the background job + snapshot re-render): state 'on' with a
  *      same-origin texture (/uploads/… or /configure/…/photo/…) and a /configure/depth/… map, and
  *      the SNAPSHOT FILE carries exactly one data-cit-depth attribute + the runtime
@@ -18,10 +19,12 @@
  */
 import { readFile, writeFile } from "node:fs/promises";
 
+import { photoKey } from "../src/console/photoProxy.js";
 import { db } from "../src/db/client.js";
 import { DEPTH_TEMPLATES } from "../src/generator/depthArm.js";
 import { depthModelReady } from "../src/media/depthMap.js";
-import { setTenantHeroMotion, tenantHeroMotionState } from "../src/tenant/editor.js";
+import { rerenderTenantSnapshot, setTenantHeroMotion, tenantHeroMotionState } from "../src/tenant/editor.js";
+import { settleHeroMotionJobs } from "../src/tenant/heroMotion.js";
 
 let failed = 0;
 const ok = (cond: boolean, msg: string): void => {
@@ -65,9 +68,11 @@ try {
   if (!stored) ok(s0?.kind === "off" && !s0.wanted && depthAttrs(snapBefore) === 0, `① alapállapot a mock szerint: KI (${s0?.kind})`);
   else console.log(`  ⏭️  ① a tenantnál már van mentett kapcsoló (${stored}) — az alapállapot-próba kimarad`);
 
+  // Forget the cover's cached map, so ② really goes through the background job ("készül").
+  if (s0 && s0.kind !== "unsupported") await db.deleteFrom("photo_depth_map").where("url_key", "=", photoKey(s0.cover)).execute();
   const on = await setTenantHeroMotion(site.tenantId, true);
   const row = await db.selectFrom("site").select("edited_site_data").where("id", "=", site.siteId).executeTakeFirstOrThrow();
-  ok(on.ok && (row.edited_site_data as { heroMotion?: string }).heroMotion === "on" && (on.state?.kind === "pending" || on.state?.kind === "on"), `② bekapcsolva, mentve (${on.state?.kind})`);
+  ok(on.ok && (row.edited_site_data as { heroMotion?: string }).heroMotion === "on" && on.state?.kind === "pending", `② bekapcsolva, mentve (${on.state?.kind})`);
 
   let st = on.state;
   for (let i = 0; i < 40 && st?.kind === "pending"; i++) {
@@ -88,10 +93,13 @@ try {
   );
   ok(depthAttrs(snap) === 1 && snap.includes("querySelector('[data-cit-depth]')"), `③ a kiszolgált lapon ott a térhatás (${depthAttrs(snap)} attribútum)`);
 
+  // the background job's own re-render must land BEFORE the switch goes off (and before restore)
+  await settleHeroMotionJobs();
   const off = await setTenantHeroMotion(site.tenantId, false);
   const snapOff = await readFile(snapPath, "utf8");
   ok(off.state?.kind === "off" && depthAttrs(snapOff) === 0, `④ kikapcsolva: ${off.state?.kind}, a lapon nincs térhatás`);
 } finally {
+  await settleHeroMotionJobs();
   await db.updateTable("site").set({ edited_site_data: editedBefore === null ? null : JSON.stringify(editedBefore) } as never).where("id", "=", site.siteId).execute();
   await writeFile(snapPath, snapBefore, "utf8");
   const back = await readFile(snapPath, "utf8");
