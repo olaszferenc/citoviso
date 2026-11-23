@@ -307,7 +307,7 @@ export function homepageLangComplete(l: string): boolean {
   return ok;
 }
 
-/** The page language for an Accept-Language header: q order, first complete one; else "en". */
+/** The page language for an Accept-Language header: q order, first complete one; else "en"; no header → "hu". */
 export function homepageLang(acceptLanguage: string | string[] | undefined): string {
   const raw = Array.isArray(acceptLanguage) ? acceptLanguage.join(",") : acceptLanguage ?? "";
   const tags = raw
@@ -320,6 +320,9 @@ export function homepageLang(acceptLanguage: string | string[] | undefined): str
     })
     .filter((t) => t.l && t.l !== "*" && t.q > 0)
     .sort((a, b) => b.q - a.q || a.i - b.i);
+  // No language signal at all (crawlers, bare clients): keep the Hungarian page the site has
+  // always served, so the live Hungarian search presence is not switched to English.
+  if (tags.length === 0) return "hu";
   for (const t of tags) if (homepageLangComplete(t.l)) return t.l;
   return "en";
 }
