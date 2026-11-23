@@ -19,8 +19,8 @@ nyitókép, a sorrend húzással rendezhető.
 
 ## Saját fotók feltöltése
 
-1. Nyissa meg a **„Fotók”** lapot. A cím alatt egy szaggatott keretű sáv áll: **„Húzza ide a
-   fotóit”**. Ugyanez a sáv sorolja fel a szabályokat is: JPEG, PNG vagy WEBP, legfeljebb 6 MB
+1. Nyissa meg a **„Fotók”** lapot. A képek fölött egy szaggatott keretű sáv áll: **„Húzza ide a
+   fotóit”** (ha az oldala tud mozgó nyitóképet, fölötte még a **„Mozgó nyitókép”** kártya is). Ugyanez a sáv sorolja fel a szabályokat is: JPEG, PNG vagy WEBP, legfeljebb 6 MB
    képenként, legfeljebb 12 kép egyszerre, és összesen 24 kép fér a könyvtárba.
 2. Koppintson a **„Fotók választása”** gombra — a telefonja felajánlja a galériáját, és egyszerre
    több képet is kijelölhet. Telefonon a **„Fényképezés”** gombbal azonnal fotózhat is. Gépen a
@@ -68,7 +68,10 @@ semmit, csak a saját képe mozog.
    **„Kikapcsolva”**.
 2. A beállítás azonnal mentődik, külön gomb nincs. Alatta ezt látja: **„Mentve. Az oldalán a
    nyitókép most már mozog.”**, kikapcsoláskor pedig: **„Mentve. Az oldalán a nyitókép most álló
-   kép.”**
+   kép.”** Ha bekapcsoláskor a nyitókép mozgása még készül, ezt: **„Mentve. Amint elkészül, a
+   nyitókép mozogni kezd.”**
+3. Ha a mentés nem sikerül (például megszakadt az internet), ezt látja: **„Nem sikerült menteni.
+   Próbálja újra.”** — ilyenkor koppintson újra a kapcsolóra.
 
 Ha **új nyitóképet** választ, vagy saját fotót tölt fel, az új kép mozgását el kell készítenünk.
 Ez általában egy percen belül megvan; addig ezt látja: **„Új nyitókép: a térhatása készül,
@@ -76,7 +79,9 @@ Ez általában egy percen belül megvan; addig ezt látja: **„Új nyitókép: 
 nem készül; utána magától mozogni kezd (**„Elkészült, a nyitókép mozog.”**).
 
 Ha a nyitókép túl kicsi, a kártya megmondja: **„Ez a nyitókép túl kicsi a mozgáshoz, ezért álló kép
-marad. Egy nagyobb fotóval mozogni fog.”**
+marad. Egy nagyobb fotóval mozogni fog.”** Más okból (például ha a kép egy térkép-szolgáltatásból
+jön) ezt írja: **„Ennél a nyitóképnél a mozgás nem érhető el, ezért álló kép marad.”** — ilyenkor
+egy saját fotó nyitóképpé tételével mozogni fog.
 
 Akinek a telefonján a mozgás ki van kapcsolva (akadálymentesítési beállítás), annak az oldala
 mindig álló képet mutat.
