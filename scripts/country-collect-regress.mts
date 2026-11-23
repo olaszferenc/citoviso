@@ -274,7 +274,10 @@ for (const [raw, want] of [["021 612 345", "+38521612345"], ["+385 (0)91 234 567
   }
 }
 check("HR mobil: 098/765-432 mobil, 021 612 345 vezetékes", ec.isMobile("098/765-432", HR_ROW) && !ec.isMobile("021 612 345", HR_ROW));
-check("HR csatorna: e-mail nélkül mobil → sms-képes jelölés", ec.resolveChannel(undefined, "091 234 5678", HR_ROW) === "sms");
+// HR dev-próba 2026-11-23: HR = csak e-mail (a sor outreach_channels-e) → a csak-mobilos lead csatornája „voice”
+// (felhívható, üzenet nem mehet), nem „sms”; a sor nélküli szabály (régi válasz) változatlan.
+check("HR csatorna: e-mail nélkül mobil → voice (a HR sor nem nyit mobil-csatornát)", ec.resolveChannel(undefined, "091 234 5678", HR_ROW) === (HR_ROW.outreachChannels.some((c) => ["sms", "mms", "viber", "whatsapp"].includes(c)) ? "sms" : "voice"));
+check("csatorna sor-csatornák nélkül: mobil → sms (a régi válasz)", ec.resolveChannel(undefined, "091 234 5678", { ...HR_ROW, outreachChannels: undefined } as never) === "sms");
 check("HR kulcs: +385 21 612 345 ≡ 021 612 345 (napló + portál)",
   cl.phoneKey("+385 21 612 345", HR_ROW) === cl.phoneKey("021 612 345", HR_ROW) && pl.phoneKey("+385 21 612 345", HR_ROW) === pl.phoneKey("021 612 345", HR_ROW) && pl.phoneKey("021 612 345", HR_ROW) === "21612345");
 check("HR napló: a két írásmód EGY sor", cl.mergeContacts([], [

@@ -17,9 +17,27 @@ export function isMobile(phone: string, rules: PhoneRules | null): boolean {
   return isMobileRawIn(phone, rules);
 }
 
-export function resolveChannel(email: string | undefined, phone: string | undefined, rules: PhoneRules | null): ContactChannel {
+/** The mobile outreach channels a country row may open (ADR-0456): a mobile number is only a
+ *  message channel where the row lists one of these. */
+const MOBILE_CHANNELS = ["sms", "mms", "viber", "whatsapp"];
+
+/**
+ * The lead's best outreach channel. A mobile counts as "sms" only where the lead's country row opens
+ * a mobile channel; where it does not (HR, IT, ES … = e-mail only; HR dev-próba 2026-11-23: the
+ * console listed Croatian mobile-only leads as "SMS" although no message can go to them), the number
+ * is a phone to call — "voice". A row without `outreachChannels` (or no row) keeps the former answer;
+ * the HU row lists sms, so the Hungarian verdict is unchanged.
+ */
+export function resolveChannel(
+  email: string | undefined,
+  phone: string | undefined,
+  rules: (PhoneRules & { readonly outreachChannels?: readonly string[] }) | null,
+): ContactChannel {
   if (email) return "email";
-  if (phone && isMobile(phone, rules)) return "sms";
+  if (phone && isMobile(phone, rules)) {
+    const open = rules?.outreachChannels;
+    return !open || open.some((c) => MOBILE_CHANNELS.includes(c)) ? "sms" : "voice";
+  }
   if (phone) return "voice";
   return "none";
 }

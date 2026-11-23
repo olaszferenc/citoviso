@@ -1008,6 +1008,19 @@ export async function saveLeadEdits(
   // raw.name too: every generator reader takes the lead from raw (Fortuna, 2026-10-26).
   const nameEdit = edits.name?.trim();
   if (nameEdit) raw.name = nameEdit;
+  // The contact channel follows the saved contact (HR dev-próba 2026-11-23: the colleague chain wrote 30
+  // phone numbers through this form and every lead still listed „nincs” — the channel was computed only
+  // at scrape time). Same rule as the scrape (enrichContact.resolveChannel), in the lead's country.
+  {
+    const { resolveChannel } = await import("../scraper/enrichContact.js");
+    const { countryConfigSync } = await import("../country.js");
+    const cc = typeof raw.country === "string" ? countryConfigSync(raw.country) : null;
+    raw.contactChannel = resolveChannel(
+      typeof raw.email === "string" && raw.email ? raw.email : undefined,
+      typeof raw.phone === "string" && raw.phone ? raw.phone : undefined,
+      cc,
+    );
+  }
   await db
     .updateTable("lead")
     .set({
