@@ -793,7 +793,7 @@
  "Észak": "North",
  "Eszköz: nincs adat.": "Device: no data.",
  "EU-tag": "EU member",
- "Éves fizetésnél {m} hónap ingyen.": "With yearly payment, {m} months free.",
+ "Éves fizetésnél {m} hónap ingyen.": "With yearly payment, free months: {m}.",
  "éves fizetésre vált a következő megújítással": "switches to annual billing at the next renewal",
  "Ez a cím nem tűnik érvényesnek: {cim}": "This address doesn't look valid: {cim}",
  "Ez a lead már nem vár jóváhagyásra — a szöveg nem változott.": "This lead is no longer awaiting approval — the text was not changed.",
