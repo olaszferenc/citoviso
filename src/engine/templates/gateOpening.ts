@@ -19,11 +19,11 @@
 // opening onto the house). No vision subject says „gate” or „entrance” (heroPick.ts knows
 // exterior · pool_garden · view · dining · interior · …), so no photo can be TOLD to be a
 // gate, and the page may not suggest the place has one. The leaves are ANOTHER photo of the
-// place opening onto the hero — since 2026-11-04 (owner, ADR-0423) exactly the gallery's SECOND
-// photo, held in its own field (SiteData.gatePhoto) for the tenant admin to configure, and
+// place opening onto the hero — since 2026-11-04 (owner, ADR-0423) a photo other than the hero,
+// since 2026-11-23 of ANOTHER SUBJECT (gatePhotoOf), held in its own field (SiteData.gatePhoto) for the tenant admin to configure, and
 // NEVER the hero itself (the old „A” fallback, the hero split and dimmed, is gone: no distinct
 // second photo → no gate, and generation refuses the plan). The leaves claim nothing (gatePhotoOf).
-// The gate also plays on the mock we SEND (owner, 2026-10-03): ~1,7 s inside the hero, it
+// The gate also plays on the mock we SEND (owner, 2026-10-03): ~4 s inside the hero, it
 // hides nothing — the 2026-09-14 ban on full-screen opening intros does not cover it, so it
 // does not listen to data-cit-no-intro.
 //
@@ -109,8 +109,31 @@ export function gatePhotoOf(photos: readonly Photo[], explicit?: Photo): Photo |
   if (!hero) return null;
   const distinct = (p: Photo | undefined): p is Photo =>
     Boolean(p && p.url && p.url !== hero.url && !isSamePicture(p.dhash, hero.dhash));
-  return [explicit, photos[1]].find(distinct) ?? null;
+  // The tenant's own choice wins (ADR-0423: „tudja majd tenant ezt is konfigurálni”).
+  if (distinct(explicit)) return explicit;
+  const rest = photos.slice(1).filter(distinct);
+  // Owner, 2026-11-23 (plan design-refs/tenant-site/generator-javitas): the leaves must show a
+  // DIFFERENT SUBJECT from what opens up behind them — Krisztina Panzió's second photo was the
+  // same yellow house from another angle, and the gate still looked as if it opened onto itself.
+  // So: the first photo of another subject GROUP (building / garden-view / inside); else of
+  // another subject; and when the verdicts know the hero's subject but no photo differs, no gate.
+  // Without a verdict on the hero (owner upload, an old snapshot) there is nothing to compare —
+  // the second distinct photo stands in, as before.
+  if (!hero.subject) return rest[0] ?? null;
+  const group = (subject: string): string => GATE_SUBJECT_GROUP[subject] ?? "inside";
+  return (
+    rest.find((p) => p.subject && group(p.subject) !== group(hero.subject!)) ??
+    rest.find((p) => p.subject && p.subject !== hero.subject) ??
+    null
+  );
 }
+
+/** Subject → the group the gate rule compares (anything else is „inside”). */
+const GATE_SUBJECT_GROUP: Readonly<Record<string, string>> = {
+  exterior: "building",
+  pool_garden: "outdoor",
+  view: "outdoor",
+};
 
 /**
  * The name split into the hero's masked lines — the most balanced split at word
@@ -274,12 +297,13 @@ p{margin:0 0 1em}
 /* load choreography — only under .ko-anim (set in <head>, before first paint: JS on,
    motion allowed, not tooling). Without it everything simply stands there. */
 .ko-anim .ko-gate{position:absolute;inset:0;z-index:0;display:flex;overflow:hidden;pointer-events:none}
-/* 1.5s = the first 1.05s slowed by 30% (owner, 2026-10-03: it opened too fast) */
-.ko-anim .ko-leaf.l{animation:koGateL 1.5s .18s cubic-bezier(.76,0,.24,1) both}
-.ko-anim .ko-leaf.r{animation:koGateR 1.5s .18s cubic-bezier(.76,0,.24,1) both}
+/* 3.5s (owner, 2026-11-23, plan design-refs/tenant-site/generator-javitas: „3,5 mp szerintem tök jó”;
+   before: 1.5s, itself the first 1.05s slowed by 30% on 2026-10-03) */
+.ko-anim .ko-leaf.l{animation:koGateL 3.5s .45s cubic-bezier(.76,0,.24,1) both}
+.ko-anim .ko-leaf.r{animation:koGateR 3.5s .45s cubic-bezier(.76,0,.24,1) both}
 @keyframes koGateL{to{transform:translateX(-103%)}}
 @keyframes koGateR{to{transform:translateX(103%)}}
-.ko-anim .ko-hero-bg img{animation:koSettle 2.2s .1s cubic-bezier(.2,.6,.2,1) both}
+.ko-anim .ko-hero-bg img{animation:koSettle 4.2s .1s cubic-bezier(.2,.6,.2,1) both}
 @keyframes koSettle{from{transform:scale(1.07)}to{transform:none}}
 .ko-anim .ko-line>span{animation:koLine .85s cubic-bezier(.19,.7,.18,1) both;animation-delay:var(--d,0s)}
 @keyframes koLine{from{transform:translateY(112%)}to{transform:none}}
@@ -455,9 +479,9 @@ p{margin:0 0 1em}
 
 /** Set before first paint so the gate is closed when the page first shows. No class (JS off,
  *  reduced motion, tooling's data-cit-no-motion) → no gate, no choreography, all visible. */
-// The hero photo settles (koSettle 2.2s after .1s) while the leaves open — the depth hero
+// The hero photo settles (koSettle 4.2s after .1s) while the leaves open (3.5s after .45s) — the depth hero
 // (ADR-0472) takes over only after that, so the two motions never fight.
-const GATE_SETTLE_MS = 2400;
+const GATE_SETTLE_MS = 4000;
 const GATE_BOOT = `(function(){var r=document.documentElement;try{if(r.hasAttribute('data-cit-no-motion')||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches))return;}catch(e){}r.classList.add('ko-anim');})();`;
 
 function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string {

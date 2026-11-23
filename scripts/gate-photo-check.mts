@@ -31,6 +31,19 @@ check("a külön mező (gatePhoto) nyer — a tenant választása", gatePhotoOf(
 check("ha a külön mező közben a nyitókép lett (operátori hős-csere) → a második kép áll be, nem a nyitókép",
   gatePhotoOf([P(1), P(2)], P(1))?.url === P(2).url);
 
+// ── a téma (tulaj 2026-11-23, terv design-refs/tenant-site/generator-javitas): a szárnyon MÁS TÉMÁJÚ fotó ──
+const S = (n: number, subject: string): Photo => P(n, { subject });
+check("homlokzat-hős, 2. kép is homlokzat, 3. étkező → az étkező (Krisztina: ugyanaz a ház másik szögből)",
+  gatePhotoOf([S(1, "exterior"), S(2, "exterior"), S(3, "dining")])?.url === P(3).url);
+check("homlokzat-hős → a kert/medence is más csoport",
+  gatePhotoOf([S(1, "exterior"), S(2, "exterior"), S(3, "pool_garden")])?.url === P(3).url);
+check("belső-hős → a homlokzat a kapu", gatePhotoOf([S(1, "interior"), S(2, "bathroom"), S(3, "exterior")])?.url === P(3).url);
+check("csak azonos témájú képek → nincs kapu", gatePhotoOf([S(1, "exterior"), S(2, "exterior"), S(3, "exterior")]) === null);
+check("azonos csoport, de más téma (kert ↔ kilátás) → az áll be, ha nincs más csoport",
+  gatePhotoOf([S(1, "pool_garden"), S(2, "view")])?.url === P(2).url);
+check("téma nélküli kép nem nyer a téma-szabályban", gatePhotoOf([S(1, "exterior"), P(2), S(3, "dining")])?.url === P(3).url);
+check("a tenant választása a téma-szabály előtt áll", gatePhotoOf([S(1, "exterior"), S(2, "exterior"), S(3, "dining")], S(2, "exterior"))?.url === P(2).url);
+
 // ── the render ──
 const tpl = TEMPLATES["gate-opening"]!;
 const recipe = { template: tpl.id, skin: tpl.skins[0], archetype: "stacked", sections: [] } as unknown as Recipe;
@@ -62,7 +75,7 @@ const LEAF_RE = /class="ko-leaf l"><img src="([^"]+)"/;
 
 // ── wiring: generation fingerprints the second photo and refuses BEFORE any AI spend ──
 const engine = readFileSync(new URL("../src/generator/generateEngine.ts", import.meta.url), "utf8");
-const refuse = engine.indexOf("Kapunyitás: nincs a nyitóképtől különböző második kép");
+const refuse = engine.indexOf("Kapunyitás: nincs a nyitóképtől eltérő témájú kép (");
 check(
   "bekötés: a generálás a második képet is ujjlenyomatolja, és a kapu-kép hiányát az AI-hívás ELŐTT elutasítja",
   /fingerprintCandidates\(gated\.photos, GATE_SUBJECTS, \[1\]\)/.test(engine) && refuse > 0 && refuse < engine.indexOf('opts.onStage?.("copy")'),

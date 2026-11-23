@@ -36,9 +36,10 @@
 import type { SiteData } from "./recipe.js";
 import { esc } from "./templateKit.js";
 
-/** Owner-approved motion parameters (2026-11-23), relative to the first draft. */
+/** Owner-approved motion parameters (2026-11-23), relative to the first draft. Strength 2 → 1.5
+ *  the same day (owner: „a finomított animáció”; at 2 the foreground edges smeared — Elek A3). */
 export const DEPTH_HERO_SPEED = 1.5;
-export const DEPTH_HERO_STRENGTH = 2;
+export const DEPTH_HERO_STRENGTH = 1.5;
 
 /** The depth data for the hero, if it is valid for the photo being rendered. */
 function activeDepth(data: SiteData, heroUrl: string | undefined): NonNullable<SiteData["heroDepth"]> | null {

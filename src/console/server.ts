@@ -245,7 +245,7 @@ import {
   injectOptedOutNotice,
   injectOwnedBanner,
   injectOwnedNotice,
-  disableIntroAnimation,
+  introJsOffNet,
   injectTrackingBanner,
   injectTrackingNotice,
   lazyLoadBelowFold,
@@ -4681,7 +4681,7 @@ async function handle(
     try {
       const html = containHorizontalOverflow(lazyLoadBelowFold(await readServableMock(contArt.path, contArt.inputs)));
       const contRegion = await regionForArtifactOrNull(contArt.id);
-      if (!contRegion) return send(res, 200, disableIntroAnimation(html));
+      if (!contRegion) return send(res, 200, introJsOffNet(html));
       const page = await injectConfigurator(html, contArt.id, p.leadName, {
         pricingRegion: contRegion,
         requestUrl: `/p/${pContMatch[1]}/folytatas/request`,
@@ -4705,7 +4705,7 @@ async function handle(
         // proba-C: ONE name for the trial's discount on every surface („Próba-kedvezmény”).
         ...(coupon ? { offer: { ...offerForPage(coupon, contLang), label: T(contLang, "Próba-kedvezmény") } } : {}),
       });
-      return send(res, 200, disableIntroAnimation(page));
+      return send(res, 200, introJsOffNet(page));
     } catch {
       return redirect(res, `/p/${pContMatch[1]}`);
     }
@@ -4777,7 +4777,7 @@ async function handle(
         return send(
           res,
           200,
-          injectOwnedNotice(injectOwnedBanner(disableIntroAnimation(html), framing), framing),
+          injectOwnedNotice(injectOwnedBanner(introJsOffNet(html), framing), framing),
         );
       }
       // ⛔ ADR-0291 (owner's ruling B, 2026-10-01): this GET RECORDS NOTHING. Mail-link
@@ -4913,7 +4913,7 @@ async function handle(
           tracked
             ? injectTrackingNotice(
                 multi
-                  ? await multiPlanLayers(disableIntroAnimation(page), {
+                  ? await multiPlanLayers(introJsOffNet(page), {
                       token: pMatch[1],
                       leadName: p.leadName,
                       lang: p.lang ?? undefined,
@@ -4925,11 +4925,11 @@ async function handle(
                       // folds into the end block's plan cards (C2 „B”) — only a page without it keeps it.
                       endBlock: page === html,
                     })
-                  : injectTrackingBanner(disableIntroAnimation(page), pMatch[1], p.lang ?? undefined),
+                  : injectTrackingBanner(introJsOffNet(page), pMatch[1], p.lang ?? undefined),
                 pMatch[1],
                 p.lang ?? undefined,
               )
-            : injectOptedOutNotice(injectOptedOutBanner(disableIntroAnimation(page), p.lang ?? undefined), pMatch[1], p.lang ?? undefined),
+            : injectOptedOutNotice(injectOptedOutBanner(introJsOffNet(page), p.lang ?? undefined), pMatch[1], p.lang ?? undefined),
         ),
       );
     } catch {

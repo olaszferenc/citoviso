@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generátor-javítás — kapunyitás · névből növő · parallax (terv, 2026-11-23)</title>
+<style>
+  :root{--ink:#0e2a47;--bg:#eef2f6;--line:#cdd6e0}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+  header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  h1{font-size:16px;margin:0 12px 0 0}
+  .seg{display:inline-flex;background:var(--bg);border-radius:999px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .note{flex-basis:100%;margin:2px 0 0;font-size:13.5px;opacity:.85}
+  main{display:flex;justify-content:center;padding:14px}
+  .frame{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(14,42,71,.12);transition:width .25s}
+  .frame.m{width:min(390px,100%);height:844px}
+  .frame.d{width:min(1280px,100%);height:min(800px,calc(100vh - 150px))}
+  iframe{display:block;width:100%;height:100%;border:0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Generátor-javítás · terv</h1>
+  <div class="seg" id="tpl">
+    <button data-k="kapu" aria-pressed="true">Kapunyitás</button>
+    <button data-k="novo" aria-pressed="false">Névből növő</button>
+    <button data-k="parallax" aria-pressed="false">Parallax</button>
+  </div>
+  <div class="seg" id="size">
+    <button data-k="d" aria-pressed="true">Asztali</button>
+    <button data-k="m" aria-pressed="false">Mobil 390px</button>
+  </div>
+  <p class="note" id="note"></p>
+</header>
+<main><div class="frame d" id="frame"><iframe id="view" title="mock"></iframe></div></main>
+<script>
+(function(){
+  var BASE='./';
+  var T={
+    kapu:{q:'kapu-JOVAHAGYOTT.html?v=A&s=3',n:'Valódi lead (Krisztina Panzió). A lap alján váltasz: <b>Kapu A</b> = a szárnyakon egy MÁSIK fotó (a terasz), mögüle jön elő a ház · <b>Kapu B</b> = sötét deszkás kapu a szállás színéből, fotó nélkül · <b>Nyitás</b> 2,5 / 3 / 3,5 mp (ma 1,5). „↻ Újra” = újrajátszás.'},
+    novo:{q:'novo-JOVAHAGYOTT.html?v=A&f=mai',n:'Valódi lead (Margaret Apartment). <b>A</b> = a keretben más fotók váltakoznak, és növés közben vált át a nyitóképre; a keret „mai” vagy „nagyobb” · <b>B</b> = nagy keret, 4 fotó, aztán felnő. „↻ Újra” = újrajátszás.'},
+    parallax:{q:'parallax-JOVAHAGYOTT.html?m=be',n:'Valódi lead (Hungaria Guesthouse). Görgess: <b>be (új)</b> = a fotók mobilon is hátul maradnak, a tartalom csúszik át rajtuk · <b>ki (mai)</b> = a mostani mobil viselkedés. Mobil nézetben látszik a különbség.'}
+  };
+  var cur='kapu',size=matchMedia('(max-width:700px)').matches?'m':'d';
+  var view=document.getElementById('view'),frame=document.getElementById('frame'),note=document.getElementById('note');
+  function press(group,k){[].forEach.call(document.querySelectorAll('#'+group+' button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.k===k));});}
+  function load(){view.src=BASE+T[cur].q+'&sajat=1';note.innerHTML=T[cur].n;frame.className='frame '+size;press('tpl',cur);press('size',size);}
+  document.getElementById('tpl').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;cur=b.dataset.k;load();});
+  document.getElementById('size').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;size=b.dataset.k;frame.className='frame '+size;press('size',size);view.src=view.src;});
+  load();
+})();
+</script>
+</body>
+</html>

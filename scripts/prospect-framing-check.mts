@@ -54,6 +54,7 @@ import { TEMPLATES } from "../src/engine/templates.js";
 import { injectRuntime } from "../src/generator/runtime.js";
 import {
   disableIntroAnimation,
+  introJsOffNet,
   injectOptedOutBanner,
   injectOptedOutNotice,
   injectTrackingBanner,
@@ -120,7 +121,9 @@ const OUT = path.resolve(import.meta.dirname, `../assets/Temp/_framing-${SCOPE}`
 await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT, { recursive: true });
 
-/** The page as the console really serves it to a TRACKED visitor. */
+/** The page a TRACKED visitor sees once the opening intro has finished (the framing sections
+ *  measure the settled page: the motion layer's tooling switch stands in for "the intro is over").
+ *  Since 2026-11-23 the console no longer switches the intro off — see servedPage(). */
 async function trackedPage(tpl: string): Promise<string> {
   const base = disableIntroAnimation(await injectRuntime(renderSite(recipe(tpl), DATA)));
   return injectTrackingNotice(injectTrackingBanner(base, TOKEN), TOKEN);
@@ -130,7 +133,13 @@ async function optedOutPage(tpl: string): Promise<string> {
   const base = disableIntroAnimation(await injectRuntime(renderSite(recipe(tpl), DATA)));
   return injectOptedOutNotice(injectOptedOutBanner(base), TOKEN);
 }
-/** The SAME page WITHOUT the switch — the reference for "is it really off?". */
+/** The page EXACTLY as the console serves it since 2026-11-23 (owner: the intro PLAYS on the mock
+ *  we send — overrides ADR-0159 ⑦): only the JS-off net is added (introJsOffNet). */
+async function servedPage(tpl: string): Promise<string> {
+  const base = introJsOffNet(await injectRuntime(renderSite(recipe(tpl), DATA)));
+  return injectTrackingNotice(injectTrackingBanner(base, TOKEN), TOKEN);
+}
+/** The SAME page WITHOUT any intro handling — the reference. */
 async function pageWithIntro(tpl: string): Promise<string> {
   const base = await injectRuntime(renderSite(recipe(tpl), DATA));
   return injectTrackingNotice(injectTrackingBanner(base, TOKEN), TOKEN);
@@ -379,7 +388,7 @@ for (const [tpl, why] of TEMPLATES_UNDER_TEST) {
     // kinyitva (egy nem renderelt elem kontrasztja nem jelent semmit).
     const worst = p.contrast.reduce((m, c) => Math.min(m, c.ratio), 99);
     check(`${tag}: a sáv feliratai olvashatók (legrosszabb kontraszt ${worst})`, worst >= 4.5, p.contrast);
-    check(`${tag}: az ELSŐ festésnél nincs nyitó-animáció a lapon`, p.introUp === false);
+    check(`${tag}: a lecsengett lapon (intro után) nincs nyitó-animáció-réteg`, p.introUp === false);
     check(
       `${tag}: a sáv középső csíkjának ${p.centrePixel?.[0]}%-a tényleg a sáv színe (festve, nem hit-teszt)`,
       isBarColour(p.centrePixel),
@@ -425,55 +434,29 @@ console.log("③ ÁLPOZITÍV KONTROLL — a leiratkozott ág:");
     !/nem mérjük|nem keressük többé/i.test(tt), tt.slice(0, 90));
 }
 
-// ── ④ A NYITÓ-ANIMÁCIÓ KI VAN KAPCSOLVA — a két érintett sablonon ────────────
-console.log("④ nyitó-animáció a kiküldött mockon (tulajdonosi döntés: KI):");
+// ── ④ A NYITÓ-ANIMÁCIÓ FUT A KIKÜLDÖTT MOCKON — JS nélkül a háló rejti ─────────
+// Tulaj, 2026-11-23 (felülírja az ADR-0159 ⑦-et): a 09-14-i „kapcsold ki” a LEVÉL KÉPÉRŐL szólt
+// („az emailben ne ezt mutassuk, mert nem látszik semmi”), nem a lapról. A lapon az intro fut;
+// ami az ADR-0159 ⑧-ból marad: JS nélkül a teljes képernyős intro nem lehet üres, opak panel.
+console.log("④ nyitó-animáció a kiküldött mockon (tulajdonosi döntés 2026-11-23: FUT):");
 for (const [tpl, mi] of INTRO_TEMPLATES) {
   for (const js of [true, false]) {
     const tag = `${tpl} JS=${js ? "BE" : "KI"}`;
-    const p = await probe(br, `intro-off-${tpl}-${js}`, await trackedPage(tpl), { width: 390, js });
-    // JS nélkül az elemet SEMMI nem tudja kivenni a DOM-ból — ott a kérdés az, hogy
-    // FEST-E (lásd a pixel-ellenőrzést alább). A DOM-ból eltűnés a JS-es ág állítása.
-    if (js) check(`${tag}: nincs intro-réteg a lapon (${mi})`, p.introUp === false);
-    else check(`${tag}: az intro-réteg ott van a DOM-ban, de NEM fest (a CSS rejti)`, p.introUp === true);
-    check(
-      `${tag}: a sáv középső csíkjának ${p.centrePixel?.[0]}%-a a sáv színe (festve)`,
-      isBarColour(p.centrePixel),
-      p.centrePixel,
-    );
-    check(`${tag}: a sáv látszik és a lap tetején van`, p.bars.length === 1 && Math.abs(p.bars[0]!.top) <= 1);
-
-    // ⛔ REFERENCIA: UGYANAZ a lap a kapcsoló NÉLKÜL. Enélkül a fenti három zöld
-    // csak annyit bizonyítana, hogy „nincs baj" — nem azt, hogy a KAPCSOLÓ okozta.
-    // (A mérőeszköz bizonyítsa a saját útját.)
-    const ref = await probe(br, `intro-on-${tpl}-${js}`, await pageWithIntro(tpl), { width: 390, js });
+    const p = await probe(br, `intro-served-${tpl}-${js}`, await servedPage(tpl), { width: 390, js });
     if (js) {
-      check(
-        `${tag}: KAPCSOLÓ NÉLKÜL ugyanez a lap MÁST mutat (intro=${ref.introUp}, a sáv színe: ${ref.centrePixel?.[0]}%)`,
-        ref.introUp === true && !isBarColour(ref.centrePixel),
-        { intro: ref.introUp, pixel: ref.centrePixel },
-      );
+      check(`${tag}: az intro-réteg FUT a kiszolgált lapon (${mi})`, p.introUp === true, { intro: p.introUp });
     } else {
-      // JS nélkül a kapcsoló NEM az egyetlen védelem: a runtime <noscript> hálója
-      // (runtime.ts) is elrejti az introt. Ez KÜLÖN állítás, és külön is mérendő —
-      // enélkül egy JS-nélküli látogató egy ÜRES KRÉM TÉGLALAPOT kapna (mérve,
-      // 2026-09-14, arch-frames és wordmark-grow, 390 px).
-      check(
-        `${tag}: a runtime <noscript> hálója ÖNMAGÁBAN is elrejti az introt (a sáv színe: ${ref.centrePixel?.[0]}%)`,
-        isBarColour(ref.centrePixel),
-        ref.centrePixel,
-      );
-      // …és egy RÉGI artefaktum (amiben a háló még nem tartalmazta az introt) csak
-      // a kapcsoló miatt marad ép — ezért van a <style> a disableIntroAnimation-ben.
-      const stale = (await pageWithIntro(tpl)).replace(
-        /\.cit-fintro,\.cit-intro\{display:none!important\}/g,
-        "",
-      );
-      const staleOff = await probe(br, `intro-stale-off-${tpl}`, disableIntroAnimation(stale), { width: 390, js: false });
+      check(`${tag}: az intro-réteg ott van a DOM-ban, de NEM fest (a háló rejti)`, p.introUp === true);
+      check(`${tag}: a sáv középső csíkjának ${p.centrePixel?.[0]}%-a a sáv színe (festve)`, isBarColour(p.centrePixel), p.centrePixel);
+      check(`${tag}: a sáv látszik és a lap tetején van`, p.bars.length === 1 && Math.abs(p.bars[0]!.top) <= 1);
+      // …és egy RÉGI artefaktum (a runtime hálója nélkül) csak a kiszolgáláskor tett háló miatt ép.
+      const stale = (await pageWithIntro(tpl)).replace(/\.cit-fintro,\.cit-intro\{display:none!important\}/g, "");
+      const staleNet = await probe(br, `intro-stale-net-${tpl}`, introJsOffNet(stale), { width: 390, js: false });
       const staleRaw = await probe(br, `intro-stale-raw-${tpl}`, stale, { width: 390, js: false });
       check(
-        `${tag}: RÉGI artefaktumon (háló nélkül) a kapcsoló menti meg a lapot`,
-        isBarColour(staleOff.centrePixel) && !isBarColour(staleRaw.centrePixel),
-        { kapcsolóval: staleOff.centrePixel, nélküle: staleRaw.centrePixel },
+        `${tag}: RÉGI artefaktumon (háló nélkül) a kiszolgáláskor tett háló menti meg a lapot`,
+        isBarColour(staleNet.centrePixel) && !isBarColour(staleRaw.centrePixel),
+        { hálóval: staleNet.centrePixel, nélküle: staleRaw.centrePixel },
       );
     }
   }
@@ -527,21 +510,21 @@ if (SELFTEST) {
   // egy hamis idempotencia-őr (`includes("data-cit-no-intro")`, ami az intro SAJÁT
   // szkriptjének forrására illeszkedett) tette hatástalanná anélkül, hogy bárhol
   // pirosat adott volna.
-  const introGood = await trackedPage("arch-frames");
+  const introGood = await servedPage("arch-frames");
   cases.push(
     [
-      "a <html data-cit-no-intro> attribútum leszedve (a JS-es kikapcsolás)",
-      introGood.replace(/<html data-cit-no-intro/i, "<html"),
-      (p) => p.introUp === true || !isBarColour(p.centrePixel),
+      "a kiszolgálás újra kikapcsolja az introt (<html data-cit-no-intro> attribútum)",
+      introGood.replace(/<html\b/i, "<html data-cit-no-intro"),
+      (p) => p.introUp === false,
     ],
     [
-      "a kapcsoló <style>-ja leszedve, RÉGI artefaktumon (a JS-nélküli kikapcsolás)",
+      "a háló leszedve, RÉGI artefaktumon (JS nélkül üres panel)",
       introGood
-        .replace(/<style data-cit-no-intro>[\s\S]*?<\/style>/i, "")
+        .replace(/<noscript data-cit-intro-net>[\s\S]*?<\/noscript>/i, "")
         .replace(/\.cit-fintro,\.cit-intro\{display:none!important\}/g, ""),
       (p) => !isBarColour(p.centrePixel),
       false,
-      false, // JS KI: enélkül a JS úgyis eltakarítaná az overlay-t
+      false, // JS KI: a JS-es ág úgyis lefutna
     ],
   );
   for (const [name, html, isRed, needsOpen, js] of cases) {

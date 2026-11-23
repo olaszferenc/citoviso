@@ -479,6 +479,22 @@ export function disableIntroAnimation(html: string): string {
 }
 
 /**
+ * THE OPENING INTRO PLAYS ON THE MOCK WE SEND (owner, 2026-11-23 — overrides ADR-0159 ⑦).
+ * The 2026-09-14 „kapcsold ki a nyitó-animációt” was about the LETTER's picture („az emailben ne
+ * ezt mutassuk, mert nem látszik semmi”), not this page: the lead opening the link sees the intro.
+ * (The letter's shot switches it off itself — outreach/heroShot.ts.) What stays from ADR-0159 ⑧
+ * is the JS-off net: an old artifact on disk may lack it, and without JS the full-screen intro
+ * would be an opaque empty panel. `<noscript>` → it never touches a page with JS.
+ */
+export function introJsOffNet(html: string): string {
+  const net = `<noscript data-cit-intro-net><style>.cit-fintro,.cit-intro{display:none!important}</style></noscript>`;
+  if (html.includes("data-cit-intro-net")) return html;
+  if (/<head[^>]*>/i.test(html)) return html.replace(/(<head[^>]*>)/i, `$1${net}`);
+  if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, `$1${net}`);
+  return net + html;
+}
+
+/**
  * Below-the-fold photos load lazily on a page we SEND OUT. Measured 2026-09-26 on the
  * 38 tracked pages (19 templates × 2 leads) at 390 px: 8–17 <img> per page, NONE with
  * loading="lazy", 1,2–5,3 MB per page, a single Google photo of 2 MB — all requested
