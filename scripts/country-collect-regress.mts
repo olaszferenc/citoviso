@@ -314,6 +314,17 @@ check("HR „hasonló szállások” blokk levágva", ex.ownContentOnly("<main>"
 check("HR böngésző-nyelv: hr;q=0.9,en;q=0.5 (nincs magyar alapérték)", acceptLanguage("hr") === "hr;q=0.9,en;q=0.5" && acceptLanguage("") === "en;q=0.9");
 check("HR szótár: típusszó-lista horvát", wordSet(HR, "typeWords").has("apartmani") && !wordSet(HR, "typeWords").has("vendeghaz"));
 check("registry: minden adapterben ország-mező", reg.PORTAL_ADAPTERS.every((a) => a.country === null || /^[A-Z]{2}$/.test(a.country)) && reg.GENERIC_PORTAL.country === null);
+// HR dev-próba 2026-11-23 (Makarska, valódi felderítés): két hamis „saját honlap” forrás.
+check("régió-szó: dátum a címkében nem földrajzi szó (a „2026” minden © 2026-os oldalt átengedett)",
+  same(pres.regionTerms({ id: "hr-makarska-proba", label: "Makarska (próba 2026-11-23)", country: HR, bbox: [43, 16, 44, 17] }), ["makarska", "proba"]));
+check("átirányítás: aggregátor a márka+város domainen (villapalmamakarska.com → housity.net ?tag=exp-…) nem saját honlap",
+  pres.isAffiliateRedirect("https://villapalmamakarska.com", "https://housity.net/hotel/villa-palma-apartments-makarska/?tag=exp-villapalmamakarska"));
+check("átirányítás: partnerlink-továbbító (red.php?url=https://booking…) nem saját honlap",
+  pres.isAffiliateRedirect("https://villalacus.com", "https://buiibo.com/red.php?url=https%3A%2F%2Fwww.booking.com%2Fhotel%2Fhr%2Fvilla-lacus-makarska.html"));
+check("átirányítás: saját domain-váltás (sissipanzio.hu → sissi-balaton.hu/hu/) marad saját honlap",
+  !pres.isAffiliateRedirect("https://sissipanzio.hu", "https://www.sissi-balaton.hu/hu/") && !pres.isAffiliateRedirect("https://sissipanzio.hu", "https://www.sissipanzio.hu/?lang=hu"));
+check("e-mail: kódolt mailto (%20info@osejava.com) → info@osejava.com; sima cím változatlan",
+  same((await import("../src/scraper/website.js")).extractEmails('<a href="mailto:%20info@osejava.com">x</a> Info@Panzio.hu'), ["info@osejava.com", "info@panzio.hu"]));
 check("registry: HR portál → generikus olvasó", reg.resolvePortal("https://www.apartmanija.hr/apartmani/makarska/123").id === "generic_portal");
 
 await db.destroy();

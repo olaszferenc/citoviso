@@ -1,3 +1,4 @@
+import { mailtoAddress } from "../email/leadEmails.js";
 import type { WebsiteAssessment } from "./types.js";
 
 // Assess whether an existing own website looks outdated. MVP heuristic over the
@@ -20,16 +21,19 @@ const LEGACY_MARKERS: Array<readonly [RegExp, string]> = [
 
 // Extract contact emails from a page: mailto: links (reliable) + bare patterns,
 // filtered against obvious noise (asset filenames like sprite@2x.png).
-function extractEmails(html: string): string[] {
+export function extractEmails(html: string): string[] {
   const set = new Set<string>();
+  // Both forms through mailtoAddress(): an escaped href ("mailto:%20info@osejava.com",
+  // HR dev-próba 2026-11-23, Osejava/Makarska) was stored verbatim as "%20info@…" — a bounce.
   for (const m of html.matchAll(/mailto:([^"'?>\s]+@[^"'?>\s]+)/gi)) {
-    set.add(m[1].toLowerCase());
+    const e = mailtoAddress(m[1]);
+    if (e) set.add(e);
   }
   for (const m of html.matchAll(
     /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi,
   )) {
-    const e = m[0].toLowerCase();
-    if (!/\.(png|jpg|jpeg|gif|webp|svg)$/.test(e)) set.add(e);
+    const e = /%[0-9a-f]{2}/i.test(m[0]) ? mailtoAddress(m[0]) : m[0].toLowerCase();
+    if (e && !/\.(png|jpg|jpeg|gif|webp|svg)$/.test(e)) set.add(e);
   }
   return [...set].slice(0, 5);
 }

@@ -146,7 +146,11 @@ export function hasNameWord(text: string, w: string): boolean {
 export function regionTerms(region: Region): string[] {
   const set = new Set<string>();
   for (const t of [...tokens(region.id), ...tokens(region.label)]) {
-    if (t.length >= 4) set.add(t);
+    // A number is no place (same rule as cityTerms): a label carrying a date
+    // ("Makarska … 2026-11-23", HR dev-próba 2026-11-23) made "2026" a geo term,
+    // and every page with "© 2026" + the brand word passed as the lead's own site
+    // (daniela.com, antonio.com for Makarska leads).
+    if (t.length >= 4 && !/^\d+$/.test(t)) set.add(t);
   }
   return [...set];
 }
@@ -371,9 +375,41 @@ async function probeLead(
   const terms = geoTerms(lead, region);
   for (const url of urlCandidates(lead.name, region, loc.ownSiteTlds, loc.iso2)) {
     const r = await fetchHtml(url);
-    if (r && (await verifyOrRender(lead.name, terms, r, loc.browserLocale, loc.iso2))) return r.finalUrl;
+    if (!r || isAffiliateRedirect(url, r.finalUrl)) continue;
+    if (await verifyOrRender(lead.name, terms, r, loc.browserLocale, loc.iso2)) return r.finalUrl;
   }
   return null;
+}
+
+/** Last two host labels ("www.foo.com.hr" → "com.hr" is fine here: only equality is asked). */
+function hostTail(u: URL): string {
+  return u.hostname.replace(/^www\./, "").split(".").slice(-2).join(".");
+}
+
+/**
+ * A guessed domain that only FORWARDS to someone else's page is not the lead's own site
+ * (HR dev-próba 2026-11-23, Makarska): villapalmamakarska.com → housity.net/…?tag=exp-villapalmamakarska
+ * (an aggregator parking the brand+town name), villalacus… → buiibo.com/red.php?url=https://booking.com/…
+ * (an affiliate redirector). Both pages name the brand and the town, so verify() passed. The mark of
+ * such a forward: the landing is on ANOTHER domain and its query carries a URL or the guessed host.
+ * A real own site moving to a new domain carries neither.
+ */
+export function isAffiliateRedirect(candidate: string, finalUrl: string): boolean {
+  let from: URL;
+  let to: URL;
+  try {
+    from = new URL(candidate);
+    to = new URL(finalUrl);
+  } catch {
+    return false;
+  }
+  if (hostTail(from) === hostTail(to)) return false;
+  const label = from.hostname.replace(/^www\./, "").split(".")[0]!.toLowerCase();
+  for (const v of to.searchParams.values()) {
+    const val = v.toLowerCase();
+    if (/^https?:\/\//.test(val) || (label.length >= 5 && val.includes(label))) return true;
+  }
+  return false;
 }
 
 export async function enrichPresence(
