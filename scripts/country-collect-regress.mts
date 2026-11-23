@@ -325,6 +325,18 @@ check("átirányítás: saját domain-váltás (sissipanzio.hu → sissi-balaton
   !pres.isAffiliateRedirect("https://sissipanzio.hu", "https://www.sissi-balaton.hu/hu/") && !pres.isAffiliateRedirect("https://sissipanzio.hu", "https://www.sissipanzio.hu/?lang=hu"));
 check("e-mail: kódolt mailto (%20info@osejava.com) → info@osejava.com; sima cím változatlan",
   same((await import("../src/scraper/website.js")).extractEmails('<a href="mailto:%20info@osejava.com">x</a> Info@Panzio.hu'), ["info@osejava.com", "info@panzio.hu"]));
+{
+  const ti = await import("../src/scraper/sources/portals/townIndex.js");
+  const card = (id: number, name: string, lat: number, lon: number) =>
+    `<a class="object_cont" data-ad_id="1" data-lat="${lat}" data-lng="${lon}" href="https://www.apartmanija.hr/apartmani/makarska/x-${id}/${id}"><div class="img-wrapper"></div><div class="obj_content"><span>${name}<br/><b>Makarska</b></span> Kapacitet</div></a>`;
+  const html = card(1, "Apartmani  Tonkita", 43.2961, 17.0175) + card(2, "Apartmani Sunny Central", 43.2965, 17.018) + card(3, "Apartmani Tonkita", 43.40, 17.10);
+  const cards = ti.parseTownIndex(html, "https://www.apartmanija.hr/apartmani/makarska");
+  check("település-index: kártya = név + tű + link (3 kártya)", cards.length === 3 && cards[0]!.name === "Apartmani Tonkita" && cards[0]!.lat === 43.2961);
+  const m = ti.townIndexMatches({ name: "Apartmani Tonkita", lat: 43.2962, lon: 17.0176, country: HR }, cards);
+  check("település-index: márkaszó + ≤1 km → jelölt; a 12 km-es névrokon nem", m.length === 1 && m[0]!.url.endsWith("/1"), JSON.stringify(m.map((x) => x.url)));
+  check("település-index: csak a „central” közös → nincs jelölt (általános szó)", ti.townIndexMatches({ name: "Central Beach 9", lat: 43.2965, lon: 17.018, country: HR }, cards).length === 0);
+  check("település-index: URL a szótárból, „Baška Voda” → baska-voda; HU-nak nincs", same(ti.townIndexUrls(HR, "Baška Voda"), ["https://www.apartmanija.hr/apartmani/baska-voda"]) && ti.townIndexUrls(HU, "Siófok").length === 0);
+}
 check("registry: HR portál → generikus olvasó", reg.resolvePortal("https://www.apartmanija.hr/apartmani/makarska/123").id === "generic_portal");
 
 await db.destroy();

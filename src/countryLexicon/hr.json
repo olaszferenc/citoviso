@@ -71,7 +71,8 @@
     "mobile", "homes", "studio", "studios", "guesthouse", "guest", "rezidencija", "residence",
     "resort", "obiteljski", "seoski", "turizam", "agroturizam", "opg", "bed", "breakfast",
     "lux", "luxury", "more", "sea", "view", "beach", "plaza", "wifi", "ferienwohnung",
-    "appartamenti", "camere", "i", "and", "the", "doo", "d.o.o", "obrt"
+    "appartamenti", "camere", "i", "and", "the", "doo", "d.o.o", "obrt",
+    "central", "centar", "center", "centre", "city", "penthouse"
   ],
   "subdivisions": [
     { "code": "01", "name": "Zagrebačka županija" },
@@ -155,5 +156,6 @@
     "web.de", "net.hr", "inet.hr", "vip.hr", "optinet.hr", "globalnet.hr", "t-com.hr", "email.t-com.hr",
     "zg.t-com.hr", "st.t-com.hr", "ri.t-com.hr", "os.t-com.hr", "du.t-com.hr", "zd.t-com.hr", "pu.t-com.hr",
     "sk.t-com.hr", "ka.t-com.hr", "vz.t-com.hr", "si.t-com.hr", "hi.t-com.hr"
-  ]
+  ],
+  "portalTownIndexes": ["https://www.apartmanija.hr/apartmani/{town}"]
 }
