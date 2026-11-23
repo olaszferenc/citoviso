@@ -63,6 +63,18 @@ export const config = {
   /** Chromium binary used by Playwright for scraping + screenshotting. */
   chromiumPath: env("CHROMIUM_PATH", detectChromium()),
   /**
+   * ADR-XXXX depth hero: the depth model (Depth Anything V2 Small, int8 ONNX, 27 MB). Not in git —
+   * `npx tsx scripts/depth-model-fetch.mts` downloads it and checks its sha256. Missing file →
+   * no depth maps are made and every page keeps its static cover (the feature is inert).
+   */
+  depthModelPath: env("DEPTH_MODEL_PATH", "models/depth-anything-v2-small-int8.onnx"),
+  /**
+   * ADR-XXXX: the depth-hero experiment in mock generation. "1" → new mocks are split into a
+   * depth arm and a control arm by lead id; anything else → no mock gets a depth map. Off by
+   * default: switching it on is an operating decision, not a code change.
+   */
+  depthHeroExperiment: env("DEPTH_HERO_EXPERIMENT", "") === "1",
+  /**
    * PostgreSQL connection string. When set (prod/managed cloud) it wins over the
    * per-field `pg` defaults below. Empty locally → the embedded dev cluster is used.
    */
