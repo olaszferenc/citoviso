@@ -8,8 +8,14 @@
  *     centre and grows, opens into an eye (the two arcs become the lids, the dot the iris),
  *     winks (time-based, the upper lid really closes over the iris), and the iris swells
  *     into the light next section.
- *  3. Page parts: billing toggle, commission calculator, mobile menu, FAQ (native
- *     <details>), the sample-request form (map pin + POST /api/mock-request).
+ *  3. Page parts: billing toggle, commission calculator (Hungarian page) or payback
+ *     calculator (every other language), mobile menu, FAQ (native <details>), the
+ *     sample-request form (map pin + POST /api/mock-request).
+ *
+ * Language (ADR-XXXX): the server renders the page in the visitor's browser language and,
+ * on a non-Hungarian page, hands this script window.CIT_HOME = {lang, s: {hu: translation}}.
+ * Every runtime text goes through tr()/trn(); the Hungarian page carries no CIT_HOME and
+ * reads its source strings.
  *
  * Motion only runs with html.anim (set in <head>: JS on and no reduced-motion). Without
  * it the page is a static layout and everything here except the animation still works.
@@ -19,6 +25,22 @@
   var root = document.documentElement;
   var ANIM = root.classList.contains("anim");
   var $ = function (id) { return document.getElementById(id); };
+  var I18N = window.CIT_HOME || null;
+  var LANG = (I18N && I18N.lang) || "hu";
+  var STR = (I18N && I18N.s) || {};
+  function tr(s) { return STR[s] || s; }
+  // plural values ("plural:one=…;other=…") pick their form by Intl.PluralRules
+  function trn(s, n) {
+    var v = tr(s);
+    if (v.indexOf("plural:") === 0) {
+      var forms = {};
+      v.slice(7).split(";").forEach(function (part) { var i = part.indexOf("="); if (i > 0) forms[part.slice(0, i).trim()] = part.slice(i + 1); });
+      var cat = "other";
+      try { cat = new Intl.PluralRules(LANG).select(n); } catch (e) { cat = "other"; }
+      v = forms[cat] || forms.other || s;
+    }
+    return v.split("{n}").join(String(n));
+  }
 
   var canvas = $("sky"), ctx = canvas ? canvas.getContext("2d") : null;
   var intro = $("intro"), pin = $("pin"), heroCopy = $("hero-copy");
@@ -263,7 +285,7 @@
     });
   });
 
-  // ── commission calculator ─────────────────────────────────────────────────
+  // ── commission calculator (Hungarian page only; the other languages get the payback card) ──
   var fmt = function (n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " Ft"; };
   var rev = $("rev"), pct = $("pct");
   var plans = document.querySelector(".plans[data-full-year]");
@@ -273,10 +295,56 @@
     $("rev-out").textContent = fmt(r);
     $("pct-out").textContent = p + "%";
     $("fee-out").textContent = fmt(fee);
-    $("quarter-out").textContent = "Ha minden negyedik foglalás közvetlenül jönne, évente " + fmt(fee / 4) + " maradna nálad." +
-      (fullYear ? " A Teljes csomag egy évre " + fullYear + "." : "");
+    $("quarter-out").textContent = "Ha minden negyedik foglalás közvetlenül jönne, évente " + fmt(fee / 4) + " maradna nálad." + // i18n-exempt: Hungarian page only
+      (fullYear ? " A Teljes csomag egy évre " + fullYear + "." : ""); // i18n-exempt: Hungarian page only
   }
   if (rev && pct) { rev.addEventListener("input", calc); pct.addEventListener("input", calc); calc(); }
+
+  // ── payback calculator (non-Hungarian page): direct nights that pay for a package ──
+  var pay = $("pay");
+  if (pay) {
+    var pd = {};
+    try { pd = JSON.parse(pay.getAttribute("data-pay") || "{}"); } catch (e) { pd = {}; }
+    var tiers = pd.tiers || [], months = pd.months || 12, cur = pd.currency || "EUR";
+    var pressed = pay.querySelector("[data-pk][aria-pressed='true']");
+    var pk = pressed ? pressed.getAttribute("data-pk") : (tiers[0] && tiers[0].id);
+    var money = function (minor) {
+      var v = minor / 100;
+      try { return new Intl.NumberFormat(LANG, { style: "currency", currency: cur, maximumFractionDigits: v % 1 === 0 ? 0 : 2 }).format(v); }
+      catch (e) { return v.toFixed(2) + " " + cur; }
+    };
+    var num = function (s) {
+      s = String(s).trim().replace(/[\s\u00a0€]/g, "");
+      if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "");
+      return parseFloat(s.replace(",", "."));
+    };
+    var payCalc = function () {
+      var n = num($("pay-night").value), p = num($("pay-pct").value), err = $("pay-err");
+      var tier = tiers.filter(function (t) { return t.id === pk; })[0];
+      if (!(n > 0) || !(p >= 1 && p <= 50) || !tier) {
+        err.hidden = false;
+        err.textContent = !(n > 0) ? tr("Írj be egy éjszakai árat, pl. 85.") : tr("A jutalék 1 és 50% között legyen.");
+        $("pay-out").textContent = "—"; $("pay-l1").textContent = ""; $("pay-l2").textContent = "";
+        return;
+      }
+      err.hidden = true;
+      var yearMinor = tier.monthly * months, perMinor = Math.round(n * p);   // n × p% in minor units
+      var nights = Math.ceil(yearMinor / perMinor);
+      $("pay-l1").textContent = tr("A csomag évente:") + " " + money(yearMinor) + " · " + tr("jutalék éjszakánként:") + " " + money(perMinor);
+      $("pay-out").textContent = trn("{n} közvetlen éjszaka / év", nights);
+      $("pay-l2").textContent = tr("Ennyi közvetlen foglalás után a saját oldalad olcsóbb, mint a portál jutaléka.");
+    };
+    $("pay-night").addEventListener("input", payCalc);
+    $("pay-pct").addEventListener("input", payCalc);
+    pay.querySelectorAll("[data-pk]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        pk = b.getAttribute("data-pk");
+        pay.querySelectorAll("[data-pk]").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+        payCalc();
+      });
+    });
+    payCalc();
+  }
 
   // ── sample request: name + map pin + e-mail → POST /api/mock-request ──────
   // The intake mails the preview link, so the contact is an e-mail address.
@@ -292,7 +360,7 @@
       .then(function (d) {
         var a = (d && d.address) || {};
         town = a.city || a.town || a.village || a.municipality || a.county || "";
-        if (town && pinOut) pinOut.textContent = "Hely rögzítve: " + town + ". Ha nem pontos, kattints máshova.";
+        if (town && pinOut) pinOut.textContent = tr("Hely rögzítve: {town}. Ha nem pontos, kattints máshova.").split("{town}").join(town);
       })
       .catch(function () {});
   }
@@ -300,12 +368,13 @@
     lat = la; lon = lo; town = "";
     if (marker) marker.setLatLng([la, lo]); else marker = L.marker([la, lo]).addTo(map);
     if (zoom) map.setView([la, lo], zoom);
-    if (pinOut) pinOut.textContent = "Hely rögzítve. Ha nem pontos, kattints máshova.";
+    if (pinOut) pinOut.textContent = tr("Hely rögzítve. Ha nem pontos, kattints máshova.");
     $("f-pin").classList.remove("bad");
     reverseGeocode(la, lo);
   }
   if (mapEl && window.L) {
-    map = L.map(mapEl, { scrollWheelZoom: false }).setView([47.16, 19.5], 7);
+    // Hungarian page: Hungary; every other language: Europe, with no country filter on search.
+    map = L.map(mapEl, { scrollWheelZoom: false }).setView(LANG === "hu" ? [47.16, 19.5] : [50, 10], LANG === "hu" ? 7 : 4);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
     map.on("click", function (e) { setPin(e.latlng.lat, e.latlng.lng); });
     if ("IntersectionObserver" in window) {
@@ -314,11 +383,11 @@
     var doSearch = function () {
       var q = (searchEl.value || "").trim();
       if (!q) return;
-      fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=hu&q=" + encodeURIComponent(q), { headers: { "Accept": "application/json" } })
+      fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1" + (LANG === "hu" ? "&countrycodes=hu" : "") + "&q=" + encodeURIComponent(q), { headers: { "Accept": "application/json" } })
         .then(function (r) { return r.json(); })
         .then(function (list) {
           if (list && list[0]) setPin(parseFloat(list[0].lat), parseFloat(list[0].lon), 16);
-          else if (pinOut) pinOut.textContent = "Nem találtam ilyen helyet. Írd pontosabban, vagy kattints a térképre.";
+          else if (pinOut) pinOut.textContent = tr("Nem találtam ilyen helyet. Írd pontosabban, vagy kattints a térképre.");
         })
         .catch(function () {});
     };
@@ -342,21 +411,21 @@
     var btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     note.classList.remove("form-bad");
-    note.textContent = "Küldés…";
+    note.textContent = tr("Küldés…");
     var fail = function () {
       btn.disabled = false;
       note.classList.add("form-bad");
-      note.textContent = "Nem sikerült elküldeni. Kérlek, próbáld újra egy perc múlva.";
+      note.textContent = tr("Nem sikerült elküldeni. Kérlek, próbáld újra egy perc múlva.");
     };
     fetch("/api/mock-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ business: business, contact: mail, type: "Szálláshely", town: town, lat: lat.toFixed(6), lon: lon.toFixed(6) })
+      body: JSON.stringify({ business: business, contact: mail, type: "Szálláshely", town: town, lat: lat.toFixed(6), lon: lon.toFixed(6) }) // i18n-exempt: intake data value, not UI
     })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (!d || !d.ok) return fail();
-        $("sent").innerHTML = "<b>Megkaptuk: „" + esc(business) + "”.</b><br>Elkészítjük a mintát, és a linkjét elküldjük ide: <b>" + esc(mail) + "</b>.";
+        $("sent").innerHTML = tr("<b>Megkaptuk: „{name}”.</b><br>Elkészítjük a mintát, és a linkjét elküldjük ide: <b>{email}</b>.").split("{name}").join(esc(business)).split("{email}").join(esc(mail));
         form.classList.add("done");
       })
       .catch(fail);

@@ -143,6 +143,17 @@ html.js .rv.in { opacity: 1; transform: none; }
 .calc-out strong { display: block; font: 700 clamp(30px, 4vw, 44px)/1 var(--citui-font-display); color: var(--citui-cyan-300); margin: 6px 0; }
 .calc-out small { color: color-mix(in srgb, var(--citui-ink-inverse) 62%, transparent); line-height: 1.5; display: block; }
 @media (max-width: 760px) { .calc { grid-template-columns: 1fr; } }
+/* Payback calculator (the non-Hungarian page, home.js #pay): two number fields + a package switch,
+   same dark card and result block as the commission calculator. */
+.pay-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.pay-two label { margin: 0; display: grid; gap: 8px; }
+.pay-two input { width: 100%; height: 46px; padding: 0 12px; border-radius: var(--citui-radius-sm); border: 1px solid color-mix(in srgb, var(--citui-white) 22%, transparent); background: color-mix(in srgb, var(--citui-white) 8%, transparent); color: var(--citui-ink-inverse); font: 600 16px/1 var(--citui-font-text); }
+.pay-two input:focus { outline: 2px solid var(--citui-cyan-400); outline-offset: 1px; }
+.pay-err { color: var(--citui-cyan-300); font-size: 13px; margin: -4px 0 12px; }
+.pay-err[hidden] { display: none; }
+.pay-seg { display: flex; gap: 2px; padding: 3px; margin-bottom: 14px; border-radius: var(--citui-radius-pill); background: color-mix(in srgb, var(--citui-white) 8%, transparent); }
+.pay-seg button { flex: 1; border: 0; background: transparent; color: var(--citui-ink-inverse); font: 600 14px/1 var(--citui-font-text); padding: 10px 8px; border-radius: var(--citui-radius-pill); cursor: pointer; }
+.pay-seg button[aria-pressed=true] { background: var(--citui-cyan-500); color: var(--citui-accent-ink); }
 
 /* pricing */
 .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 40px; }

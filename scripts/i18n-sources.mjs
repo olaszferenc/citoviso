@@ -41,6 +41,9 @@ export const I18N_SOURCES = [
   "src/console/planSwitcher.ts",
   "assets/runtime/cit-runtime.js",
   "assets/runtime/cit-configurator.js",
+  // The citoviso.com homepage's runtime texts (ADR-XXXX: the page speaks the visitor's
+  // browser language; window.CIT_HOME carries the pack, src/server/homepage.ts).
+  "public/assets/home/home.js",
   // season-datepicker: the tenant admin's season editor — every word comes from the
   // server's L (T()), so the lint keeps a stray literal from slipping in here.
   "assets/runtime/cit-season-editor.js",

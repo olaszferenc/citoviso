@@ -569,6 +569,8 @@ async function serveHomepage(
     return send(res, 404, "<h1>404</h1>", "text/html; charset=utf-8");
   }
   const rendered = await withAssetVersions(await renderHomepage(html, req.headers, url.searchParams.get("region")));
+  // The page is in the visitor's browser language (homepageLang): caches key on the header.
+  res.setHeader("Vary", "Accept-Language");
   // Installable citoviso.com app (2026-11-19, src/ui/pwa.ts).
   send(res, 200, withPwaHead(rendered, "public"));
 }
