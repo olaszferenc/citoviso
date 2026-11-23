@@ -298,6 +298,23 @@ console.log("⑩ személyes levél — a tulaj végleges szövege (kikapcsolt v�
   check("nincs „az Öné” reklámfordulat", !/az Öné/.test(body));
 }
 
+console.log("⑪ a személyes levél horvátul a §C kapun (HR dev-próba 2026-11-23)");
+{
+  // The translated hook („… vidite je samo Vi …”) is the framing of the foreign letter: before the fix
+  // every non-Hungarian owner's letter failed KERETEZÉS, so no foreign cold letter could go out.
+  const lang = await prepareMailLang("hr");
+  const input = { leadName: "Apartmani Tonkita", region: "", qualification: null, segment: "nincs_honlap", rating: null, token: "abcdefghijklmnopqrstuvwx", lang, planCount: 1, trialDays: 14 } as Parameters<typeof personalParts>[0];
+  const base = renderDraft(input);
+  const links = { cta: base.link, unsub: base.unsubscribeLink, privacy: base.privacyLink };
+  const parts = personalParts(input, base, priceSentence(lang, base.parts.priceOffer, "HR"), "Kovács Anna");
+  const letter = { ...base, subject: subjectIsThisYours(lang, "Apartmani Tonkita", "Makarska"), parts, body: composePersonalBody(parts, links, lang) };
+  const g = checkOutreachDraft(letter, "Apartmani Tonkita", lang, { country: "HR", approved: true });
+  check("HR: a horvát személyes levél nem KERETEZÉS-FLAG", !g.reasons.some((r) => r.startsWith("KERETEZÉS")), g.reasons);
+  const hook = parts.hook;
+  const noFrame = { ...letter, body: letter.body.replace(hook, "") };
+  check("HR: a horog nélkül KERETEZÉS-FLAG (a kapu él)", checkOutreachDraft(noFrame, "Apartmani Tonkita", lang, { country: "HR", approved: true }).reasons.some((r) => r.startsWith("KERETEZÉS")));
+}
+
 if (failures) {
   console.error(`\n✗ experiment-selftest: ${failures} hiba`);
   process.exit(1);

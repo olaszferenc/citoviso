@@ -32,6 +32,7 @@ const { buildOutreachEmail } = await import("../src/email/outreachEmail.js");
 const { applyOffer } = await import("../src/payment/offers.js");
 const { seedAssignment } = await import("../src/packages.js");
 const { db } = await import("../src/db/client.js");
+const { sql } = await import("kysely");
 
 let failures = 0;
 function check(label: string, cond: boolean, detail = ""): void {
@@ -43,17 +44,19 @@ const grp = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " 
 const sp = (s: string): string => s.replace(/&nbsp;|&#160;|[\s\u00a0\u202f]+/g, " ");
 const digits = (s: string): string => s.replace(/\D/g, "");
 
-// A real prospect of the shared park (read only).
-// gate-subject-allow: bármelyik prospect megfelel — az ár leadtől független, a levél és a manifest UGYANAZT a leadet kapja, a %-ot a levélből olvassuk; hiányában hangos bukás
+// A real HU prospect of the shared park (read only) — the predicate below; none → loud precondition fail.
 const row = await db
   .selectFrom("prospect")
   .innerJoin("lead", "lead.id", "prospect.lead_id")
   .select(["prospect.id as id", "lead.name as name"])
+  // The cards measured below are the HU price sheet: a foreign prospect (HR dev-próba 2026-11-23: the
+  // newest prospect became a Croatian one, letter in €, cards in Ft) is another price layer, not this guard's.
+  .where(sql<boolean>`coalesce(lead.raw->>'country', 'HU') = 'HU'`)
   .orderBy("prospect.created_at", "desc")
   .limit(1)
   .executeTakeFirst();
 if (!row) {
-  console.error("✗ FAIL  nincs prospect a dev DB-ben — az őr nem tud mit mérni");
+  console.error("✗ FAIL  ELŐFELTÉTEL: nincs magyar (HU) prospect a dev DB-ben — az őr nem tud mit mérni");
   process.exit(1);
 }
 

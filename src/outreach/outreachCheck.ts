@@ -647,7 +647,11 @@ function foreignGateMarks(lang: string): { identity: string; legal: string; fram
     T(lang, "Érdekli a megoldásunk? Készítettünk Önnek {n} honlaptervet, amit {days} napig ingyen próbára tehet.", vn),
     T(lang, "Érdekli a megoldásunk? Készítettünk Önnek {n} honlaptervet.", vn),
   ].map(longest);
-  const framing = [...new Set([mail, followup, ...nonOpener, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
+  // HR dev-próba 2026-11-23: the OWNER'S LETTER (experimentCopy.ownerLetter, every cold letter since
+  // 4fd41a77) frames the page in its hook („… csak Ön látja …”) — the Hungarian rule passes on „csak Ön
+  // látja”, the translated hook failed KERETEZÉS, so no foreign cold letter could go out at all.
+  const ownerHook = T(lang, "Elkészítettem a szállása honlapját: teljesen működik, csak Ön látja, és telefonon is kipróbálhatja.");
+  const framing = [...new Set([mail, followup, ownerHook, ...nonOpener, ...sms, ...sms.map(fold)].map((x) => x.toLowerCase()).filter((x) => x.length >= 8))];
   return {
     identity: longest(T(lang, "A megkeresés küldője: {who}", v)).toLowerCase(),
     // ORSZÁG-RÉTEG 3/9: the letter takes its legal line from the COUNTRY LEGAL PACK (draft.ts →
