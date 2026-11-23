@@ -130,7 +130,7 @@ type Overrides = {
   contact?: { email?: string; phone?: string; address?: string };
   /** ADR-0241 — the owner-placed map pin. */
   geo?: { lat: number; lon: number };
-  /** ADR-XXXX — the owner's "Mozgó nyitókép" switch; absent = what the mock carried (§23). */
+  /** ADR-0472 — the owner's "Mozgó nyitókép" switch; absent = what the mock carried (§23). */
   heroMotion?: HeroMotionSetting;
 };
 
@@ -710,7 +710,7 @@ export interface EffectiveSiteContent {
   readonly hideGallery: boolean;
   /** LV-1: anchors of the not-bought modules, cut from the page at render. */
   readonly hideAnchors: readonly string[];
-  /** ADR-XXXX: the moving cover's state (the Fotók tab card reads it). */
+  /** ADR-0472: the moving cover's state (the Fotók tab card reads it). */
   readonly heroMotion: HeroMotionState;
 }
 
@@ -721,7 +721,7 @@ async function assembleEffective(
   /** ADR-0089 — preview-only module set; see moduleContentFor. Never persisted. */
   overrideActive?: ReadonlySet<string>,
 ): Promise<EffectiveSiteContent> {
-  // ADR-XXXX: the mock's depth map and the owner's switch are NOT page data as such —
+  // ADR-0472: the mock's depth map and the owner's switch are NOT page data as such —
   // resolveHeroMotion decides below, against the FINAL cover.
   const { heroDepth: mockDepth, ...baseNoDepth } = s.baseSiteData;
   const { heroMotion: motionSetting, ...pageOverrides } = overrides;
@@ -776,7 +776,7 @@ async function assembleEffective(
     moduleContent.photoCap && merged2.photos.length > moduleContent.photoCap
       ? { ...merged2, photos: merged2.photos.slice(0, moduleContent.photoCap) }
       : merged2;
-  // ADR-XXXX moving cover — last, against the final cover (photos[0]).
+  // ADR-0472 moving cover — last, against the final cover (photos[0]).
   const motion = await resolveHeroMotion(
     { tenantId: s.tenantId, sourceArtifactId: s.sourceArtifactId, template: s.recipe.template, setting: motionSetting, mockDepth },
     capped,
@@ -1231,7 +1231,7 @@ export async function moveTenantPhoto(
   return { ok: await renderAndPersist(s, { ...s.overrides, photos: current }) };
 }
 
-/** ADR-XXXX — the owner's "Mozgó nyitókép" switch; re-renders the snapshot. */
+/** ADR-0472 — the owner's "Mozgó nyitókép" switch; re-renders the snapshot. */
 export async function setTenantHeroMotion(tenantId: string, on: boolean): Promise<{ ok: boolean; state: HeroMotionState | null }> {
   const s = await loadSiteForEdit(tenantId);
   if (!s || !s.path) return { ok: false, state: null };
@@ -1241,7 +1241,7 @@ export async function setTenantHeroMotion(tenantId: string, on: boolean): Promis
   return { ok, state: after.heroMotion };
 }
 
-/** ADR-XXXX — the moving cover's state for the Fotók tab card (the same assembly the page renders). */
+/** ADR-0472 — the moving cover's state for the Fotók tab card (the same assembly the page renders). */
 export async function tenantHeroMotionState(tenantId: string): Promise<HeroMotionState | null> {
   const s = await loadSiteForEdit(tenantId);
   if (!s) return null;

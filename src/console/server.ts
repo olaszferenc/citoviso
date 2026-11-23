@@ -3974,7 +3974,7 @@ async function handle(
     res.end(body);
     return;
   }
-  // GET /configure/depth/<sha24>.png — a depth-hero map (ADR-XXXX). Not artifact-bound: the file
+  // GET /configure/depth/<sha24>.png — a depth-hero map (ADR-0472). Not artifact-bound: the file
   // name is a hash of the photo URL and the content is a grayscale shape, so it is served to anyone
   // who names it. Same-origin on every host (the /configure/ prefix is routed here everywhere),
   // which is what lets WebGL read it without CORS.

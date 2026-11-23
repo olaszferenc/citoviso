@@ -1639,7 +1639,7 @@ async function serveAdmin(
   const lookNow = planSet
     ? { n: planSet.plans.find((p) => p.artifactId === planSet.currentArtifactId)?.n ?? 1, count: planSet.plans.length }
     : null;
-  // ADR-XXXX — the "Mozgó nyitókép" card on the Fotók tab (the page's own assembly decides).
+  // ADR-0472 — the "Mozgó nyitókép" card on the Fotók tab (the page's own assembly decides).
   const heroMotion: AdminOpts["heroMotion"] = tab === "fotok" ? await tenantHeroMotionState(session.tenantId) : null;
   let look: AdminOpts["look"] = null;
   if (tab === "kinezet" && planSet && site) {
@@ -3728,7 +3728,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     }
     return redirect(res, "/admin?tab=fotok&saved=1");
   }
-  // POST /admin/hero-motion — ADR-XXXX "Mozgó nyitókép" switch (plan: design-refs/tenant-admin/
+  // POST /admin/hero-motion — ADR-0472 "Mozgó nyitókép" switch (plan: design-refs/tenant-admin/
   // terhatas-kapcsolo, variant A). Saved in place (fetch → JSON with the new state); without JS
   // the form posts and comes back to the Fotók tab.
   if (req.method === "POST" && pathname === "/admin/hero-motion") {

@@ -154,7 +154,7 @@ export async function rerenderArtifactWithHero(
   const nextPhotos = url
     ? applyHeroPin(photos, url)
     : orderPhotosForHero(photos, scores);
-  // ADR-XXXX: a mock that was in the depth-hero experiment keeps its place in it — the new cover
+  // ADR-0472: a mock that was in the depth-hero experiment keeps its place in it — the new cover
   // gets its own depth map (or a skip reason); a stale map would only sit inert in the data.
   const { heroDepth: _staleDepth, ...withoutDepth } = siteData;
   const inExperiment = typeof inputs.heroDepthArm === "string";

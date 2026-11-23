@@ -751,9 +751,9 @@ async function generateEngineMockInner(
   // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
   opts.onStage?.("render");
   // EGY ARTEFAKTUM = EGY FÁJL (ADR-0140): the id is taken BEFORE the render (see below) — the
-  // depth-hero texture URL names it too (ADR-XXXX).
+  // depth-hero texture URL names it too (ADR-0472).
   const artifactIdPre = newArtifactId();
-  // ADR-XXXX depth-hero experiment: the arm is decided now, so the rendered file matches it.
+  // ADR-0472 depth-hero experiment: the arm is decided now, so the rendered file matches it.
   const depth = await withDepthArm(siteData, { leadId, artifactId: artifactIdPre, template: finalRecipe.template });
   siteData = depth.siteData;
   if (depth.arm) console.log(`  🎞️ térhatás-kísérlet: ${depth.arm}`); // i18n-exempt: operator log
@@ -847,7 +847,7 @@ async function generateEngineMockInner(
       archetype: finalRecipe.archetype,
       recipe: finalRecipe as unknown as Record<string, unknown>,
       siteData: siteData as unknown as Record<string, unknown>,
-      // ADR-XXXX: the depth-hero experiment arm ('depth' | 'control' | 'skip:<why>'); absent = off.
+      // ADR-0472: the depth-hero experiment arm ('depth' | 'control' | 'skip:<why>'); absent = off.
       ...(depth.arm ? { heroDepthArm: depth.arm } : {}),
       // `inputs` is not an archive — `rerender-mock.mts` RE-RENDERS from it (ADR-0143 ①).
       // Persisting the key under the `region` NAME field would resurrect the scrape key on

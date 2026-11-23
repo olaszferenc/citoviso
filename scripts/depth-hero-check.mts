@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 // gate-runner: self-overlap-safe — renders in memory, serves on ephemeral loopback ports, writes no file, no row
 /**
- * DEPTH HERO guard ("térhatású borítókép", ADR-XXXX) — the cover moves in depth only when it
+ * DEPTH HERO guard ("térhatású borítókép", ADR-0472) — the cover moves in depth only when it
  * should, and a failure always leaves the static photo, never an empty frame.
  *
  *   npx tsx scripts/depth-hero-check.mts [--self-test]

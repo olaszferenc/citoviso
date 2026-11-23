@@ -661,7 +661,7 @@ function photoRow(
 
 /** Photos tab (README ⑥⑦). `view` = grid | list (GET `v=`, remembered by the script). */
 /**
- * ADR-XXXX — the "Mozgó nyitókép" card (contract: design-refs/tenant-admin/terhatas-kapcsolo,
+ * ADR-0472 — the "Mozgó nyitókép" card (contract: design-refs/tenant-admin/terhatas-kapcsolo,
  * variant A). Live preview with the page's own runtime, the shared admin switch (adm-vis), saved
  * in place; while a new cover's map is made the card polls and the preview stays still.
  */
@@ -6536,7 +6536,7 @@ export interface AdminOpts {
   readonly siteSlug?: string | null;
   /** ADR-0224 ⑥: the Fotók tab's layout (GET `v=`; the script remembers the choice). */
   readonly photosView?: "grid" | "list";
-  /** ADR-XXXX: the "Mozgó nyitókép" card on the Fotók tab (null → no card). */
+  /** ADR-0472: the "Mozgó nyitókép" card on the Fotók tab (null → no card). */
   readonly heroMotion?: HeroMotionState | null;
   /** „Now" for the date-relative copy (subscription card, message dates). ADR-0220: the
    *  KB shot pins it, so the same commit always renders the same picture. */

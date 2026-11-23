@@ -1605,7 +1605,7 @@ export interface SitePlaceRatingTable {
 /** 0060: per-photo hero suitability, keyed by the query-less URL (photoKey()).
  *  Pixel size says nothing about SUBJECT — a 1200px outhouse shot passed every
  *  size/URL gate and became a hero. This caches what the vision pass saw. */
-/** 0152 (ADR-XXXX depth hero): one depth map per photo URL (photoKey), the PNG under sites/_depth/. */
+/** 0152 (ADR-0472 depth hero): one depth map per photo URL (photoKey), the PNG under sites/_depth/. */
 export interface PhotoDepthMapTable {
   url_key: string;
   /** PNG file name under sites/_depth/; null when none was made (skip_reason says why). */

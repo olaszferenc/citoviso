@@ -1,4 +1,4 @@
-// THE TENANT'S MOVING COVER ("Mozgó nyitókép", ADR-XXXX; plan
+// THE TENANT'S MOVING COVER ("Mozgó nyitókép", ADR-0472; plan
 // assets/design-refs/tenant-admin/terhatas-kapcsolo/, approved 2026-11-23, variant A).
 //
 // WHAT DECIDES IT

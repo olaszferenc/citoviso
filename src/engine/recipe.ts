@@ -283,7 +283,7 @@ export interface SiteData {
    */
   readonly gatePhoto?: Photo;
   /**
-   * ADR-XXXX depth hero ("térhatású borítókép"): the cover photo moves in depth (engine/depthHero.ts).
+   * ADR-0472 depth hero ("térhatású borítókép"): the cover photo moves in depth (engine/depthHero.ts).
    * `source` = the photo URL the map was computed for — the renderer animates ONLY when it equals
    * the hero it is about to show (a stale map never moves a different cover). `img` = the same
    * photo on a same-origin / CORS-enabled URL (WebGL cannot read portal photos), `depth` = the

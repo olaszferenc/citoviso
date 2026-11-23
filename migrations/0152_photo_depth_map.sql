@@ -1,4 +1,4 @@
--- MÉLYSÉGKÉP-CACHE a térhatású borítóképhez (ADR-XXXX).
+-- MÉLYSÉGKÉP-CACHE a térhatású borítóképhez (ADR-0472).
 --
 -- Miért tábla: egy fotó mélységképe nem változik — egy lead mockja sokszor újragenerálódik
 -- (kurátor-kör, újraszövegezés, sablon-csere), a tenant borítóképe is visszaállhat egy

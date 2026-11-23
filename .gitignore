@@ -106,5 +106,5 @@ data/
 # A terv-kontraktus újraépített PÉLDÁNYA (összehasonlításra) — a hiteles a commitolt freeze-state-B.html
 assets/design-refs/console/**/*.regen.html
 
-# ADR-XXXX depth hero: the ONNX model is fetched by scripts/depth-model-fetch.mts (sha256-pinned), never committed
+# ADR-0472 depth hero: the ONNX model is fetched by scripts/depth-model-fetch.mts (sha256-pinned), never committed
 models/

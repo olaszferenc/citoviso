@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * DEPTH-HERO EXPERIMENT REPORT (ADR-XXXX) — does the moving cover change what a lead does AFTER
+ * DEPTH-HERO EXPERIMENT REPORT (ADR-0472) — does the moving cover change what a lead does AFTER
  * opening the mock?
  *
  *   npx tsx scripts/depth-hero-report.mts [--days 30]

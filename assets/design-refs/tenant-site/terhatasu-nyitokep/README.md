@@ -1,6 +1,6 @@
 # Tenant-oldal / mock — térhatású nyitókép (JÓVÁHAGYOTT, 2026-11-23)
 
-**Státusz:** a tulaj jóváhagyta · **Kapu:** CLAUDE.md §2b · **Döntés:** ADR-XXXX ·
+**Státusz:** a tulaj jóváhagyta · **Kapu:** CLAUDE.md §2b · **Döntés:** ADR-0472 ·
 **Megvalósítás:** `src/engine/depthHero.ts` · **Őr:** `scripts/depth-hero-check.mts`
 
 - Terv (kattintható, a valódi futtatóval): `terhatas-JOVAHAGYOTT.html` · képek: `terhatas-{mobile,desktop}.png`

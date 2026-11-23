@@ -1,4 +1,4 @@
-// THE DEPTH-HERO EXPERIMENT ARM of a new mock (ADR-XXXX, owner 2026-11-23: "először csak kísérlet").
+// THE DEPTH-HERO EXPERIMENT ARM of a new mock (ADR-0472, owner 2026-11-23: "először csak kísérlet").
 //
 // WHY AT GENERATION, NOT AT SEND. The outreach experiment layer (outreach/experiment.ts) assigns
 // its variants when the letter leaves — but the mock HTML is rendered, curator-approved and frozen

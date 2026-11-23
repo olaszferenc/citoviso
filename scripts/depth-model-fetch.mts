@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Fetch the depth-hero model (ADR-XXXX) — Depth Anything V2 Small, int8 ONNX, 27 MB.
+ * Fetch the depth-hero model (ADR-0472) — Depth Anything V2 Small, int8 ONNX, 27 MB.
  *
  *   npx tsx scripts/depth-model-fetch.mts
  *

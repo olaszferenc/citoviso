@@ -1,4 +1,4 @@
-## ADR-XXXX — Térhatású borítókép (mélységkép + WebGL) a mockon és a tenant-oldalon, kísérletként
+## ADR-0472 — Térhatású borítókép (mélységkép + WebGL) a mockon és a tenant-oldalon, kísérletként
 
 **Státusz:** ELFOGADVA (tulaj, 2026-11-23, session `cite2d1c9b4`, brief `hero-20261123-080710.md`) ·
 **Épít:** ADR-0016 (egy motor, mock = élő), ADR-0044 (modul-konfig), ADR-0115 (mozgásréteg, fail-safe),

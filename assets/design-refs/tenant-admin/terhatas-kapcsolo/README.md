@@ -1,7 +1,7 @@
 # Tenant-admin — „Mozgó nyitókép” kapcsoló a Fotók fülön (JÓVÁHAGYOTT TERV, 2026-11-23)
 
 **Státusz:** a tulaj jóváhagyta (**„A” változat: a Fotók fülön**, a nyitókép felett) ·
-**Kapu:** CLAUDE.md §2b · **Döntés:** ADR-XXXX (térhatású borítókép, kísérletként) ·
+**Kapu:** CLAUDE.md §2b · **Döntés:** ADR-0472 (térhatású borítókép, kísérletként) ·
 **Session:** `cite2d1c9b4`, brief `hero-20261123-080710.md` ·
 **Hatókör:** `src/server/adminViews.ts`, `src/tenant/heroMotion.ts`
 

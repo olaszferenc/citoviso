@@ -1,4 +1,4 @@
-// DEPTH HERO ("térhatású borítókép", ADR-XXXX) — the cover photo moves in depth.
+// DEPTH HERO ("térhatású borítókép", ADR-0472) — the cover photo moves in depth.
 //
 // WHAT IT IS. A depth map (grayscale PNG, near = white) is computed once per cover photo
 // (Depth Anything V2 Small, ONNX) and a tiny WebGL shader shifts the photo's own pixels by it,
