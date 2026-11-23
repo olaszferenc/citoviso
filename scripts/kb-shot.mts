@@ -1354,6 +1354,12 @@ async function shoot(
     // ADR-0429: the overview strip and the Modulok tiles are on these pictures, as on the real admin.
     ...(tab === "attekintes" ? { setupStrip: overviewSetupStrip({ lang: LANG, items: SETUP_ITEMS, next: SETUP_ITEMS[1]!, guestLine: SETUP_GUEST }) } : {}),
     ...(tab === "modulok" && !moduleSettingsHtml ? { setupTiles: setupTilesSection({ lang: LANG, items: SETUP_ITEMS, guestLine: SETUP_GUEST }) } : {}),
+    // ADR-0472: the Fotók picture shows the „Mozgó nyitókép” card the entry walks through —
+    // switched ON, the cover as a still (no preview map: a KB picture must be the same on every
+    // run, a moving canvas would not be).
+    ...(tab === "fotok"
+      ? { heroMotion: { kind: "on" as const, wanted: true, cover: content.photos?.[0]?.url ?? "", preview: null, skip: null } }
+      : {}),
     tab,
     modules: mods,
     siteUrl: "https://nyugalom-vendeghaz.citoviso.com",
