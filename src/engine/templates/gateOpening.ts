@@ -42,6 +42,7 @@ import { isSamePicture } from "../samePicture.js";
 import { slotMarker } from "../moduleSections.js";
 import { ratingScale } from "../rating.js";
 import type { Photo, Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import {
@@ -454,6 +455,9 @@ p{margin:0 0 1em}
 
 /** Set before first paint so the gate is closed when the page first shows. No class (JS off,
  *  reduced motion, tooling's data-cit-no-motion) → no gate, no choreography, all visible. */
+// The hero photo settles (koSettle 2.2s after .1s) while the leaves open — the depth hero
+// (ADR-XXXX) takes over only after that, so the two motions never fight.
+const GATE_SETTLE_MS = 2400;
 const GATE_BOOT = `(function(){var r=document.documentElement;try{if(r.hasAttribute('data-cit-no-motion')||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches))return;}catch(e){}r.classList.add('ko-anim');})();`;
 
 function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string {
@@ -539,7 +543,7 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const heroBlock = `<section class="ko-hero" id="top">
     <div class="ko-hero-bg">${
       hero
-        ? `<img src="${esc(hero.url)}" alt="${esc(hero.alt || data.name)}" fetchpriority="high" loading="eager">`
+        ? `<img${depthHeroAttr(data, hero.url, { delayMs: GATE_SETTLE_MS })} src="${esc(hero.url)}" alt="${esc(hero.alt || data.name)}" fetchpriority="high" loading="eager">`
         : photoFill(data.name)
     }</div>
     ${gateHtml}
@@ -797,7 +801,7 @@ ${motionCss("calm")}
   </main>
   ${footer}
   ${fab}
-  <script>${motionJs()}</script>
+  <script>${motionJs()}</script>${hero && depthHeroJs(data, hero.url) ? `\n  <script>${depthHeroJs(data, hero.url)}</script>` : ""}
 </body>
 </html>`;
 }
