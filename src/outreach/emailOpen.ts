@@ -15,6 +15,13 @@
 //                             Mail client without MPP sends the same User-Agent, so a real Apple
 //                             open is undercounted rather than an Apple prefetch overcounted.
 //   BOT_PATTERN             → bot (the list mock_view uses for device 'bot')
+//   Gmail's delivery scanner → bot: a non-proxy UA from a Google egress block (66.249/16 …), e.g.
+//                             "… Edge/… Mozilla/5.0" with Referer mail.google.com, or one naming
+//                             "Gmail-content-sampling". Measured 2026-11-23 (nginx): 30 of 129 cold
+//                             letters fetched this way 3 s after the send — no person opens that fast.
+//   Gmail proxy ≤ 60 s after the send → bot: the proxy fetch that follows the scanner (same day, 20
+//                             letters at 5–17 s). A real open in the first minute is lost — rare, and
+//                             an undercount, never an overcount.
 //   anything else           → open (a mail client loading the image itself)
 // The owner's pilot copy carries `?sajat=1` (markOwnViewLinks) and is never written.
 //
@@ -47,6 +54,15 @@ function isAppleIp(ip: string | null | undefined): boolean {
   return /^17\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(v4);
 }
 
+/** Google egress blocks (Gmail's proxy and its delivery scanner both fetch from these). */
+function isGoogleIp(ip: string | null | undefined): boolean {
+  const v4 = (ip ?? "").replace(/^::ffff:/i, "");
+  return /^(66\.249|64\.233|72\.14|74\.125|108\.177|142\.25[01]|172\.217|173\.194|209\.85)\./.test(v4);
+}
+
+/** A Gmail proxy fetch this soon after the send is the scanner's follow-up, not the recipient. */
+export const MAIL_OPEN_MIN_DELAY_MS = 60_000;
+
 /**
  * Pure classification of one fetch. `ip` is read for the Apple block only, never stored.
  * Order matters: the Gmail proxy UA mentions "Firefox" and would read as a client.
@@ -54,6 +70,8 @@ function isAppleIp(ip: string | null | undefined): boolean {
 export function classifyMailFetch(ua: string | null | undefined, ip?: string | null): { kind: EmailOpenKind; client: EmailOpenClient } {
   const s = (ua ?? "").trim();
   if (/GoogleImageProxy/i.test(s)) return { kind: "open", client: "gmail_proxy" };
+  // Gmail's delivery scanner: a browser-looking UA from Google's own egress (never a person).
+  if (/Gmail-content-sampling/i.test(s) || isGoogleIp(ip)) return { kind: "bot", client: "bot" };
   if (/YahooMailProxy/i.test(s)) return { kind: "open", client: "yahoo_proxy" };
   // Apple MPP: Apple's egress, the bare "Mozilla/5.0", or the WebKit Mac UA without a browser token.
   const appleMailUa = /Macintosh/i.test(s) && /AppleWebKit/i.test(s) && !/Safari\/|Version\/|Chrome\/|Firefox\//i.test(s);
@@ -96,10 +114,21 @@ export async function storeMailHero(token: string, shotPath: string): Promise<st
   }
 }
 
+/** True when a fetch at `now` came within MAIL_OPEN_MIN_DELAY_MS of the send (pure, for the selftest). */
+export function tooSoonAfterSend(sentAt: Date | string | null, now: Date): boolean {
+  if (!sentAt) return false;
+  const ms = now.getTime() - new Date(sentAt).getTime();
+  return ms >= 0 && ms < MAIL_OPEN_MIN_DELAY_MS;
+}
+
 /** Record one fetch of a lead's hero. Never throws: the image must be served either way. */
 export async function recordMailFetch(prospectId: string, ua: string | null | undefined, ip: string | null | undefined): Promise<EmailOpenKind | null> {
   try {
-    const c = classifyMailFetch(ua, ip);
+    let c = classifyMailFetch(ua, ip);
+    if (c.client === "gmail_proxy") {
+      const p = await db.selectFrom("prospect").select("email_sent_at").where("id", "=", prospectId).executeTakeFirst();
+      if (tooSoonAfterSend(p?.email_sent_at ?? null, new Date())) c = { kind: "bot", client: "bot" };
+    }
     await db.insertInto("email_open").values({ prospect_id: prospectId, kind: c.kind, client: c.client }).execute();
     return c.kind;
   } catch (e) {

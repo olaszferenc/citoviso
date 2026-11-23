@@ -29,7 +29,7 @@ import {
   DEFAULT_EXPERIMENT,
   COMPLAINT_PATTERN,
 } from "../src/outreach/experiment.js";
-import { classifyMailFetch, RE_MAIL_HERO } from "../src/outreach/emailOpen.js";
+import { classifyMailFetch, RE_MAIL_HERO, tooSoonAfterSend } from "../src/outreach/emailOpen.js";
 import { renderDraft } from "../src/outreach/draft.js";
 import { buildOutreachEmail, HERO_CID } from "../src/email/outreachEmail.js";
 import { checkOutreachDraft } from "../src/outreach/outreachCheck.js";
@@ -130,6 +130,13 @@ console.log("⑤ levélnyitás-osztályozás");
   check("iOS Mail (MPP nélkül) = nyitás", classifyMailFetch("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148", "84.2.3.4").kind === "open");
   check("Outlook asztali = nyitás", classifyMailFetch("Microsoft Office/16.0 (Windows NT 10.0; Microsoft Outlook 16.0.17126; Pro)", "84.2.3.4").kind === "open");
   check("Yahoo proxy = nyitás", classifyMailFetch("YahooMailProxy; https://help.yahoo.com/kb/yahoo-mail-proxy-SLN28749.html", null).client === "yahoo_proxy");
+  const scanUa = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edge/12.246 Mozilla/5.0";
+  check("Gmail kézbesítési szűrő (Google IP, böngésző-UA) = bot", classifyMailFetch(scanUa, "66.249.92.34").kind === "bot");
+  check("Gmail-content-sampling = bot (IP nélkül is)", classifyMailFetch("Mozilla/5.0 (Windows NT 10.0) Chrome/120 Gmail-content-sampling", null).kind === "bot");
+  check("ugyanez a UA nem-Google IP-ről = nyitás", classifyMailFetch(scanUa, "84.2.3.4").kind === "open");
+  check("Gmail proxy 8 mp-cel a küldés után = túl korai", tooSoonAfterSend(new Date("2026-11-23T08:13:28Z"), new Date("2026-11-23T08:13:36Z")));
+  check("Gmail proxy 5 perccel a küldés után = valós", !tooSoonAfterSend(new Date("2026-11-23T08:13:28Z"), new Date("2026-11-23T08:18:28Z")));
+  check("küldési idő nélkül → nem dob el", !tooSoonAfterSend(null, new Date()));
   check("útvonal-minta: /p/<token>/kep.jpg", RE_MAIL_HERO.test("/p/abcdefghijklmnopqrstuvwx/kep.jpg") && !RE_MAIL_HERO.test("/p/short/kep.jpg"));
 }
 
