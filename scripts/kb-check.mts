@@ -105,6 +105,7 @@ const VIEW_GROUPS = {
     "src/console/domainRegistryViews.ts",
     // Riport „Tenantok” tab + the partner sheet's Aktivitás block (frozen plans 1A/2A).
     "src/console/tenantActivityViews.ts",
+    "src/console/experimentViews.ts",
     // ADR-0360: the redesigned Árazás page — its new panels (Csomagok, Modulok, Saját domain,
     // the overview, the save bar) are rendered HERE; views.ts only assembles them.
     "src/console/pricingPage.ts",

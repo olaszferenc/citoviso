@@ -66,7 +66,10 @@ export function markOwnViewLinks(body: string): string {
       new RegExp(`(/p/(?:[a-z0-9][a-z0-9-]*/)?${TOKEN})(?![A-Za-z0-9_/?#-])`, "g"),
       `$1?${OWN_VIEW_PARAM}=1`,
     )
-    .replace(PREVIEW_HOST_LINK, `$1/?${OWN_VIEW_PARAM}=1`);
+    .replace(PREVIEW_HOST_LINK, `$1/?${OWN_VIEW_PARAM}=1`)
+    // The cold letter's remote hero (src/outreach/emailOpen.ts): its fetch is the mail open, so
+    // the owner's copy must not count either.
+    .replace(new RegExp(`(/p/${TOKEN}/kep\\.jpg)(?![?])`, "g"), `$1?${OWN_VIEW_PARAM}=1`);
 }
 
 /** True when the message carries at least one tracked page link. */

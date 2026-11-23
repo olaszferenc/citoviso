@@ -8,7 +8,7 @@
 // sending domain). Default cap + inter-send delay are deliberately conservative;
 // the operator raises them consciously per run, not by default.
 
-import { buildDraftForProspect, draftOfferPercent } from "./draft.js";
+import { buildDraftForProspect, composeBody, draftOfferPercent, type OutreachDraft } from "./draft.js";
 import { loadCopyOverride, withMailOverride } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
@@ -35,6 +35,9 @@ import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { alreadyCustomerBlocks } from "./customerGate.js";
 import { isTestLeadName } from "./ownerTestPhone.js";
 import { planCountStill } from "./planSet.js";
+import { assignVariants, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
+import { mailHeroUrl, remoteHeroActive, storeMailHero } from "./emailOpen.js";
+import { composePersonalBody, personalParts, personalSenderName } from "./experimentCopy.js";
 
 export interface SendableProspect {
   readonly id: string;
@@ -314,6 +317,7 @@ export async function sendOutreachMail(
       "prospect.mock_artifact_id as artifactId",
       "lead.id as leadId",
       "lead.name as leadName",
+      sql<string | null>`lead.raw->>'city'`.as("leadCity"),
     ])
     .where("prospect.id", "=", prospectId)
     .executeTakeFirst();
@@ -397,7 +401,8 @@ export async function sendOutreachMail(
   if (!d0) return { ...base, outcome: { kind: "skipped", reason: "a piszkozat nem állítható elő" } };
   // The owner's own wording for this lead, if he edited it on the approval page (copyOverride.ts);
   // every gate below judges the letter that actually goes out.
-  const d = { ...d0, draft: withMailOverride(d0.draft, await loadCopyOverride(prospectId), d0.lang) };
+  const override = await loadCopyOverride(prospectId);
+  const d = { ...d0, draft: withMailOverride(d0.draft, override, d0.lang) };
 
   // ADR-0070 §3 — LANGUAGE gate: for a non-Hungarian lead the draft must have a
   // COMPLETE pack behind it. A missing translation falls back to Hungarian per
@@ -427,6 +432,56 @@ export async function sendOutreachMail(
   const check = checkOutreachDraft(d.draft, d.input.leadName, d.lang, d.market);
   if (check.verdict === "FLAG") {
     return { ...base, outcome: { kind: "flagged", reasons: check.reasons, gate: "legal", confirmable: false } };
+  }
+
+  // KÍSÉRLET-MOTOR (experiment.ts): the variants of this letter. Read-only here — recorded only
+  // after the send. ⛔ The §C gate judges the FINISHED letter a second time: the variant subject
+  // and the visible first line ride with the body. The base draft passed above, so every
+  // positive requirement (name, framing, opt-out, identity) is met by the text itself; the second
+  // run catches what a variant's wording could add (a misleading claim). A FLAG falls back to the
+  // control letter — a bad variant never holds the queue, and never goes out.
+  let variants: LetterVariants = await assignVariants({
+    lang: d.lang,
+    leadName: d.input.leadName,
+    city: p.leadCity,
+    price: d.draft.parts.priceList,
+    offerPrice: d.draft.parts.priceOffer,
+    country: d.market.country,
+    // The owner's own wording for this lead (copyOverride) is never experimented on.
+    participate: !testLead && !opts.dryRun && !opts.probe && !override,
+  });
+  // The letter the variants make: subject, and for `price_line` the price part of the body (the
+  // body is RE-COMPOSED from the parts, so the HTML and the gated text stay one, §I).
+  const letterOf = (v: LetterVariants): OutreachDraft => {
+    let out: OutreachDraft = v.subject ? { ...d.draft, subject: v.subject } : d.draft;
+    const links = { cta: out.link, unsub: out.unsubscribeLink, privacy: out.privacyLink, ...(out.whyLink ? { why: out.whyLink } : {}) };
+    if (v.bodyStyle === "personal") {
+      // The personal first-person letter (experimentCopy.ts): its own parts and body, the price line
+      // in its place; today's price sentence keeps its discount footnote.
+      const parts = personalParts(d.input, out, v.priceLine, personalSenderName());
+      return { ...out, parts, body: composePersonalBody(parts, links, d.lang) };
+    }
+    if (v.priceLine !== undefined) {
+      // No discount in the letter → the discount's validity footnote has nothing to qualify.
+      const parts = { ...out.parts, p3: v.priceLine, fine: "" };
+      const body = composeBody(parts, { cta: out.link, unsub: out.unsubscribeLink, privacy: out.privacyLink, ...(out.whyLink ? { why: out.whyLink } : {}) }, d.lang);
+      out = { ...out, parts, body };
+    }
+    return out;
+  };
+  let letter = letterOf(variants);
+  if (letter !== d.draft || variants.firstLine) {
+    const vcheck = checkOutreachDraft(
+      { ...letter, body: variants.firstLine ? `${variants.firstLine}\n\n${letter.body}` : letter.body },
+      d.input.leadName,
+      d.lang,
+      d.market,
+    );
+    if (vcheck.verdict === "FLAG") {
+      console.warn(`[experiment] a változat elbukott a §C-kapun (${JSON.stringify(variants.keys)}): ${vcheck.reasons.join(" · ")} → kontroll-levél`);
+      variants = controlOf(variants);
+      letter = d.draft;
+    }
   }
 
   // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).
@@ -574,10 +629,29 @@ export async function sendOutreachMail(
 
   // Hero shot of the mock's opening screen (best-effort — its absence must never
   // block a §C-PASS send; the mail is valid text+link without it).
-  const heroShotPath = p.artifactId ? await ensureHeroShot(p.artifactId) : null;
+  const heroShotPath = p.artifactId && variants.image ? await ensureHeroShot(p.artifactId) : null;
+  // Mail open without a pixel (emailOpen.ts): on the cold lane the hero loads from the cold host
+  // on the lead's own URL — frozen as a JPEG under the prospect token. A failed conversion keeps
+  // the CID image (the letter is never worse than before).
+  const heroUrl =
+    heroShotPath && remoteHeroActive() && (await storeMailHero(d.input.token, heroShotPath)) ? mailHeroUrl(d.input.token) : undefined;
   // ADR-0067: the draft prose is already in the lead's language (draft.ts) —
   // declare it on the message too, and localize the image alt text.
-  const msg = buildOutreachEmail(d.draft, p.contactEmail, { heroShotPath, lang: d.lang, openVia: "e" });
+  const msg = buildOutreachEmail(
+    letter,
+    p.contactEmail,
+    {
+      heroShotPath,
+      lang: d.lang,
+      openVia: "e",
+      ...(heroUrl ? { heroUrl } : {}),
+      ...(variants.firstLine ? { firstLine: variants.firstLine } : {}),
+      ...(variants.fromName ? { fromName: variants.fromName } : {}),
+      bodyStyle: variants.bodyStyle,
+      noImage: !variants.image,
+      ...(variants.priceLine !== undefined ? { noPriceBox: true } : {}),
+    },
+  );
   // Belt-and-braces: refuse to hand anything UNSUBSCRIBABLE to the raw adapter.
   // What the law requires (Grt./GDPR) is a working opt-out the recipient can act
   // on — that is the IN-BODY link, which §C.1 separately checks for presence and
@@ -673,6 +747,8 @@ export async function sendOutreachMail(
     const result = await getEmailSender().send(msg);
     // ADR-0286: the letter's percent binds — stamped once it is out, not at the first visit.
     await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
+    // The experiment's label, once the letter is out (never throws).
+    await recordSendVariants(prospectId, variants, now);
     return { ...base, outcome: { kind: "sent", emailId: result.id, provider: result.provider } };
   } catch (e) {
     // Send failed after the claim → best-effort revert so a later run retries: clear the

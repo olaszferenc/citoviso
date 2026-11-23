@@ -251,6 +251,9 @@ import {
   deferConsentUntilEngagement,
 } from "./prospectNotice.js";
 import { markOwnViewLinks, normalizeProspectPath, OWN_VIEW_PARAM } from "./prospectPath.js";
+import { mailHeroPath, RE_MAIL_HERO, recordMailFetch } from "../outreach/emailOpen.js";
+import { getExperimentReport } from "./experimentReport.js";
+import { reportExperimentsPage } from "./experimentViews.js";
 import { injectPlanEndBlock, injectPlanSwitcherBar, planHref, planThumbUrl } from "./planSwitcher.js";
 import {
   ensureCardJpeg,
@@ -3192,6 +3195,11 @@ async function handle(
     const days: StockPreset = isStockPreset(raw) ? raw : "0";
     return send(res, 200, reportLeadStockPage(await getLeadStock(reportPeriod(days, null, null, new Date(), "0")), days));
   }
+  // GET /report/experiments — the Kísérletek tab: the cold letter's variants per dimension, the
+  // Monday line, today's split (frozen plan: design-refs/console/kiserletek/, „C”, ADR-0462).
+  if (method === "GET" && path === "/report/experiments") {
+    return send(res, 200, reportExperimentsPage(await getExperimentReport()));
+  }
   if (method === "GET" && path === "/report/tenants") {
     const fRaw = url.searchParams.get("f") ?? "active";
     const f: TenantFilter = (TENANT_FILTERS as readonly string[]).includes(fRaw) ? (fRaw as TenantFilter) : "active";
@@ -4064,6 +4072,32 @@ async function handle(
   // /p/<slug>/<token> → /p/<token>, so every route below and every link already
   // sent in the bare-token shape match unchanged (see prospectPath.ts for why).
   const pPath = normalizeProspectPath(path);
+
+  // GET /p/:token/kep.jpg — the cold letter's hero, loaded from the cold host on the lead's own
+  // URL: the fetch IS the mail open (no pixel; src/outreach/emailOpen.ts, ADR kísérlet-motor).
+  // Classified and counted, nothing raw kept; the owner's pilot copy (?sajat=1) is not counted.
+  // The image is served either way — a mail client must never get a broken picture for our sake.
+  const mailHeroMatch = RE_MAIL_HERO.exec(pPath);
+  if ((method === "GET" || method === "HEAD") && mailHeroMatch) {
+    let file: string;
+    try {
+      file = mailHeroPath(mailHeroMatch[1]);
+    } catch {
+      return send(res, 404, "");
+    }
+    if (method === "GET" && url.searchParams.get(OWN_VIEW_PARAM) !== "1") {
+      const pr = await db.selectFrom("prospect").select("id").where("token", "=", mailHeroMatch[1]).executeTakeFirst();
+      if (pr) await recordMailFetch(pr.id, (req.headers["user-agent"] as string | undefined) ?? null, clientIp(req));
+    }
+    try {
+      const buf = await readFile(file);
+      res.writeHead(200, { "Content-Type": "image/jpeg", "Content-Length": buf.length, "Cache-Control": "private, no-store" });
+      res.end(method === "HEAD" ? undefined : buf);
+      return;
+    } catch {
+      return send(res, 404, "");
+    }
+  }
 
   const unsubMatch = /^\/p\/([A-Za-z0-9_-]{16,})\/unsubscribe$/.exec(pPath);
   if (method === "GET" && unsubMatch) {

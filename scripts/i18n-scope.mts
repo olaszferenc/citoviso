@@ -45,6 +45,9 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // errors and logs (a fatal boot error, a progress line) — none reaches a customer.
   "src/country.ts": "operátori hiba-/naplószöveg (az ország-réteg nem olvasható) — vevőhöz nem jut",
   "src/scraper/enrichGeo.ts": "operátori napló (Nominatim-dúsítás folyamatjelzése) — vevőhöz nem jut",
+  // ADR-0462 kísérlet-motor: the Hungarian literals are the guard's house alert (alertHouse → the
+  // operator's mailbox) and logs; the lead-facing variant wording is code-defined in experimentCopy.ts.
+  "src/outreach/experiment.ts": "operátori riasztás/napló (kísérlet-őr) — a vevő-szöveg az experimentCopy.ts-ben, csak magyar levélre",
   // DATA registries: their literals are harvested BY FIELD NAME (extract-i18n) and
   // translated at render time via T(lang, m.label). Wrapping them here would break
   // the harvest (ADR-0067 ②).

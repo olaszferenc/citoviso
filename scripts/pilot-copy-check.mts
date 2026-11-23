@@ -106,7 +106,20 @@ try {
   ok(Boolean(mailCopy?.html?.includes(`${TOK}/unsubscribe"`)), "a másolat leiratkozó linkje érintetlen");
   ok(!Object.keys(mailCopy?.headers ?? {}).some((k) => /^list-unsubscribe/i.test(k)) && mailCopy?.headers?.["X-Keep"] === "1", "a másolatról a List-Unsubscribe fejlécek lekerülnek (a tulaj postafiókja nem iratkoztathatja le a leadet)");
   ok(pilotOwnViewCopy({ ...leadMail, audience: "guest" }) === null, "vendég-levélről nincs másolat");
-  ok(pilotOwnViewCopy({ ...leadMail, lane: "cold" as const }) === null, "hideg sávos levélről nincs másolat (a Zoho elutasítja, tulaj 2026-11-22)");
+  ok(pilotOwnViewCopy({ ...leadMail, lane: "cold" as const }) === null, "hideg sávos levélről COLD_OUTREACH_COPY_TO nélkül nincs másolat (az EMAIL_BCC-t a Zoho elutasítja, tulaj 2026-11-22)");
+  // COLD_OUTREACH_COPY_TO (coordinator 2026-11-23): the cold copy goes to ITS address only, marked, cold lane.
+  const { config: cfg } = await import("../src/config.js");
+  (cfg.coldOutreach as { copyTo: string }).copyTo = "hideg-masolat@example.org";
+  const coldCopy = pilotOwnViewCopy({ ...leadMail, lane: "cold" as const });
+  ok(coldCopy?.to === "hideg-masolat@example.org", "hideg sáv + COLD_OUTREACH_COPY_TO → a másolat oda megy (nem az EMAIL_BCC-re)", String(coldCopy?.to));
+  ok(coldCopy?.lane === "cold", "a hideg másolat a hideg sávon megy (getcitoviso.com fiók)");
+  ok(Boolean(coldCopy?.html?.includes(`${TOK}?sajat=1`)) && !Object.keys(coldCopy?.headers ?? {}).some((k) => /^list-unsubscribe/i.test(k)), "a hideg másolat jelölt (?sajat=1) és List-Unsubscribe nélküli");
+  const heroMail = { ...leadMail, lane: "cold" as const, html: `${leadMail.html}<img src="https://getcitoviso.com/p/${TOK}/kep.jpg">` };
+  ok(Boolean(pilotOwnViewCopy(heroMail)?.html?.includes(`/p/${TOK}/kep.jpg?sajat=1`)), "a hideg másolat hős-képe is jelölt (a megnyitása nem számít levélnyitásnak)");
+  ok(pilotOwnViewCopy({ ...leadMail, to: "hideg-masolat@example.org", lane: "cold" as const }) === null, "önmagának nincs másolat");
+  const platformCopy = pilotOwnViewCopy(leadMail);
+  ok(platformCopy?.to === "masolat@citoviso.com", "a platform-sáv másolata változatlanul az EMAIL_BCC-re megy", String(platformCopy?.to));
+  (cfg.coldOutreach as { copyTo: string }).copyTo = "";
   ok(pilotOwnViewCopy({ ...leadMail, text: "számla", html: "<p>számla</p>" }) === null, "követett link nélkül nincs külön másolat (marad a Bcc)");
   await getEmailSender().send(leadMail);
   const emls = await readdir(path.join(work, "outbox")).catch(() => [] as string[]);

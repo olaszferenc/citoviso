@@ -88,6 +88,8 @@ import { attentionOf, domainStats, lifeSteps, type DomainRecord } from "../src/c
 import { domainsPage, parseDomainsQuery } from "../src/console/domainRegistryViews.js";
 import type { TenantActivity } from "../src/console/tenantActivityData.js";
 import { reportTenantsPage } from "../src/console/tenantActivityViews.js";
+import { reportExperimentsPage } from "../src/console/experimentViews.js";
+import { verdictOf, type VariantRow } from "../src/console/experimentReport.js";
 import { TEMPLATES as RP_TEMPLATES } from "../src/engine/templates.js";
 import { inferExitReason, signalsFromEvents } from "../src/analytics/exitReason.js";
 import { buildLeadListResult, defaultLeadQuery } from "../src/console/data.js";
@@ -2621,6 +2623,42 @@ await shootConsole(rpMock, path.join(ROOT, "kb/entries", "console-report-mock", 
     ta(5, "Fenyves Apartman", "trial", "sleeping", { age: 9, l7: 0, l30: 1, lastLogin: 8, save: null, v7: 1, v30: 2, enq: 0, src: "direct", pat: [0, 0, 1, 0, 0, 0, 0] }),
   ];
   await shootConsole(reportTenantsPage(rows, { f: "active", test: false, sort: "flag", desc: false }, tNow), conOut("console-report-tenants"));
+}
+// Riport › Kísérletek (ADR-0462, frozen plan design-refs/console/kiserletek/) — a representative week:
+// one winning subject, one guard-disabled variant, a running sender test, the rest control-only.
+{
+  type Dim = VariantRow["dimension"];
+  const st = (dimension: Dim, key: string, sends: number, m24: number, mail: number, l24: number, m72: number, l72: number, rep: number, uns: number) => ({
+    dimension, key, sends, sentToday: 0, mature72: m72, link72: l72, mature24: m24, link24: l24, mail24: mail, prefetchOnly: 0, replies: rep, unsubs: uns, complaints: 0,
+  });
+  const vr = (dimension: Dim, key: string, label: string, template: string | null, isControl: boolean, enabled: boolean, share: number | null, stats: ReturnType<typeof st> | null, disabledReason: string | null = null): VariantRow => ({
+    dimension, key, label, template, isControl, enabled, disabledReason, stats, shareToday: share,
+  });
+  const ctl = (d: Dim, label: string) => [vr(d, "control", label, null, true, true, 1, st(d, "control", 900, 810, 294, 107, 689, 107, 25, 8))];
+  const groups: [Dim, VariantRow[]][] = [
+    ["subject", [
+      vr("subject", "control", "Mai tárgy: „{név} – kész honlap”", null, true, true, 0.52, st("subject", "control", 612, 560, 190, 66, 488, 64, 14, 7)),
+      vr("subject", "is_this_yours", "Kíváncsiság + „nem az enyém” szűrő", "Ez az Ön szállása? ({name}, {city})", false, true, 0.38, st("subject", "is_this_yours", 288, 250, 104, 41, 201, 43, 11, 1)),
+      vr("subject", "we_looked", "„Megnéztük, és készítettünk valamit”", "{name} – megnéztük, és készítettünk valamit", false, false, null, st("subject", "we_looked", 140, 140, 30, 9, 140, 12, 2, 5), "őr: leiratkozás 3,57% > kontroll 1,14% + 0,50 pont (5/140)"),
+    ]],
+    ["first_line", ctl("first_line", "Mai első sor: „Elkészült a honlapja, nézze meg!”")],
+    ["sender", [
+      vr("sender", "control", "Mai feladó (COLD_OUTREACH_FROM neve)", null, true, true, 0.61, st("sender", "control", 500, 450, 150, 55, 380, 50, 13, 5)),
+      vr("sender", "person", "Személynév (OUTREACH_SENDER_NAME)", null, false, true, 0.39, st("sender", "person", 400, 360, 144, 52, 309, 41, 12, 3)),
+    ]],
+    ["body_style", ctl("body_style", "Mai képes-dobozos levél (logó, gomb, árdoboz)")],
+    ["image", ctl("image", "Hős-képpel")],
+    ["price_line", ctl("price_line", "Mai ár: navy árdoboz + kedvezmény")],
+  ];
+  const dims = groups.map(([dimension, rows]) => ({ dimension, rows, running: rows.filter((r) => r.enabled).length, verdict: verdictOf(rows) }));
+  await shootConsole(
+    reportExperimentsPage({
+      dims,
+      kpi: { running: 8, letters: 900, mail24: 294, mature24: 810, capToday: 130 },
+      weekly: { from: "2026-11-16", to: "2026-11-23", variants: 8, dimensions: 6, best: { dimension: "subject", label: "Kíváncsiság + „nem az enyém” szűrő", rate: 43 / 201, controlRate: 64 / 488, pBetter: 0.99 }, disabled: 1 },
+    }),
+    conOut("console-report-experiments"),
+  );
 }
 // The entry documents the sales switches, so the image must SHOW them: capture the
 // panel element, not the viewport that stops above the module grid.

@@ -97,6 +97,12 @@ export const config = {
     dkimSelector: env("COLD_OUTREACH_DKIM_SELECTOR"),
     /** PEM file of the matching private key (mode 600, outside the repo). */
     dkimKeyFile: env("COLD_OUTREACH_DKIM_KEY_FILE"),
+    /**
+     * Where the owner's own-view COPY of each cold letter goes (coordinator 2026-11-23). Empty = no copy
+     * (the 2026-11-22 state: the platform Zoho mailbox rejects every getcitoviso.com mail). Never the
+     * platform EMAIL_BCC: a mailbox that accepts the cold sender (set per machine, not in the code).
+     */
+    copyTo: env("COLD_OUTREACH_COPY_TO"),
   },
   /**
    * From address for guest booking mail (approved plan 2026-09-06):
