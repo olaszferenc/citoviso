@@ -1,10 +1,10 @@
 ---
 id: admin-photos
-title: Fotók kezelése — feltöltés, sorrend, nyitókép
+title: Fotók kezelése — feltöltés, sorrend, nyitókép, mozgó nyitókép
 audience: tenant
 category: my-site
 anchors: admin.photos
-updated: 2026-10-02
+updated: 2026-11-23
 ---
 
 A **„Fotók”** lapon kezeli az oldalán megjelenő képeket. Az oldala az induláskor kapott képekkel
@@ -56,6 +56,30 @@ Az **első kép a nyitókép** — ez jelenik meg a legnagyobban az oldala tetej
 - **Húzás:** gépen a csempét vagy a sort egyszerűen húzza a kívánt helyre.
 
 A sorrend azonnal mentődik, és ugyanebben a sorrendben látszik a nyilvános oldalán is.
+
+## Mozgó nyitókép
+
+Ha az oldala olyan kinézetű, amelyik tudja, a képek fölött a **„Mozgó nyitókép”** kártya áll. Bal
+oldalt (telefonon felül) a nyitóképe látszik, pontosan úgy, ahogy a vendégek látják: bekapcsolva a
+kép finoman, térhatással mozog, mintha a kamera lassan közelítene. A fotóhoz nem teszünk hozzá
+semmit, csak a saját képe mozog.
+
+1. Koppintson a kapcsolóra. Mellette mindig olvasható az állapota: **„Bekapcsolva”** vagy
+   **„Kikapcsolva”**.
+2. A beállítás azonnal mentődik, külön gomb nincs. Alatta ezt látja: **„Mentve. Az oldalán a
+   nyitókép most már mozog.”**, kikapcsoláskor pedig: **„Mentve. Az oldalán a nyitókép most álló
+   kép.”**
+
+Ha **új nyitóképet** választ, vagy saját fotót tölt fel, az új kép mozgását el kell készítenünk.
+Ez általában egy percen belül megvan; addig ezt látja: **„Új nyitókép: a térhatása készül,
+általában 1 percen belül kész. Addig álló kép látszik.”** Az oldalán is álló kép látszik, amíg el
+nem készül; utána magától mozogni kezd (**„Elkészült, a nyitókép mozog.”**).
+
+Ha a nyitókép túl kicsi, a kártya megmondja: **„Ez a nyitókép túl kicsi a mozgáshoz, ezért álló kép
+marad. Egy nagyobb fotóval mozogni fog.”**
+
+Akinek a telefonján a mozgás ki van kapcsolva (akadálymentesítési beállítás), annak az oldala
+mindig álló képet mutat.
 
 ## Nagyítás
 
