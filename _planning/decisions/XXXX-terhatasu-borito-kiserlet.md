@@ -32,11 +32,28 @@ wordmark-grow: a belépő animáció UTÁN indul). Ha az oldal adatában nincs m
 ⑥ **Fail-safe (ADR-0115):** csökkentett mozgás / nincs JS / nincs WebGL → állókép; a hero képernyőn kívül → áll.
 A kiküldött mockon a térhatás megy (nem belépő animáció, az ADR-0159 nem érinti).
 
-⑦ **Kimarad automatikusan:** kis felbontású hero (pl. 511 px széles), lapos mélységkép, és **Google Places-fotó**
+⑦ **Kimarad automatikusan:** kis felbontású hero (rövidebb oldal < 700 px vagy hosszabb < 1000 px; pl. a Vénusz 511 px széles képe) és **Google Places-fotó**
 (fizetős hoszt, sem proxy, sem tárolt származék). A WebGL csak saját eredetű képet fogad → a hero az ADR-0341
 saját útján (`/configure/<artifactId>/photo/<hash>`) vagy a tenant `/uploads/` útján jön.
 
 ⑧ **Név:** „térhatású borítókép” / kódban `depthHero` — NEM „parallax” (az egy meglévő sablon neve).
+
+⑨ **A „lapos kép” NEM automatikus kimaradás** (mérve 2026-11-23): a mélységkép szórása nem választja szét a
+laposat a mélytől — egy mesterséges csíkos fal 0,21-et adott, öt valódi borító 0,24–0,29-et (a min-max normalizálás
+felhúzza a zajt). A szórást eltároljuk elemzésre; a rossz hatású borítót ember kapcsolja ki (kurátor / tenant).
+
+⑩ **A kísérleti ág a GENERÁLÁSKOR dől el, nem küldéskor**: a mock a küldés előtt elkészül, jóváhagyják és befagy,
+tehát a fájlnak már egyeznie kell az ággal. Az ág a lead azonosítójából jön (`seedOf("depth-hero:"+leadId) % 2`),
+újragenerálásnál stabil; `inputs.heroDepthArm` = `depth` | `control` | `skip:<ok>` (a `skip` a kiértékelésből
+kimarad, különben a kontroll-ág a kis/Places-borítók felé torzulna). Kapcsoló: `DEPTH_HERO_EXPERIMENT=1`
+(alapból ki — a bekapcsolás üzemeltetési döntés). A meglévő `link72` mérőszám (levél → mock-kattintás 72 órán belül)
+ezt NEM méri, mert a dizájn csak a kattintás UTÁN látszik: a kiértékelés kattintás utáni jelekből (görgetés,
+időtartam, érdeklődés / rendelés-szándék a `mock_event`-ben, válasz, rendelés) készül.
+
+⑪ **Futtatás:** `onnxruntime-node` (CPU; a `.npmrc` kihagyja a 284 MB-os CUDA-csomagot), a modell int8 változata
+(27 MB, sha256-tal rögzítve, `scripts/depth-model-fetch.mts`; a gitben nincs). Külön folyamatban, egyszerre egy:
+mérve 2,1 mp és 336 MB képenként. A mélységkép `sites/_depth/<sha24>.png`, cache: `photo_depth_map`; kiszolgálás:
+`/configure/depth/<sha24>.png` (relatív, minden hoszton saját eredetű).
 
 ### Nem döntés — még nyitva
 

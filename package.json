@@ -31,6 +31,7 @@
     "embedded-postgres": "^18.4.0-beta.17",
     "kysely": "^0.28.17",
     "nodemailer": "^9.0.3",
+    "onnxruntime-node": "1.31.1",
     "pg": "^8.22.0",
     "playwright-core": "^1.48.0",
     "sharp": "^0.35.4"

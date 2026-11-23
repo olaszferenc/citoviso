@@ -30,6 +30,7 @@ import {
   readCachedScores,
   scoreHeroCandidates,
 } from "./heroPick.js";
+import { withDepthArm } from "./depthArm.js";
 import { secureMockPhotos } from "./photoTransport.js";
 import { isAttachedAsAlternative } from "../outreach/planSet.js";
 
@@ -153,7 +154,14 @@ export async function rerenderArtifactWithHero(
   const nextPhotos = url
     ? applyHeroPin(photos, url)
     : orderPhotosForHero(photos, scores);
-  const nextData: SiteData = { ...siteData, photos: nextPhotos };
+  // ADR-XXXX: a mock that was in the depth-hero experiment keeps its place in it — the new cover
+  // gets its own depth map (or a skip reason); a stale map would only sit inert in the data.
+  const { heroDepth: _staleDepth, ...withoutDepth } = siteData;
+  const inExperiment = typeof inputs.heroDepthArm === "string";
+  const depth = inExperiment
+    ? await withDepthArm({ ...withoutDepth, photos: nextPhotos }, { leadId: row.lead_id, artifactId, template: recipe.template })
+    : null;
+  const nextData: SiteData = depth ? depth.siteData : { ...siteData, photos: nextPhotos };
   const html = await injectRuntime(
     renderSite(recipe, nextData, { sampleDeny: sampleDenyKeys(await getDisabledModules()) }),
     nextData.lang,
@@ -182,6 +190,7 @@ export async function rerenderArtifactWithHero(
         heroScore: verdict.score,
         // Audit: a lapon a "miért ez a kép?" kérdésre egy NÉV álljon, ne egy anonim sor.
         heroPinnedBy: url ? actor : null,
+        ...(depth?.arm ? { heroDepthArm: depth.arm } : {}),
       } as never,
     })
     .where("id", "=", artifactId)

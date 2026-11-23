@@ -55,6 +55,7 @@ import {
   recordMockArtifact,
   type LoadedLead,
 } from "./persist.js";
+import { withDepthArm } from "./depthArm.js";
 import { secureMockPhotos } from "./photoTransport.js";
 import { renderMockMeasured } from "./mockLanguage.js";
 
@@ -715,7 +716,7 @@ async function generateEngineMockInner(
   if (gateWanted && !gatePick) {
     throw new Error("Kapunyitás: a második kép a nyitóképpel azonos — a tervet elutasítottam, nem generáltam."); // i18n-exempt: operator-facing generation error (console)
   }
-  const siteData: SiteData = gatePick ? { ...baseSiteData, gatePhoto: gatePick } : baseSiteData;
+  let siteData: SiteData = gatePick ? { ...baseSiteData, gatePhoto: gatePick } : baseSiteData;
 
   // ADR-0027 template-first: with photos (the hero's fuel) the mock renders through the
   // COMPLETE reference-fidelity art template. The composition path remains for the no-photo
@@ -766,6 +767,13 @@ async function generateEngineMockInner(
   // Module-sales switch (owner decree 2026-09-06): a not-sellable module gets no
   // ALL-IN sample in the mock — we must not advertise what we would refuse to sell.
   opts.onStage?.("render");
+  // EGY ARTEFAKTUM = EGY FÁJL (ADR-0140): the id is taken BEFORE the render (see below) — the
+  // depth-hero texture URL names it too (ADR-XXXX).
+  const artifactIdPre = newArtifactId();
+  // ADR-XXXX depth-hero experiment: the arm is decided now, so the rendered file matches it.
+  const depth = await withDepthArm(siteData, { leadId, artifactId: artifactIdPre, template: finalRecipe.template });
+  siteData = depth.siteData;
+  if (depth.arm) console.log(`  🎞️ térhatás-kísérlet: ${depth.arm}`); // i18n-exempt: operator log
   const sampleDeny = sampleDenyKeys(await getDisabledModules());
   // ORSZÁG-RÉTEG 3/6: rendered AND measured — every fixed string that fell back to Hungarian on a
   // foreign page is recorded, and such a mock is held from sending (mockLanguage.ts).
@@ -775,7 +783,6 @@ async function generateEngineMockInner(
   // név csak a SABLON-változatokat választotta szét: ugyanannak a leadnek ugyanazzal a
   // sablonnal való újragenerálása felülírta az előző artefaktum fájlját. Az azonosítót
   // ezért a render ELŐTT kérjük el, és a sor is ezt kapja.
-  const artifactIdPre = newArtifactId();
   const path = mockArtifactPath(lead.name, finalRecipe.template ?? "engine", artifactIdPre);
   // http-s fotó a https-es mockon nem jelenik meg (ADR-0341): https-emelés vagy saját proxy.
   const { html, transport: photoTransport } = await secureMockPhotos(
@@ -858,6 +865,8 @@ async function generateEngineMockInner(
       archetype: finalRecipe.archetype,
       recipe: finalRecipe as unknown as Record<string, unknown>,
       siteData: siteData as unknown as Record<string, unknown>,
+      // ADR-XXXX: the depth-hero experiment arm ('depth' | 'control' | 'skip:<why>'); absent = off.
+      ...(depth.arm ? { heroDepthArm: depth.arm } : {}),
       // `inputs` is not an archive — `rerender-mock.mts` RE-RENDERS from it (ADR-0143 ①).
       // Persisting the key under the `region` NAME field would resurrect the scrape key on
       // the next re-render, which is the exact loop that ADR closed. `regionId` keeps the

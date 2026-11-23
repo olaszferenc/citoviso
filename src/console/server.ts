@@ -26,6 +26,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { setTenantTimeZone } from "../tenant/timeZone.js";
 import { isValidTimeZone } from "../text/zoneTime.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { DEPTH_DIR, DEPTH_ROUTE } from "../media/depthMap.js";
 import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { isPickableTemplate, TEMPLATES } from "../engine/templates.js";
@@ -4129,6 +4130,18 @@ async function handle(
       "cache-control": "public, max-age=86400",
     });
     res.end(body);
+    return;
+  }
+  // GET /configure/depth/<sha24>.png — a depth-hero map (ADR-XXXX). Not artifact-bound: the file
+  // name is a hash of the photo URL and the content is a grayscale shape, so it is served to anyone
+  // who names it. Same-origin on every host (the /configure/ prefix is routed here everywhere),
+  // which is what lets WebGL read it without CORS.
+  const depthMatch = DEPTH_ROUTE.exec(path);
+  if (method === "GET" && depthMatch) {
+    const depthPng = await readFile(`${DEPTH_DIR}/${depthMatch[1]!.toLowerCase()}.png`).catch(() => null);
+    if (!depthPng) return send(res, 404, "not found", "text/plain");
+    res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=2592000, immutable" });
+    res.end(depthPng);
     return;
   }
   // GET /configure/:artifactId — prospect configurator (mock + interactive sell).

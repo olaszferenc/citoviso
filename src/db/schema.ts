@@ -1617,6 +1617,21 @@ export interface SitePlaceRatingTable {
 /** 0060: per-photo hero suitability, keyed by the query-less URL (photoKey()).
  *  Pixel size says nothing about SUBJECT — a 1200px outhouse shot passed every
  *  size/URL gate and became a hero. This caches what the vision pass saw. */
+/** 0152 (ADR-XXXX depth hero): one depth map per photo URL (photoKey), the PNG under sites/_depth/. */
+export interface PhotoDepthMapTable {
+  url_key: string;
+  /** PNG file name under sites/_depth/; null when none was made (skip_reason says why). */
+  file: string | null;
+  src_width: number | null;
+  src_height: number | null;
+  /** Depth spread 0–1; small = a flat picture with nothing to move. */
+  spread: number | null;
+  /** 'small' | 'flat' | 'fetch' | 'compute' | 'paid'; null = usable. */
+  skip_reason: string | null;
+  model: string;
+  computed_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 export interface PhotoHeroScoreTable {
   url_key: string;
   subject: string;
@@ -2421,6 +2436,7 @@ export interface Database {
   calendar_conflict: CalendarConflictTable;
   site_place_rating: SitePlaceRatingTable;
   photo_hero_score: PhotoHeroScoreTable;
+  photo_depth_map: PhotoDepthMapTable;
   settlement: SettlementTable;
   settlement_cover: SettlementCoverTable;
   event_gather_run: EventGatherRunTable;
