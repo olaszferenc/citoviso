@@ -6,15 +6,18 @@
  *
  *   npx tsx scripts/depth-hero-check.mts [--self-test]
  *
- * Rendered with the REAL engine (parallax template, the default outreach template) and driven
- * in headless Chromium (SwiftShader WebGL), page + textures served from loopback:
+ * Rendered with the REAL engine on all three outreach templates (parallax, gate-opening,
+ * wordmark-grow — ADR-0423) and driven in headless Chromium (SwiftShader WebGL), page +
+ * textures served from loopback. Per template:
  *   ① no `heroDepth` → the page carries no trace of it (no attribute, no runtime): the
  *      experiment's control arm and every existing page stay byte-identical
  *   ② a STALE map (`source` ≠ the hero being shown) → byte-identical to ① (a new cover is never
  *      moved by the previous photo's depth)
  *   ③ a valid map → the attribute sits on the hero exactly once, the runtime is emitted once
- *   ④ in the browser: the canvas is inserted into the hero, shown (opacity 1), and two frames
- *      1.2 s apart differ — it really moves; no JS error
+ *   ④ in the browser: the canvas is inserted into the template's hero container, shown
+ *      (opacity 1), and two frames 1.2 s apart differ — it really moves; no JS error. On
+ *      gate-opening it appears only after the gate settled (≥ 2.4 s), on wordmark-grow only
+ *      after the intro left the page
  *   ⑤ prefers-reduced-motion → no canvas (ADR-0115 rule 2)
  *   ⑥ data-cit-no-motion (screenshot tooling, ADR-0115 rule 9) → no canvas
  *   ⑦ a texture from another origin WITHOUT CORS (what a portal photo is) → no canvas, no JS
@@ -94,62 +97,90 @@ const BASE = {
   contact: { email: "foglalas@hotelpelda.hu", phone: "+36 30 000 0000", address: "3300 Példaváros, Vár utca 2." },
   place: { city: "Példaváros", country: "HU" },
 } as unknown as SiteData;
-const tpl = TEMPLATES["parallax"]!;
-const recipe: Recipe = { template: "parallax", skin: tpl.skins[0]!, archetype: "stacked", sections: [] };
 const heroSrc = BASE.photos[0]!.url;
 const withDepth = (img: string, source = heroSrc): SiteData =>
   ({ ...BASE, heroDepth: { source, img, depth: `${img.replace(/\/photo\.jpg$/, "")}/depth.png` } }) as unknown as SiteData;
-const render = (d: SiteData): string => renderSite(recipe, d, { phase: "mock" });
 
-// ---- ①–③ markup ----
-console.log("depth-hero-check — markup");
-const plain = render(BASE);
-ok(!plain.includes("data-cit-depth") && !plain.includes("cit-depth"), "① heroDepth nélkül nincs nyoma a lapon");
-ok(render(withDepth(`${A.origin}/photo.jpg`, "https://example.invalid/OTHER.jpg")) === plain, "② elavult mélységkép (más borító) → bájtra azonos az ①-gyel");
-const live = render(withDepth(`${A.origin}/photo.jpg`));
-const attrCount = (live.match(/data-cit-depth="/g) ?? []).length;
-const heroTag = live.match(/<header class="t-par t-par--hero"[^>]*>/)?.[0] ?? "";
-ok(attrCount === 1 && heroTag.includes("data-cit-depth="), `③ az attribútum pontosan egyszer, a hero-n (${attrCount}×)`);
-ok((live.match(/querySelector\('\[data-cit-depth\]'\)/g) ?? []).length === 1, "③ a futtató egyszer kerül a lapra");
+interface Case {
+  readonly template: string;
+  /** the element that must receive the canvas */
+  readonly host: string;
+  /** the tag the depth attribute must sit on */
+  readonly heroTag: RegExp;
+  /** the canvas may not appear before this (ms after load) */
+  readonly notBeforeMs: number;
+}
+const CASES: readonly Case[] = [
+  { template: "parallax", host: ".t-par--hero", heroTag: /<header class="t-par t-par--hero"[^>]*>/, notBeforeMs: 0 },
+  { template: "gate-opening", host: ".ko-hero-bg", heroTag: /<div class="ko-hero-bg"><img[^>]*>/, notBeforeMs: 2400 },
+  { template: "wordmark-grow", host: ".w-hero", heroTag: /<img[^>]*data-cit-hero-img[^>]*>/, notBeforeMs: 0 },
+];
 
-// ---- ④–⑦ runtime ----
-console.log("depth-hero-check — böngésző");
 const browser: Browser = await chromium.launch({
   executablePath: config.chromiumPath,
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
-async function probe(html: string, opts: { reduced?: boolean; noMotion?: boolean } = {}) {
+async function probe(html: string, host: string, opts: { reduced?: boolean; noMotion?: boolean } = {}) {
   pageHtml = opts.noMotion ? html.replace("<html", "<html data-cit-no-motion") : html;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: opts.reduced ? "reduce" : "no-preference" });
   const page = await ctx.newPage();
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  const t0 = Date.now();
   await page.goto(`${A.origin}/`, { waitUntil: "load" });
-  await page.waitForTimeout(1800);
-  const canvas = page.locator(".t-par--hero > canvas.cit-depth");
-  const present = (await canvas.count()) === 1;
+  const canvas = page.locator(`${host} > canvas.cit-depth`);
+  let appearedMs = -1;
+  // wordmark-grow's intro runs ~9 s on a mock; give it room, then a grace period
+  for (let i = 0; i < 64; i++) {
+    if (await canvas.count()) {
+      appearedMs = Date.now() - t0;
+      break;
+    }
+    await page.waitForTimeout(250);
+  }
   let opacity = "", moving = false;
-  if (present) {
-    opacity = await canvas.evaluate((c) => getComputedStyle(c).opacity);
+  if (appearedMs >= 0) {
+    // the fade-in is a .6 s CSS transition; SwiftShader frames are slow, so poll (≤ 6 s)
+    for (let i = 0; i < 24; i++) {
+      opacity = await canvas.evaluate((c) => getComputedStyle(c).opacity);
+      if (opacity === "1") break;
+      await page.waitForTimeout(250);
+    }
     const a = await canvas.screenshot();
     await page.waitForTimeout(1200);
     moving = !a.equals(await canvas.screenshot());
   }
   await ctx.close();
-  return { present, opacity, moving, errors };
+  return { present: appearedMs >= 0, appearedMs, opacity, moving, errors };
 }
 
-const own = await probe(SELF_TEST ? render(withDepth(`${B.origin}/photo.jpg`)) : live);
-const ran = own.present && own.opacity === "1" && own.moving && own.errors.length === 0;
-if (SELF_TEST) {
-  ok(!ran, `ÖNTESZT: idegen eredetű textúrával a ④-nek PIROSNAK kell lennie (vászon: ${own.present}, mozog: ${own.moving})`);
-} else {
-  ok(ran, `④ a vászon a hero-ban, látszik, mozog, JS-hiba nincs (vászon: ${own.present}, opacity: ${own.opacity}, mozog: ${own.moving}, hibák: ${own.errors.join(" | ") || 0})`);
-  const reduced = await probe(live, { reduced: true });
+for (const c of CASES) {
+  const tpl = TEMPLATES[c.template]!;
+  const recipe: Recipe = { template: c.template, skin: tpl.skins[0]!, archetype: "stacked", sections: [] } as Recipe;
+  const render = (d: SiteData): string => renderSite(recipe, d, { phase: "mock" });
+  console.log(`depth-hero-check — ${c.template}`);
+  const plain = render(BASE);
+  const live = render(withDepth(`${A.origin}/photo.jpg`));
+  if (!SELF_TEST) {
+    ok(!plain.includes("data-cit-depth") && !plain.includes("cit-depth"), "① heroDepth nélkül nincs nyoma a lapon");
+    ok(render(withDepth(`${A.origin}/photo.jpg`, "https://example.invalid/OTHER.jpg")) === plain, "② elavult mélységkép (más borító) → bájtra azonos az ①-gyel");
+    const attrCount = (live.match(/data-cit-depth="/g) ?? []).length;
+    const tag = live.match(c.heroTag)?.[0] ?? "";
+    ok(attrCount === 1 && tag.includes("data-cit-depth="), `③ az attribútum pontosan egyszer, a hero-képen (${attrCount}×)`);
+    ok((live.match(/querySelector\('\[data-cit-depth\]'\)/g) ?? []).length === 1, "③ a futtató egyszer kerül a lapra");
+  }
+  const own = await probe(SELF_TEST ? render(withDepth(`${B.origin}/photo.jpg`)) : live, c.host);
+  const ran = own.present && own.opacity === "1" && own.moving && own.errors.length === 0 && own.appearedMs >= c.notBeforeMs;
+  if (SELF_TEST) {
+    ok(!ran, `ÖNTESZT: idegen eredetű textúrával a ④-nek PIROSNAK kell lennie (vászon: ${own.present}, mozog: ${own.moving})`);
+    continue;
+  }
+  ok(ran, `④ a vászon a hero-ban (${c.host}), látszik, mozog, JS-hiba nincs (megjelent: ${own.appearedMs} ms, legkorábban ${c.notBeforeMs}; opacity: ${own.opacity}, mozog: ${own.moving}, hibák: ${own.errors.join(" | ") || 0})`);
+  const reduced = await probe(live, c.host, { reduced: true });
   ok(!reduced.present && reduced.errors.length === 0, "⑤ csökkentett mozgás → nincs vászon");
-  const still = await probe(live, { noMotion: true });
+  const still = await probe(live, c.host, { noMotion: true });
   ok(!still.present && still.errors.length === 0, "⑥ data-cit-no-motion → nincs vászon");
-  const foreign = await probe(render(withDepth(`${B.origin}/photo.jpg`)));
+  const foreign = await probe(render(withDepth(`${B.origin}/photo.jpg`)), c.host);
   ok(!foreign.present && foreign.errors.length === 0, `⑦ idegen eredetű, CORS nélküli textúra → nincs vászon, nincs JS-hiba (hibák: ${foreign.errors.join(" | ") || 0})`);
 }
 

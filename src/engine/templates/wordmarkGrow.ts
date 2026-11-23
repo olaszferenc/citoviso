@@ -29,6 +29,7 @@ import {
 } from "../motion.js";
 import { slotMarker } from "../moduleSections.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos } from "../templateKit.js";
@@ -301,7 +302,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   </header>`
     : `${nav}
   <header class="w-hero">
-    ${hero ? `<img ${parallax(0.7)} data-cit-hero-img src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
+    ${hero ? `<img ${parallax(0.7)} data-cit-hero-img${depthHeroAttr(data, hero.url)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
     <div class="w-hero-copy cit-words" data-cit-hero-copy ${mo("in", 100)}>
       ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
       <h1>${esc(data.name)}</h1>
@@ -540,7 +541,7 @@ ${intro.photos.length ? introCss() : ""}
   ${slotMarker("closing")}
   ${footer}
   ${intro.photos.length ? introHtml(intro) : ""}
-  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>
+  <script>${motionJs()}${intro.photos.length ? introJs(intro) : ""}</script>${hero && !backdrop && depthHeroJs(data, hero.url) ? `\n  <script>${depthHeroJs(data, hero.url)}</script>` : ""}
 </body>
 </html>`;
 }
