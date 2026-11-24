@@ -68,6 +68,10 @@ export const config = {
    * no depth maps are made and every page keeps its static cover (the feature is inert).
    */
   depthModelPath: env("DEPTH_MODEL_PATH", "models/depth-anything-v2-small-int8.onnx"),
+  // Local, free photo classifier (CLIP ViT-B/32 vision encoder, int8) — attraction / document /
+  // toilet pictures leave the mock (src/media/photoKind.ts). Not in git: copied to models/ like the
+  // depth model (sha256 583fd111…9299, Xenova/clip-vit-base-patch32 onnx/vision_model_quantized.onnx).
+  photoKindModelPath: env("PHOTO_KIND_MODEL_PATH", "models/clip-vit-b32-vision-q8.onnx"),
   /**
    * ADR-0472 / ADR-0476: who gets the depth hero (the moving cover) in mock generation.
    *   "all"        — every mock of the three outreach templates (owner 2026-11-24, after the live

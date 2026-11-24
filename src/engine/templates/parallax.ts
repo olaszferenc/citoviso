@@ -14,7 +14,7 @@ import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
-import { accented, bookingSlot, contactPhotoOf, copyHook, copyOf, ctaLabel, esc, firstSentence, galleryPhotos, hasBookingSurface, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
+import { accented, allotPhotos, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, hasBookingSurface, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
 
 const PARALLAX_CSS = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -300,12 +300,19 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const revCopy = copyOf(recipe, "reviews");
 
   const photos = data.photos;
-  const heroPhoto = photos[0]?.url;
-  const bandAUrl = photos[2]?.url ?? photos[1]?.url;
-  const bandBUrl = photos[4]?.url ?? photos[3]?.url;
-  const conPhoto = contactPhotoOf(data, photos[photos.length - 1]);
+  // EACH PHOTO ONCE (owner 2026-11-24: 78 of 78 new mocks showed the same photo 3–5 times — the
+  // bands, the feature rows, the gallery and the contact all read photos[0..5]). The page's slots
+  // now take from ONE pool, in priority order, and a photo leaves the pool when a slot takes it:
+  // hero → contact (an outdoor scene first) → band A → band B → gallery (min. 3) → feature rows.
+  // The room cards (render.ts sampleRooms) chose before the template — their photos are not in it.
+  const plan = allotPhotos(data, { minGallery: 3, maxGallery: 6, maxRows: Math.min(4, data.highlights.length) });
+  const heroPhoto = plan.hero?.url;
+  const bandAUrl = plan.bandA?.url;
+  const bandBUrl = plan.bandB?.url;
+  const conPhoto = plan.contact ? { url: plan.contact.url, alt: plan.contactAlt } : null;
   const contactPhoto = conPhoto?.url ?? "";
   const contactAlt = conPhoto?.alt ?? "";
+  const galleryList = plan.gallery;
 
   const h1 = heroCopy.lead || data.tagline || data.name;
   // The hero sub prefers the intro's first sentence: the tagline is saved for the quote band
@@ -320,7 +327,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hasReviews = Boolean(data.reviews && data.reviews.length);
   const mastLinks: MastheadLink[] = [
     ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-services" }] : []),
-    ...(photos.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
+    ...(galleryList.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
     ...(hasReviews ? [{ label: T(data, "Vélemények"), href: "#t-reviews" }] : []),
     ...(data.contact.phone || data.contact.email || data.contact.address
       ? [{ label: T(data, "Kapcsolat"), href: "#t-contact" }]
@@ -340,7 +347,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       ${sub ? `<p class="t-herosub"${hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }], ["tagline", data.tagline])}>${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}
-        ${photos.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
+        ${galleryList.length ? `<a class="cit-btn cit-btn-ghost" href="#t-gallery">${T(data, "Galéria")}</a>` : ""}
       </div>
     </div>
   </header>`;
@@ -393,10 +400,10 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       : "";
 
   // -- alternating feature rows: photo + REAL highlight pairs (max 4) ---------
-  const rowCount = photos.length ? Math.min(4, data.highlights.length) : 0;
+  const rowCount = plan.rows.length;
   const rows = Array.from({ length: rowCount }, (_, i) => {
     const h = data.highlights[i]!;
-    const p = photos[(i + 1) % photos.length]!;
+    const p = plan.rows[i]!;
     return `<div class="t-row${i % 2 ? " t-flip" : ""}">
         <div class="t-rowimg"><img src="${esc(p.url)}" alt="${esc(p.alt)}"></div>
         <div class="t-rowbody">
@@ -441,14 +448,13 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       : "";
 
   // -- gallery grid (img-based, lightbox runtime hook) ------------------------
-  const gallery = photos.length
+  const gallery = galleryList.length
     ? `<section class="t-sec" id="t-gallery">
     <div class="t-wrap">
       ${galCopy.eyebrow ? `<p class="t-eyebrow"${copyHook("gallery.eyebrow")}>${esc(galCopy.eyebrow)}</p>` : `<p class="t-eyebrow">${T(data, "Galéria")}</p>`}
       <h2${hookPick(["gallery.title", galCopy.title && galCopy.title !== bandAText ? galCopy.title : ""])}>${galCopy.title && galCopy.title !== bandAText ? accented(galCopy.title, galCopy.accent) : T(data, "Nézzen körül")}</h2>
       <div class="t-gal" data-cit-module="gallery">
-        ${galleryPhotos(data)
-          .slice(0, 6)
+        ${galleryList
           .map((p) => `<figure><img src="${esc(p.url)}" alt="${esc(p.alt)}"></figure>`)
           .join("\n        ")}
       </div>

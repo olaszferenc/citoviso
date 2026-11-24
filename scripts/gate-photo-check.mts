@@ -77,8 +77,8 @@ const LEAF_RE = /class="ko-leaf l"><img src="([^"]+)"/;
 const engine = readFileSync(new URL("../src/generator/generateEngine.ts", import.meta.url), "utf8");
 const refuse = engine.indexOf("Kapunyitás: nincs a nyitóképtől eltérő témájú kép (");
 check(
-  "bekötés: a generálás a második képet is ujjlenyomatolja, és a kapu-kép hiányát az AI-hívás ELŐTT elutasítja",
-  /fingerprintCandidates\(gated\.photos, GATE_SUBJECTS, \[1\]\)/.test(engine) && refuse > 0 && refuse < engine.indexOf('opts.onStage?.("copy")'),
+  "bekötés: a generálás minden képet ujjlenyomatol (a másodikat is), és a kapu-kép hiányát az AI-hívás ELŐTT elutasítja",
+  /fingerprintAndDedupe\(gated\.photos\)/.test(engine) && refuse > 0 && refuse < engine.indexOf('opts.onStage?.("copy")'),
 );
 check("bekötés: a generált siteData külön mezőben viszi a kapu képét (gatePhoto)", /gatePhoto: gatePick/.test(engine));
 

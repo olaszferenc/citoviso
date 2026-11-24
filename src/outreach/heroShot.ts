@@ -84,7 +84,7 @@ const MAX_CONCURRENT_RENDERS = 1;
 let activeRenders = 0;
 const renderQueue: (() => void)[] = [];
 
-async function acquireRenderSlot(): Promise<() => void> {
+export async function acquireRenderSlot(): Promise<() => void> {
   if (activeRenders >= MAX_CONCURRENT_RENDERS) {
     await new Promise<void>((resolve) => renderQueue.push(resolve));
   }

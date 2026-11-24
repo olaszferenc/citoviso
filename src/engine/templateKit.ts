@@ -9,6 +9,7 @@ import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
 import { isStockPhoto, stockRoomPhotos } from "./stock.js";
+import { isSamePicture } from "./samePicture.js";
 // Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
 export { copyHook, highlightHook, hookPick } from "./copyFields.js";
@@ -280,6 +281,80 @@ function withStockCards(d: SiteData, rooms: Room[]): Room[] {
 export function galleryPhotos(d: SiteData): readonly Photo[] {
   const extra = d.stock?.gallery ?? [];
   return extra.length ? [...d.photos, ...extra] : d.photos;
+}
+
+export interface PhotoAllotment {
+  readonly hero: Photo | undefined;
+  readonly bandA: Photo | undefined;
+  readonly bandB: Photo | undefined;
+  readonly contact: Photo | undefined;
+  readonly contactAlt: string;
+  /** Own photos first, then (mock, few own photos) the stock fill — each picture once. */
+  readonly gallery: readonly Photo[];
+  readonly rows: readonly Photo[];
+}
+
+/**
+ * ONE POOL, EACH PICTURE ONCE (owner 2026-11-24). Measured on the 78 new parallax mocks: the
+ * template read fixed indexes for every slot (bands photos[2]/[4], rows (i+1)%n, gallery
+ * photos[0..5], contact the last), so every page showed 2–5 photos two or three times; and a
+ * portal serves one facade under several file names (Stéghouse udulohaz2–5), so URL-distinct
+ * was not picture-distinct either. Here the photos are first made picture-distinct (URL, then
+ * dHash when the generator stored one), the room cards' photos leave the pool (real rooms are
+ * chosen before the template, sample cards by the same sampleRooms the rooms module calls), and the slots take in priority order:
+ * hero → contact's outdoor scene → band A → band B → contact fallback (never a bathroom) → gallery
+ * (`minGallery` reserved before the rows) → feature rows → the rest of the gallery.
+ * A slot the pool cannot fill stays empty — the template drops or flattens it.
+ */
+export function allotPhotos(
+  d: SiteData,
+  opts: { readonly minGallery: number; readonly maxGallery: number; readonly maxRows: number },
+): PhotoAllotment {
+  const distinct: Photo[] = [];
+  for (const p of d.photos) {
+    if (isStockPhoto(p)) continue;
+    if (distinct.some((q) => q.url === p.url || isSamePicture(q.dhash, p.dhash))) continue;
+    distinct.push(p);
+  }
+  const hero = distinct[0];
+  // The cards the page will show: the real rooms (render.ts roomsForMock) or, without any, the
+  // sample cards moduleSections renders from the same data (sampleRooms is deterministic).
+  const cards = d.rooms?.length ? d.rooms : sampleRooms(d);
+  const cardUrls = new Set(cards.map((r) => r.photo?.url).filter((u): u is string => Boolean(u)));
+  const cardPhotos = d.photos.filter((p) => cardUrls.has(p.url));
+  const pool = distinct.slice(1).filter((p) => !cardUrls.has(p.url) && !cardPhotos.some((c) => isSamePicture(c.dhash, p.dhash)));
+  const take = (pick?: (p: Photo) => boolean): Photo | undefined => {
+    const i = pick ? pool.findIndex(pick) : 0;
+    return i >= 0 && pool.length ? pool.splice(i, 1)[0] : undefined;
+  };
+  const outdoor = (p: Photo): boolean => Boolean(p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
+  const notBath = (p: Photo): boolean => !(p.subject && NEVER_SURROUNDINGS.has(p.subject));
+  // The contact's outdoor scene is chosen BEFORE the bands (contactPhotoOf's rule: the LAST outdoor
+  // photo other than the hero) — a band must not take the only garden and leave the contact a room.
+  const lastOutdoor = [...pool].reverse().find(outdoor);
+  const scene = lastOutdoor ? take((p) => p === lastOutdoor) : undefined;
+  const bandA = take();
+  const bandB = take();
+  let contact = scene;
+  let contactAlt = scene ? sceneAlt(d) : d.name;
+  if (!contact) {
+    // The fixed slot was the LAST photo: keep that taste, a bathroom or toilet stepping aside.
+    const lastOk = [...pool].reverse().find(notBath);
+    contact = lastOk ? take((p) => p === lastOk) : undefined;
+    contactAlt = d.name;
+  }
+  const reserve = Math.min(opts.minGallery, pool.length);
+  const rowsN = Math.max(0, Math.min(opts.maxRows, pool.length - reserve));
+  const rows: Photo[] = [];
+  for (let i = 0; i < rowsN; i++) {
+    const p = take();
+    if (p) rows.push(p);
+  }
+  const own = pool.splice(0, opts.maxGallery);
+  // The stock fill (mock, fewer than six own photos) completes the gallery, never another slot.
+  const extra = d.stock?.gallery ?? [];
+  const gallery = [...own, ...extra].slice(0, Math.max(own.length, opts.maxGallery));
+  return { hero, bandA, bandB, contact, contactAlt, gallery, rows };
 }
 
 /** A photo's file name + caption, folded, for the no-verdict signal words. */
