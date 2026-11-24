@@ -1,4 +1,4 @@
-## ADR-XXXX — HR dev-próba (Makarska): település-index mint ingyenes portálkép-forrás + a felderítés hamis „saját honlap” ítéletei
+## ADR-0475 — HR dev-próba (Makarska): település-index mint ingyenes portálkép-forrás + a felderítés hamis „saját honlap” ítéletei
 
 **Státusz:** ELFOGADVA (brief `hr-dev-lead-proba-20261123`, koordinátor `cit9b4690e3`; SUB `citfe6a479b`) ·
 **Épít:** ADR-0337 (attachPhotoLinks), ADR-0437 (ország-réteg), ADR-0456, ADR-0467 (gyűjtés országfüggően), ADR-0470 (HR végpróba).

@@ -1,7 +1,7 @@
 # 2026-11-24 — HR dev-próba: lead-beszerzés Makarskán + Elek négy szerepben
 
 **Session:** `citfe6a479b` (SUB), koordinátor `cit9b4690e3`, brief `~/rc-briefs/hr-dev-lead-proba-20261123.md`.
-**ADR:** ADR-XXXX „HR dev-próba: település-index + a felderítés hamis saját-honlap ítéletei”. **Élesen:** semmi.
+**ADR:** ADR-0475 „HR dev-próba: település-index + a felderítés hamis saját-honlap ítéletei”. **Élesen:** semmi.
 
 ## Tölcsér (közös dev DB, régió `hr-makarska-proba`, 2,5 km-es kör, a leadek `raw.devProba='hr-makarska-20261123'`)
 74 OSM-hely → 70 mentve → 47 lead (41 honlap nélküli, 6 elavult) → 34 kontaktos (Maps-panel, $0) → 7 e-mailes
