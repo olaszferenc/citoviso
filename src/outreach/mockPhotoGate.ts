@@ -22,3 +22,10 @@ export const MOCK_OWN_PHOTOS_OK_SQL = sql<boolean>`(
   jsonb_typeof(a.inputs->'siteData'->'photos') = 'array'
   and jsonb_array_length(a.inputs->'siteData'->'photos') >= ${DISPATCH_MIN_OWN_PHOTOS}
   and a.inputs->'siteData'->'townPhoto' is null)`;
+
+/** 2026-11-24 (owner: the Zsejka mock was „full plain”, every module thrown in, nothing of the mock
+ *  type used): every queued mock was rendered 11-06…11-17, before the generator fix went live
+ *  (prod/20261123-2242, 03643a66, 2026-11-23 21:42 UTC). A cold letter carries only a mock made by
+ *  the fixed generator; an older one waits for its regeneration. Table alias `a` = mock_artifact. */
+export const MOCK_MIN_GENERATED_AT = "2026-11-23T21:42:31Z";
+export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz)`;

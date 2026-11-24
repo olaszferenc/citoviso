@@ -26,7 +26,7 @@ import { logLeadActivity, SYSTEM_ACTOR } from "../console/leadActivity.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, reviewOf, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
+import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
 import { dailyCapFor, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
@@ -440,7 +440,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       // rest stay QUEUED, untouched, until the rule changes (no hold churn, no lost place).
       .where(sql<boolean>`exists (select 1 from lead l where l.id = outreach_dispatch.lead_id and ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS})`)
       // …and the mock that goes out actually shows them (2026-11-24) — else it stays queued for a rerender.
-      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWN_PHOTOS_OK_SQL})`)
+      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWN_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(CLAIM_SCAN)
