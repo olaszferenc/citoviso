@@ -69,11 +69,17 @@ export const config = {
    */
   depthModelPath: env("DEPTH_MODEL_PATH", "models/depth-anything-v2-small-int8.onnx"),
   /**
-   * ADR-0472: the depth-hero experiment in mock generation. "1" → new mocks are split into a
-   * depth arm and a control arm by lead id; anything else → no mock gets a depth map. Off by
-   * default: switching it on is an operating decision, not a code change.
+   * ADR-0472 / ADR-XXXX: who gets the depth hero (the moving cover) in mock generation.
+   *   "all"        — every mock of the three outreach templates (owner 2026-11-24, after the live
+   *                  test: „mindenki kapja meg”) — the DEFAULT
+   *   "experiment" — the old 50/50 split by lead id (also the legacy DEPTH_HERO_EXPERIMENT=1)
+   *   "off"        — no mock gets a depth map
    */
-  depthHeroExperiment: env("DEPTH_HERO_EXPERIMENT", "") === "1",
+  depthHero: ((): "all" | "experiment" | "off" => {
+    const v = env("DEPTH_HERO", "").trim().toLowerCase();
+    if (v === "off" || v === "experiment" || v === "all") return v;
+    return env("DEPTH_HERO_EXPERIMENT", "") === "1" ? "experiment" : "all";
+  })() as "all" | "experiment" | "off",
   /**
    * PostgreSQL connection string. When set (prod/managed cloud) it wins over the
    * per-field `pg` defaults below. Empty locally → the embedded dev cluster is used.

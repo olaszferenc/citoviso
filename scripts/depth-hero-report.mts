@@ -81,7 +81,7 @@ const rows = await sql<Row>`
 
 const pct = (n: number, d: number): string => (d ? `${((100 * n) / d).toFixed(1)} % (${n}/${d})` : "— (0)");
 console.log(`Térhatású borítókép — kísérlet, az utolsó ${DAYS} nap kiküldései\n`);
-if (!rows.rows.length) console.log("Még nincs kiküldött mock a kísérletből (DEPTH_HERO_EXPERIMENT ki, vagy nincs küldés).");
+if (!rows.rows.length) console.log("Még nincs kiküldött mock a kísérletből (DEPTH_HERO nem „experiment”, vagy nincs küldés).");
 for (const r of rows.rows) {
   const label = r.arm === "depth" ? "TÉRHATÁS" : r.arm === "control" ? "KONTROLL" : `kimaradt (${r.arm})`;
   console.log(`■ ${label}`);
