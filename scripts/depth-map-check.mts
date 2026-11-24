@@ -10,10 +10,12 @@
  *      lands in the same arm (a re-generation never flips a mock between arms)
  *   ② the size rule: 772×1080 (Szamos-Lak, approved) passes; 511×1080 (Vénusz, too soft) and
  *      1600×690 fail
- *   ③ switch OFF (config.depthHeroExperiment) → arm null and the SAME siteData object back:
- *      production stays byte-identical until someone turns the experiment on
- *   ④ switch ON: a control-coin lead → 'control', untouched; a depth-coin lead on a non-outreach
+ *   ③ switch "off" (config.depthHero) → arm null and the SAME siteData object back
+ *   ④ "experiment": a control-coin lead → 'control', untouched; a depth-coin lead on a non-outreach
  *      template → 'skip:template'; a Places cover → 'skip:paid' WITHOUT any fetch (§ cost)
+ *   ④b "all" (the default since 2026-11-24, „mindenki kapja meg”): the SAME control-coin lead is
+ *      NOT 'control' — it goes on to the cover checks (a Places cover → 'skip:paid'); and with no
+ *      DEPTH_HERO / DEPTH_HERO_EXPERIMENT in the env the mode is "all"
  *   ⑤ the worker (only when the model file is installed — scripts/depth-model-fetch.mts): a real
  *      map comes out of a real photo-like image, a PNG at most 768 px wide; the row is cached, and
  *      the second ensureDepthMap for the same photo does NOT ask for the bytes again; a 600×900
@@ -39,7 +41,7 @@ const ok = (cond: boolean, msg: string): void => {
   console.log(`${cond ? "  ✅" : "  ⛔"} ${msg}`);
   if (!cond) failed++;
 };
-const mutable = config as { depthHeroExperiment: boolean };
+const mutable = config as { depthHero: "all" | "experiment" | "off" };
 const coin = SELF_TEST ? (): boolean => true : depthCoin;
 
 // ① coin
@@ -60,11 +62,11 @@ ok(bigEnough(772, 1080) && !bigEnough(511, 1080) && !bigEnough(1600, 690), "② 
 const depthId = ids.find((id) => depthCoin(id))!;
 const controlId = ids.find((id) => !depthCoin(id))!;
 const SD = { name: "Teszt", photos: [{ url: "https://example.invalid/depth-map-check/hero.jpg", alt: "" }] } as unknown as SiteData;
-const prev = mutable.depthHeroExperiment;
-mutable.depthHeroExperiment = false;
+const prev = mutable.depthHero;
+mutable.depthHero = "off";
 const off = await withDepthArm(SD, { leadId: depthId, artifactId: ids[0]!, template: "parallax" });
-ok(off.arm === null && off.siteData === SD, "③ kikapcsolt kísérlet → nincs ág, a siteData érintetlen");
-mutable.depthHeroExperiment = true;
+ok(off.arm === null && off.siteData === SD, "③ kikapcsolt térhatás → nincs ág, a siteData érintetlen");
+mutable.depthHero = "experiment";
 const ctl = await withDepthArm(SD, { leadId: controlId, artifactId: ids[0]!, template: "parallax" });
 ok(ctl.arm === "control" && ctl.siteData === SD, "④ kontroll-ágú lead → 'control', érintetlen");
 const tpl = await withDepthArm(SD, { leadId: depthId, artifactId: ids[0]!, template: "fullbleed" });
@@ -75,7 +77,13 @@ const paid = await ensureDepthMap("https://places.googleapis.com/v1/x/media?key=
   return null;
 });
 ok(paid?.ok === false && !paid.ok && paid.skip === "paid" && !fetched, "④ Places-fotó → 'paid', letöltés nélkül");
-mutable.depthHeroExperiment = prev;
+mutable.depthHero = "all";
+const PLACES_SD = { name: "Teszt", photos: [{ url: "https://places.googleapis.com/v1/x/media?key=1", alt: "" }] } as unknown as SiteData;
+const all = await withDepthArm(PLACES_SD, { leadId: controlId, artifactId: ids[0]!, template: "parallax" });
+ok(all.arm === "skip:paid", `④b „mindenki kapja” → a kontroll-érmés lead sem 'control' (kapott: ${all.arm})`);
+mutable.depthHero = prev;
+if (!process.env.DEPTH_HERO && !process.env.DEPTH_HERO_EXPERIMENT)
+  ok(prev === "all", `④b kapcsoló nélkül az alapállás „all” (kapott: ${prev})`);
 
 // ⑤ worker + cache
 const KEY_BIG = "https://example.invalid/depth-map-check/big.jpg";

@@ -1,4 +1,6 @@
-// THE DEPTH-HERO EXPERIMENT ARM of a new mock (ADR-0472, owner 2026-11-23: "először csak kísérlet").
+// THE DEPTH-HERO ARM of a new mock (ADR-0472, owner 2026-11-23: "először csak kísérlet"; since
+// ADR-XXXX, 2026-11-24, after the live test: „mindenki kapja meg” — config.depthHero "all" is the
+// default, every lead is in the depth arm and the coin only decides in "experiment" mode).
 //
 // WHY AT GENERATION, NOT AT SEND. The outreach experiment layer (outreach/experiment.ts) assigns
 // its variants when the letter leaves — but the mock HTML is rendered, curator-approved and frozen
@@ -8,12 +10,12 @@
 //
 // THE ARMS (stored as inputs.heroDepthArm):
 //   'depth'      — the cover moves: siteData.heroDepth is set (the map exists and is usable)
-//   'control'    — the lead's coin said no: rendered exactly as before
+//   'control'    — the lead's coin said no (only in "experiment" mode): rendered exactly as before
 //   'skip:<why>' — the coin said yes but the cover cannot carry it ('small', 'paid', 'fetch',
 //                  'compute', 'no-model', 'template', 'no-photo'). Rendered as before and
 //                  EXCLUDED from the comparison: counting it as control would bias the control arm
 //                  towards small / Places covers.
-//   (absent)     — the experiment switch (config.depthHeroExperiment) is off.
+//   (absent)     — the switch (config.depthHero) is "off".
 //
 // THE TEXTURE URL. `img` is the mock's own photo route, RELATIVE (`/configure/<artifact>/photo/<h>`):
 // that prefix reaches the console on every host the lead may open the page on (cold-lane host,
@@ -46,14 +48,14 @@ export function mockTextureUrl(artifactId: string, source: string): string {
 
 /**
  * Decide the arm and, for the depth arm, attach `heroDepth`. Never throws: any failure falls back
- * to the unchanged siteData (a mock must never fail because of an experiment).
+ * to the unchanged siteData (a mock must never fail because of the moving cover).
  */
 export async function withDepthArm(
   siteData: SiteData,
   o: { readonly leadId: string; readonly artifactId: string; readonly template: string | undefined },
 ): Promise<{ siteData: SiteData; arm: DepthArm | null }> {
-  if (!config.depthHeroExperiment) return { siteData, arm: null };
-  if (!depthCoin(o.leadId)) return { siteData, arm: "control" };
+  if (config.depthHero === "off") return { siteData, arm: null };
+  if (config.depthHero === "experiment" && !depthCoin(o.leadId)) return { siteData, arm: "control" };
   if (!o.template || !DEPTH_TEMPLATES.has(o.template)) return { siteData, arm: "skip:template" };
   const hero = siteData.photos[0]?.url;
   if (!hero) return { siteData, arm: "skip:no-photo" };

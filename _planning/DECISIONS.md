@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-terhatas-mindenkinek-es-meglevo-mockok-ujrarenderelese.md) — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
 - [ADR-0475](decisions/0475-hr-dev-proba-makarska-telepules-index-mint.md) — HR dev-próba (Makarska): település-index mint ingyenes portálkép-forrás + a felderítés hamis „saját honlap” ítéletei
 - [ADR-0474](decisions/0474-generator-javitas-kapunyitas-mas-temaju.md) — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro
 - [ADR-0473](decisions/0473-a-fooldal-a-latogato-bongeszojenek-nyelven.md) — A főoldal a látogató böngészőjének nyelvén (magyar = a mai oldal, más nyelv = euró + .com)
