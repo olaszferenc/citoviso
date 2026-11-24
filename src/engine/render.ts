@@ -12,6 +12,7 @@ import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
 import { isStockPhoto, stockGallery, stockHeroBackdrop } from "./stock.js";
@@ -779,6 +780,11 @@ function withMockNotes(html: string, data: SiteData): string {
   return out;
 }
 
+/** A text as the inside of a JSON string literal in an inline script (jsonForScript's escaping, quotes cut). */
+function jsonStringBody(t: string): string {
+  return jsonForScript(t).slice(1, -1);
+}
+
 /**
  * The generated alt „<név> — N. kép” (siteData.toSitePhotos / neutralAlt) in the PAGE's language, on the
  * finished HTML (HR dev-próba 2026-11-23, Elek: a Croatian mock's lightbox read „Hotel Palma Makarska — 2. kép”
@@ -794,7 +800,7 @@ function localizedGeneratedAlts(page: string, data: SiteData): string {
     )
     // The gallery list the lightbox reads (withGalleryPhotoList: JSON `"alt":"<név> — N. kép"`).
     .replace(/("alt":")((?:[^"\\]|\\.)*?) — (\d+)\. kép"/g, (_m, head: string, name: string, n: string) =>
-      `${head}${name} — ${JSON.stringify(T(data, "{n}. kép", { n })).slice(1, -1)}"`,
+      `${head}${name} — ${jsonStringBody(T(data, "{n}. kép", { n }))}"`,
     )
     // The map frame's title (primitives.mapEmbed: „<név> — térkép”), read out by a screen reader.
     .replace(/(<iframe\b[^>]*\btitle=")([^"<>]*?) — térkép"/g, (_m, head: string, name: string) => `${head}${name} — ${esc(T(data, "Térkép"))}"`);
