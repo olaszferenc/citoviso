@@ -11,6 +11,14 @@
 //      file (the generator fixes of ADR-0474 ride along: 3.5 s gate, big wordmark frame, pinned
 //      parallax photos). Never the AI planner — the persisted inputs ARE the design (§I).
 //
+// 2026-11-24 PHOTO FIX ROUND (coordinator, owner „csináld meg”): the 11-24 run went with the code
+// BEFORE the photo fixes and was stopped at 2 629. The stamp is now "2026-11-24-photofix", so
+// every mock is redone once. On top of ①–③, a mock of the CURRENT generator (generated after the
+// 2026-11-23 fix — the only ones the send gates let out) gets ④ the generation-time photo fix:
+// republished copies dropped (photoHash.fingerprintAndDedupe) and pictures that are not the
+// lodging dropped (media/photoKind.ts — local, no API); the result is persisted in siteData.photos.
+// Older mocks are re-rendered only (their own photos are not in the inputs; they are regenerated).
+//
 // Safe to stop and re-run: a finished mock carries inputs.terhatasAt and is skipped. Every mock is
 // backed up (its HTML gzipped + its inputs) BEFORE it is touched; --restore puts them all back.
 //
@@ -34,8 +42,11 @@ import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "../src/generator/depthArm.js";
 import { persistMockLanguage, renderMockMeasured } from "../src/generator/mockLanguage.js";
 import { secureMockPhotos } from "../src/generator/photoTransport.js";
+import { fingerprintAndDedupe } from "../src/generator/photoHash.js";
+import { classifyPhotoUrl, isOffPagePhoto, photoKindAvailable } from "../src/media/photoKind.js";
+import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
 
-const STAMP = "2026-11-24";
+const STAMP = "2026-11-24-photofix";
 const argv = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
   const i = argv.indexOf(name);
@@ -75,6 +86,7 @@ const rows = await db
     "m.lead_id as lead_id",
     "m.path as path",
     "m.inputs as inputs",
+    "m.generated_at as generated_at",
     (eb) =>
       eb
         .exists(eb.selectFrom("prospect as p").select("p.id").whereRef("p.mock_artifact_id", "=", "m.id"))
@@ -92,6 +104,10 @@ if (!GO) {
   process.exit(0);
 }
 
+if (!photoKindAvailable()) {
+  console.error("A képfelismerő modell hiányzik (config.photoKindModelPath) — a fotó-javítás nem futhat nélküle.");
+  process.exit(1);
+}
 await mkdir(path.join(BACKUP!, "html"), { recursive: true });
 const tally = { done: 0, depth: 0, gateChanged: 0, missing: 0, failed: 0 } as Record<string, number>;
 const arms = new Map<string, number>();
@@ -117,6 +133,16 @@ for (const row of todo.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
 
     const { heroDepth: _old, ...base } = stored;
     let siteData = base as SiteData;
+    // ④ the photo fix on a current-generator mock (see the header)
+    if (new Date(String(row.generated_at)) >= new Date(MOCK_MIN_GENERATED_AT) && (siteData.photos?.length ?? 0) > 0) {
+      const dd = await fingerprintAndDedupe(siteData.photos as readonly Photo[]);
+      const kinds = await Promise.all(dd.photos.map((p) => classifyPhotoUrl(p.url)));
+      const kept = dd.photos.filter((_, i) => !isOffPagePhoto(kinds[i] ?? null, i === 0));
+      tally.dupes = (tally.dupes ?? 0) + dd.dropped.length;
+      tally.offPage = (tally.offPage ?? 0) + (dd.photos.length - kept.length);
+      tally.photoFixed = (tally.photoFixed ?? 0) + 1;
+      siteData = { ...siteData, photos: kept };
+    }
     if (recipe.template === "gate-opening") {
       const photos = (siteData.photos ?? []) as readonly Photo[];
       const pick = gatePhotoOf(photos);
