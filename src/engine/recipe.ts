@@ -110,6 +110,13 @@ export interface Photo {
    */
   readonly bedroom?: boolean;
   /**
+   * A kitchen, bathroom, dining or toilet shot (local classifier, generator/photoCurate.ts,
+   * 2026-11-24): it may stand in the gallery, never in the opening sequence — the wordmark-grow
+   * intro frame and the gate-opening leaf (Pirkadat and Mia opened on a toilet and a bathtub).
+   * Absent = showcase-fit or no verdict.
+   */
+  readonly backstage?: boolean;
+  /**
    * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
    * for the hero and the outdoor photos only. Answers "is this the SAME picture under
    * another URL?" (portals republish each other's photos) via engine/samePicture.ts.

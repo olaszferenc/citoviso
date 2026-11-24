@@ -14,7 +14,7 @@
 // Deterministic, no AI. A failed download is OUR gap, not a finding: no hash, no claim.
 
 import sharp from "sharp";
-import { isSamePicture } from "../engine/samePicture.js";
+import { isSamePicture, sizelessPhotoKey } from "../engine/samePicture.js";
 
 // The comparison itself (threshold included) lives in the engine, so a template can ask
 // "same picture?" without importing an image library: ../engine/samePicture.ts.
@@ -104,7 +104,8 @@ export async function fingerprintAndDedupe<T extends { url: string }>(
   const dropped: T[] = [];
   photos.forEach((p, i) => {
     const h = hashes[i] ?? undefined;
-    if (h && kept.some((k) => isSamePicture(k.dhash, h))) {
+    const key = sizelessPhotoKey(p.url);
+    if ((h && kept.some((k) => isSamePicture(k.dhash, h))) || kept.some((k) => sizelessPhotoKey(k.url) === key)) {
       dropped.push(p);
       return;
     }

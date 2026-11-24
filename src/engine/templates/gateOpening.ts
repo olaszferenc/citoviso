@@ -38,7 +38,7 @@
 import { amenityIconSvg } from "../amenityIcon.js";
 import { iconSvg, starIcon } from "../icons.js";
 import { mo, motionCss, motionJs } from "../motion.js";
-import { isSamePicture } from "../samePicture.js";
+import { isSamePicture, sizelessPhotoKey } from "../samePicture.js";
 import { slotMarker } from "../moduleSections.js";
 import { ratingScale } from "../rating.js";
 import type { Photo, Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -108,10 +108,11 @@ export function gatePhotoOf(photos: readonly Photo[], explicit?: Photo): Photo |
   const hero = photos[0];
   if (!hero) return null;
   const distinct = (p: Photo | undefined): p is Photo =>
-    Boolean(p && p.url && p.url !== hero.url && !isSamePicture(p.dhash, hero.dhash));
+    Boolean(p && p.url && p.url !== hero.url && !isSamePicture(p.dhash, hero.dhash) && sizelessPhotoKey(p.url) !== sizelessPhotoKey(hero.url));
   // The tenant's own choice wins (ADR-0423: „tudja majd tenant ezt is konfigurálni”).
   if (distinct(explicit)) return explicit;
-  const rest = photos.slice(1).filter(distinct);
+  // Never a kitchen/bathroom shot on the leaves (Photo.backstage, 2026-11-24).
+  const rest = photos.slice(1).filter((p) => distinct(p) && !p.backstage);
   // Owner, 2026-11-23 (plan design-refs/tenant-site/generator-javitas): the leaves must show a
   // DIFFERENT SUBJECT from what opens up behind them — Krisztina Panzió's second photo was the
   // same yellow house from another angle, and the gate still looked as if it opened onto itself.
@@ -787,9 +788,9 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   // The gallery leads with the photos the page does not show elsewhere (contract gallery-cap).
   // The gate's photo is seen for ~1 s while it opens: it does not count as "already on the page"
   // (otherwise the B gate photo would be pushed to the back of the gallery).
-  const gallery = galleryOf(
-    galleryOrder(galleryPhotos(data), [heroBlock.replace(gateHtml, ""), aboutBlock, roomsBlock, footer].join("")),
-  );
+  // Each picture once (2026-11-24): nothing unseen left → no gallery section, never a repeat strip.
+  const galleryList = galleryOrder(galleryPhotos(data), [heroBlock.replace(gateHtml, ""), aboutBlock, roomsBlock, footer].join(""));
+  const gallery = galleryList.length ? galleryOf(galleryList) : "";
 
   return `<!doctype html>
 <html lang="${data.lang ?? "hu"}">

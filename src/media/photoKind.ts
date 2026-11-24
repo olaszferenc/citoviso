@@ -37,12 +37,14 @@ export interface PhotoKind {
   /** Probability mass per class. */
   readonly sight: number;
   readonly never: number;
+  /** Probability per label (photoKindLabels.json order-independent, keyed by label). */
+  readonly probs: Readonly<Record<string, number>>;
 }
 
 /** A class at or above this mass takes the photo off the page. */
 export const PHOTO_KIND_THRESHOLD = 0.6;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 1;
+const VERSION = 2;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -107,7 +109,11 @@ export async function classifyPhotoBuffer(buf: Buffer): Promise<PhotoKind | null
   const sight = mass("sight");
   const never = mass("never");
   const kind: PhotoKindClass = never >= PHOTO_KIND_THRESHOLD ? "never" : sight >= PHOTO_KIND_THRESHOLD ? "sight" : "ok";
-  return { kind, label: LABELS.labels[best]!.label, score: probs[best]!, sight, never };
+  const byLabel: Record<string, number> = {};
+  LABELS.labels.forEach((l, i) => {
+    byLabel[l.label] = +probs[i]!.toFixed(4);
+  });
+  return { kind, label: LABELS.labels[best]!.label, score: probs[best]!, sight, never, probs: byLabel };
 }
 
 /** Classify a photo URL; the verdict is cached on disk per URL (a portal photo does not change). */
@@ -145,4 +151,69 @@ export async function classifyPhotoUrl(url: string, bytes?: Buffer): Promise<Pho
 export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   if (!v) return false;
   return v.kind === "never" || (v.kind === "sight" && !isHero);
+}
+
+/** What a hero shows at its best: the place from outside, its garden, pool, view (full weight). */
+const HERO_OUTSIDE = ["the outside of a house", "a guesthouse building", "a garden with a terrace", "a swimming pool", "a balcony with a view", "a lake shore", "a courtyard"];
+/** Inside rooms a guest would sleep or sit in (part weight): a hero only when nothing outside is. */
+const HERO_INSIDE = ["a living room", "a bedroom with a bed", "a hotel room interior", "a sauna or jacuzzi"];
+/** Never the first screen (11-24: a bathroom mirror, a stove, a Booking award banner). */
+const NOT_HERO_TOP = new Set(["a kitchen", "a bathroom with a shower", "a dining table", "a toilet"]);
+
+/** How well a photo opens the page: outside views count fully, rooms partly. */
+export function heroScore(v: PhotoKind): number {
+  const p = v.probs ?? {};
+  return HERO_OUTSIDE.reduce((a, l) => a + (p[l] ?? 0), 0) + 0.4 * HERO_INSIDE.reduce((a, l) => a + (p[l] ?? 0), 0);
+}
+
+/** May this photo be the hero? Not a kitchen/bathroom/dining/toilet shot, not a non-lodging picture. */
+export function isHeroWorthy(v: PhotoKind): boolean {
+  if (v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
+  if (NOT_HERO_TOP.has(v.label)) return false;
+  return heroScore(v) >= 0.25;
+}
+
+/**
+ * May this photo stand in the opening sequence (the wordmark-grow intro cycle, the gate leaf, the
+ * gallery's first cards)? Anything but a kitchen/bathroom/dining/toilet shot or a non-lodging
+ * picture. Looser than isHeroWorthy: a bedroom is fine here, a bathtub is not (11-24: Pirkadat and
+ * Mia opened their wordmark-grow intro on a toilet and a bathtub).
+ */
+export function isShowcase(v: PhotoKind): boolean {
+  if (v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
+  return !NOT_HERO_TOP.has(v.label);
+}
+
+/**
+ * After the hero, the showcase photos first and the kitchen/bathroom ones last — each group in its
+ * own order. The first photo is never moved here (withBestHeroFirst chose it). Unknown verdicts
+ * count as showcase (no model → nothing moves).
+ */
+export function withShowcaseFirst<T>(photos: readonly T[], kinds: readonly (PhotoKind | null)[]): T[] {
+  if (photos.length < 3) return [...photos];
+  const idx = photos.map((_, i) => i).slice(1);
+  const ok = (i: number): boolean => { const v = kinds[i]; return !v || isShowcase(v); };
+  return [photos[0]!, ...idx.filter(ok).map((i) => photos[i]!), ...idx.filter((i) => !ok(i)).map((i) => photos[i]!)];
+}
+
+/**
+ * Put the best hero first (generation and the photo-fix rerender): the photo with the highest
+ * heroScore among the hero-worthy ones, unless the current first photo is already hero-worthy and
+ * within 0.15 of it (the vision/portal order keeps its say when it is good). Order otherwise kept.
+ * Unknown verdicts (no model, unreadable image) never move anything.
+ */
+export function withBestHeroFirst<T>(photos: readonly T[], kinds: readonly (PhotoKind | null)[]): T[] {
+  if (photos.length < 2) return [...photos];
+  let best = -1;
+  let bestScore = -1;
+  kinds.forEach((v, i) => {
+    if (v && isHeroWorthy(v) && heroScore(v) > bestScore) {
+      best = i;
+      bestScore = heroScore(v);
+    }
+  });
+  if (best <= 0) return [...photos];
+  const first = kinds[0];
+  if (first && isHeroWorthy(first) && heroScore(first) >= bestScore - 0.15) return [...photos];
+  return [photos[best]!, ...photos.filter((_, i) => i !== best)];
 }

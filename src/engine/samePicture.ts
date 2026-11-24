@@ -22,3 +22,19 @@ export function isSamePicture(a: string | undefined, b: string | undefined): boo
   const d = hashDistance(a, b);
   return d !== null && d <= NEAR_DUP_BITS;
 }
+
+/**
+ * One file under several SIZE folders is one picture (Vörösmarty tér, 2026-11-24: booked.hu served
+ * the same photo as …/500x500w/… and …/OriginalPhoto/…; the square crop's dHash differs, so the
+ * fingerprint alone let the gate leaf open onto the hero). Host + path without size segments.
+ */
+const SIZE_SEGMENT = /^(?:\d+x\d*\w*|\d*x\d+\w*|original\w*|orig|fullhd|full|large|medium|small|thumbs?|thumbnail\w*|w\d+|h\d+)$/i;
+export function sizelessPhotoKey(url: string): string {
+  try {
+    const u = new URL(url);
+    const segs = u.pathname.split("/").filter((x) => x && !SIZE_SEGMENT.test(x));
+    return `${u.host.toLowerCase()}/${segs.join("/").toLowerCase()}`;
+  } catch {
+    return url.toLowerCase();
+  }
+}

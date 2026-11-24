@@ -1130,6 +1130,15 @@ fi
 # a sáv MINDEN látogatónak kimegy, a lap tetején marad, lenyomja a lapot, és a jogi részlete
 # JS NÉLKÜL is nyílik. A sablon-CSS a valódi kockázat (fixed nav, body>*{position:relative},
 # parallax réteg) — ezért fut a sablonok ellen, böngészőben, öt piros önteszttel.
+# THE THREE OUTREACH TEMPLATES, RENDERED (owner 2026-11-24): 18 real mocks through the current engine
+# and the rendered send gate — any repeated picture, bathroom/kitchen in the opening, broken word fails.
+# The CLIP model is not in git: the main tree's copy unless PHOTO_KIND_MODEL_PATH is set.
+if [ -f scripts/mock-render-fixtures-check.mts ] && \
+   changed_files | grep -qE '^(src/engine/templates/(parallax|gateOpening|wordmarkGrow)|src/engine/templateKit|src/engine/render|src/engine/motion|src/engine/samePicture|src/generator/(photoCurate|photoHash|generateEngine)|src/media/photoKind|src/outreach/mockRenderGate|scripts/mock-render-fixtures-check|scripts/fixtures/mock-render/)'; then
+  echo "[pre-commit] mock-render-fixtures-check (a három kiküldési sablon lerenderelve, 18 minta)…"
+  PHOTO_KIND_MODEL_PATH="${PHOTO_KIND_MODEL_PATH:-$HOME/citoviso/models/clip-vit-b32-vision-q8.onnx}" \
+    npx tsx scripts/mock-render-fixtures-check.mts >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/prospect-framing-check.mts ] && \
    changed_files | grep -qE '^(src/console/prospectNotice|src/console/server|src/engine/templates|src/engine/templateKit|src/generator/runtime|assets/design-refs/prospect-page/|scripts/prospect-framing-check)'; then
   echo "[pre-commit] prospect-framing-check (a keretezés minden látogatónak, a helyén)…"

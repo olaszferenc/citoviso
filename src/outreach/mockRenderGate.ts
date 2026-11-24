@@ -35,16 +35,16 @@ import { sql } from "kysely";
 import { chromium } from "playwright-core";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
-import { isSamePicture } from "../engine/samePicture.js";
+import { isSamePicture, sizelessPhotoKey } from "../engine/samePicture.js";
 import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { classifyPhotoBuffer, isOffPagePhoto, photoKindAvailable } from "../media/photoKind.js";
+import { classifyPhotoBuffer, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 2;
+export const RENDER_GATE_VERSION = 7;
 
 const VIEWPORT = { width: 390, height: 844 };
 /** An image smaller than this on screen is an icon / logo / avatar, not a photo slot. */
@@ -87,6 +87,7 @@ interface PageMeasure {
   readonly scrollWidth: number;
   readonly innerWidth: number;
   readonly wideText: string[];
+  readonly brokenWords: string[];
 }
 
 const fileOf = (u: string): string => decodeURIComponent(photoUrlKey(u).split("/").pop() ?? u);
@@ -124,7 +125,9 @@ const MEASURE_JS = `(() => {
     const u = img.currentSrc || img.src;
     if (!u || u.startsWith("data:")) continue;
     const r = img.getBoundingClientRect();
-    if (r.width >= MIN && r.height >= MIN && shown(img) && (!img.complete || img.naturalWidth === 0)) broken.push(u);
+    // complete && no pixels = a failed load; a lazy image off-screen (a swipe strip's later cards)
+    // is simply not loaded yet — not broken (wordmark-grow, 11-24: 20 false alarms).
+    if (r.width >= MIN && r.height >= MIN && shown(img) && img.complete && img.naturalWidth === 0) broken.push(u);
     push(img, u);
   }
   for (const el of Array.from(document.querySelectorAll("body *"))) {
@@ -149,7 +152,29 @@ const MEASURE_JS = `(() => {
     if (r.left + Math.max(el.scrollWidth, r.width) > iw + 1) wideText.push((el.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 40));
     if (wideText.length >= 5) break;
   }
-  return { slots, broken, scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wideText };
+  // A word broken across two lines in a heading ("BALATONBOGLÁRO / N", 11-24): the word's own
+  // range has boxes on more than one line. A hyphenation break is the same failure here (the
+  // phone shows it as a cut word too).
+  const brokenWords = [];
+  for (const el of Array.from(document.querySelectorAll("h1,h2,h3,.t-quote"))) {
+    if (!shown(el)) continue;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const text = n.textContent || "";
+      const re = /[^\\s]+/g;
+      let m;
+      while ((m = re.exec(text))) {
+        if (m[0].length < 4) continue;
+        const range = document.createRange();
+        range.setStart(n, m.index);
+        range.setEnd(n, m.index + m[0].length);
+        const tops = new Set(Array.from(range.getClientRects()).filter((r) => r.width > 1).map((r) => Math.round(r.top)));
+        if (tops.size > 1) brokenWords.push(m[0]);
+      }
+    }
+    if (brokenWords.length >= 5) break;
+  }
+  return { slots, broken, scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wideText, brokenWords };
 })()`;
 
 /**
@@ -241,7 +266,11 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(300);
     const walked = (await page.evaluate(MEASURE_JS)) as PageMeasure;
-    measure = { ...walked, wideText: [...new Set([...opening.wideText, ...walked.wideText])].slice(0, 5) };
+    measure = {
+      ...walked,
+      wideText: [...new Set([...opening.wideText, ...walked.wideText])].slice(0, 5),
+      brokenWords: [...new Set([...opening.brokenWords, ...walked.brokenWords])].slice(0, 5),
+    };
   } finally {
     await browser.close().catch(() => undefined);
     release();
@@ -290,6 +319,56 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     findings.push({ code: "render", detail: "a képfelismerő modell hiányzik ezen a gépen — ellenőrizetlen lap nem mehet ki" });
   } else {
     const heroUrl = slots.find((s) => s.mod === "header#top" || s.y < 10)?.u;
+    // THE HERO SHOWS THE LODGING AT ITS BEST (11-24: a bathroom mirror, a stove, a Booking award
+    // banner opened 9 of 18 letters) — never a bathroom, toilet, kitchen or a non-lodging picture.
+    const heroBytes = heroUrl ? bodies.get(heroUrl) : undefined;
+    if (heroUrl && heroBytes) {
+      const hv = await classifyPhotoBuffer(heroBytes);
+      if (hv && !isHeroWorthy(hv)) {
+        findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv.label}): ${fileOf(heroUrl)}` });
+      }
+    }
+    // THE OPENING SEQUENCE, TOO (11-24, second round): wordmark-grow cycles photos 2–5 in its big
+    // frame before the hero fades in, and gate-opening's leaves carry their own photo — a toilet or a
+    // bathtub there opens the page just as a bathtub hero would (Pirkadat, Mia). Read from the page
+    // itself (the intro's SHOTS list, the leaf <img>), judged with the same local classifier.
+    const html = await readFile(mockAbs, "utf8").catch(() => "");
+    const opening = new Set<string>();
+    const shots = /var SHOTS=(\[[^\]]*\])/.exec(html)?.[1];
+    if (shots) {
+      try {
+        for (const u of JSON.parse(shots.replace(/\\u003c/gi, "<")) as unknown[]) if (typeof u === "string") opening.add(u);
+      } catch {
+        findings.push({ code: "render", detail: "a nyitó-animáció képlistája nem olvasható — ellenőrizetlen nyitás nem mehet ki" });
+      }
+    }
+    for (const m of html.matchAll(/class="ko-leaf [lr]"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
+    const heroHash = heroBytes ? await dHashFromBuffer(heroBytes).catch(() => undefined) : undefined;
+    for (const u of opening) {
+      if (/\/assets\/stock\//.test(u)) continue;
+      let b = bodies.get(u) ?? (await photos.read(u))?.body;
+      if (!b && /^https?:/.test(u)) {
+        const r = await fetch(u, { headers: { "user-agent": PORTAL_USER_AGENT } }).catch(() => null);
+        if (r?.ok) b = Buffer.from(await r.arrayBuffer());
+      }
+      // The opening must never show the picture that stays (Vörösmarty tér, 11-24: the leaf was the
+      // hero at another size — the gate opened onto itself). Layered over the hero, so the repeat
+      // rule above does not see it.
+      const sameAsHero =
+        heroUrl != null &&
+        (u === heroUrl ||
+          sizelessPhotoKey(u) === sizelessPhotoKey(heroUrl) ||
+          (b != null && isSamePicture(heroHash, await dHashFromBuffer(b).catch(() => undefined))));
+      if (sameAsHero) {
+        findings.push({ code: "repeat", detail: `a nyitó-animáció a nyitóképet mutatja (önmagára nyílik): ${fileOf(u)}` });
+        continue;
+      }
+      if (!b) continue; // not served → the broken-image rule speaks for it
+      const v = await classifyPhotoBuffer(b);
+      if (v && !isShowcase(v)) {
+        findings.push({ code: "subject", detail: `a nyitó-animációban nem odavaló kép (${v.label}): ${fileOf(u)}` });
+      }
+    }
     for (const u of urls) {
       const b = bodies.get(u);
       if (!b || /\/assets\/stock\//.test(u)) continue;
@@ -306,6 +385,9 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
 
   if (measure.scrollWidth > measure.innerWidth + 1) {
     findings.push({ code: "overflow", detail: `mobilon az oldal ${measure.scrollWidth - measure.innerWidth} px-szel szélesebb a képernyőnél` });
+  }
+  if (measure.brokenWords.length) {
+    findings.push({ code: "overflow", detail: `mobilon két sorba tört szó a címben: ${measure.brokenWords.join(" · ")}` });
   }
   if (measure.wideText.length) {
     findings.push({ code: "overflow", detail: `mobilon kilógó, levágott szöveg: ${measure.wideText.join(" · ")}` });

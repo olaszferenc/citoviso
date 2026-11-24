@@ -3,6 +3,7 @@
 #
 #   bash scripts/deploy-prod.sh <commit-ish>        # dry-run: gates + diff plan only
 #   … --full-kb-shots                                # GATE 1c/kép: every guide image re-captured (no pass cache)
+#   bash scripts/deploy-prod.sh --mock-render-gate <commit-ish>   # GATE 1d alone: 18 mocks, 3 templates
 #   bash scripts/deploy-prod.sh <commit-ish> --go   # deploy (owner's scoped permission!)
 #   … --go --ignore-scrape                          # deploy THOUGH a scrape is running
 #                                                     (it will be killed — see GATE 4)
@@ -199,6 +200,45 @@ kb_shot_gate() { # $1 = commit sha
   rm -f "$log"
 }
 
+# ── GATE 1d — a három kiküldési sablon LERENDERELVE és megítélve (tulaj, 2026-11-24) ──────
+# 11-24-én a fotó-javítás csak a parallaxon volt kipróbálva, és élesre ment, miközben a
+# kapunyitás és a névből növő a galériában újra mutatta a nyitóképet. Innentől a cél-commit
+# SAJÁT worktree-jében a scripts/mock-render-fixtures-check.mts 18 valós mockot (6/sablon)
+# a cél-commit motorjával renderel, és a küldés előtti minőségkapuval ítél (ismétlődő kép,
+# nem szállás-kép, fürdő/konyha a nyitásban, stock, törött szó, kilógó szöveg). Bármely bukás =
+# a deploy MEGÁLL. Csak LOKÁLIS (külön is: --mock-render-gate <commit>).
+mock_render_gate() { # $1 = commit sha
+  local wt log rc model
+  wt="$(mktemp -d /tmp/mockrender-gate-XXXX)"
+  log="$(mktemp /tmp/mockrender-gate-log-XXXX)"
+  git worktree add -q --detach "$wt" "$1" || fail "mock-render-kapu: cél-worktree létrehozás sikertelen"
+  ln -s "$PWD/node_modules" "$wt/node_modules"
+  if [ ! -f "$wt/scripts/mock-render-fixtures-check.mts" ]; then
+    git worktree remove -f "$wt" >/dev/null 2>&1 || true
+    fail "mock-render-kapu: a cél-commitban nincs scripts/mock-render-fixtures-check.mts — a három sablon renderelése nem igazolható"
+  fi
+  # The CLIP model is not in git (models/ is gitignored): the main tree's copy, unless set.
+  model="${PHOTO_KIND_MODEL_PATH:-$HOME/citoviso/models/clip-vit-b32-vision-q8.onnx}"
+  [ -f "$model" ] || { git worktree remove -f "$wt" >/dev/null 2>&1 || true; fail "mock-render-kapu: a képfelismerő modell hiányzik ($model)"; }
+  PHOTO_KIND_MODEL_PATH="$model" npx tsx "$wt/scripts/mock-render-fixtures-check.mts" >"$log" 2>&1
+  rc=$?
+  git worktree remove -f "$wt" >/dev/null 2>&1 || true
+  if [ "$rc" -ne 0 ]; then
+    sed 's/^/     /' "$log" >&2
+    rm -f "$log"
+    fail "mock-render-kapu: a cél-commit legalább egy minta-mockja elbukott a renderelt minőségkapun (fent: melyik, miért) — ez a kód nem mehet ki"
+  fi
+  local ok
+  ok="$(grep -o 'mind a [0-9]* minta-mock (3 sablon) tiszta' "$log" || true)"
+  if [ -z "$ok" ]; then
+    sed 's/^/     /' "$log" >&2
+    rm -f "$log"
+    fail "mock-render-kapu: az ellenőrző 0-val lépett ki, de a „tiszta\" sort nem írta ki — a mérés nem történt meg"
+  fi
+  echo "     ✓ $ok"
+  rm -f "$log"
+}
+
 # ── GATE 1c — which paths the guide depends on, computed from the code of a commit ──
 # ① every src/ file that puts a help anchor on screen (a literal `data-kb-anchor` or the
 #   `helpLink("…")` helper); ② the view corpus kb-check itself reads (VIEW_GROUPS in THAT
@@ -267,6 +307,14 @@ if [ "$1" = "--kb-shot-gate" ]; then
   esac
   echo "── GATE 1c/kép — súgó-képek frissessége ($KSHA, csak lokál)…"
   kb_shot_gate "$KSHA"
+  exit 0
+fi
+if [ "$1" = "--mock-render-gate" ]; then
+  [ $# -ge 2 ] || fail "használat: deploy-prod.sh --mock-render-gate <commit-ish>"
+  cd "$(git rev-parse --show-toplevel)" || fail "nem git-fa"
+  MSHA="$(git rev-parse --verify "$2^{commit}" 2>/dev/null)" || fail "ismeretlen commit: $2"
+  echo "── GATE 1d — a három kiküldési sablon lerenderelve ($MSHA, csak lokál)…"
+  mock_render_gate "$MSHA"
   exit 0
 fi
 TARGET_REF="$1"
@@ -381,6 +429,9 @@ if [ -n "${KB_SHOT_GATE_WAIVE:-}" ]; then
 else
   kb_shot_gate "$SHA"
 fi
+
+echo "── GATE 1d — a három kiküldési sablon lerenderelve (18 minta-mock, minőségkapu)…"
+mock_render_gate "$SHA"
 
 # GATE 1c — tudásbázis-frissesség (ADR-0045/f, §J). The dev-time hooks guarantee the
 # DETERMINISTIC layer at every commit; deploy-time re-verifies it on the TARGET commit's

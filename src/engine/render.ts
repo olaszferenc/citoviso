@@ -196,12 +196,15 @@ export function withGalleryPhotoList(html: string, data: SiteData): string {
  * (owner 2026-11-24: 20 of the 78 new mocks cut a hero headline on a phone — "KERÉKPÁRTÁROLÓVAL",
  * "BADACSONYTÖRDEMICEN", "KEDVEZMÉNYKÁRTYÁKRÓL" in an uppercase display face). `anywhere` only
  * breaks a word that cannot fit whole (a line that fits is untouched) and, unlike `break-word`,
- * also shrinks the min-content width, so a heading inside a flex item breaks too; `hyphens:auto` adds the
- * hyphen where the browser has the language's dictionary (<html lang> is set). Every template,
- * both phases — the last rule in <head>, so a template's own heading rule cannot undo it.
+ * also shrinks the min-content width, so a heading inside a flex item breaks too. NO automatic
+ * hyphenation (owner 2026-11-24, second round): `hyphens:auto` broke ordinary words that would have
+ * wrapped whole ("KÖR-NYÉKEN", "SZAU-NÁVAL", "APART-MAN" in the parallax headings) — a cut word on a
+ * phone is the failure itself. The hero's longest word gets a width cap instead (templateKit.heroFit),
+ * and the rendered send gate fails a heading that still breaks a word. Every template, both
+ * phases — the last rule in <head>, so a template's own heading rule cannot undo it.
  */
 const LONG_WORD_CSS =
-  "<style data-cit-long-word>h1,h2,h3,h4,.t-quote,blockquote,figcaption{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}</style>";
+  "<style data-cit-long-word>h1,h2,h3,h4,.t-quote,blockquote,figcaption{overflow-wrap:anywhere;hyphens:manual;-webkit-hyphens:manual}</style>";
 function withLongWordBreak(html: string): string {
   if (html.includes("data-cit-long-word")) return html;
   return html.includes("</head>") ? html.replace("</head>", `${LONG_WORD_CSS}</head>`) : html;

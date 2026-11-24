@@ -30,6 +30,13 @@ check("más ujjlenyomatú második kép → az a kapu", gatePhotoOf([P(1, { dhas
 check("a külön mező (gatePhoto) nyer — a tenant választása", gatePhotoOf([P(1), P(2), P(3)], P(3))?.url === P(3).url);
 check("ha a külön mező közben a nyitókép lett (operátori hős-csere) → a második kép áll be, nem a nyitókép",
   gatePhotoOf([P(1), P(2)], P(1))?.url === P(2).url);
+// Vörösmarty tér, 2026-11-24: the same file under two SIZE folders (500x500w · OriginalPhoto) —
+// the square crop's fingerprint differs, so only the size-free key tells them apart.
+const V = (folder: string): Photo => ({ url: `https://x.booked.hu/data/Photos/${folder}/1/2/3/Macro.JPEG`, alt: "m", provenance: "portal" });
+check("a külön mező ugyanaz a fájl más méret-mappában (500x500w ↔ OriginalPhoto) → nem az, hanem a következő kép",
+  gatePhotoOf([V("500x500w"), P(2)], V("OriginalPhoto"))?.url === P(2).url);
+check("a második kép a nyitókép más méretű változata → nincs kapu", gatePhotoOf([V("500x500w"), V("OriginalPhoto")]) === null);
+check("konyha/fürdő (backstage) nem kerül a szárnyra", gatePhotoOf([P(1), P(2, { backstage: true }), P(3)])?.url === P(3).url);
 
 // ── a téma (tulaj 2026-11-23, terv design-refs/tenant-site/generator-javitas): a szárnyon MÁS TÉMÁJÚ fotó ──
 const S = (n: number, subject: string): Photo => P(n, { subject });
@@ -78,7 +85,10 @@ const engine = readFileSync(new URL("../src/generator/generateEngine.ts", import
 const refuse = engine.indexOf("Kapunyitás: nincs a nyitóképtől eltérő témájú kép (");
 check(
   "bekötés: a generálás minden képet ujjlenyomatol (a másodikat is), és a kapu-kép hiányát az AI-hívás ELŐTT elutasítja",
-  /fingerprintAndDedupe\(gated\.photos\)/.test(engine) && refuse > 0 && refuse < engine.indexOf('opts.onStage?.("copy")'),
+  // 2026-11-24: one shared step (generator/photoCurate.ts) — it fingerprints every photo.
+  /curateMockPhotos\(gated\.photos\)/.test(engine) &&
+    /fingerprintAndDedupe\(input\)/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")) &&
+    refuse > 0 && refuse < engine.indexOf('opts.onStage?.("copy")'),
 );
 check("bekötés: a generált siteData külön mezőben viszi a kapu képét (gatePhoto)", /gatePhoto: gatePick/.test(engine));
 
