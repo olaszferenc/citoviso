@@ -12,7 +12,6 @@ import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
-import { jsonForScript } from "../text/jsonForScript.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
 import { isStockPhoto, stockGallery, stockHeroBackdrop } from "./stock.js";
