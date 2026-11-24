@@ -32,7 +32,8 @@ import { db } from "../src/db/client.js";
 import type { Photo, Recipe, SiteData } from "../src/engine/recipe.js";
 import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "../src/generator/depthArm.js";
-import { persistMockLanguage, renderMockMeasured } from "../src/generator/mockLanguage.js";
+import { renderSite } from "../src/engine/render.js";
+import { injectRuntime } from "../src/generator/runtime.js";
 import { secureMockPhotos } from "../src/generator/photoTransport.js";
 
 const STAMP = "2026-11-24";
@@ -131,7 +132,8 @@ for (const row of todo.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
     arms.set(arm, (arms.get(arm) ?? 0) + 1);
     if (depth.arm === "depth") tally.depth++;
 
-    const { html, language } = await renderMockMeasured(recipe, siteData, { phase: "mock" });
+    // (the live tree has no country layer yet — the same render call as its rerender-mock.mts)
+    const html = await injectRuntime(renderSite(recipe, siteData, { phase: "mock" }), siteData.lang);
     const secured = await secureMockPhotos(html, String(row.id), (siteData.photos ?? []).map((p) => p.url), String(row.lead_id));
     await writeFile(row.path, secured.html, "utf8");
     await db
@@ -139,7 +141,6 @@ for (const row of todo.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
       .set({ inputs: JSON.stringify({ ...inputs, siteData, heroDepthArm: depth.arm, terhatasAt: STAMP }) } as never)
       .where("id", "=", row.id)
       .execute();
-    await persistMockLanguage(String(row.id), language);
     tally.done++;
   } catch (e) {
     tally.failed++;
