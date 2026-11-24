@@ -17,7 +17,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [ADR-XXXX](decisions/XXXX-hideg-megkereses-kulon-domain-sav.md) — A hideg megkeresés KÜLÖN domainről megy (getcitoviso.com), saját SMTP-vel és DKIM-mel, felfutással és fékkel
-- [ADR-XXXX](decisions/XXXX-terhatas-mindenkinek-es-meglevo-mockok-ujrarenderelese.md) — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
+- [ADR-0476](decisions/0476-terhatasu-boritokep-mindenkinek-es-az-osszes.md) — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
 - [ADR-0474](decisions/0474-generator-javitas-kapunyitas-mas-temaju.md) — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro
 - [ADR-0472](decisions/0472-terhatasu-boritokep-melysegkep-webgl-a-mockon.md) — Térhatású borítókép (mélységkép + WebGL) a mockon és a tenant-oldalon, kísérletként
 - [ADR-0454](decisions/0454-orszag-reteg-3-3-a-riportok-penznemenkent.md) — Ország-réteg 3/3: a riportok pénznemenként, országonként és a helyi időben

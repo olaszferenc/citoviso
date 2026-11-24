@@ -1,4 +1,4 @@
-// THE DEPTH-HERO RE-RENDER OF EVERY EXISTING MOCK (ADR-XXXX, owner 2026-11-24 after the live test:
+// THE DEPTH-HERO RE-RENDER OF EVERY EXISTING MOCK (ADR-0476, owner 2026-11-24 after the live test:
 // „mindenki kapja meg … ha jó a teszt, újra kell generálni az összes létezőt”).
 //
 // What it does, per mock of the three outreach templates (parallax · gate-opening · wordmark-grow):
