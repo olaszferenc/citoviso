@@ -12,8 +12,11 @@
 // lapozója, a helyben kinyitás), a no-JS lap pedig a saját ígérete (§B): ott a sáv natív
 // húzható sor, és a claymorphism minden kártyát mutat. Ezért minden alany két méretben
 // (1280 · 390 px telefon) és két állapotban (runtime-mal · runtime nélkül) fut:
-//   ① a galéria-slot MINDEN fotót <img>-ként hordoz, és a nagyító „1 / N”-nel nyílik;
-//   ② a galéria első képei közül egy sem látható máshol a lapon, sorrendjük a tulajé;
+//   ① MINDEN fotó elérhető a lapon, és mindegyik EGYSZER (tulaj, 2026-11-24: „minden kép egyszer”):
+//      a galéria-slot + a lap többi része együtt mind az N fotót mutatja, a galéria egyetlen képe
+//      sem látható máshol (addig a galéria mind az N-et hordozta, a máshol látottakat a végén —
+//      a kapunyitás/névből növő így a nyitóképet ismételte); a nagyító mind az N-et lapozza;
+//   ② a galéria sorrendje a tulajé;
 //   ③ JS-sel: a sáv lapoz (számláló + tiltott nyíl a szélén),
 //      a claymorphism 4 → N → 4 (felirat „Kevesebb fotó”); JS nélkül: nincs lapozó és nincs
 //      gomb, a claymorphism mind az N kártyát mutatja, a sáv minden kártyája doboz > 0;
@@ -130,17 +133,21 @@ try {
           if (e.closest('[data-cit-gtrack]')) return false;
           const r = e.getBoundingClientRect(); return r.width > 0 && r.right > innerWidth + 0.5; }).map((e) => e.className + ' ' + Math.round(e.getBoundingClientRect().right))`)) as string[];
         ok(over.length === 0, `${label}: galéria-elem nem lóg ki a képernyőből${over.length ? " — " + over.slice(0, 3).join(" | ") : ""}`);
-        // ① every photo in the slot
-        ok(new Set(p.order).size === N && p.order.every((i) => i >= 0), `${label}: a galéria-slot mind a ${N} fotót hordozza (${new Set(p.order).size})`);
-        // ② not-yet-seen first, owner order
-        const unseen = p.order.filter((i) => !p.elsewhere.includes(i));
-        ok(p.order.slice(0, unseen.length).every((i) => !p.elsewhere.includes(i)) && unseen.every((i, k) => k === 0 || i > unseen[k - 1]!) && p.elsewhere.length < N,
-          `${label}: a galéria a még nem látott képekkel indul (sorrend #${p.order.join(" #")} · máshol látszik #${p.elsewhere.join(" #")})`);
+        // ① every photo reachable on the page, each ONCE (owner 2026-11-24)
+        const G = p.order.length;
+        const reach = new Set([...p.order, ...p.elsewhere]);
+        ok(p.order.every((i) => i >= 0) && new Set(p.order).size === G && reach.size === N,
+          `${label}: minden fotó elérhető a lapon (galéria ${G} + máshol ${p.elsewhere.length} = ${reach.size} / ${N})`);
+        ok(G > 0 && p.order.every((i) => !p.elsewhere.includes(i)),
+          `${label}: a galéria egyetlen képe sem látszik máshol (sorrend #${p.order.join(" #")} · máshol #${p.elsewhere.join(" #")})`);
+        // ② owner order
+        ok(p.order.every((i, k) => k === 0 || i > p.order[k - 1]!), `${label}: a galéria sorrendje a tulajé`);
         if (js) {
           // ① the shared lightbox pages through ALL
           await page.evaluate(`(() => { const s=document.querySelector('[data-cit-module="gallery"]'); const im=[...s.querySelectorAll('img')].find(i=>{const r=i.getBoundingClientRect();return r.width>4&&getComputedStyle(i.closest('[aria-hidden="true"]')||i).pointerEvents!=='none'}); (im.parentElement.tagName==='FIGURE'?im.parentElement:im).click(); })()`);
           await page.waitForTimeout(250);
           const lb = (await page.evaluate(`(document.querySelector('.cit-lb[data-open] .cit-lb__count')||{}).textContent||''`)) as string;
+          // The lightbox is a viewer, not a place on the page: it pages through ALL N photos.
           ok(new RegExp(`/ ${N}$`).test(lb), `${label}: a nagyító mind a ${N} fotót lapozza („${lb}”)`);
           await page.keyboard.press("Escape");
           await page.waitForTimeout(150);
@@ -153,7 +160,7 @@ try {
             if (!nxDis) await page.click("[data-cit-gnext]");
             await page.waitForTimeout(700);
             const c1 = nxDis ? c0 : await page.textContent("[data-cit-gcount]");
-            ok(c0 === `1 / ${N}` && pvDis0 && c1 !== c0, `${label}: a sáv lapoz („${c0}” → „${c1}”, a „‹” az elején tiltott)`);
+            ok(c0 === `1 / ${G}` && pvDis0 && c1 !== c0, `${label}: a sáv lapoz („${c0}” → „${c1}”, a „‹” az elején tiltott)`);
           }
           if (t === "wordmark-grow" && tag === "asztali") {
             // contract wordmark-grow-b: three photos at once on a desktop
@@ -169,13 +176,13 @@ try {
             await page.click("[data-cit-gexpand]");
             const v2 = await visCount(page, "[data-cit-module=gallery] figure");
             const lbl2 = (await page.textContent("[data-cit-gexpand]"))?.trim();
-            ok(v0 === 4 && v1 === N && v2 === 4 && lbl === "Kevesebb fotó" && lbl2 === `Összes fotó (${N})`,
+            ok(v0 === 4 && v1 === G && v2 === 4 && lbl === "Kevesebb fotó" && lbl2 === `Összes fotó (${G})`,
               `${label}: helyben kinyílik és összecsukódik (${v0} → ${v1} → ${v2}; „${lbl}” / „${lbl2}”)`);
           }
           ok(errs.length === 0, `${label}: JS-hiba 0${errs.length ? " — " + errs.join(" | ") : ""}`);
         } else {
           ok((await visCount(page, "[data-cit-gpager]")) === 0 && (await visCount(page, "[data-cit-gexpand]")) === 0, `${label}: nincs halott lapozó / gomb`);
-          ok(p.boxes.every(Boolean), `${label}: mind a ${N} galéria-kép doboza > 0 (natív sor / minden kártya kint)`);
+          ok(p.boxes.every(Boolean), `${label}: mind a ${G} galéria-kép doboza > 0 (natív sor / minden kártya kint)`);
         }
         await ctx.close();
       }
@@ -190,7 +197,11 @@ try {
       const btn = await visCount(page, "[data-cit-gexpand]");
       const p = (await page.evaluate(PROBE_JS)) as Probe;
       const want = t === "claymorphism" ? btn === 0 : n === 1 ? pager === 0 : true;
-      ok(want && new Set(p.order).size === n, `${t} ${n} fotó: minden fotó a slotban (${p.order.length}), ${t === "claymorphism" ? "nincs gomb" : n === 1 ? "nincs lapozó" : "rendben"}`);
+      // Each photo once: with 1 photo it is the hero and there is no gallery at all (no empty frame).
+      // (a stock card — index -1 — fills a short live gallery; it is not an owner photo)
+      const reach = new Set([...p.order, ...p.elsewhere].filter((i) => i >= 0));
+      ok(want && reach.size === n && p.order.every((i) => i < 0 || !p.elsewhere.includes(i)),
+        `${t} ${n} fotó: minden fotó elérhető, egyszer (galéria ${p.order.length} + máshol ${p.elsewhere.length}), ${t === "claymorphism" ? "nincs gomb" : n === 1 ? "nincs lapozó" : "rendben"}`);
       await ctx.close();
     }
   }

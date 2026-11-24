@@ -561,11 +561,15 @@ export function galleryOrder(photos: readonly Photo[], elsewhere: string): Photo
     const u = esc(p.url);
     return elsewhere.includes(`${u}"`) || elsewhere.includes(`${u}'`) || elsewhere.includes(`${u})`);
   };
-  // A stock illustration (mock only) never leads: the lodging's own unseen photos first, then
-  // the illustrations, then the own photos the page already shows.
+  // EACH PICTURE ONCE (owner 2026-11-24): a photo the page already shows elsewhere — or the same
+  // picture under another URL (Photo.dhash) — no longer closes the gallery; it was the repeat the
+  // 11-24 test found on every gate-opening and wordmark-grow page (the hero again in the strip).
+  // A stock illustration (mock only) never leads: the lodging's unseen own photos first, then it.
   const own = photos.filter((p) => !isStockPhoto(p));
   const stock = photos.filter((p) => isStockPhoto(p));
-  return [...own.filter((p) => !shown(p)), ...stock, ...own.filter(shown)];
+  const shownOwn = own.filter(shown);
+  const unseen = own.filter((p) => !shown(p) && !shownOwn.some((q) => isSamePicture(q.dhash, p.dhash)));
+  return [...unseen, ...stock];
 }
 
 const GPAGER_PREV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;
@@ -988,14 +992,33 @@ export const MOBCTA_CSS = `
  * shrinks in lines instead of stacking 3-word rows up into the overlay masthead.
  */
 export function heroFit(text: string): string {
-  const n = text.replace(/\s+/g, " ").trim().length;
-  return `data-cit-hero-fit="${n <= 28 ? "s" : n <= 48 ? "m" : n <= 72 ? "l" : "xl"}"`;
+  const flat = text.replace(/\s+/g, " ").trim();
+  const n = flat.length;
+  // LONGEST WORD (owner 2026-11-24, „BALATONBOGLÁRO / N”): an uppercase display word of 15+
+  // letters did not fit a phone line at the band's size; the browser cut or broke it mid-word.
+  // The word's length now sets a WIDTH ceiling too, so the whole word always fits one line.
+  const word = Math.max(0, ...flat.split(" ").map((w) => w.replace(/[^\p{L}\p{N}]/gu, "").length));
+  const w = word >= HERO_WORD_MIN ? ` data-cit-hero-word="${Math.min(word, HERO_WORD_MAX)}"` : "";
+  return `data-cit-hero-fit="${n <= 28 ? "s" : n <= 48 ? "m" : n <= 72 ? "l" : "xl"}"${w}`;
 }
+/** Words shorter than this fit a phone line at every band's size; longer ones get a width cap. */
+const HERO_WORD_MIN = 10;
+const HERO_WORD_MAX = 30;
+/**
+ * The width cap of a long word: (phone width − 56px side padding) / (letters × .78em) — .78em is a
+ * wide uppercase display letter (Playfair / Fraunces caps measured ~.70–.76em). `min()` with the
+ * band's own cap, so on a laptop the word cap (100vw-based) never bites.
+ */
+const HERO_WORD_CSS = Array.from(
+  { length: HERO_WORD_MAX - HERO_WORD_MIN + 1 },
+  (_, i) => `h1[data-cit-hero-word="${HERO_WORD_MIN + i}"]{--cit-hero-wcap:calc((100vw - 56px) / ${((HERO_WORD_MIN + i) * 0.78).toFixed(2)})}`,
+).join("\n  ");
 export const HERO_FIT_CSS = `
-  h1[data-cit-hero-fit="s"]{--cit-hero-cap:max(34px,16vh)}
-  h1[data-cit-hero-fit="m"]{--cit-hero-cap:max(30px,12vh)}
-  h1[data-cit-hero-fit="l"]{--cit-hero-cap:min(max(28px,7.5vh),max(30px,9vw));--cit-hero-measure:22ch}
-  h1[data-cit-hero-fit="xl"]{--cit-hero-cap:min(max(26px,6vh),max(28px,8vw));--cit-hero-measure:24ch}`;
+  h1[data-cit-hero-fit="s"]{--cit-hero-cap:min(max(34px,16vh),var(--cit-hero-wcap,999px))}
+  h1[data-cit-hero-fit="m"]{--cit-hero-cap:min(max(30px,12vh),var(--cit-hero-wcap,999px))}
+  h1[data-cit-hero-fit="l"]{--cit-hero-cap:min(max(28px,7.5vh),max(30px,9vw),var(--cit-hero-wcap,999px));--cit-hero-measure:22ch}
+  h1[data-cit-hero-fit="xl"]{--cit-hero-cap:min(max(26px,6vh),max(28px,8vw),var(--cit-hero-wcap,999px));--cit-hero-measure:24ch}
+  ${HERO_WORD_CSS}`;
 
 /**
  * NEMZETKÖZI C: a unit TYPE (roomNames.ts TYPES, Hungarian source) in the page language — one

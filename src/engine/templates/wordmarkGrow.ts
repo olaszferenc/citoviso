@@ -491,9 +491,9 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // The one-shot intro flash is NOT "shown on the page" — it is gone after two seconds.
   // No photo at all (the typographic-hero lead): no gallery section — never one empty frame.
   const galList = galleryPhotos(data);
-  const gallery = galList.length
-    ? galleryOf(galleryOrder(galList, [heroBlock, about, roomsBlock, review, footer].join("")))
-    : "";
+  // Each picture once (2026-11-24): nothing unseen left → no gallery section, never a repeat strip.
+  const galOrdered = galList.length ? galleryOrder(galList, [heroBlock, about, roomsBlock, review, footer].join("")) : [];
+  const gallery = galOrdered.length ? galleryOf(galOrdered) : "";
 
   // Contract wordmark-grow-b: with a booking surface the slim band sits right after the
   // photos (the full calendar closes the page); the enquiry bar keeps its old place.
@@ -505,7 +505,8 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     // Owner 2026-11-23 (variant B, design-refs/tenant-site/generator-javitas): FOUR photos
     // cycle in the big frame, none of them the hero; the hero fades in inside the frame as it
     // starts to grow, and is the picture the page keeps — what grows is never what stays.
-    photos: photos.filter((p) => p.url !== hero?.url && !isSamePicture(p.dhash, hero?.dhash)).slice(0, 4).map((p) => p.url),
+    // Never a kitchen/bathroom shot in the frame (Photo.backstage, 2026-11-24).
+    photos: photos.filter((p) => !p.backstage && p.url !== hero?.url && !isSamePicture(p.dhash, hero?.dhash)).slice(0, 4).map((p) => p.url),
     ...(hero ? { hero: hero.url } : {}),
   };
 

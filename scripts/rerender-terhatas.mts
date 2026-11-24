@@ -17,6 +17,8 @@
 // 2026-11-23 fix — the only ones the send gates let out) gets ④ the generation-time photo fix:
 // republished copies dropped (photoHash.fingerprintAndDedupe) and pictures that are not the
 // lodging dropped (media/photoKind.ts — local, no API); the result is persisted in siteData.photos.
+// 2026-11-24 HERO FIX ROUND (stamp "2026-11-24-herofix"): ④ is now generator/photoCurate.ts, the
+// generator's own step, which also moves the best hero first (never a bathroom, stove or banner).
 // Older mocks are re-rendered only (their own photos are not in the inputs; they are regenerated).
 //
 // Safe to stop and re-run: a finished mock carries inputs.terhatasAt and is skipped. Every mock is
@@ -42,11 +44,11 @@ import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "../src/generator/depthArm.js";
 import { persistMockLanguage, renderMockMeasured } from "../src/generator/mockLanguage.js";
 import { secureMockPhotos } from "../src/generator/photoTransport.js";
-import { fingerprintAndDedupe } from "../src/generator/photoHash.js";
-import { classifyPhotoUrl, isOffPagePhoto, photoKindAvailable } from "../src/media/photoKind.js";
+import { curateMockPhotos } from "../src/generator/photoCurate.js";
+import { photoKindAvailable } from "../src/media/photoKind.js";
 import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
 
-const STAMP = "2026-11-24-photofix";
+const STAMP = "2026-11-24-herofix";
 const argv = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
   const i = argv.indexOf(name);
@@ -135,19 +137,22 @@ for (const row of todo.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
     let siteData = base as SiteData;
     // ④ the photo fix on a current-generator mock (see the header)
     if (new Date(String(row.generated_at)) >= new Date(MOCK_MIN_GENERATED_AT) && (siteData.photos?.length ?? 0) > 0) {
-      const dd = await fingerprintAndDedupe(siteData.photos as readonly Photo[]);
-      const kinds = await Promise.all(dd.photos.map((p) => classifyPhotoUrl(p.url)));
-      const kept = dd.photos.filter((_, i) => !isOffPagePhoto(kinds[i] ?? null, i === 0));
-      tally.dupes = (tally.dupes ?? 0) + dd.dropped.length;
-      tally.offPage = (tally.offPage ?? 0) + (dd.photos.length - kept.length);
+      const c = await curateMockPhotos(siteData.photos as readonly Photo[]);
+      const kept = c.photos;
+      tally.dupes = (tally.dupes ?? 0) + c.duplicates.length;
+      tally.offPage = (tally.offPage ?? 0) + c.offPage.length;
+      if (c.heroMoved) tally.heroMoved = (tally.heroMoved ?? 0) + 1;
       tally.photoFixed = (tally.photoFixed ?? 0) + 1;
       siteData = { ...siteData, photos: kept };
     }
     if (recipe.template === "gate-opening") {
       const photos = (siteData.photos ?? []) as readonly Photo[];
+      // Always recomputed: the hero fix can make the old gate photo the new hero (Vörösmarty tér,
+      // 11-24) — a stale gatePhoto would open the gate onto itself. No distinct photo → none.
       const pick = gatePhotoOf(photos);
-      if (pick && pick.url !== siteData.gatePhoto?.url) {
-        siteData = { ...siteData, gatePhoto: pick };
+      if (pick?.url !== siteData.gatePhoto?.url) {
+        const { gatePhoto: _stale, ...noGate } = siteData;
+        siteData = (pick ? { ...noGate, gatePhoto: pick } : noGate) as SiteData;
         tally.gateChanged++;
       }
     }
