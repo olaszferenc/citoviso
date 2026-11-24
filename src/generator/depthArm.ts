@@ -1,5 +1,5 @@
 // THE DEPTH-HERO ARM of a new mock (ADR-0472, owner 2026-11-23: "először csak kísérlet"; since
-// ADR-XXXX, 2026-11-24, after the live test: „mindenki kapja meg” — config.depthHero "all" is the
+// ADR-0476, 2026-11-24, after the live test: „mindenki kapja meg” — config.depthHero "all" is the
 // default, every lead is in the depth arm and the coin only decides in "experiment" mode).
 //
 // WHY AT GENERATION, NOT AT SEND. The outreach experiment layer (outreach/experiment.ts) assigns

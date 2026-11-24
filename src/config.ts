@@ -69,7 +69,7 @@ export const config = {
    */
   depthModelPath: env("DEPTH_MODEL_PATH", "models/depth-anything-v2-small-int8.onnx"),
   /**
-   * ADR-0472 / ADR-XXXX: who gets the depth hero (the moving cover) in mock generation.
+   * ADR-0472 / ADR-0476: who gets the depth hero (the moving cover) in mock generation.
    *   "all"        — every mock of the three outreach templates (owner 2026-11-24, after the live
    *                  test: „mindenki kapja meg”) — the DEFAULT
    *   "experiment" — the old 50/50 split by lead id (also the legacy DEPTH_HERO_EXPERIMENT=1)

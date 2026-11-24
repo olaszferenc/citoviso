@@ -1,4 +1,4 @@
-## ADR-XXXX — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
+## ADR-0476 — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
 
 **Dátum:** 2026-11-24 · **Státusz:** elfogadva (tulaj) · **Session:** `cite2d1c9b4`
 **Felülírja:** ADR-0472 kísérleti felosztását (a leadek fele kapja) · **Érinti:** ADR-0474 (generátor-javítás)
