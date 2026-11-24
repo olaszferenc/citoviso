@@ -126,6 +126,9 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   process.env.CONSOLE_PORT = String(cport);
   process.env.PUBLIC_PORT = String(pport);
   process.env.EMAIL_BCC = "";
+  // Since 4fd41a77 every cold letter is the owner's letter, signed with the personal sender name — without
+  // one it is HELD and the world had no letter (HR dev-próba 2026-11-23). A test name, never the owner's.
+  process.env.OUTREACH_FOLLOWUP_SENDER_NAME = process.env.OUTREACH_FOLLOWUP_SENDER_NAME || "Elek";
   process.env.LEGAL_ENTITY_EU_VAT_NUMBER = process.env.LEGAL_ENTITY_EU_VAT_NUMBER || "HU00000000";
   for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_MAPS_API_KEY", "SZAMLAZZ_AGENT_KEY", "BARION_POSKEY", "OUTREACH_SMS_ALLOWLIST"]) process.env[k] = "";
   const barionTest = o.payment === "barion-test";

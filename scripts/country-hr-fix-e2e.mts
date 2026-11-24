@@ -183,6 +183,12 @@ try {
     check("lemondó oldal HU: lang=hu, 2026. 12. 10.", /<html lang="hu"/.test(huHtml) && huHtml.includes("2026. 12. 10."));
     const login = await (await fetch(`${w.publicOrigin}/login?l=hr`)).text();
     check("/login?l=hr: horvátul (nincs „Ügyfél-belépés”, nincs „mutat”)", !login.includes("Ügyfél-belépés") && !/>mutat</.test(login) && !/'mutat'/.test(login), login.match(/<h1[^>]*>[^<]*/)?.[0] ?? "");
+    // HR dev-próba 2026-11-23 (Elek kezdő): the mock's login button carries no hint — the browser language decides.
+    const loginAl = await (await fetch(`${w.publicOrigin}/login`, { headers: { "accept-language": "hr-HR,hr;q=0.9" } })).text();
+    check("/login hint nélkül, horvát böngészővel: horvátul", !loginAl.includes("Ügyfél-belépés"), loginAl.match(/<h1[^>]*>[^<]*/)?.[0] ?? "");
+    const loginHuAl = await (await fetch(`${w.publicOrigin}/login`, { headers: { "accept-language": "hu-HU,hu;q=0.9" } })).text();
+    const loginNone = await (await fetch(`${w.publicOrigin}/login`)).text();
+    check("⛔ /login magyar böngészővel és fejléc nélkül: a magyar lap", loginHuAl.includes("Ügyfél-belépés") && loginNone.includes("Ügyfél-belépés"));
     const { injectOwnedBanner, injectOwnedNotice } = await import("../src/console/prospectNotice.js");
     const own = { stage: "live", siteUrl: "https://apartmanilavanda.com", loginUrl: "https://citoviso.test/login" } as never;
     const ownHr = injectOwnedNotice(injectOwnedBanner("<html><body></body></html>", { ...(own as object), lang: "hr" } as never), { ...(own as object), lang: "hr" } as never);

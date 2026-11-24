@@ -105,7 +105,7 @@ import { capacityError, overCapacity, siteTouristTax, stayIsTaken, stayQuote, st
 import { decoratePreview, parsePreviewSet } from "./modulePreview.js";
 import type { AdminOpts, DomainSettlementView } from "./adminViews.js";
 import { countryOfSite, countryOfTenant, siteCurrency } from "../tenant/siteCountry.js";
-import { calendarSyncPortals } from "../country.js";
+import { allCountriesSync, calendarSyncPortals } from "../country.js";
 import { minorDigits } from "../text/money.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
 import { localizedKbEntries } from "../i18n/kbPacks.js";
@@ -4726,7 +4726,21 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // (ownerLogin.ts). Unknown/unsupported → Hungarian.
     // 3/10 (Elek HR: /login?l=hr all Hungarian): `?l=` is the short hint the legal pages and the
     // lead's links use (legalViews.ts) — the login reads it too; `?lang=` keeps precedence.
-    const loginHint = url.searchParams.get("lang") ?? url.searchParams.get("l") ?? "";
+    // HR dev-próba 2026-11-23 (Elek, kezdő): the mock's „Prijava u administraciju” and every other link
+    // without the hint landed a Croatian owner on a Hungarian login and password-reset page. No hint → the
+    // browser's Accept-Language, but only a language a country row speaks and the UI has (a Hungarian or an
+    // unknown browser keeps the Hungarian page exactly as before).
+    let loginHint = url.searchParams.get("lang") ?? url.searchParams.get("l") ?? "";
+    if (!loginHint) {
+      const spoken = new Set(allCountriesSync().map((c) => c.defaultLang));
+      for (const part of String(req.headers["accept-language"] ?? "").split(",")) {
+        const tag = part.split(";")[0]!.trim().toLowerCase().split("-")[0]!;
+        if (tag && spoken.has(tag) && uiLangs().includes(tag)) {
+          loginHint = tag;
+          break;
+        }
+      }
+    }
     const loginLang = await prepareRenderLang(uiLangs().includes(loginHint) ? loginHint : DEFAULT_LANG);
     if (pathname === "/login") {
       return send(
