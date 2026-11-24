@@ -13,6 +13,7 @@ import { loadCopyOverride, withMailOverride } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
+import { renderGateFor, renderGateReason } from "./mockRenderGate.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import {
   ackCoversVerdicts,
@@ -533,6 +534,17 @@ export async function sendOutreachMail(
     return { ...base, outcome: { kind: "flagged", reasons: vcheck.reasons, gate: "legal", confirmable: false } };
   }
 
+  // ⛔⛔ RENDERED-MOCK QUALITY GATE (2026-11-24, mockRenderGate.ts): the page the lead opens is rendered
+  // like a phone and judged — repeated photo, portal attraction picture, ad/sign/document/toilet
+  // picture, stock image, sideways-scrolling mobile page, broken image. No acknowledgement exists:
+  // a failing mock is regenerated. Every send path, the owner's sample included.
+  if (p.artifactId) {
+    const rendered = await renderGateFor(p.artifactId);
+    if (rendered.verdict === "fail") {
+      return { ...base, outcome: { kind: "skipped", reason: renderGateReason(rendered) } };
+    }
+  }
+
   // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).
   // A ház alapinvariánsa: amit a leadnek MEGAJÁNLUNK, az pontosan az legyen, amit
   // kap. Eddig a törött kép NEM állította meg a küldést: a `heroShot` ugyan MEGMÉRTE
@@ -676,11 +688,16 @@ export async function sendOutreachMail(
     if (mockBlock) return { ...base, outcome: { kind: "skipped", reason: mockBlock } };
   }
 
-  // Hero shot of the mock's opening screen (best-effort — its absence must never
-  // block a §C-PASS send; the mail is valid text+link without it).
+  // Hero shot of the mock's opening screen. Since 2026-11-24 a letter whose variant carries the
+  // picture does not go out without it (see the guard below).
   // Set inside letterOf (a closure): TS cannot see the assignment, so it is re-typed here.
   const ownerNow = owner as { layout: OwnerLayout; fromName: string } | null;
   const heroShotPath = p.artifactId && variants.image ? await ensureHeroShot(p.artifactId) : null;
+  // 2026-11-24: the letter's picture of the mock is part of what the lead is promised — a letter
+  // that should carry it goes out with it or not at all (it used to go out without, silently).
+  if (p.artifactId && variants.image && !heroShotPath) {
+    return { ...base, outcome: { kind: "skipped", reason: "a levélbe szánt mock-kép nem készült el — a levél kép nélkül nem mehet ki, a következő körben újrapróbáljuk" } }; // i18n-exempt: operátori ok
+  }
   // Mail open without a pixel (emailOpen.ts): on the cold lane the hero loads from the cold host
   // on the lead's own URL — frozen as a JPEG under the prospect token. A failed conversion keeps
   // the CID image (the letter is never worse than before).

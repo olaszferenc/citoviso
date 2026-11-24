@@ -191,6 +191,22 @@ export function withGalleryPhotoList(html: string, data: SiteData): string {
   );
 }
 
+/**
+ * A word longer than its box breaks at the box's edge instead of being cut by the section
+ * (owner 2026-11-24: 20 of the 78 new mocks cut a hero headline on a phone — "KERÉKPÁRTÁROLÓVAL",
+ * "BADACSONYTÖRDEMICEN", "KEDVEZMÉNYKÁRTYÁKRÓL" in an uppercase display face). `anywhere` only
+ * breaks a word that cannot fit whole (a line that fits is untouched) and, unlike `break-word`,
+ * also shrinks the min-content width, so a heading inside a flex item breaks too; `hyphens:auto` adds the
+ * hyphen where the browser has the language's dictionary (<html lang> is set). Every template,
+ * both phases — the last rule in <head>, so a template's own heading rule cannot undo it.
+ */
+const LONG_WORD_CSS =
+  "<style data-cit-long-word>h1,h2,h3,h4,.t-quote,blockquote,figcaption{overflow-wrap:anywhere;hyphens:auto;-webkit-hyphens:auto}</style>";
+function withLongWordBreak(html: string): string {
+  if (html.includes("data-cit-long-word")) return html;
+  return html.includes("</head>") ? html.replace("</head>", `${LONG_WORD_CSS}</head>`) : html;
+}
+
 function injectImgFallback(html: string): string {
   return html.includes("</body>")
     ? html.replace("</body>", `${IMG_FALLBACK_JS}</body>`)
@@ -716,7 +732,15 @@ function injectWholeBand(html: string, data: SiteData, phase: RenderPhase): stri
  * lead with NO own photo gets the faded regional landscape behind its typographic hero. Rides in
  * `data.stock`, never in `data.photos` — so no hero/about/band/contact slot can pick one up.
  */
+/**
+ * A lodging with this many own photos shows only its own pictures: no stock in the gallery, none
+ * on a room card (owner 2026-11-24, after the 78-mock test: a stock bedroom in the gallery of a
+ * lodging with 9 own photos). The outreach gate sends only such leads (mockPhotoGate.ts, ≥5).
+ */
+export const OWN_PHOTOS_NO_STOCK = 5;
+
 function withStockFill(data: SiteData): SiteData {
+  if (data.photos.filter((p) => !isStockPhoto(p)).length >= OWN_PHOTOS_NO_STOCK) return data;
   const alt = T(data, "Illusztráció");
   const gallery = stockGallery(data, !hasOwnBedroomPhoto(data), alt);
   const backdrop = data.photos.length === 0 ? stockHeroBackdrop(data, alt) : undefined;
@@ -810,7 +834,7 @@ export function renderSite(
     // Owner 2026-11-16 („Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): the
     // sample pictures and the town photo the mock showed stay on the trial / live page too, with
     // the same sample note and licence credit, until the owner's own photos replace them.
-    return phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data);
+    return withLongWordBreak(phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data));
   };
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
@@ -982,10 +1006,19 @@ function withoutGallery(
   const stripped = stripGallerySections(page);
   if (stripped !== page && /<img\b/i.test(stripped)) return stripped;
   if (data.photos.length > 1) {
-    return renderSite(recipe, { ...data, photos: data.photos.slice(0, 1) }, {
+    const heroOnly = renderSite(recipe, { ...data, photos: data.photos.slice(0, 1) }, {
       ...opts,
       hideGallery: false,
     });
+    // One photo still opens the stock fill's gallery (owner 2026-11-07): the hidden gallery stays
+    // hidden — cut it from the hero-only page too, when the page keeps a picture without it.
+    // Art templates only (parallax keeps its hero as a background image); the composition
+    // archetypes' hero-only page is left as it was (module-preview-check: their picture IS there).
+    if (!recipe.template) return heroOnly;
+    const cut = stripGallerySections(heroOnly);
+    const heroUrl = data.photos[0]!.url;
+    const shown = (h: string): boolean => new RegExp(`(?:src="|url\\(['"]?)${heroUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(h);
+    return cut !== heroOnly && shown(cut) ? cut : heroOnly;
   }
   return page;
 }

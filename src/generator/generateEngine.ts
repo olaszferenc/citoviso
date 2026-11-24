@@ -44,8 +44,9 @@ import { MIN_GUEST_STARS } from "./guestVoice.js";
 import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./writerSources.js";
 import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, withHostWellness, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
-import { fingerprintCandidates } from "./photoHash.js";
-import { GATE_OPENING, GATE_SUBJECTS, gatePhotoOf } from "../engine/templates/gateOpening.js";
+import { fingerprintAndDedupe } from "./photoHash.js";
+import { classifyPhotoUrl, isOffPagePhoto } from "../media/photoKind.js";
+import { GATE_OPENING, gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { resolveTownPhoto } from "./townPhoto.js";
 import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
@@ -354,13 +355,25 @@ async function generateEngineMockInner(
   opts.onStage?.("photos");
   const gated = await resolveGatedPhotos(lead, leadId, { places: "auto" });
   const { rating, userRatingCount, heroVerdict } = gated;
-  // gate-opening picks ANOTHER outdoor photo for its leaves; a portal's republished copy of
-  // the hero has another URL but is the same picture (owner, 2026-10-03). Fingerprint the
-  // hero + the outdoor candidates — only for this template: nobody else reads the hash.
-  const photos =
-    opts.template === GATE_OPENING.id
-      ? await fingerprintCandidates(gated.photos, GATE_SUBJECTS, [1])
-      : gated.photos;
+  // EACH PICTURE ONCE, every template (owner 2026-11-24): a portal serves one facade under several
+  // file names, and the 78 new mocks showed it up to four times. Every photo is fingerprinted and a
+  // republished copy of an earlier one leaves the set here — the stored siteData then carries the
+  // hashes, so the templates (templateKit.allotPhotos, gate-opening's leaves) never pair a picture
+  // with itself. gate-opening read only the hero + outdoor hashes before; it now has all of them.
+  const deduped = await fingerprintAndDedupe(gated.photos);
+  if (deduped.dropped.length) {
+    console.log(`  ↳ ${deduped.dropped.length} ismétlődő kép kiszűrve (ugyanaz a fotó más néven): ${deduped.dropped.map((p) => p.url.split("/").pop()).join(", ")}`); // i18n-exempt: operator log
+  }
+  // NOT THE LODGING → OFF THE PAGE (owner 2026-11-24): the landlord's portal gallery also holds the
+  // house rules, the floor plan, a spa's discount card, the toilet, the town's fountain — the local
+  // classifier (media/photoKind.ts, free, no API) takes them off before any slot can pick one up.
+  // No model on this box → nothing is dropped here; the send gate refuses an unchecked page.
+  const kinds = await Promise.all(deduped.photos.map((p) => classifyPhotoUrl(p.url)));
+  const offPage = deduped.photos.filter((_, i) => isOffPagePhoto(kinds[i] ?? null, i === 0));
+  if (offPage.length) {
+    console.log(`  ↳ ${offPage.length} nem szállás-kép kiszűrve: ${offPage.map((p, k) => `${p.url.split("/").pop()} (${kinds[deduped.photos.indexOf(p)]?.label ?? "?"})`).join(", ")}`); // i18n-exempt: operator log
+  }
+  const photos = deduped.photos.filter((p) => !offPage.includes(p));
   // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-0436, plan
   // assets/design-refs/tenant-site/varos-hero/): free (Wikimedia), never a photo of the lodging,
   // persisted in siteData.townPhoto. Not found → the typographic hero below (2026-11-07).

@@ -45,6 +45,9 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // errors and logs (a fatal boot error, a progress line) — none reaches a customer.
   "src/country.ts": "operátori hiba-/naplószöveg (az ország-réteg nem olvasható) — vevőhöz nem jut",
   "src/scraper/enrichGeo.ts": "operátori napló (Nominatim-dúsítás folyamatjelzése) — vevőhöz nem jut",
+  // 2026-11-24: the rendered-mock quality gate's Hungarian literals are the operator-facing reasons
+  // a send is skipped (dispatch note, send log, CLI report) — never a text of a letter or a page.
+  "src/outreach/mockRenderGate.ts": "operátori ok (miért bukott a renderelt mock a minőségkapun) — vevőhöz nem jut",
   // ADR-0462 kísérlet-motor: the Hungarian literals are the guard's house alert (alertHouse → the
   // operator's mailbox) and logs; the lead-facing variant wording is code-defined in experimentCopy.ts.
   "src/outreach/experiment.ts": "operátori riasztás/napló (kísérlet-őr) — a vevő-szöveg az experimentCopy.ts-ben, csak magyar levélre",

@@ -14,6 +14,7 @@
 // Deterministic, no AI. A failed download is OUR gap, not a finding: no hash, no claim.
 
 import sharp from "sharp";
+import { isSamePicture } from "../engine/samePicture.js";
 
 // The comparison itself (threshold included) lives in the engine, so a template can ask
 // "same picture?" without importing an image library: ../engine/samePicture.ts.
@@ -78,4 +79,36 @@ export async function fingerprintCandidates<T extends { url: string; subject?: s
     photos.map((p, i) => (picked.has(i) ? dHashUrl(p.url) : Promise.resolve(null))),
   );
   return photos.map((p, i) => (hashes[i] ? { ...p, dhash: hashes[i]! } : p));
+}
+
+/** How many photos a generation fingerprints at most (the templates show ≤ ~16). */
+export const FINGERPRINT_ALL_CAP = 24;
+
+/**
+ * Fingerprint the first FINGERPRINT_ALL_CAP photos (every template, owner 2026-11-24) and drop a
+ * photo that is the SAME PICTURE as an earlier one: portals serve one facade under several file
+ * names (Stéghouse udulohaz2–5, measured on the 78 new mocks), and a page that shows it four times
+ * reads as a thin, broken site. Order is kept; a photo that cannot be downloaded keeps its place
+ * without a hash (our gap, not a finding). Returns the dropped ones so the caller can log them.
+ */
+export async function fingerprintAndDedupe<T extends { url: string }>(
+  photos: readonly T[],
+): Promise<{ photos: (T & { dhash?: string })[]; dropped: T[] }> {
+  const head = photos.slice(0, FINGERPRINT_ALL_CAP);
+  const hashes: (string | null)[] = [];
+  // Three at a time: the portal sees no burst, a 20-photo lead still takes seconds, not a minute.
+  for (let i = 0; i < head.length; i += 3) {
+    hashes.push(...(await Promise.all(head.slice(i, i + 3).map((p) => dHashUrl(p.url)))));
+  }
+  const kept: (T & { dhash?: string })[] = [];
+  const dropped: T[] = [];
+  photos.forEach((p, i) => {
+    const h = hashes[i] ?? undefined;
+    if (h && kept.some((k) => isSamePicture(k.dhash, h))) {
+      dropped.push(p);
+      return;
+    }
+    kept.push(h ? { ...p, dhash: h } : p);
+  });
+  return { photos: kept, dropped };
 }
