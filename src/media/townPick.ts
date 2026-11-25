@@ -418,29 +418,50 @@ export async function countryAtPoint(lat: number, lon: number): Promise<string |
 
 // ── the style of the place (which sample rooms fit) ───────────────────────────
 
+/** The sample-room style of a town alone (the backfill's --restyle): its Wikidata item, then the rule below. */
+export async function townStyleOf(t: TownPickInput, wikidataId?: string): Promise<TownStyle> {
+  const net = new Net();
+  let it: any = null;
+  if (wikidataId) it = (await net.wikidata({ action: "wbgetentities", ids: wikidataId, props: "claims" }))?.entities?.[wikidataId] ?? null;
+  return styleOf(net, t, it, []);
+}
+
 async function styleOf(net: Net, t: TownPickInput, wd: any, accepted: readonly { s: TownScores; c: Cand }[]): Promise<TownStyle> {
-  // Coast: an OSM coastline within 5 km (Overpass, free). Failing that, the town's own pictures:
-  // two or more sea / harbour / beach pictures among the accepted ones.
-  let coast: boolean | null = null;
-  try {
-    const q = `[out:json][timeout:20];way["natural"="coastline"](around:5000,${t.lat},${t.lon});out ids 1;`;
-    const r = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded" },
-      body: "data=" + encodeURIComponent(q),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    net.stats.apiCalls++;
-    if (r.ok) coast = (((await r.json()) as { elements?: unknown[] }).elements ?? []).length > 0;
-  } catch {
-    coast = null;
+  // Coast: an OSM coastline within 5 km (Overpass, free; two public instances, a retry each). No answer
+  // → not called a coast: a guess from the pictures took the Danube for a harbour (Budapest, 2026-11-25).
+  let coast = false;
+  const q = `[out:json][timeout:25];way["natural"="coastline"](around:5000,${t.lat},${t.lon});out ids 1;`;
+  outer: for (const host of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
+    for (let i = 0; i < 2; i++) {
+      try {
+        net.stats.apiCalls++;
+        const r = await fetch(host, {
+          method: "POST",
+          headers: { "User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded" },
+          body: "data=" + encodeURIComponent(q),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (r.ok) {
+          coast = (((await r.json()) as { elements?: unknown[] }).elements ?? []).length > 0;
+          break outer;
+        }
+      } catch {
+        // next try
+      }
+      await sleep(3000);
+    }
   }
-  if (coast === null) {
-    coast = accepted.filter((a) => /sea|harbour|beach/.test(a.s.top)).length >= 2;
-  }
+  void accepted;
   if (coast) return "mediterranean";
   const amount = (v: any): number => Number(String(v?.amount ?? "").replace(/^\+/, ""));
-  const elevation = claim(wd, "P2044").map(amount).find((x) => Number.isFinite(x));
+  let elevation = claim(wd, "P2044").map(amount).find((x) => Number.isFinite(x));
+  if (elevation === undefined) {
+    // No elevation on Wikidata (Mátraszentimre, ~700 m): the free OpenTopoData SRTM answer for the point.
+    net.stats.apiCalls++;
+    const j = await net.json(`https://api.opentopodata.org/v1/srtm90m?locations=${t.lat},${t.lon}`).catch(() => null);
+    const e = Number(j?.results?.[0]?.elevation);
+    if (Number.isFinite(e)) elevation = e;
+  }
   if (elevation !== undefined && elevation >= 600) return "alpine";
   const pops = claim(wd, "P1082").map(amount).filter((x) => Number.isFinite(x));
   const population = pops.length ? Math.max(...pops) : undefined;

@@ -30,7 +30,7 @@ import {
 
 import { APPROVAL_PENDING_NOTE, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
 import { cachedRenderGate } from "../outreach/mockRenderGate.js";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "../outreach/mockPhotoGate.js";
+import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 
 /** The dispatch note of a lead waiting for the owner (the colleague's pass writes it — mockQaReview.ts). */
 export { APPROVAL_PENDING_NOTE };
@@ -99,8 +99,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       join mock_artifact a on a.id = d.artifact_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE}
        and a.status = 'approved'
-       and ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}
-       and ${MOCK_OWN_PHOTOS_OK_SQL}
+       and ${DISPATCH_PHOTOS_OK_SQL}
        and ${MOCK_CURRENT_GENERATOR_SQL}
      order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   // ORSZÁG-RÉTEG 3/5: a mobile of the lead's OWN country, and only where the country's row lets

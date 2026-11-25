@@ -13,6 +13,7 @@
 // next one starts. A start on a definition whose last run died resumes from its
 // checkpoint instead of walking Google again.
 
+import { gatherTownSetsForRun } from "../media/townPhotoSet.js";
 import { writeFile } from "node:fs/promises";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
@@ -364,6 +365,10 @@ async function main(): Promise<void> {
     };
     await closeScrapeRun(runId, stats);
     liveRunId = null;
+    // The TOWN pictures of the new e-mail leads with no / few own photos (owner 2026-11-25, ADR-XXXX):
+    // after the contact step, once per town (town_photo_set). Never fails the run.
+    const towns = await gatherTownSetsForRun(runId, (line) => console.log(line));
+    if (towns) console.log(`  Településkép: ${towns} település képei összegyűjtve.`);
     // The worksheet rows learn what became of them: lead / not a lead, and which lead.
     if (scout) {
       const r = await finishScoutTile(scout, runId);

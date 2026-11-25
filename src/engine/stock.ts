@@ -78,9 +78,84 @@ export function stockLibrary(): readonly StockEntry[] {
   return cache;
 }
 
-/** Does this URL point into the stock library (relative, absolute, or proxied)? */
+/** Does this URL point into the stock library (relative, absolute, or proxied) — or the styled one? */
 export function stockUrl(url: string | undefined | null): boolean {
-  return typeof url === "string" && url.includes(STOCK_PREFIX);
+  return typeof url === "string" && (url.includes(STOCK_PREFIX) || styledUrlSet().has(url.replace(/[?#].*$/, "")));
+}
+
+// ── the STYLED sample-room library (owner 2026-11-25, ADR-XXXX, plan kepnelkuli-hero) ─────────
+// ~300 free-licence room photos per style (mediterranean / alpine / rural / urban), chosen by the
+// local CLIP model (scripts/stock-rooms-build.mts), HOT-LINKED from the provider's CDN (Flickr,
+// Wikimedia) and credited on the page. Same hard rules as the local library: gallery and room cards
+// only, mock phase, „MINTA”-marked, never stored, never live (stockUrl() knows every URL of it).
+
+export type RoomStyle = "mediterranean" | "alpine" | "rural" | "urban";
+export type StyledRoom = "bedroom" | "bathroom" | "living" | "kitchen" | "terrace" | "dining";
+
+export interface StyledStockEntry {
+  readonly url: string;
+  readonly style: RoomStyle;
+  readonly room: StyledRoom;
+  readonly page: string;
+  readonly author: string;
+  readonly license: string;
+  readonly licenseUrl?: string;
+  readonly dhash?: string;
+}
+
+let styledCache: readonly StyledStockEntry[] | null = null;
+let styledUrls: Set<string> | null = null;
+
+/** The styled library manifest (src/engine/stockRooms.json) — read once, from the app root. */
+export function styledStockLibrary(): readonly StyledStockEntry[] {
+  if (styledCache) return styledCache;
+  try {
+    const raw = JSON.parse(readFileSync(path.resolve(process.cwd(), "src/engine/stockRooms.json"), "utf8")) as { images?: StyledStockEntry[] };
+    styledCache = raw.images ?? [];
+  } catch {
+    styledCache = [];
+  }
+  return styledCache;
+}
+
+function styledUrlSet(): Set<string> {
+  styledUrls ??= new Set(styledStockLibrary().map((e) => e.url));
+  return styledUrls;
+}
+
+/** The styled entry of a URL (for the credit line), or undefined. */
+export function styledStockEntry(url: string): StyledStockEntry | undefined {
+  const u = url.replace(/[?#].*$/, "");
+  return styledStockLibrary().find((e) => e.url === u);
+}
+
+const ROOM_OF: Partial<Record<StockCategory, StyledRoom>> = {
+  "bedroom-rustic": "bedroom",
+  "bedroom-modern": "bedroom",
+  bathroom: "bathroom",
+  kitchen: "kitchen",
+  living: "living",
+  terrace: "terrace",
+  breakfast: "dining",
+};
+
+/** The styled pictures of one room in this lead's own deterministic order. */
+function styledOrdered(seed: string, style: RoomStyle, room: StyledRoom): StyledStockEntry[] {
+  return styledStockLibrary()
+    .filter((e) => e.style === style && e.room === room)
+    .map((e) => ({ e, k: hash(`${seed}|${e.url}`) }))
+    .sort((a, b) => a.k - b.k || (a.e.url < b.e.url ? -1 : 1))
+    .map((x) => x.e);
+}
+
+function styledPhoto(e: StyledStockEntry, alt: string): Photo {
+  return { url: e.url, alt, provenance: "generated", stock: true };
+}
+
+/** Does the styled library carry this lead's style (else the local library serves it)? */
+function styledStyleOf(d: SiteData): RoomStyle | null {
+  const s = d.townStyle;
+  return s && styledStockLibrary().some((e) => e.style === s) ? s : null;
 }
 
 /** Is this a stock illustration? By flag OR by URL — a stripped flag must not let one through. */
@@ -109,7 +184,11 @@ export function isStockDhash(dhash: string | null | undefined): boolean {
     const d = hashDistance(dhash, h);
     return d !== null && d <= STOCK_DHASH_BITS;
   };
-  return stockLibrary().some((e) => near(e.dhash) || near(e.sourceDhash)) || retiredCache.some((e) => near(e.dhash));
+  return (
+    stockLibrary().some((e) => near(e.dhash) || near(e.sourceDhash)) ||
+    retiredCache.some((e) => near(e.dhash)) ||
+    styledStockLibrary().some((e) => e.dhash != null && near(e.dhash))
+  );
 }
 
 function fold(s: string | undefined | null): string {
@@ -209,6 +288,11 @@ function stockBedrooms(d: SiteData): StockEntry[] {
  * back for the gallery, so a card and the gallery never wear the same picture.
  */
 export function stockRoomPhotos(d: SiteData, n: number, alt: (i: number) => string): Photo[] {
+  const style = styledStyleOf(d);
+  if (style) {
+    const beds = styledOrdered(stockSeedOf(d), style, "bedroom");
+    if (beds.length > 1) return beds.slice(0, Math.max(0, Math.min(n, beds.length - 1))).map((e, i) => styledPhoto(e, alt(i)));
+  }
   const list = stockBedrooms(d);
   return list.slice(0, Math.max(0, Math.min(n, list.length - 1))).map((e, i) => toPhoto(e, alt(i)));
 }
@@ -218,17 +302,37 @@ export function stockRoomPhotos(d: SiteData, n: number, alt: (i: number) => stri
  * over the categories, each picture once. None when the lead has no own photo (its page has
  * the typographic hero and no gallery) or already has enough.
  */
-export function stockGallery(d: SiteData, needBedroom: boolean, alt: string): Photo[] {
+/**
+ * A page with the town's pictures (ADR-XXXX, plan kepnelkuli-hero): about 15 pictures in all — the hero,
+ * 4–6 local pictures, the room cards — so the gallery is filled up to this many (own + local + MINTA).
+ */
+export const STOCK_GALLERY_TOWN_TARGET = 12;
+
+export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, localCount = 0): Photo[] {
   const own = d.photos.filter((p) => !isStockPhoto(p)).length;
-  if (own === 0 || own >= STOCK_GALLERY_MIN) return [];
+  if (own === 0) return [];
+  const target = localCount > 0 ? STOCK_GALLERY_TOWN_TARGET : STOCK_GALLERY_MIN;
+  if (own + localCount >= target) return [];
   const seed = stockSeedOf(d);
   const cats = stockGalleryCategories(d, needBedroom);
-  const want = STOCK_GALLERY_MIN - own;
+  const style = styledStyleOf(d);
+  const want = target - own - localCount;
   const picks: Photo[] = [];
   const used = new Set<string>();
   for (let round = 0; picks.length < want && round < 12; round++) {
     for (const cat of cats) {
       if (picks.length >= want) break;
+      const room = ROOM_OF[cat];
+      if (style && room) {
+        // Bedrooms from the END: the room cards take from the front (stockRoomPhotos).
+        const list = styledOrdered(seed, style, room);
+        const e = (room === "bedroom" ? [...list].reverse() : list).find((x) => !used.has(x.url));
+        if (e) {
+          used.add(e.url);
+          picks.push(styledPhoto(e, alt));
+          continue;
+        }
+      }
       // Bedrooms from the END: the room cards take from the front (stockRoomPhotos).
       const list = cat.startsWith("bedroom") ? [...stockBedrooms(d)].reverse() : ordered(seed, cat);
       const e = list.find((x) => !used.has(x.file));

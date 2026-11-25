@@ -6,7 +6,7 @@ import { withoutStarRating } from "../text/starRating.js";
 import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
-import { isSampleOnly, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
+import { isSampleOnly, type Photo, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
 import { renderSeoHead, seoTitle } from "./seo.js";
 import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
@@ -14,7 +14,7 @@ import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
-import { isStockPhoto, stockGallery, stockHeroBackdrop } from "./stock.js";
+import { isStockPhoto, stockGallery, stockHeroBackdrop, stockUrl, styledStockEntry } from "./stock.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
@@ -744,10 +744,26 @@ function injectWholeBand(html: string, data: SiteData, phase: RenderPhase): stri
  */
 export const OWN_PHOTOS_NO_STOCK = 5;
 
+/** The town's local pictures (siteData.townGallery, ADR-XXXX) as gallery photos — not on the page yet, each once. */
+function localTownPhotos(data: SiteData): Photo[] {
+  const on = new Set(data.photos.map((p) => p.url));
+  const out: Photo[] = [];
+  for (const t of data.townGallery ?? []) {
+    if (on.has(t.url)) continue;
+    on.add(t.url);
+    out.push({ url: t.url, alt: t.city, provenance: "generated", subject: "exterior", bedroom: false });
+  }
+  return out;
+}
+
 function withStockFill(data: SiteData): SiteData {
-  if (data.photos.filter((p) => !isStockPhoto(p)).length >= OWN_PHOTOS_NO_STOCK) return data;
+  // The town's hero is no own photo (withTownHero put it first): it never stops the fill.
+  const own = data.photos.filter((p) => !isStockPhoto(p) && p.url !== data.townPhoto?.url).length;
+  if (own >= OWN_PHOTOS_NO_STOCK) return data;
   const alt = T(data, "Illusztráció");
-  const gallery = stockGallery(data, !hasOwnBedroomPhoto(data), alt);
+  // Plan kepnelkuli-hero ③: the town's LOCAL pictures come first after the own photos, then the MINTA rooms.
+  const local = localTownPhotos(data);
+  const gallery = [...local, ...stockGallery(data, !hasOwnBedroomPhoto(data), alt, local.length)];
   const backdrop = data.photos.length === 0 ? stockHeroBackdrop(data, alt) : undefined;
   return { ...data, stock: { gallery, cards: true, ...(backdrop ? { backdrop } : {}) } };
 }
@@ -760,10 +776,13 @@ function withStockFill(data: SiteData): SiteData {
  */
 function withTownHero(data: SiteData): SiteData {
   const t = data.townPhoto;
-  if (!t || data.photos.length > 0) return data;
+  if (!t || data.photos.some((p) => p.url === t.url)) return data;
+  // Plan kepnelkuli-hero ⑨ (ADR-XXXX): a few-photo lead whose own first photo does not show the lodging
+  // from outside opens on the town too — the own photos follow, each once. (Before 2026-11-25 the
+  // generator stored a town photo only for a lead with no own photo, so an older mock is unchanged.)
   return {
     ...data,
-    photos: [{ url: t.url, alt: t.city, provenance: "generated", subject: "exterior", bedroom: false }],
+    photos: [{ url: t.url, alt: t.city, provenance: "generated", subject: "exterior", bedroom: false }, ...data.photos],
   };
 }
 
@@ -804,7 +823,69 @@ function withMockNotes(html: string, data: SiteData): string {
     const i = out.lastIndexOf("</body>");
     out = i >= 0 ? out.slice(0, i) + credit + out.slice(i) : out + credit;
   }
-  return out;
+  return withSampleMarks(withPictureCredits(out, data), data);
+}
+
+/**
+ * Plan kepnelkuli-hero ③④ (ADR-XXXX): the town's local pictures and the styled MINTA rooms are free
+ * licence pictures whose licence asks for the credit — one folded list at the page's foot names each
+ * picture that is ON the page: place or „Minta”, author (linked to its source page) and licence.
+ */
+function withPictureCredits(html: string, data: SiteData): string {
+  const rows: string[] = [];
+  const seen = new Set<string>();
+  const lic = (name: string, url?: string): string =>
+    url ? `<a href="${esc(url)}" target="_blank" rel="noopener license" style="color:inherit">${esc(name)}</a>` : esc(name);
+  for (const t of data.townGallery ?? []) {
+    if (seen.has(t.url) || !html.includes(esc(t.url))) continue;
+    seen.add(t.url);
+    rows.push(
+      `<li>${esc(t.city)} · ${T(data, "Fotó")}: <a href="${esc(t.pageUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.author)}</a>, Wikimedia Commons, ${lic(t.license, t.licenseUrl)}</li>`,
+    );
+  }
+  for (const m of html.matchAll(/https:\/\/(?:live\.staticflickr\.com|upload\.wikimedia\.org)\/[^"'\s)]+/g)) {
+    const e = styledStockEntry(m[0].replace(/&amp;/g, "&"));
+    if (!e || seen.has(e.url)) continue;
+    seen.add(e.url);
+    rows.push(
+      `<li>${T(data, "Minta")} · ${T(data, "Fotó")}: <a href="${esc(e.page)}" target="_blank" rel="noopener" style="color:inherit">${esc(e.author)}</a>, ${lic(e.license, e.licenseUrl)}</li>`,
+    );
+  }
+  if (!rows.length) return html;
+  const block =
+    `<details class="cit-picture-credits" style="margin:0;padding:8px 16px 14px;font-size:.75rem;line-height:1.45;opacity:.7;text-align:center">` +
+    `<summary style="cursor:pointer">${T(data, "Képek forrása")}</summary>` +
+    `<ul style="list-style:none;margin:6px 0 0;padding:0">${rows.join("")}</ul></details>`;
+  const i = html.lastIndexOf("</body>");
+  return i >= 0 ? html.slice(0, i) + block + html.slice(i) : html + block;
+}
+
+/**
+ * Every sample picture on the page carries a small „MINTA” mark (plan kepnelkuli-hero ④, owner
+ * 2026-11-25) besides the one line under the gallery: the <img> gets `data-cit-sample` (the render gate
+ * reads it too) and a few lines of script pin the mark on its frame. Without script the gallery's
+ * sentence still says it.
+ */
+function withSampleMarks(html: string, data: SiteData): string {
+  let marked = 0;
+  // The faded landscape behind the typographic hero is a backdrop, not a picture of the place: no mark.
+  const backdrop = data.stock?.backdrop?.url;
+  const out = html.replace(/<img\b([^>]*?)\ssrc="([^"]+)"/g, (m, pre: string, src: string) => {
+    const u = src.replace(/&amp;/g, "&");
+    if (/data-cit-sample/.test(pre) || !stockUrl(u) || (backdrop != null && u.endsWith(backdrop))) return m;
+    marked++;
+    return `<img${pre} data-cit-sample="1" src="${src}"`;
+  });
+  if (!marked || !out.includes("</body>")) return out;
+  const label = jsonForScript(T(data, "MINTA"));
+  const script =
+    `<style data-cit-sample-css>.cit-sample-badge{position:absolute;top:8px;left:8px;z-index:2;padding:2px 7px;border-radius:4px;` +
+    `background:color-mix(in srgb,var(--cit-ink,currentColor) 72%,transparent);color:var(--cit-bg,Canvas);font:600 11px/1.4 system-ui,sans-serif;letter-spacing:.06em;pointer-events:none}</style>` +
+    `<script>(function(){var L=${label};function mark(){document.querySelectorAll('img[data-cit-sample]').forEach(function(i){var p=i.parentElement;` +
+    `if(!p||p.querySelector(':scope>.cit-sample-badge'))return;if(getComputedStyle(p).position==='static')p.style.position='relative';` +
+    `var b=document.createElement('span');b.className='cit-sample-badge';b.textContent=L;p.appendChild(b);});}` +
+    `if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mark);else mark();})();</script>`;
+  return out.replace("</body>", `${script}</body>`);
 }
 
 /** A text as the inside of a JSON string literal in an inline script (jsonForScript's escaping, quotes cut). */

@@ -45,7 +45,8 @@ import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems,
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { curateMockPhotos } from "./photoCurate.js";
 import { GATE_OPENING, gatePhotoOf } from "../engine/templates/gateOpening.js";
-import { resolveTownPhoto } from "./townPhoto.js";
+import { townPhotosForMock } from "./townHero.js";
+import { DISPATCH_MIN_OWN_PHOTOS } from "../outreach/mockPhotoGate.js";
 import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
@@ -379,10 +380,17 @@ async function generateEngineMockInner(
   }
   if (photoSet.heroMoved) console.log("  ↳ a nyitókép helyére a legjobb külső/szoba-kép került"); // i18n-exempt: operator log
   const photos = photoSet.photos;
-  // NO OWN PHOTO → the town's photo is the mock's hero (owner 2026-11-09, ADR-0436, plan
-  // assets/design-refs/tenant-site/varos-hero/): free (Wikimedia), never a photo of the lodging,
-  // persisted in siteData.townPhoto. Not found → the typographic hero below (2026-11-07).
-  const townPhoto = photos.length === 0 && !opts.archetype ? await resolveTownPhoto(lead.city, leadCountry ?? undefined, lead.lat != null && lead.lon != null ? { lat: Number(lead.lat), lon: Number(lead.lon) } : null) : null;
+  // NO OR FEW OWN PHOTOS → the TOWN's picture set (owner 2026-11-25, ADR-XXXX, plan
+  // assets/design-refs/console/kepnelkuli-hero/; before: one Wikipedia lookup, ADR-0436): the town's
+  // hero, shared out among its e-mail leads, opens the page unless a few-photo lead's own first photo
+  // shows the lodging from outside; 4–6 local pictures join the gallery. Gathered here on the spot
+  // when the town has none yet — ⛔ only for a lead with an e-mail address. Free (Wikimedia + the
+  // local CLIP model), never a photo of the lodging, persisted in siteData. None → the typographic hero.
+  const town =
+    photos.length < DISPATCH_MIN_OWN_PHOTOS && !opts.archetype
+      ? await townPhotosForMock({ leadId, city: lead.city, country: leadCountry, lat: lead.lat, lon: lead.lon, email: lead.email, ownPhotos: photos })
+      : null;
+  const townPhoto = town?.hero ?? null;
   // The Kapunyitás needs a gate photo that is NOT the hero (owner 2026-11-04, ADR-0423): the
   // gallery's second photo, distinct by URL and fingerprint. None → the plan is refused out
   // loud HERE, before any AI spend — never a gate that opens onto itself. A town-photo lead has
@@ -722,6 +730,8 @@ async function generateEngineMockInner(
     // The seed of the mock's deterministic stock-illustration pick (engine/stock.ts).
     stockSeed: leadId,
     ...(townPhoto ? { townPhoto } : {}),
+    ...(town?.gallery.length ? { townGallery: town.gallery } : {}),
+    ...(town?.style ? { townStyle: town.style } : {}),
   };
   // The gate photo in its own field (the tenant admin's later choice; ADR-0423).
   // A lead with no own photo renders through wordmark-grow (noPhotoHero below), not the gate.
