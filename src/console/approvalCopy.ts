@@ -229,10 +229,7 @@ export async function approvalCopyPanel(
     const c = checkOutreachDraft(mail, ctx.base.leadName, ctx.base.lang, ctx.base.market);
     if (c.verdict === "FLAG") notes.push(`${T(lang, "Levél — a jogszerűségi kapu megállítaná")}: ${c.reasons.join(" · ")}`);
   }
-  if (sms) {
-    const c = checkOutreachSms(sms, ctx.base.leadName, ctx.base.lang, ctx.base.market);
-    if (c.verdict === "FLAG") notes.push(`${T(lang, "SMS — a jogszerűségi kapu megállítaná")}: ${c.reasons.join(" · ")}`);
-  }
+  // (no SMS check on this page: the messenger/SMS part is gone, owner 2026-11-25)
 
   const fixed = fixedBlocks(mail);
   const field = (k: EditableMailPart): string =>

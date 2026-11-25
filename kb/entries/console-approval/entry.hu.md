@@ -29,7 +29,7 @@ lista felül áll, alatta a kiválasztott lead.
   megy; a **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros
   **„Nem mentettem”** sáv sorolja fel az okokat.
 - **„Mehet”** — a jóváhagyásod mindkét tervre, ebben a mostani állapotukban szól. A lead visszakerül a
-  kiküldési sorba, és hétköznap 8 és 16 óra között kimegy. Ha bármelyik terv a jóváhagyásod után
+  kiküldési sorba, és a hétköznapi küldési ablakban (reggel 8-tól) kimegy. Ha bármelyik terv a jóváhagyásod után
   megváltozik (például a folyamat újragenerálja), nem megy ki, hanem újra a jóváhagyásodra vár.
   **„Nem mehet ki”** — a megkeresés törlődik. Mindkettő után a következő lead nyílik meg.
 - Alul a nézet: **„1. terv”** / **„2. terv”** a terv teljes oldala, **„Levél”** pedig pontosan az a
