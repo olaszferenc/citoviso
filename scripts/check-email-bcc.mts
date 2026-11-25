@@ -1,4 +1,5 @@
 // Gate: the pilot BCC may never copy a tenant's GUEST data to us.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // EMAIL_BCC blind-copies outgoing mail to the owner during the pilot so he can see
 // what the machine actually sends. The same adapter, however, also carries the

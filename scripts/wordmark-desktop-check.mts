@@ -1,4 +1,5 @@
 // Névből növő (wordmark-grow) desktop layout — Poe3, 2026-11-04 (Renáta b07890e4, Panna c552c2d0):
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // the gallery's title stood alone in a band under the booking strip (the carousel headed by a bare
 // „Képek”), and a single room card sat beside two empty columns. Owner's „Igen” to the fix:
 // the title heads the gallery; one card is centred at ≤640 px, two share the row.

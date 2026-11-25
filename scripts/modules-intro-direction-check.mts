@@ -1,4 +1,5 @@
 /**
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
  * Kapu — a Modulok fül bevezetője NE küldje a tulajt olyan irányba, amerre a
  * felület nem áll.
  *

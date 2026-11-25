@@ -1,4 +1,5 @@
 // Kapunyitás (gate-opening): the photo that SPLITS is never the photo that STAYS (ADR-0423).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // Owner, 2026-11-04: „DE KURVÁRA NEM LEHET A SZÉTNYÍLÓ KÉP UGYANAZ AMI AZ ANIMÁCIÓ UTÁN OTTMARAD!!!!
 // Az admin második képe legyen, hogy tudja majd tenant ezt is konfigurálni”.
 // The leaves show SiteData.gatePhoto (own field; generation = the gallery's SECOND photo), never

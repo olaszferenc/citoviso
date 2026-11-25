@@ -1,4 +1,5 @@
 // ADR-0044/d guard: the unit subpage must look EXACTLY like the site it belongs to.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // The owner's constraint, verbatim: "extrém mód fontos, hogy ugyanabba a stílusba
 // illeszkedjen, mint a fő mock, amit ígértünk a tenantnak". That is the §I delivery

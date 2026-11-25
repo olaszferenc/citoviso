@@ -1,4 +1,5 @@
 /**
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
  * Kapu — a FIZETŐ ÜGYFÉLNEK mutatott support-cím EGY forrásból jön, és nem a
  * hideg-megkeresés feladó-azonossága.
  *

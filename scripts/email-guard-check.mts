@@ -1,4 +1,5 @@
 // Guard gate: no message may leave for an IANA-reserved test domain.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHAT THIS MEASURES AND WHY. The local .env holds the real Zoho credentials, so
 // every gate that exercises a real flow (review-flow-check, module-config-check…)

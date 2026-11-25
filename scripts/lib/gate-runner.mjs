@@ -677,6 +677,26 @@ function landBlocking(job) {
 /** A gate that the land does not wait for: a browser gate without the land-blocking marker. */
 const hourlyGate = (job) => browserGate(job) && !landBlocking(job);
 
+// ── DOCS-ONLY DIFF: gates that provably read no doc skip (2026-11-25, ADR-XXXX) ─────────
+// The hook sets CIT_GATE_DOCS_ONLY=1 when EVERY changed file is MEMORY.md or a _planning/**/*.md
+// (26 of 57 commits on main 11-24/25). A gate whose header (first 40 lines) carries
+//   // gate-scope: no-docs — <reason, ≥ 20 characters>
+// measures code only: scripts/gate-scope-check.mts bundles its whole import closure (comments
+// stripped) and fails if it mentions _planning, MEMORY, git, ls-files, a glob or a recursive
+// directory walk — so the docs-only diff cannot change its verdict. It is listed loudly, never green.
+const DOCS_ONLY = process.env.CIT_GATE_DOCS_ONLY === "1";
+const DOCS_MARK = "// gate-scope: no-docs —";
+function noDocsGate(job) {
+  try {
+    return readFileSync(path.join(job.cwd, job.script), "utf8")
+      .split("\n", 40)
+      .some((l) => l.trim().startsWith(DOCS_MARK) && l.trim().slice(DOCS_MARK.length).trim().length >= 20);
+  } catch {
+    return false;
+  }
+}
+const toDocsSkip = [];
+
 const t0 = Date.now();
 const serial = [];
 const queue = [];
@@ -687,6 +707,10 @@ let reused = 0;
 for (const j of jobs) {
   if (HOURLY && !hourlyGate(j)) {
     notHourly++; // already gated (blocking) by the land that brought it
+    continue;
+  }
+  if (DOCS_ONLY && noDocsGate(j)) {
+    toDocsSkip.push(j);
     continue;
   }
   if (COMMIT_MODE && browserGate(j)) {
@@ -707,6 +731,11 @@ for (const j of jobs) {
   (knownWriters.has(j.script) ? serial : queue).push(j);
 }
 const gateNames = (list) => [...new Set(list.map((j) => path.basename(j.script).replace(/\.(mts|mjs|ts|js)$/, "")))];
+if (toDocsSkip.length) {
+  process.stdout.write(
+    `[pre-commit] ⏭ ${toDocsSkip.length} kódkapu kihagyva: CSAK dokumentum változott (MEMORY.md / _planning/**/*.md), és ezek bizonyítottan nem olvasnak ilyet (gate-scope-check): ${gateNames(toDocsSkip).join(", ")}\n`,
+  );
+}
 if (toLand.length) {
   process.stdout.write(
     `[pre-commit] ⏭ ${toLand.length} böngészős kapu a LAND-en fut, nem most (commit-mód, ADR-0432): ${gateNames(toLand).join(", ")}\n` +

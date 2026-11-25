@@ -1,4 +1,5 @@
 // ⭐ LAND GATE — ADR-0429: every sellable module reaches the setup wizard, the module tiles
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // and the reminders through ONE registry (src/tenant/moduleSetup.ts), and cannot land without it.
 //
 // The approved plan (assets/design-refs/tenant-admin/modul-statusz/README §5) binds these checks:

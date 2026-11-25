@@ -1,4 +1,5 @@
 // Gate: the tracked outreach link keeps working in BOTH shapes.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // The bare /p/<token> shape is already out in the wild in mails we have sent, so
 // the readable /p/<slug>/<token> shape must be additive, never a replacement. This

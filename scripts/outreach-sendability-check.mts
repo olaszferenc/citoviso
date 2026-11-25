@@ -1,4 +1,5 @@
 // A piszkozat-képernyő NEM mondhat mást, mint amit a küldő-út tenne (Elek FK-004 Z1/Z2).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // ⛔ MIÉRT: a lap teteje zöld „Jogszerűségi kapu: PASS — küldhető" jelvényt adott, miközben
 // a §C-kapu a `sendOutreachMail` KILENC kapujából EGY. Mérve 2026-09-13: három ELEK-prospect

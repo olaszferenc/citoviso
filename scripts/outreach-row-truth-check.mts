@@ -1,4 +1,5 @@
 // A lead-lap megkeresés-sora AZT mondja, ami történt (Elek FK-004 Z3/Z4).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // ⛔ MIÉRT — három mért állítás ugyanarról a képernyőről:
 //   Z3/a A sor „✓ E-mail elküldve"-t írt a CSATORNA-FÜGGETLEN `sent_at`-ból, amit a

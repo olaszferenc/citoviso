@@ -1,4 +1,5 @@
 // §B.18 i18n doctrine guard (ADR-0036): customer-facing sources must read every UI string
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // from the language pack (T()/tr()) — a hardcoded Hungarian literal silently stays Hungarian
 // on a Polish page. This lint scans the CONVERTED customer-facing chain for Hungarian-accented
 // text that is NOT inside a T(/tr( call and reports loudly. Exit 1 on violations.

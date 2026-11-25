@@ -1,4 +1,5 @@
 // ADR-0044 END-TO-END guard: does a module's saved setting actually REACH THE PAGE?
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS, bluntly: module-config-lint only proves a settings SCREEN exists.
 // That is not the promise. The promise is that what the owner types shows up on the

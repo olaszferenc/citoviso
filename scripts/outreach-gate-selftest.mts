@@ -1,4 +1,5 @@
 // Self-test: the §C outreach gate on the REAL wording we ship — BOTH channels.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // Why (ADR-0112): the owner's wording moved the opt-out and the legal-basis
 // sentence off the message and onto the linked page, so two gate rules were

@@ -1,4 +1,5 @@
 // Regression guard for PORTAL PHOTOS REACHING THE RENDERER (2026-08-21).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS: the portal-listing layer (f510bf8) collects up to 60 images per
 // listing and stores them on lead.raw — but for its first hours nothing outside

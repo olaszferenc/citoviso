@@ -1,4 +1,5 @@
 // The curator's template pair is honoured EXACTLY or refused out loud (src/generator/templatePicks.ts).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // Live cases (Poe2, 2026-11-04): „Parallax + Fejezetes” on Martina 9f5723d0 and Balatinus 00ec9215
 // came back as two Parallax / Parallax + Fullbleed. Prod 2026-11-04: the stored pairs of those runs
 // were parallax + horizontal (17:24, 17:31 UTC) and, earlier, fullbleed + parallax (Balatinus

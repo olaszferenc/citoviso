@@ -1,4 +1,5 @@
 // OUTLOOK-lint (ADR-0101) — STRUCTURAL guard for the outreach letter's HTML.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS. On 2026-09-06 the letter was flawless in the browser AND in Gmail,
 // and fell apart in Outlook: the dark price box stretched across the whole 1900px

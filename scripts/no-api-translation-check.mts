@@ -1,4 +1,5 @@
 // no-api-translation-check — ⛔ a fordítás SOHA nem megy API-hívással (tulaj, 2026-10-27, ADR-0412).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // A tulaj szava: „ki kell venni, hogy a nyelvi fordításokat api hívásokkal oldjuk meg! TILOS!
 // csak Bábel előfizetői tokenjeivel lehet költeni fordításra! Bábel ráadásul kontextusban tudja

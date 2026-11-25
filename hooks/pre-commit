@@ -152,7 +152,11 @@ gate_flush() {
       key="$tree ${diffsum%% *}"
     fi
   fi
-  CIT_GATE_KEY="$key" command node scripts/lib/gate-runner.mjs "$GATE_JOBS" "$CIT_ROOT" || rc=$?
+  # Docs-only diff (see gate-runner.mjs, ADR-XXXX): every changed file is MEMORY.md or _planning/**/*.md.
+  local docs_only=0 cf
+  cf="$(changed_files 2>/dev/null)" || cf=""  # no list = no docs-only lane, every gate runs
+  if [ -n "$cf" ] && [ -z "$(printf '%s\n' "$cf" | grep -vE '^(MEMORY\.md|_planning/.+\.md)$')" ]; then docs_only=1; fi
+  CIT_GATE_DOCS_ONLY="$docs_only" CIT_GATE_KEY="$key" command node scripts/lib/gate-runner.mjs "$GATE_JOBS" "$CIT_ROOT" || rc=$?
   [ "$rc" -eq 0 ] && return 0
   [ -f "$GATE_JOBS/FAILED" ] || { echo "⛔ a kapu-futtató maga hibázott (kilépési kód: $rc)" >&2; exit "$rc"; }
   local grc label out err last=1 first=""
@@ -229,6 +233,13 @@ if [ -f scripts/planning-index-land-check.mts ] && \
    changed_files | grep -qE '^scripts/(planning-index\.mts|planning-index-land-check\.mts|land-rebase\.sh|land\.sh)$'; then
   echo "[pre-commit] planning-index-land-check (a land feloldja-e a generált indexeket, és CSAK azokat)…"
   npx tsx scripts/planning-index-land-check.mts >"$GATE_LOG" || gate_failed
+fi
+# A „no-docs” JELÖLÉS IGAZ-E (ADR-XXXX): csak-dokumentum diffnél a futtató kihagyja a jelölt kódkapukat; ez az őr
+# a jelölt kapuk teljes kód-zárlatán méri, hogy egyik sem olvas MEMORY.md-t / _planning/-t. Minden kódváltozásnál fut.
+if [ -f scripts/gate-scope-check.mts ] && changed_files | grep -qE '^(src|scripts|hooks)/'; then
+  echo "[pre-commit] gate-scope-check (a no-docs jelölésű kódkapuk tényleg nem olvasnak dokumentumot)…"
+  npx tsx scripts/gate-scope-check.mts --self-test >"$GATE_LOG" || gate_failed
+  npx tsx scripts/gate-scope-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A GÉPSZINTŰ LAND-SOR (scripts/land-lock.sh): eldobható repóban a valódi `land-lock.sh` — két land sorba áll,
 # a leölt zártartó elenged, a land.sh a fetch előtt zár; 3 visszarontás piros. ~20 s.

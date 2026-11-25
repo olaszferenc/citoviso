@@ -1,4 +1,5 @@
 // gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: minőségi kolléga + tulaj-jóváhagyás minden levél előtt + engedélylistás képszűrő)
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // ① No letter leaves without the quality colleague's pass on THIS mock file (src/outreach/mockQaReview.ts):
 //    the dispatcher's claim, its per-row check and the shared send path all ask for it; only the

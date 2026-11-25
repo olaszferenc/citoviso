@@ -1,4 +1,5 @@
 /**
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
  * ADR-0089 gate — the tenant-admin module preview.
  *
  * What this measures, and why each one is here rather than "obviously fine":

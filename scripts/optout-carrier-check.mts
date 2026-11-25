@@ -1,4 +1,5 @@
 // Gate: the LINKED prospect page really carries the legal mandatories.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // Why this guard exists (ADR-0112): the outreach SMS no longer prints the
 // opt-out link or the legal-basis sentence in its own text — the owner's wording

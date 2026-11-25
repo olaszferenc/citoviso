@@ -1,4 +1,5 @@
 // DERIVED i18n scope guard (ADR-0070 ②) — the list is no longer the doctrine.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // ⛔ WHY: the doctrine used to reach exactly as far as a HAND-KEPT file list, and
 // that failed twice the same way: a file that builds customer text simply never

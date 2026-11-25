@@ -1,4 +1,5 @@
 // OWN-PHOTO PRESSURE guard — owner's ruling (2026-10-02, Elek javítás L1 ⑤).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS. The buyer DECLARES at checkout that they may use the photos the site
 // is built from (src/legal.ts) — that declaration is final. Yet the tenant admin kept

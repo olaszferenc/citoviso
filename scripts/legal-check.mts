@@ -1,4 +1,5 @@
 // Regression guard for the LEGAL DOCUMENT LAYER (ADR-0056).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS: before this layer landed, the outreach mock's footer linked to
 // `/adatvedelem` while the only route that existed was `/privacy` — so every cold

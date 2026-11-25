@@ -1,4 +1,5 @@
 // ŐR: a kiemelés a VENDÉGNEK szóljon, ne a fotó felületeit írja le.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY (tulaj, 2026-08-24): a mockba ilyenek kerültek ki — „Napsütötte sárga
 // homlokzat", „Bézs csempés fürdőszoba üvegkabinos zuhannyal", „Világos szobák
