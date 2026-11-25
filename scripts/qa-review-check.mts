@@ -59,8 +59,9 @@ check(
 const qaSrc = src("src/outreach/mockQaReview.ts");
 check("a kolléga jóváhagyása NEM küld: a sort a tulaj lapjára teszi", /status: "held", note: APPROVAL_PENDING_NOTE/.test(qaSrc) && !/status: "queued"/.test(qaSrc));
 const aq = src("src/console/approvalQueue.ts");
-check("a jóváhagyó lap csak a teljes kört mutatja (kapu + kolléga + 5 saját kép + új generátor)",
-  /qaReviewState\(r\.main_id\)/.test(aq) && /cachedRenderGate\(/.test(aq) && /LEAD_OWN_PHOTOS_SQL/.test(aq) && /MOCK_CURRENT_GENERATOR_SQL/.test(aq));
+// 2026-11-25 (ADR-0479): DISPATCH_PHOTOS_OK_SQL = the ≥5 own-photo rule, or for fewer the CURRENT town pick (mockPhotoGate.ts).
+check("a jóváhagyó lap csak a teljes kört mutatja (kapu + kolléga + 5 saját kép / aktuális településkép + új generátor)",
+  /qaReviewState\(r\.main_id\)/.test(aq) && /cachedRenderGate\(/.test(aq) && /LEAD_OWN_PHOTOS_SQL|DISPATCH_PHOTOS_OK_SQL/.test(aq) && /MOCK_CURRENT_GENERATOR_SQL/.test(aq));
 check("a „Mehet” a mockfájlra bélyegzi a tulaj jóváhagyását", /recordOwnerApproval\(row\.artifact_id/.test(aq));
 check("a várakozó-jegyzet egy helyen él", APPROVAL_PENDING_NOTE.startsWith("JÓVÁHAGYÁSRA VÁR"));
 
@@ -75,6 +76,13 @@ check("a kolléga sora a kollégára váró sorokat is felveszi", /QA_WAIT_NOTE/
 const stock = src("src/console/leadStock.ts");
 check("Lead-állomány: „kiküldhető” csak kolléga-jóváhagyott, javított generátorú mock",
   /\$\{MOCK_QA_PASSED_SQL\}/.test(stock) && /\$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(stock));
+
+// ④ (owner 2026-11-25): <5 own photos go out only once the town library is ready AND the owner opened it —
+// the town-pick branch sits behind the app_setting switch, default OFF (absent row = closed).
+const photoGateSrc = src("src/outreach/mockPhotoGate.ts");
+const townBranch = /export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`\(\s*exists \(select 1 from app_setting s where s\.key = \$\{TOWN_PHOTO_DISPATCH_KEY\} and s\.value = 'on'\)\s*and /.test(photoGateSrc);
+check("KI kapcsolónál a <5 képes ág zárva (app_setting town_photo_dispatch, alapból ki)",
+  townBranch && /TOWN_PHOTO_DISPATCH_KEY = "town_photo_dispatch"/.test(photoGateSrc) && /else \$\{MOCK_TOWN_PICK_OK_SQL\} end/.test(photoGateSrc));
 
 // ── ② the allow-list ──
 const K = (kind: PhotoKind["kind"], label: string, extra: Partial<PhotoKind> = {}): PhotoKind => ({

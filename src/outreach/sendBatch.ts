@@ -30,7 +30,7 @@ import { getEmailSender } from "../email/sender.js";
 import { tagLink } from "./openVia.js";
 import { markOwnViewLinks } from "../console/prospectPath.js";
 import { sql } from "kysely";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
+import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL, MOCK_TOWN_PICK_OK_SQL } from "./mockPhotoGate.js";
 import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
@@ -366,6 +366,25 @@ export async function sendOutreachMail(
         outcome: {
           kind: "skipped",
           reason: `a leadnek ${photoGate.leadPhotos} saját képe van, a mockban ${photoGate.mockPhotos} — a mock újragenerálandó, így nem mehet ki`, // i18n-exempt: operátori ok
+        },
+      };
+    }
+  }
+  // 2026-11-25 (ADR-0479, plan kepnelkuli-hero ⑩): a lead with fewer own photos goes only with the town's
+  // pictures picked by the CURRENT picker version and threshold — never the old single Wikipedia lookup,
+  // never a typographic page.
+  if (p.artifactId) {
+    const g = (
+      await sql<{ leadPhotos: number; townOk: boolean }>`
+        select ${LEAD_OWN_PHOTOS_SQL} as "leadPhotos", ${MOCK_TOWN_PICK_OK_SQL} as "townOk"
+        from lead l, mock_artifact a where l.id = ${p.leadId} and a.id = ${p.artifactId}`.execute(db)
+    ).rows[0];
+    if (g && Number(g.leadPhotos) < DISPATCH_MIN_OWN_PHOTOS && !g.townOk) {
+      return {
+        ...base,
+        outcome: {
+          kind: "skipped",
+          reason: `a leadnek ${g.leadPhotos} saját képe van, és a mock nem az aktuális településkép-választással készült — újragenerálandó, így nem mehet ki`, // i18n-exempt: operátori ok
         },
       };
     }

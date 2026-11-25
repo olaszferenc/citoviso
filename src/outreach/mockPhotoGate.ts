@@ -5,6 +5,7 @@
 // without the lodging's photos (town photo hero), and the dispatcher counted the LEAD's photos, not
 // the MOCK's. 81 of the 88 queued ≥5-photo leads were in that state. The mailed mock is what counts.
 import { sql } from "kysely";
+import { TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION } from "../media/townPick.js";
 
 /** At least this many of the lodging's own photos (Places + portal + own website). */
 export const DISPATCH_MIN_OWN_PHOTOS = 5;
@@ -38,3 +39,41 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T02:00:00Z"; // set after the dep
 export const MOCK_HEROFIX_STAMP = "2026-11-25-qafix2";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
   and (a.generated_at >= ${MOCK_HEROFIX_LIVE_AT}::timestamptz or coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}))`;
+
+/**
+ * THE OWNER'S SWITCH for the <5-photo branch (owner rule 2026-11-25 via cit5980e14c: „amíg a képtár nincs
+ * kész, <5 saját képes lead nem megy ki” — opened only once the owner has seen the town picture library).
+ * app_setting row; absent or anything but 'on' = CLOSED. Not data-driven: a test run on the live DB that
+ * fills town_photo_set must not open it by itself.
+ */
+export const TOWN_PHOTO_DISPATCH_KEY = "town_photo_dispatch";
+
+/**
+ * A mock of a lead with NO or FEW own photos (owner 2026-11-25, ADR-0479, plan
+ * assets/design-refs/console/kepnelkuli-hero/ ⑩): it may go only with the town's pictures picked by the
+ * CURRENT picker version and threshold (media/townPick.ts) — the town photo as the hero, or (a few-photo
+ * lead whose own first photo opens the page) the local gallery pictures — and only while the owner's switch
+ * (TOWN_PHOTO_DISPATCH_KEY) is 'on'. Fewer than
+ * DISPATCH_MIN_OWN_PHOTOS of the lodging's photos in the mock, else it is the ≥5 rule's case.
+ * Table alias `a` = mock_artifact.
+ */
+export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`(
+  exists (select 1 from app_setting s where s.key = ${TOWN_PHOTO_DISPATCH_KEY} and s.value = 'on')
+  and (case when jsonb_typeof(a.inputs->'siteData'->'photos') = 'array' then jsonb_array_length(a.inputs->'siteData'->'photos') else 0 end) < ${DISPATCH_MIN_OWN_PHOTOS}
+  and (
+    (a.inputs->'siteData'->'townPhoto'->'pick'->>'version' = ${String(TOWN_PICK_VERSION)}
+      and a.inputs->'siteData'->'townPhoto'->'pick'->>'threshold' = ${TOWN_PICK_THRESHOLD})
+    or (a.inputs->'siteData'->'townPhoto' is null
+      and jsonb_typeof(a.inputs->'siteData'->'photos') = 'array' and jsonb_array_length(a.inputs->'siteData'->'photos') >= 1
+      and a.inputs->'siteData'->'townGallery'->0->'pick'->>'version' = ${String(TOWN_PICK_VERSION)}
+      and a.inputs->'siteData'->'townGallery'->0->'pick'->>'threshold' = ${TOWN_PICK_THRESHOLD})))`;
+
+/**
+ * THE photo rule of a cold letter, lead + mock together (aliases `l` = lead, `a` = mock_artifact):
+ *   · a lead with ≥ DISPATCH_MIN_OWN_PHOTOS own photos → its mock shows ≥ that many and no town photo
+ *     (the 2026-11-24 Zsejka rule, unchanged);
+ *   · a lead with fewer → its mock carries the current town pick (MOCK_TOWN_PICK_OK_SQL).
+ */
+export const DISPATCH_PHOTOS_OK_SQL = sql<boolean>`(
+  case when ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS} then ${MOCK_OWN_PHOTOS_OK_SQL}
+       else ${MOCK_TOWN_PICK_OK_SQL} end)`;

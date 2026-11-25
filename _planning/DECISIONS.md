@@ -16,6 +16,8 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-0479](decisions/0479-kep-nelkuli-es-keves-kepes-lead-automata.md) — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár
+- [ADR-0478](decisions/0478-elesites-gyorsitasa-a-mock-kapu-uresjarata-ki.md) — Élesítés gyorsítása: a mock-kapu üresjárata ki, képítélet-tár, a `--go` átveszi a próbafuttatást, a deploy mindig a main szkriptjével fut, a fordítás nem állít meg
 - [ADR-0477](decisions/0477-orszagfuggo-kontaktkereso-hr-ingyenes-kereso-a.md) — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval
 - [ADR-0476](decisions/0476-terhatasu-boritokep-mindenkinek-es-az-osszes.md) — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
 - [ADR-0475](decisions/0475-hr-dev-proba-makarska-telepules-index-mint.md) — HR dev-próba (Makarska): település-index mint ingyenes portálkép-forrás + a felderítés hamis „saját honlap” ítéletei

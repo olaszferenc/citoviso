@@ -7,7 +7,10 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-11-25_modem-sim-minerealnak.md](2026-11-25_modem-sim-minerealnak.md) — 2026-11-25 — A modem-SIM a MineREAL-é: Citoviso SMS/MMS ki, MineREAL-konzol szűrése
+- [2026-11-25_kepnelkuli_hero_megvalositas.md](2026-11-25_kepnelkuli_hero_megvalositas.md) — 2026-11-25 — Kép nélküli és kevés képes lead: településkép-tár (megvalósítás, `cit561ec018`)
 - [2026-11-25_hr-kontaktkereso.md](2026-11-25_hr-kontaktkereso.md) — 2026-11-25 — HR kontaktkereső országfüggővé téve, mérve Makarskán és Baška Vodán (dev DB)
+- [2026-11-25_elesites_gyorsitas.md](2026-11-25_elesites_gyorsitas.md) — 2026-11-25 — Élesítés gyorsítása (mock-kapu üresjárat, képítélet-tár, --go átveszi a próbát)
+- [2026-11-25_barion-eur-sandbox-fizetes.md](2026-11-25_barion-eur-sandbox-fizetes.md) — 2026-11-25 — Barion EUR: saját sandbox-bolt EUR-tárcával, HR végpróba fizetve végig
 - [2026-11-24_hr_dev_proba_makarska.md](2026-11-24_hr_dev_proba_makarska.md) — 2026-11-24 — HR dev-próba: lead-beszerzés Makarskán + Elek négy szerepben
 - [2026-11-23_hr_jogi_variant_tervezet.md](2026-11-23_hr_jogi_variant_tervezet.md) — 2026-11-23 — HR jogi csomag: horvát jogra honosított tervezet (kikapcsolva)
 - [2026-11-22_orszag_reteg_3_10_horvat_javitokor.md](2026-11-22_orszag_reteg_3_10_horvat_javitokor.md) — 2026-11-22 — Ország-réteg 3/10: horvát javítókör (Elek HR leletei) + Elek ismétlés

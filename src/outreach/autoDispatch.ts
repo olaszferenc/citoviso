@@ -26,7 +26,7 @@ import { logLeadActivity, SYSTEM_ACTOR } from "../console/leadActivity.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import { ackCoversVerdicts, blockingVerdicts, hasPendingReview, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
+import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "./mockPhotoGate.js";
 import { MOCK_OWNER_APPROVED_SQL, MOCK_QA_PASSED_SQL, ownerApprovalBlock, QA_STALE_NOTE, qaBlockReason, qaReviewState } from "./mockQaReview.js";
 import { dailyCapFor, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { planChainPassed, secondPlanBlock, secondPlanOf } from "./secondPlan.js";
@@ -438,11 +438,11 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .selectFrom("outreach_dispatch")
       .select(["id", "lead_id", "artifact_id", "note"])
       .where("status", "=", "queued")
-      // Owner 2026-11-23: only leads with at least DISPATCH_MIN_OWN_PHOTOS own photos go out; the
-      // rest stay QUEUED, untouched, until the rule changes (no hold churn, no lost place).
-      .where(sql<boolean>`exists (select 1 from lead l where l.id = outreach_dispatch.lead_id and ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS})`)
-      // …and the mock that goes out actually shows them (2026-11-24) — else it stays queued for a rerender.
-      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWN_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
+      // Owner 2026-11-23: only leads with at least DISPATCH_MIN_OWN_PHOTOS own photos go out, and the
+      // mock that goes out actually shows them (2026-11-24); since 2026-11-25 (ADR-0479) a lead with
+      // fewer goes too when its mock carries the CURRENT town pick (mockPhotoGate.DISPATCH_PHOTOS_OK_SQL).
+      // The rest stay QUEUED, untouched, for a rerender (no hold churn, no lost place).
+      .where(sql<boolean>`exists (select 1 from lead l, mock_artifact a where l.id = outreach_dispatch.lead_id and a.id = outreach_dispatch.artifact_id and ${DISPATCH_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
       // …and the quality colleague passed it (owner 2026-11-25, mockQaReview.ts) — else it stays queued for the look.
       .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_QA_PASSED_SQL} and ${MOCK_OWNER_APPROVED_SQL})`)
       .orderBy(DISPATCH_PRIORITY)

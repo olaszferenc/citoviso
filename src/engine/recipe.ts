@@ -152,6 +152,19 @@ export interface TownPhoto {
   /** Licence short name, e.g. „CC BY-SA 4.0” or „Public domain”. */
   readonly license: string;
   readonly licenseUrl?: string;
+  /**
+   * The picker's stamp (media/townPick.ts, ADR-0479): which version and threshold judged it, from
+   * which tier („town” = the town itself, „land” = the landscape around, „region”). The send gate
+   * (mockPhotoGate) lets a no-/few-photo mock go only with the CURRENT stamp. Absent = the old
+   * single Wikipedia lookup (generator/townPhoto.ts, before 2026-11-25) — never sent.
+   */
+  readonly pick?: {
+    readonly version: number;
+    readonly threshold: string;
+    readonly tier: "town" | "land" | "region";
+    readonly score?: number;
+    readonly km?: number;
+  };
 }
 
 /** One amenity ON a unit: the owner's stored label plus the catalogue's icon markup. */
@@ -412,6 +425,14 @@ export interface SiteData {
    * never in `photos`, never on the live site.
    */
   readonly townPhoto?: TownPhoto;
+  /**
+   * LOCAL gallery pictures of the town (beach, main square, sight, landscape — media/townPick.ts,
+   * ADR-0479): free licence, credited like the town photo, shown in the MOCK's gallery after the own
+   * photos and before the sample rooms. Persisted with the mock; never in `photos`, never a hero.
+   */
+  readonly townGallery?: readonly TownPhoto[];
+  /** The sample-room style of the place (coast / mountains / city / village) — picks the MINTA rooms. */
+  readonly townStyle?: "mediterranean" | "alpine" | "rural" | "urban";
   /**
    * RENDER-TIME ONLY, mock phase (render.ts withStockFill) — never stored, never live.
    * `gallery`: watermarked illustrations the gallery shows AFTER the own photos (templates read

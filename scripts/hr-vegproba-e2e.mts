@@ -17,16 +17,23 @@
 //      payment (--barion-test) — the rest of the walk is the buyer persona's, in a browser;
 //   ⑦ the .com suggestion for „Apartmani Đurđa” (→ durda).
 //
-//   npx tsx scripts/hr-vegproba-e2e.mts [--barion-test]
+//   npx tsx scripts/hr-vegproba-e2e.mts [--barion-test | --barion-pay [--szamlazz-test]]
 import { readFileSync, readdirSync, rmSync } from "node:fs";
 import { buildHrWorld } from "./lib/hr-world.mts";
 
-const BARION_TEST = process.argv.includes("--barion-test");
+// --barion-pay: the sandbox payment is also PAID (test card, in a browser), the gateway callback is replayed
+// to the local console, and the chain runs on: paid → invoice in euros → activation (dry: mock registrar,
+// mock mail). Implies --barion-test. --szamlazz-test: the invoice is a real Számlázz.hu TEST-account
+// document (dev .env key, OV- prefix, no NAV) instead of the mock invoicer. A sandbox shop with a euro
+// account is needed: BARION_SANDBOX_ENV_FILE=<600 file> (scripts/lib/hr-world.mts barionSandboxEnv).
+const BARION_PAY = process.argv.includes("--barion-pay");
+const SZAMLAZZ_TEST = process.argv.includes("--szamlazz-test");
+const BARION_TEST = BARION_PAY || process.argv.includes("--barion-test");
 // The real gateway without a euro wallet keeps the HR market CLOSED (countryReadiness: wallet), so no
 // letter would go out at all; the world is built with the scratch-only wallet, the production setting is
 // measured in ⑥ a).
 if (BARION_TEST) process.env.BARION_WALLET_CURRENCIES = "HUF,EUR";
-const w = await buildHrWorld({ base: "citoviso_hrvegproba_e2e", payment: BARION_TEST ? "barion-test" : "mock" });
+const w = await buildHrWorld({ base: "citoviso_hrvegproba_e2e", payment: BARION_TEST ? "barion-test" : "mock", invoice: SZAMLAZZ_TEST ? "szamlazz-test" : "mock" });
 
 const { db } = await import("../src/db/client.js");
 
@@ -179,6 +186,64 @@ try {
   check("elutasító után: eszkalációs emlékeztető nem megy", x.sent === 0 && sent.length === 0, JSON.stringify(x));
 
   // ── ⑥ buyers, order, payment ────────────────────────────────────────────────────────────
+  /** --barion-pay: the buyer pays the sandbox page with Barion's test card, then the gateway callback is
+   *  replayed to the local console (the sandbox cannot reach https://citoviso.test) — the same idempotent
+   *  path a real callback takes (handleWebhook → GetPaymentState). */
+  async function payInSandbox(gatewayUrl: string): Promise<void> {
+    const barionId = new URL(gatewayUrl).searchParams.get("Id") ?? "";
+    const { chromium } = await import("playwright-core");
+    const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || `${process.env.HOME}/bin/chrome-for-testing`, headless: true });
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, locale: "hr-HR" });
+      await page.goto(gatewayUrl);
+      await page.waitForLoadState("networkidle").catch(() => {});
+      const body = await page.locator("body").innerText();
+      check("a Barion fizetőoldal euróban, horvátul („Plaćanje: … €”)", /Plaćanje:\s*[\d.,]+\s*€/.test(body), body.replace(/\s+/g, " ").slice(0, 200));
+      // Not elek@: the EUR test shop is registered to elek@ — Barion refuses „the shop owner can not pay
+      // in their own shop” (measured 2026-11-25). A guest payer address on the reserved example.com domain.
+      await page.fill("#EmailAddress", "ivan.babic.hr@example.com");
+      await page.fill("#CardNumber", "4444888888885559");
+      await page.fill("#CardExpiration", "12/30");
+      await page.fill("#CardCVC", "123");
+      await page.fill("#CardHolderName", "Ivan Babic");
+      await page.click("#StartGuestPayment");
+      // The sandbox redirects to our RedirectUrl (https://citoviso.test/… — unreachable here): wait for leaving secure.test.
+      await page.waitForURL((u) => !/secure\.test\.barion\.com\/Pay/.test(u.href), { timeout: 60_000 }).catch(() => {});
+      info("a sandbox-fizetés után", page.url().slice(0, 140));
+    } finally {
+      await browser.close();
+    }
+    const pay = await db.selectFrom("payment").select(["id", "status", "currency", "amount"]).where("gateway_ref", "=", barionId).executeTakeFirst();
+    const wh = await fetch(`${w.consoleOrigin}/pay/webhook/barion`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `PaymentId=${encodeURIComponent(barionId)}` });
+    info("a visszahívás (helyben)", `${wh.status} ${(await wh.text()).slice(0, 160)}`);
+    const after = pay ? await db.selectFrom("payment").select(["status", "currency", "amount"]).where("id", "=", pay.id).executeTakeFirst() : null;
+    check("a sandbox-fizetés kifizetve (paid), euróban", after?.status === "paid" && after.currency === "EUR", JSON.stringify({ before: pay, after }));
+    if (!pay) return;
+    // The invoice is made right after „paid” (applyWebhookResult) — the Számlázz-TESZT call may take a few seconds.
+    let inv: Record<string, unknown> | undefined;
+    for (let i = 0; i < 30 && !inv; i++) {
+      inv = (await db.selectFrom("invoice").selectAll().where("payment_id", "=", pay.id).orderBy("id", "desc").executeTakeFirst()) as never;
+      if (!inv) await new Promise((r) => setTimeout(r, 1000));
+    }
+    const invOk = !!inv && inv.status !== "failed" && inv.currency === "EUR";
+    check(`a számla euróban elkészült (${SZAMLAZZ_TEST ? "Számlázz.hu TESZT-fiók" : "mock számlázó"})`, invOk,
+      JSON.stringify(inv ? Object.fromEntries(Object.entries(inv).filter(([k]) => !/pdf|xml|raw/i.test(k))) : null).slice(0, 400));
+    if (inv) info("számla", JSON.stringify(Object.fromEntries(Object.entries(inv).filter(([k]) => /^(invoice_number|provider|currency|gross|net|vat_key|vat_rate|status|error|fx_rate|fx_date|buyer_country)$/.test(k)))).slice(0, 300));
+    const oi = await db.selectFrom("order_intent").selectAll().where("id", "=", (await db.selectFrom("payment").select("order_intent_id").where("id", "=", pay.id).executeTakeFirstOrThrow()).order_intent_id).executeTakeFirst() as Record<string, unknown> | undefined;
+    info("a rendelés a fizetés után", JSON.stringify(oi ? Object.fromEntries(Object.entries(oi).filter(([k]) => /^(status|tenant_id|domain_type|domain_name|price|currency|preset)$/.test(k))) : null).slice(0, 300));
+    // BY DESIGN (K-1, owner 2026-10-02; migration 0036 CHECK: kind='initial' ⇒ tenant_id IS NULL): an
+    // order_intent never moves past „submitted” — what it IS comes from its payments (orderIntentState),
+    // and a first order finds its tenant through the lead (revenueReport tenantOfLead). Measured here so a
+    // change to either side shows up.
+    const { orderIntentState } = await import("../src/console/views.js");
+    const pays = await db.selectFrom("payment").select(["order_intent_id as orderIntentId", "status", "created_at as createdAt"]).where("order_intent_id", "=", String(oi?.id)).execute();
+    const st = oi ? orderIntentState({ id: String(oi.id), kind: oi.kind as never, status: oi.status as never, createdAt: oi.created_at as never }, pays as never, []) : null;
+    check("a kezdő rendelés a fizetés után: a konzol „fizetve”-nek látja (submitted + paid fizetés), tenant_id üres — a bérlő a leaden át", st?.key === "paid" && oi?.status === "submitted" && oi?.tenant_id == null, JSON.stringify({ st, status: oi?.status, tenant_id: oi?.tenant_id }));
+    const tenant = await db.selectFrom("tenant").selectAll().where("lead_id", "=", w.leadId).executeTakeFirst() as Record<string, unknown> | undefined;
+    check("élesítés (száraz: mock regisztrátor, mock levél): a bérlő létrejött, aktív, a leadhez kötve", tenant?.status === "active",
+      JSON.stringify(tenant ? Object.fromEntries(Object.entries(tenant).filter(([k]) => /^(id|status|display_name|time_zone)$/.test(k))) : null).slice(0, 300));
+  }
+
   console.log("⑥ vevő → rendelés euróban → fizetés");
   const { validateBuyer } = await import("../src/billing/buyer.js");
   const base = { buyer_name: "Ivan Babić", buyer_country: "HR", buyer_zip: "21300", buyer_city: "Makarska", buyer_address: "Obala kralja Tomislava 12", buyer_email: "elek@citoviso.com" };
@@ -197,12 +262,14 @@ try {
   const { PRESETS } = await import("../src/modules.js");
   const offer = await db.selectFrom("offer").select(["kind", "percent"]).where("prospect_id", "=", w.prospectId).execute();
   const pct = offer.find((o) => o.kind === "outreach")?.percent ?? 0;
-  const mods = PRESETS.find((p) => p.id === "ajanlott")!.modules;
+  // The paid probe takes the smallest package („alap”, 7 €/hó in the hr layer) — a real payment, kept small.
+  const PRESET = BARION_PAY ? "alap" : "ajanlott";
+  const mods = PRESETS.find((p) => p.id === PRESET)!.modules;
   const list = computeMonthly(mods, "hr");
   const fee = domainFeeForCycle(1, "hr", { domain: "apartmanilavanda.com", modules: mods, disabled: new Set() } as never);
   const price = applyOffer(list, { percent: pct }) + fee;
   const order = (extra: Record<string, unknown> = {}) => cPost(`/p/${w.token}/request`, {
-    modules: mods, preset: "ajanlott", billing_period: "monthly", domain_type: "citoviso_registered", domain_name: "apartmanilavanda.com",
+    modules: mods, preset: PRESET, billing_period: "monthly", domain_type: "citoviso_registered", domain_name: "apartmanilavanda.com",
     photo_rights_declared: true, recurring_consent: true, withdrawal_waiver: true, terms_accepted: true, price,
     buyer_type: "individual", ...base, ...extra,
   });
@@ -228,12 +295,16 @@ try {
     const j2 = (await o2.json().catch(() => ({}))) as { ok?: boolean; payUrl?: string; pending?: boolean; error?: string };
     check("scratch + BARION_WALLET_CURRENCIES=HUF,EUR: a rendelés átmegy a kapun", j2.ok === true, JSON.stringify(j2).slice(0, 300));
     if (j2.payUrl) {
-      const go = await cGet(local(j2.payUrl));
-      const loc = go.headers.get("location") ?? "";
-      const goHtml = loc ? "" : await go.text();
-      const sandbox = loc || (goHtml.match(/https:\/\/secure\.test\.barion\.com[^"'<\s]*/)?.[0] ?? "");
-      check("a Barion SANDBOX-fizetés elindult (secure.test.barion.com)", /secure\.test\.barion\.com/.test(sandbox), `${go.status} ${loc || goHtml.slice(0, 300)}`);
+      // The order answer carries either our stable /pay/go/… link or the gateway's own page directly
+      // (measured 2026-11-25: the sandbox Pay?Id=… URL) — the latter is not a console path.
+      const direct = /^https:\/\/secure\.test\.barion\.com\//.test(j2.payUrl);
+      const go = direct ? null : await cGet(local(j2.payUrl));
+      const loc = go?.headers.get("location") ?? "";
+      const goHtml = !go || loc ? "" : await go.text();
+      const sandbox = direct ? j2.payUrl : loc || (goHtml.match(/https:\/\/secure\.test\.barion\.com[^"'<\s]*/)?.[0] ?? "");
+      check("a Barion SANDBOX-fizetés elindult (secure.test.barion.com)", /secure\.test\.barion\.com/.test(sandbox), `${go?.status ?? "direct"} ${loc || goHtml.slice(0, 300) || j2.payUrl}`);
       if (sandbox) console.log(`  · SANDBOX-URL (a vevő-perszóna fizeti tesztkártyával): ${sandbox}`);
+      if (sandbox && BARION_PAY) await payInSandbox(sandbox);
     } else {
       // Measured 2026-11-22: the sandbox shop answers „NotExistingCurrency — Payment is not supported”
       // for EUR (see the [console] pay-link line above) — the TEST shop has no euro wallet either.

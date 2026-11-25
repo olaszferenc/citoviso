@@ -266,9 +266,15 @@ console.log("⑨ no own photo + town photo → the town is the hero, credited; o
     const live = renderSite(recipe(t), d, { phase: "live" });
     check(`${t} LIVE: a településfotó, a forrás-sor és a minta-felirat is ott van (tulaj 11-16)`, live.includes("Koveskal.jpg") && live.includes("cit-town-credit") && live.split("Néhány kép minta: a helyükre a szállás saját fotói kerülnek.").length === 2);
   }
-  // A lead WITH own photos keeps them as the hero even when a town photo is stored.
+  // Plan kepnelkuli-hero ⑨ (ADR-0479, 2026-11-25): a few-photo lead's stored town photo means the generator
+  // judged its own first photo no outside view — the town opens the page, the own photos follow, each once,
+  // credited. (Before 2026-11-25 the generator stored a town photo only for a lead with no own photo.)
   const own2 = renderSite(recipe("parallax"), lead(2, { townPhoto: town }), { phase: "mock" });
-  check("saját képnél a településfotó nem kerül a lapra", !own2.includes("Koveskal.jpg") && !own2.includes("cit-town-credit"));
+  check("kevés saját képnél a tárolt településfotó a hero, forrásmegjelöléssel", (heroSrc(own2) ?? "").includes("Koveskal.jpg") && own2.includes("cit-town-credit"));
+  check("…és a saját képek is a lapon maradnak", own2.includes("own-1") || own2.includes("own1") || extractImageRefs(own2).length >= 3);
+  // Without a stored town photo the own photo stays the hero (the generator's choice for an outside view).
+  const own3 = renderSite(recipe("parallax"), lead(2), { phase: "mock" });
+  check("településfotó nélkül a saját kép a hero", !own3.includes("Koveskal.jpg") && !own3.includes("cit-town-credit"));
   // 1–5 own photos: the stock is clean, so the same one note marks it.
   const thin = renderSite(recipe("parallax"), lead(2), { phase: "mock" });
   check("1–5 saját képnél is EGY minta-felirat a galéria alatt", thin.split(NOTE).length === 2);

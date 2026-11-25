@@ -14,7 +14,10 @@
 //   subject  — not a picture of the lodging: the local classifier (media/photoKind.ts) sees a
 //              document, plan, ad, toilet, map, logo — or a sight of the area off the hero; also
 //              a cached paid vision verdict of ad / sign-map / document / toilet
-//   stock    — any stock illustration (public/assets/stock) on the page
+//   stock    — a sample picture (public/assets/stock or the styled library, engine/stock.ts) anywhere
+//              but a MARKED gallery / room-card slot: in the hero, the opening, a band, the contact
+//              picture, or without its „MINTA” mark (ADR-0479, plan kepnelkuli-hero ⑩; until
+//              2026-11-25 any sample picture failed the page)
 //   overflow — the page is wider than the phone (horizontal scroll)
 //   broken   — an image that does not load
 //   render   — the page could not be rendered at all (no render = no send)
@@ -42,9 +45,23 @@ import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
 import { bandScore, classifyPhotoBuffer, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
+import { stockUrl } from "../engine/stock.js";
+import { judgeTownPicture } from "../media/townPick.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 10;
+export const RENDER_GATE_VERSION = 11;
+
+/** A town page (no / few own photos, plan kepnelkuli-hero) carries at least this many distinct pictures (coordinator 2026-11-25: „tele kell lennie képpel”). */
+export const TOWN_PAGE_MIN_PICTURES = 12;
+
+/** The only places a MARKED sample picture may stand (plan kepnelkuli-hero ⑩, ADR-0479). */
+const SAMPLE_MODULES = new Set(["gallery", "rooms"]);
+
+/** The mock's town pictures (siteData.townPhoto / townGallery) — judged by the town rule, not the lodging rule. */
+export interface TownUrls {
+  readonly hero?: string;
+  readonly gallery: readonly string[];
+}
 
 const VIEWPORT = { width: 390, height: 844 };
 /** The letter's picture (heroShot.ts VIEWPORT): its first screen is measured too. */
@@ -52,11 +69,13 @@ const DESKTOP_VIEWPORT = { width: 1216, height: 760 };
 /** An image smaller than this on screen is an icon / logo / avatar, not a photo slot. */
 const MIN_SLOT_PX = 80;
 const IMG_GAP_MS = 400;
+/** Network quiet = no request in flight and none started or finished for this long (Playwright's networkidle uses 500 ms). */
+const QUIET_MS = 500;
 
 /** Vision subjects that never belong on a lodging page shown to its owner. */
 const FORBIDDEN_SUBJECTS = new Set(["ad_banner", "sign_map", "people_doc", "toilet"]);
 
-export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render";
+export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render" | "thin";
 
 export interface RenderFinding {
   readonly code: RenderFindingCode;
@@ -76,6 +95,8 @@ export interface RenderGateResult {
 
 interface Slot {
   readonly u: string;
+  /** The <img> carries the „MINTA” mark (render.ts withSampleMarks). */
+  readonly sample?: boolean;
   readonly y: number;
   readonly x: number;
   readonly w: number;
@@ -123,7 +144,7 @@ const MEASURE_JS = `(() => {
   const push = (el, u) => {
     const r = el.getBoundingClientRect();
     if (r.width < MIN || r.height < MIN || !shown(el)) return;
-    slots.push({ u, y: Math.round(r.top + scrollY), x: Math.round(r.left), w: Math.round(r.width), h: Math.round(r.height), mod: modOf(el) });
+    slots.push({ u, y: Math.round(r.top + scrollY), x: Math.round(r.left), w: Math.round(r.width), h: Math.round(r.height), mod: modOf(el), sample: el.tagName === "IMG" && el.hasAttribute("data-cit-sample") });
   };
   for (const img of Array.from(document.images)) {
     const u = img.currentSrc || img.src;
@@ -182,10 +203,24 @@ const MEASURE_JS = `(() => {
 })()`;
 
 /**
+ * The bytes a town picture was PICKED on (media/townPick.ts judges the 330 px Wikimedia thumbnail): the
+ * gate re-judges the very same input, so a borderline score cannot flip between the pick and the page
+ * (Garáb, 2026-11-25: „sports ground” on the 1920 px file, a village view on the 330 px one). Falls back
+ * to the page's own bytes when the thumbnail cannot be fetched.
+ */
+async function townJudgeBytes(url: string, pageBytes: Buffer): Promise<Buffer> {
+  const small = url.replace(/\/(?:960|1280|1920)px-/, "/330px-");
+  if (small === url) return pageBytes;
+  const r = await fetch(small, { headers: { "user-agent": PORTAL_USER_AGENT }, signal: AbortSignal.timeout(15000) }).catch(() => null);
+  return r?.ok ? Buffer.from(await r.arrayBuffer()) : pageBytes;
+}
+
+/**
  * Render one mock HTML file like a phone and judge it. Pure of the DB except for reading the
  * cached vision verdicts (no paid call). Throws only on a launch failure.
  */
-export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateResult, "mtime" | "at" | "version">> {
+export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery: [] }): Promise<Omit<RenderGateResult, "mtime" | "at" | "version">> {
+  const isTown = (u: string): boolean => (town.hero != null && sizelessPhotoKey(u) === sizelessPhotoKey(town.hero)) || town.gallery.some((g) => sizelessPhotoKey(g) === sizelessPhotoKey(u));
   const photos = createPhotoCache();
   const bodies = new Map<string, Buffer>();
   const failedNet = new Set<string>();
@@ -195,6 +230,7 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     throw e;
   });
   let measure: PageMeasure;
+  let opening: PageMeasure = { slots: [], broken: [], scrollWidth: 0, innerWidth: 0, wideText: [], brokenWords: [] };
   try {
     // The PAGE renders with the browser's own UA: Google Fonts answers a bot UA with another font
     // file, the headline then fits where a phone's Fraunces does not (measured 11-24, Crystal
@@ -208,6 +244,30 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     page.on("requestfailed", (r) => {
       if (r.resourceType() === "image") failedNet.add(r.url());
     });
+    // OWN NETWORK-QUIET COUNTER (2026-11-25). Playwright's waitForLoadState("networkidle") after the
+    // scroll walk NEVER resolved here (measured 2/2 mocks: the full 60 s timeout every time, no request
+    // pending) — 60 s of idling per audited mock, 18 min per fixture gate, +60 s per lead in the send
+    // gate. The condition the measurement needs is exactly this: every request the page started has
+    // finished or failed, and nothing new started for QUIET_MS. Same 60 s upper bound as before.
+    const inflight = new Set<object>();
+    let lastNet = Date.now();
+    page.on("request", (r) => {
+      inflight.add(r);
+      lastNet = Date.now();
+    });
+    const settle = (r: object) => {
+      inflight.delete(r);
+      lastNet = Date.now();
+    };
+    page.on("requestfinished", settle);
+    page.on("requestfailed", settle);
+    const networkQuiet = async (timeoutMs: number): Promise<void> => {
+      const end = Date.now() + timeoutMs;
+      while (Date.now() < end) {
+        if (inflight.size === 0 && Date.now() - lastNet >= QUIET_MS) return;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    };
     const hostChain = new Map<string, Promise<void>>();
     await page.route("**/*", async (route) => {
       if (route.request().resourceType() !== "image") return route.continue();
@@ -259,14 +319,14 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     await page.goto(`file://${mockAbs}`, { waitUntil: "networkidle", timeout: 60000 });
     // The first screen exactly as it opens (the hero's fitted headline can reflow after a scroll).
     await page.waitForTimeout(1200);
-    const opening = (await page.evaluate(MEASURE_JS)) as PageMeasure;
+    opening = (await page.evaluate(MEASURE_JS)) as PageMeasure;
     // Walk the page so lazy images load, then measure from the top.
     const height = (await page.evaluate("document.documentElement.scrollHeight")) as number;
     for (let y = 0; y < height; y += VIEWPORT.height / 2) {
       await page.evaluate(`window.scrollTo(0, ${y})`);
       await page.waitForTimeout(120);
     }
-    await page.waitForLoadState("networkidle", { timeout: 60000 }).catch(() => undefined);
+    await networkQuiet(60000);
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(300);
     const walked = (await page.evaluate(MEASURE_JS)) as PageMeasure;
@@ -294,6 +354,16 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
 
   const findings: RenderFinding[] = [];
   const slots = measure.slots;
+
+  // A TOWN PAGE, measured as a phone opens it (coordinator 2026-11-25): the first screen, unscrolled, shows a
+  // real, loaded picture in the hero (a parallax layer that never paints = a grey band), and the page holds
+  // at least TOWN_PAGE_MIN_PICTURES distinct pictures. A failing page is regenerated, never sent.
+  if (town.hero || town.gallery.length) {
+    const heroShown = opening.slots.some((sl) => sl.y < VIEWPORT.height && sl.h >= VIEWPORT.height * 0.3 && !opening.broken.includes(sl.u));
+    if (!heroShown) findings.push({ code: "thin", detail: "mobilon az első képernyőn nincs betöltött nyitókép (szürke sáv)" });
+    const distinct = new Set(slots.map((sl) => sizelessPhotoKey(sl.u))).size;
+    if (distinct < TOWN_PAGE_MIN_PICTURES) findings.push({ code: "thin", detail: `kevés kép a lapon: ${distinct} (legalább ${TOWN_PAGE_MIN_PICTURES} kell)` });
+  }
 
   // repeat — group slots by picture (URL key, then dHash), ignore stacked layers of one place.
   const hashOf = new Map<string, string | undefined>();
@@ -338,7 +408,15 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     // THE HERO SHOWS THE LODGING AT ITS BEST (11-24: a bathroom mirror, a stove, a Booking award
     // banner opened 9 of 18 letters) — never a bathroom, toilet, kitchen or a non-lodging picture.
     const heroBytes = heroUrl ? bodies.get(heroUrl) : undefined;
-    if (heroUrl && heroBytes) {
+    if (heroUrl && heroBytes && isTown(heroUrl)) {
+      // The TOWN's picture opens the page (plan kepnelkuli-hero, ADR-0479): re-judged with the very rule
+      // that picked it (media/townPick.ts) — a vehicle, an interior, a road, a dusk field never opens.
+      const tv = await judgeTownPicture(await townJudgeBytes(heroUrl, heroBytes), "town", true);
+      if (!tv) findings.push({ code: "render", detail: "a településkép-szabály nem futtatható — ellenőrizetlen nyitókép nem mehet ki" });
+      else if (!tv.ok) findings.push({ code: "subject", detail: `a település-nyitókép elbukik a szabályon (${tv.reason}): ${fileOf(heroUrl)}` });
+    } else if (heroUrl && stockUrl(heroUrl)) {
+      findings.push({ code: "stock", detail: `mintakép a nyitóképen: ${fileOf(heroUrl)}` });
+    } else if (heroUrl && heroBytes) {
       const hv = await classifyPhotoBuffer(heroBytes);
       if (hv && !isHeroWorthy(hv)) {
         findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv.label}): ${fileOf(heroUrl)}` });
@@ -369,7 +447,10 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     for (const m of html.matchAll(/class="t-conphoto"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
     const heroHash = heroBytes ? await dHashFromBuffer(heroBytes).catch(() => undefined) : undefined;
     for (const u of opening) {
-      if (/\/assets\/stock\//.test(u)) continue;
+      if (stockUrl(u)) {
+        findings.push({ code: "stock", detail: `mintakép a nyitásban / sávban / kapcsolat-képen: ${fileOf(u)}` });
+        continue;
+      }
       let b = bodies.get(u) ?? (await photos.read(u))?.body;
       if (!b && /^https?:/.test(u)) {
         const r = await fetch(u, { headers: { "user-agent": PORTAL_USER_AGENT } }).catch(() => null);
@@ -388,6 +469,12 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
         continue;
       }
       if (!b) continue; // not served → the broken-image rule speaks for it
+      if (isTown(u)) {
+        // A town page's band shows the town's LOCAL picture (templateKit.allotPhotos): the town rule judges it.
+        const tv = await judgeTownPicture(await townJudgeBytes(u, b));
+        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a sávban lévő helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}` });
+        continue;
+      }
       const v = await classifyPhotoBuffer(b);
       if (v && !isShowcase(v)) {
         findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${v.label}): ${fileOf(u)}` });
@@ -398,7 +485,14 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     }
     for (const u of urls) {
       const b = bodies.get(u);
-      if (!b || /\/assets\/stock\//.test(u)) continue;
+      if (!b || stockUrl(u)) continue;
+      if (isTown(u)) {
+        // A local picture of the town (gallery) is a sight by design: the town rule judges it.
+        if (u === heroUrl) continue;
+        const tv = await judgeTownPicture(await townJudgeBytes(u, b));
+        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}` });
+        continue;
+      }
       const v = await classifyPhotoBuffer(b);
       if (isOffPagePhoto(v, u === heroUrl)) {
         findings.push({
@@ -411,8 +505,12 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     }
   }
 
-  for (const u of urls.filter((x) => /\/assets\/stock\//.test(x))) {
-    findings.push({ code: "stock", detail: `stock kép a lapon: ${fileOf(u)}` });
+  // A sample picture only in a MARKED gallery / room-card slot (plan kepnelkuli-hero ⑩).
+  const heroSlotUrl = slots.find((s) => s.mod === "header#top" || s.y < 10)?.u;
+  for (const sl of slots.filter((x) => stockUrl(x.u))) {
+    if (sl.u === heroSlotUrl) continue; // reported above
+    if (!SAMPLE_MODULES.has(sl.mod)) findings.push({ code: "stock", detail: `mintakép nem galéria- / szobahelyen (${sl.mod}): ${fileOf(sl.u)}` });
+    else if (!sl.sample) findings.push({ code: "stock", detail: `jelöletlen mintakép („MINTA” nélkül): ${fileOf(sl.u)}` });
   }
 
   if (measure.scrollWidth > measure.innerWidth + 1) {
@@ -461,7 +559,12 @@ export async function renderGateFor(artifactId: string): Promise<RenderGateResul
   if (cached) return cached;
   let result: RenderGateResult;
   try {
-    const r = await auditMockFile(mockAbs);
+    const sd = (a.inputs as { siteData?: { townPhoto?: { url?: string }; townGallery?: { url?: string }[] } } | null)?.siteData;
+    const town: TownUrls = {
+      ...(sd?.townPhoto?.url ? { hero: sd.townPhoto.url } : {}),
+      gallery: (sd?.townGallery ?? []).map((t) => t.url).filter((u): u is string => typeof u === "string"),
+    };
+    const r = await auditMockFile(mockAbs, town);
     result = { version: RENDER_GATE_VERSION, mtime, at: now, ...r };
   } catch (e) {
     // Not stored: a crashed browser is our gap, the next send attempt renders again.

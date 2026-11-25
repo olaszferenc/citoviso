@@ -1617,6 +1617,24 @@ export interface SitePlaceRatingTable {
 /** 0060: per-photo hero suitability, keyed by the query-less URL (photoKey()).
  *  Pixel size says nothing about SUBJECT — a 1200px outhouse shot passed every
  *  size/URL gate and became a hero. This caches what the vision pass saw. */
+/** 0153 (ADR-0479): the town's picked photos for leads with no / few own photos (media/townPhotoSet.ts). */
+export interface TownPhotoSetTable {
+  country: string;
+  city_key: string;
+  city: string;
+  lat: number | null;
+  lon: number | null;
+  version: number;
+  threshold: string;
+  tier: "town" | "land" | "region" | "none";
+  style: "mediterranean" | "alpine" | "rural" | "urban";
+  heroes: JSONColumnType<unknown[]>;
+  gallery: JSONColumnType<unknown[]>;
+  stats: JSONColumnType<Record<string, unknown>>;
+  trigger: string;
+  picked_at: Generated<Timestamp>;
+}
+
 /** 0152 (ADR-0472 depth hero): one depth map per photo URL (photoKey), the PNG under sites/_depth/. */
 export interface PhotoDepthMapTable {
   url_key: string;
@@ -2437,6 +2455,7 @@ export interface Database {
   site_place_rating: SitePlaceRatingTable;
   photo_hero_score: PhotoHeroScoreTable;
   photo_depth_map: PhotoDepthMapTable;
+  town_photo_set: TownPhotoSetTable;
   settlement: SettlementTable;
   settlement_cover: SettlementCoverTable;
   event_gather_run: EventGatherRunTable;
