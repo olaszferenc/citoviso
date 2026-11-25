@@ -21,6 +21,7 @@ import { db } from "../src/db/client.js";
 import { DISPATCH_PRIORITY } from "../src/outreach/autoDispatch.js";
 import { ensureHeroShot } from "../src/outreach/heroShot.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "../src/outreach/mockPhotoGate.js";
+import { secondPlanOf } from "../src/outreach/secondPlan.js";
 import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
@@ -129,7 +130,7 @@ async function queue(limit: number): Promise<void> {
     .selectFrom("outreach_dispatch")
     .innerJoin("mock_artifact as a", "a.id", "outreach_dispatch.artifact_id")
     .innerJoin("lead as l", "l.id", "outreach_dispatch.lead_id")
-    .select(["outreach_dispatch.artifact_id as artifactId", "l.name as name", "a.inputs as inputs"])
+    .select(["outreach_dispatch.artifact_id as artifactId", "outreach_dispatch.lead_id as leadId", "l.name as name", "a.inputs as inputs"])
     // Queued rows, and rows already on the owner's page whose mock changed since the pass (stale → look again).
     .where((eb) => eb.or([
       eb("outreach_dispatch.status", "=", "queued"),
@@ -145,16 +146,25 @@ async function queue(limit: number): Promise<void> {
   let shown = 0;
   for (const r of rows) {
     if (shown >= limit) break;
-    const st = await qaReviewState(r.artifactId);
-    if (st.state === "pass" || st.state === "fail") continue;
-    const gate = await renderGateFor(r.artifactId);
-    if (gate.verdict === "fail") {
-      console.log(`\n⛔ ${r.artifactId} · ${r.name} — a gépi kapu megfogta, újragenerálás kell (nem a te dolgod): ${renderGateReason(gate)}`);
-      continue;
+    // Both plans of the offer (owner 2026-11-25: „Csak az hagyható jóvá, ahol van második terv is.”) —
+    // the second plan once the folyamat refreshed it with the current generator.
+    const alt = await secondPlanOf(r.leadId, r.artifactId);
+    const plans: { id: string; label: string }[] = [{ id: r.artifactId, label: "1. terv" }];
+    if (alt?.current) plans.push({ id: alt.id, label: "2. terv" });
+    else if (!alt) console.log(`\n⏭ ${r.name} — nincs második terv, a megkeresés így nem mehet ki (nem a te dolgod)`);
+    for (const pl of plans) {
+      if (shown >= limit) break;
+      const st = await qaReviewState(pl.id);
+      if (st.state === "pass" || st.state === "fail") continue;
+      const gate = await renderGateFor(pl.id);
+      if (gate.verdict === "fail") {
+        console.log(`\n⛔ ${pl.id} · ${r.name} (${pl.label}) — a gépi kapu megfogta, újragenerálás kell (nem a te dolgod): ${renderGateReason(gate)}`);
+        continue;
+      }
+      shown++;
+      console.log(`\n▶ ${pl.id} · ${r.name} (${pl.label})${st.state === "stale" ? " (újra: a mock az előző átnézés óta változott)" : ""}`);
+      for (const f of await shots(pl.id)) console.log(`   ${f}`);
     }
-    shown++;
-    console.log(`\n▶ ${r.artifactId} · ${r.name}${st.state === "stale" ? " (újra: a mock az előző átnézés óta változott)" : ""}`);
-    for (const f of await shots(r.artifactId)) console.log(`   ${f}`);
   }
   if (!shown) console.log("Nincs átnézendő mock a sorban.");
 }

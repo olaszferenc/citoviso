@@ -22,6 +22,7 @@ import { gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../media/photoKind.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
 import { APPROVAL_PENDING_NOTE, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
+import { secondPlanOf } from "../outreach/secondPlan.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "./depthArm.js";
 import { persistMockLanguage, renderMockMeasured } from "./mockLanguage.js";
 import { secureMockPhotos } from "./photoTransport.js";
@@ -136,6 +137,35 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     } catch (e) {
       failed++;
       console.warn(`  ⚠️ mock-frissítés ${r.id}: ${e instanceof Error ? e.message : String(e)}`); // i18n-exempt: operator log
+    }
+  }
+  // THE SECOND PLAN of every row waiting for the chain is refreshed too (owner 2026-11-25: the letter
+  // needs both plans) — rows whose own plan is already current first, so a whole offer gets ready.
+  if (Date.now() - started <= budgetMs) {
+    const waiting = await db
+      .selectFrom("outreach_dispatch as d")
+      .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
+      .innerJoin("lead as l", "l.id", "d.lead_id")
+      .select(["d.lead_id as leadId", "d.artifact_id as mainId"])
+      .where("d.status", "in", ["queued", "held"])
+      .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+      .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
+      .where(MOCK_CURRENT_GENERATOR_SQL)
+      .orderBy("d.queued_at")
+      .execute();
+    for (const w of waiting) {
+      if (Date.now() - started > budgetMs) break;
+      const alt = await secondPlanOf(w.leadId, w.mainId);
+      if (!alt || alt.current) continue;
+      const row = await db.selectFrom("mock_artifact").select(["id", "lead_id", "path", "inputs", "generated_at"]).where("id", "=", alt.id).executeTakeFirst();
+      if (!row) continue;
+      try {
+        await refreshMock(row, { backupDir });
+        refreshed++;
+      } catch (e) {
+        failed++;
+        console.warn(`  ⚠️ 2. terv frissítése ${alt.id}: ${e instanceof Error ? e.message : String(e)}`); // i18n-exempt: operator log
+      }
     }
   }
   const leftRow = await db

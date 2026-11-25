@@ -244,8 +244,14 @@ export async function classifyPhotoUrl(url: string, bytes?: Buffer): Promise<Pho
  */
 export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   if (!v) return false;
-  return v.kind === "never" || v.kind === "junk" || (v.kind === "sight" && !isHero);
+  if (v.kind === "never" || v.kind === "junk" || (v.kind === "sight" && !isHero)) return true;
+  // A bathroom or a toilet is never on the page, gallery included (quality colleague, 11-25: Lili's WC
+  // with the washing machine, Zalabéri's shower curtain and sink — failed every time).
+  const p = v.probs ?? {};
+  return v.label === "a bathroom with a shower" || v.label === "a toilet" || (p["a bathroom with a shower"] ?? 0) + (p["a toilet"] ?? 0) >= BATHROOM_OFF_PAGE;
 }
+/** Bathroom + toilet mass from which a photo leaves the page. */
+export const BATHROOM_OFF_PAGE = 0.35;
 
 /** What a hero shows at its best: the place from outside, its garden, pool, view (full weight). */
 const HERO_OUTSIDE = ["the outside of a house", "a guesthouse building", "a garden with a terrace", "a swimming pool", "a balcony with a view", "a lake shore", "a courtyard"];
@@ -273,8 +279,35 @@ export function heroScore(v: PhotoKind): number {
 export function isHeroWorthy(v: PhotoKind): boolean {
   if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
   if (NOT_HERO_TOP.has(v.label) || backstageMass(v) >= BACKSTAGE_MAX) return false;
+  // 11-25 (quality colleague, evening round): a dark corridor, a dark outbuilding corner and a sky over a
+  // far town were heroes — the first screen must be bright and show the PLACE itself.
+  if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
+  const p = v.probs ?? {};
+  const place = (p["the outside of a house"] ?? 0) + (p["a guesthouse building"] ?? 0) + (p["a garden with a terrace"] ?? 0) + (p["a swimming pool"] ?? 0) + (p["a courtyard"] ?? 0) + (p["a living room"] ?? 0) + (p["a bedroom with a bed"] ?? 0) + (p["a hotel room interior"] ?? 0);
+  if (place < HERO_MIN_PLACE) return false;
   return heroScore(v) >= 0.25;
 }
+/** Mean luma below this is too dark for the first screen. */
+export const HERO_MIN_LUMA = 80;
+/** The house / its garden / its rooms must hold at least this mass (not a view, not a lake, not a sky). */
+export const HERO_MIN_PLACE = 0.3;
+
+/**
+ * How good a photo is as a full-bleed band (0 = not fit): the place itself, bright, wide. The bands take
+ * the best scorers, not the next photo in line (11-25 evening: bedding, a lamp, a dark sofa, an empty
+ * car park still filled bands).
+ */
+export function bandScore(v: PhotoKind): number {
+  if (!isBandWorthy(v)) return 0;
+  if (v.quality && v.quality.luma < BAND_GOOD_LUMA) return 0;
+  const p = v.probs ?? {};
+  if ((p["a parking lot"] ?? 0) + (p["a car"] ?? 0) + (p["a street with parked cars"] ?? 0) + (p["a street"] ?? 0) >= 0.08) return 0;
+  const s = heroScore(v);
+  return s >= BAND_MIN_SCORE ? +s.toFixed(4) : 0;
+}
+/** A band below this place-score stays empty (the template drops or flattens it). */
+export const BAND_MIN_SCORE = 0.3;
+export const BAND_GOOD_LUMA = 85;
 
 /**
  * May this photo stand in the opening sequence (the wordmark-grow intro cycle, the gate leaf, the

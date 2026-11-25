@@ -8,7 +8,7 @@
 //      the front, so a bathtub there opens the page just as a bathtub hero would (11-24);
 //      those shots also carry Photo.backstage, and the opening sequence skips them
 
-import { classifyPhotoUrl, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
+import { bandScore, classifyPhotoUrl, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
 
 export interface CuratedPhotos<T> {
@@ -35,9 +35,10 @@ export async function curateMockPhotos<T extends { url: string }>(input: readonl
     const v = kindOf(p);
     const backstage = i > 0 && v != null && !isShowcase(v);
     // A close-up / dark / non-scene shot never fills a full-bleed band (11-25, quality colleague).
-    const notBand = i > 0 && v != null && !isBandWorthy(v);
-    const { backstage: _old, notBand: _oldBand, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean };
-    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}) } as T & { dhash?: string };
+    const bs = v != null ? bandScore(v) : undefined;
+    const notBand = i > 0 && v != null && (!isBandWorthy(v) || !bs);
+    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number };
+    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}) } as T & { dhash?: string };
   });
   return {
     photos: ordered,

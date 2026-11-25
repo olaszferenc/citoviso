@@ -22,6 +22,7 @@ import path from "node:path";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderMockMeasured } from "../src/generator/mockLanguage.js";
 import { curateMockPhotos } from "../src/generator/photoCurate.js";
+import { DISPATCH_MIN_OWN_PHOTOS } from "../src/outreach/mockPhotoGate.js";
 import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../src/media/photoKind.js";
 import { auditMockFile } from "../src/outreach/mockRenderGate.js";
@@ -54,6 +55,7 @@ const keep = process.env.MOCK_FIXTURES_KEEP;
 const dir = keep ? path.resolve(keep) : await mkdtemp(path.join(os.tmpdir(), "cit-mock-fixtures-"));
 if (keep) await mkdir(dir, { recursive: true });
 let failed = 0;
+let skipped = 0;
 try {
   for (const f of fixtures) {
     // The generator's own photo step (dedup · not-the-lodging off · best hero first) — the check
@@ -64,6 +66,14 @@ try {
       const c = await curateMockPhotos(siteData.photos as readonly { url: string }[]);
       siteData = { ...siteData, photos: c.photos as SiteData["photos"] };
       if (c.heroMoved) heroNote = "  (nyitókép cserélve)";
+      // Fewer good own photos than the send chain asks for → this lead never goes out (the chain's
+      // MOCK_OWN_PHOTOS_OK_SQL holds it): not a code failure, said out loud (2026-11-25: bathrooms off
+      // the page left Vörösmarty tér with 4).
+      if (c.photos.length < DISPATCH_MIN_OWN_PHOTOS) {
+        skipped++;
+        console.log(`⏭  ${f.tpl.padEnd(13)} ${f.name}  — ${c.photos.length} jó saját kép marad (< ${DISPATCH_MIN_OWN_PHOTOS}): kiesik a kiküldésből, nem renderelem`);
+        continue;
+      }
       if (f.tpl === "gate-opening") {
         // Recomputed like the generator does — never the stored one (it may be today's hero).
         const pick = gatePhotoOf(c.photos as never);
@@ -89,5 +99,5 @@ if (failed) {
   console.error(`⛔ mock-render-fixtures-check: ${failed}/${fixtures.length} minta-mock elbukott a renderelt minőségkapun — ez a kód nem mehet ki`);
   process.exit(1);
 }
-console.log(`✅ mock-render-fixtures-check: mind a ${fixtures.length} minta-mock (3 sablon) tiszta — nincs ismétlődő, stock, nem szállás-kép, nincs levágott szöveg.`);
+console.log(`✅ mock-render-fixtures-check: mind a ${fixtures.length - skipped} minta-mock (3 sablon) tiszta — nincs ismétlődő, stock, nem szállás-kép, nincs levágott szöveg.${skipped ? ` (${skipped} minta kiesik a kiküldésből: kevés jó saját kép)` : ""}`);
 process.exit(0);

@@ -40,7 +40,7 @@ import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { classifyPhotoBuffer, isBandWorthy, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
+import { bandScore, classifyPhotoBuffer, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
@@ -391,7 +391,7 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       const v = await classifyPhotoBuffer(b);
       if (v && !isShowcase(v)) {
         findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${v.label}): ${fileOf(u)}` });
-      } else if (v && bands.has(u) && !isBandWorthy(v)) {
+      } else if (v && bands.has(u) && !bandScore(v)) {
         // A band is a screen of its own: a close-up, a dark shot or a thing instead of a place fails (11-25).
         findings.push({ code: "subject", detail: `a széles sávképen közelkép / sötét / nem a helyet mutató kép (${v.label}): ${fileOf(u)}` });
       }
