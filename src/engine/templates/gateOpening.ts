@@ -112,7 +112,15 @@ export function gatePhotoOf(photos: readonly Photo[], explicit?: Photo): Photo |
   // The tenant's own choice wins (ADR-0423: „tudja majd tenant ezt is konfigurálni”).
   if (distinct(explicit)) return explicit;
   // Never a kitchen/bathroom shot on the leaves (Photo.backstage, 2026-11-24).
-  const rest = photos.slice(1).filter((p) => distinct(p) && !p.backstage);
+  // …and the best wide shot first (photoKind.bandScore via photoCurate, 2026-11-25: Sunset Villa's leaves
+  // were its kitchen-living corner, the first photo in line). A close-up / dark / non-scene photo
+  // (notBand) only when nothing else is left; the order is otherwise kept.
+  const rest = photos
+    .slice(1)
+    .filter((p) => distinct(p) && !p.backstage)
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => Number(Boolean(a.p.notBand)) - Number(Boolean(b.p.notBand)) || (b.p.bandScore ?? -1) - (a.p.bandScore ?? -1) || a.i - b.i)
+    .map((x) => x.p);
   // Owner, 2026-11-23 (plan design-refs/tenant-site/generator-javitas): the leaves must show a
   // DIFFERENT SUBJECT from what opens up behind them — Krisztina Panzió's second photo was the
   // same yellow house from another angle, and the gate still looked as if it opened onto itself.

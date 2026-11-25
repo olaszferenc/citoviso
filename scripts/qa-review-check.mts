@@ -114,7 +114,7 @@ check("a sávokat a közelkép-jelzés nélküli képek töltik", /bandFit/.test
 check("telefonon a sávkép nem képernyőnyi ablak (a fotó nagy része látszik)", /t-par--band'\)\)\{var h=Math\.round\(r\.height\*1\.25\)/.test(src("src/engine/templates/parallax.ts")));
 const gate = src("src/outreach/mockRenderGate.ts");
 check("a kapu a levél képét (asztali első képernyő) is nézi szótörésre", /DESKTOP_VIEWPORT/.test(gate) && /desktopBrokenWords/.test(gate));
-check("a kapu a sávképet is méri (isBandWorthy)", /isBandWorthy\(v\)/.test(gate));
+check("a kapu a sávképet is méri (bandScore)", /bandScore\(v\)/.test(gate));
 check("a dátumbélyegzős fotó junk (helyi szövegfelismerő)", /dátumbélyegző a fotón/.test(kindSrc) && /readPhotoText/.test(kindSrc));
 check("az e-mail a kapcsolat-sorban nem nagybetűs, a @ előtt törhet", /a\.t-mail\{text-transform:none/.test(src("src/engine/templates/parallax.ts")) && /<wbr>@/.test(src("src/engine/templates/parallax.ts")));
 
@@ -125,6 +125,25 @@ const refresh = src("src/generator/mockRefresh.ts");
 check("a frissítés a léc alattiakat veszi (not MOCK_CURRENT_GENERATOR_SQL) és a kollégához küldi vissza",
   /not \$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(refresh) && /note: QA_WAIT_NOTE/.test(refresh));
 check("a kézi kör ugyanazt a függvényt hívja (egy út)", /refreshMock\(row\)/.test(src("scripts/rerender-terhatas.mts")));
+
+// ── ⑤ two plans or no letter (owner 2026-11-25: „Csak az hagyható jóvá, ahol van második terv is.”) ──
+const aq2 = src("src/console/approvalQueue.ts");
+check("jóváhagyó lap: csak ha a 2. terv is végigjárta a láncot", /planChainPassed\(alt\)/.test(aq2) && /secondPlanOf\(r\.lead_id, r\.main_id\)/.test(aq2));
+check("a tulaj igenje mindkét tervre kerül", /recordOwnerApproval\(alt\.id, by\)/.test(aq2));
+const ad2 = src("src/outreach/autoDispatch.ts");
+check("kiküldő: 2. terv nélkül (vagy láncon kívüli 2. tervvel) nem küld", /secondPlanBlock\(leadId, artifactId\)/.test(ad2) && /if \(!att\.ok\) return \{ ok: false, status: "held"/.test(ad2));
+check("a csatolt 2. terv pontosan a láncot megjárt terv", /m\.id === chosen\?\.id/.test(ad2));
+check("a frissítés a 2. tervet is frissíti", /secondPlanOf\(w\.leadId, w\.mainId\)/.test(src("src/generator/mockRefresh.ts")));
+check("a kolléga sora a 2. tervet is adja", /secondPlanOf\(r\.leadId, r\.artifactId\)/.test(src("scripts/qa-review.mts")));
+
+check("nyitókép: sötét (fényerő < 80) nem lehet", !isHeroWorthy(K("ok", "the outside of a house", { quality: { long: 1600, luma: 60, lap: 300 } })));
+check("nyitókép: égbolt/távoli kilátás (a hely < 0,3) nem lehet", !isHeroWorthy(K("ok", "a balcony with a view", { probs: { "a balcony with a view": 0.7, "the outside of a house": 0.1 } })));
+check("sáv: a legjobb pontszámú kép, nem a soron következő", /bestBand\(\)/.test(src("src/engine/templateKit.ts")));
+
+check("fürdő/WC sehol nincs az oldalon (galéria sem)", isOffPagePhoto(K("ok", "a bathroom with a shower", { probs: { "a bathroom with a shower": 0.5 } }), false));
+check("a kártyaképek nem fürdő/konyha", /const p = take\(notBath\);/.test(src("src/engine/templateKit.ts")));
+
+check("kapuszárny: a legjobb széles kép, közeli/sötét csak végső esetben", /b\.p\.bandScore \?\? -1/.test(src("src/engine/templates/gateOpening.ts")));
 
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — kolléga-jóváhagyás vagy engedélylistás képszűrő nélkül menne ki levél.`);

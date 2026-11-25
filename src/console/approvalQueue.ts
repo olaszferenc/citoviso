@@ -28,6 +28,8 @@ import {
 } from "../mms/messenger.js";
 
 import { APPROVAL_PENDING_NOTE, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
+import { planChainPassed, secondPlanOf } from "../outreach/secondPlan.js";
+import { ownViewHref } from "./prospectPath.js";
 import { cachedRenderGate } from "../outreach/mockRenderGate.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "../outreach/mockPhotoGate.js";
 
@@ -80,10 +82,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
     select d.lead_id, l.name, l.raw->>'city' as city, l.qualification,
            l.raw->>'phone' as phone, l.raw->>'email' as email,
            d.artifact_id as main_id,
-           (select m.id from mock_artifact m
-             where m.lead_id = d.lead_id and m.id <> d.artifact_id and m.status <> 'rejected'
-               and m.inputs->'review'->>'verdict' = 'pass'
-             order by m.generated_at desc limit 1) as alt_id,
+           null::uuid as alt_id,
            (select m.inputs->'review'->>'note' from mock_artifact m where m.id = d.artifact_id) as reason,
            d.queued_at
       from outreach_dispatch d
@@ -108,7 +107,11 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
     if (qa.state !== "pass") continue;
     const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", r.main_id).executeTakeFirst();
     if (cachedRenderGate(a?.inputs, qa.review.mtime)?.verdict !== "pass") continue;
-    whole.push(r);
+    // …and its SECOND plan went through the same chain (owner 2026-11-25: „Csak az hagyható jóvá, ahol
+    // van második terv is.”) — the very plan the dispatcher attaches (secondPlan.ts).
+    const alt = await secondPlanOf(r.lead_id, r.main_id);
+    if (!(await planChainPassed(alt))) continue;
+    whole.push({ ...r, alt_id: alt!.id });
   }
   rows.rows.splice(0, rows.rows.length, ...whole);
   const presence = await presenceOf(rows.rows.map((r) => mobile(r.phone)).filter((p): p is string => !!p));
@@ -208,6 +211,9 @@ export async function decideApproval(leadId: string, approve: boolean, by: strin
       .where("note", "=", APPROVAL_PENDING_NOTE)
       .executeTakeFirst();
     if (!row?.artifact_id || !(await recordOwnerApproval(row.artifact_id, by))) return false;
+    // The yes covers both plans the page showed (the second plan is part of the offer, 2026-11-25).
+    const alt = await secondPlanOf(leadId, row.artifact_id);
+    if (!alt || !(await recordOwnerApproval(alt.id, by))) return false;
   }
   const r = await db
     .updateTable("outreach_dispatch")
@@ -329,7 +335,7 @@ const SCRIPT = `<script>
         var g=b.getAttribute('data-g');
         document.querySelectorAll('.aq-tabs button[data-g="'+g+'"]').forEach(function(x){x.classList.remove('on');});
         b.classList.add('on');
-        if(g==='plan'){ fr.src='/mock/'+b.getAttribute('data-id'); }
+        if(g==='plan'){ fr.src=b.getAttribute('data-mail')||('/mock/'+b.getAttribute('data-id')); }
         else { fr.classList.toggle('m', b.getAttribute('data-w')==='390'); }
       });
     });
@@ -421,7 +427,8 @@ function chips(key: string, opts: readonly (readonly [string, string])[], lang: 
 function pageTop(tab: "wait" | "notseen", waiting: number, notSeen: number, cfg: MessengerConfig, lang: string): string {
   const tabs =
     `<nav class="aq-tabbar"><a href="/jovahagyas"${tab === "wait" ? ' class="on"' : ""}>${esc(T(lang, "Jóváhagyásra vár"))} <span class="n">${waiting}</span></a>` +
-    `<a href="/jovahagyas?tab=nemnezte"${tab === "notseen" ? ' class="on"' : ""}>${esc(T(lang, "Messengeren nem nézte meg"))} <span class="n${notSeen ? " warn" : ""}">${notSeen}</span></a>` +
+    // Owner 2026-11-25: „A messengeres rész kuka” — no messenger tab on the page (the route stays).
+    (tab === "notseen" ? `<a href="/jovahagyas?tab=nemnezte" class="on">${esc(T(lang, "Messengeren nem nézte meg"))} <span class="n${notSeen ? " warn" : ""}">${notSeen}</span></a>` : "") +
     `<span class="aq-help">${helpLink("console.approval")}</span></nav>`;
   const intro =
     tab === "wait"
@@ -434,8 +441,8 @@ function pageTop(tab: "wait" | "notseen", waiting: number, notSeen: number, cfg:
       ? T(lang, "Messenger-út: a fék leállította ({why}) — minden MMS + SMS-ben megy, együtt.", { why: cfg.brake.reason })
       : T(lang, "Messenger-út: kikapcsolva — minden MMS + SMS-ben megy, együtt.");
   return (
-    `${tabs}<p class="aq-intro">${esc(intro)}</p>` +
-    `<div class="aq-state${on ? "" : " off"}"><span class="dot"></span><span>${esc(state)}</span><a href="/">${esc(T(lang, "Irányítópult"))}</a></div>`
+    `${tabs}<p class="aq-intro">${esc(tab === "wait" ? T(lang, "Itt döntöd el, mehet-e ki a megkeresés. Csak az a megkeresés van itt, amelynek mindkét terve végigment a láncon (gépi kapu, minőségi kolléga).") : intro)}</p>` +
+    (tab === "wait" ? "" : `<div class="aq-state${on ? "" : " off"}"><span class="dot"></span><span>${esc(state)}</span><a href="/">${esc(T(lang, "Irányítópult"))}</a></div>`)
   );
 }
 
@@ -504,7 +511,7 @@ export function approvalPage(
   selected: string | null,
   flash: string,
   copyPanel = "",
-  ctx: { readonly cfg: MessengerConfig; readonly notSeen: number } = { cfg: { enabled: false, brake: null }, notSeen: 0 },
+  ctx: { readonly cfg: MessengerConfig; readonly notSeen: number; readonly letter?: { readonly prospectId: string; readonly link: string } | null } = { cfg: { enabled: false, brake: null }, notSeen: 0 },
 ): string {
   const lang = consoleLang();
   const cur = selectedApproval(items, selected);
@@ -521,12 +528,9 @@ export function approvalPage(
   }).join("");
   const filters =
     `<div class="aq-filt"><input type="search" placeholder="${esc(T(lang, "Keresés név vagy település szerint"))}" aria-label="${esc(T(lang, "Keresés név vagy település szerint"))}">` +
-    `<h4>${esc(T(lang, "Csatorna"))}</h4>${chips("ch", APPROVAL_GROUPS.map((g) => [g, chipName(g, lang)] as const), lang)}` +
     `<h4>${esc(T(lang, "Honlap"))}</h4>${chips("site", [["none", T(lang, "Nincs honlap")], ["old", T(lang, "Elavult honlap")]], lang)}` +
-    // Owner 2026-11-08: hide / show what the phone has not checked for Viber / WhatsApp yet,
-    // and whether the link carries a reviewed second plan (ADR-0433: one plan is enough).
-    `<h4>${esc(T(lang, "Messenger-ellenőrzés"))}</h4>${chips("chk", [["done", T(lang, "Ellenőrizve")], ["wait", T(lang, "Ellenőrzésre vár")]], lang)}` +
-    `<h4>${esc(T(lang, "Második terv"))}</h4>${chips("alt", [["yes", T(lang, "Van")], ["no", T(lang, "Nincs — egy tervvel megy")]], lang)}` +
+    // Owner 2026-11-25: „A messengeres rész kuka” — no channel / messenger-check chips; every listed
+    // lead has its second plan (secondPlan.ts), so that chip row went too.
     `<button type="button" class="aq-clear">${esc(T(lang, "Szűrők törlése"))}</button></div>`;
   const left =
     `<nav class="aq-list"><div class="aq-cnt">${esc(T(lang, "Jóváhagyásra vár"))}: ${items.length}</div>${items.length ? filters : ""}${groups}` +
@@ -544,8 +548,14 @@ export function approvalPage(
   const tabs =
     `<div class="aq-tabs"><button type="button" class="on" data-g="plan" data-id="${esc(cur.mainId)}">${esc(T(lang, "1. terv"))}</button>` +
     (cur.altId ? `<button type="button" data-g="plan" data-id="${esc(cur.altId)}">${esc(T(lang, "2. terv"))}</button>` : "") +
+    // Owner 2026-11-25: „szeretném látni … hogy fog kinézni konkrétan az email” — the exact HTML letter
+    // (the console's own email preview, its links marked as the owner's view).
+    (ctx.letter ? `<button type="button" data-g="plan" data-mail="/prospect/${esc(ctx.letter.prospectId)}/email-preview">${esc(T(lang, "Levél"))}</button>` : "") +
     `<span class="sep"></span><button type="button" class="on" data-g="w" data-w="1280">${esc(T(lang, "Asztali"))}</button>` +
-    `<button type="button" data-g="w" data-w="390">${esc(T(lang, "Mobil"))}</button></div>`;
+    `<button type="button" data-g="w" data-w="390">${esc(T(lang, "Mobil"))}</button>` +
+    // „A megkereső linket tudjam innen (számolás nélkül, ne számítson kattintásnak) megnyitni.”
+    (ctx.letter ? `<a class="aq-golink" href="${esc(ownViewHref(ctx.letter.link))}" target="_blank" rel="noopener">${esc(T(lang, "Megkereső link megnyitása (nem számít kattintásnak)"))}</a>` : "") +
+    `</div>`;
   const form = (approve: boolean) =>
     `<form method="post" action="/jovahagyas/${esc(cur.leadId)}"><input type="hidden" name="d" value="${approve ? "mehet" : "nem"}"><button class="aq-btn ${approve ? "aq-yes" : "aq-no"}">${esc(approve ? T(lang, "Mehet") : T(lang, "Nem mehet ki"))}</button></form>`;
   // Owner 2026-11-08: no recipient line, no reviewer note — the contacts as badges WITH the data,

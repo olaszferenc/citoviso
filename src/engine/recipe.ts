@@ -122,6 +122,8 @@ export interface Photo {
    * Absent = band-fit or no verdict.
    */
   readonly notBand?: boolean;
+  /** Band fitness (photoKind.bandScore, 0–1): the bands take the highest scorers. Absent = no verdict. */
+  readonly bandScore?: number;
   /**
    * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
    * for the hero and the outdoor photos only. Answers "is this the SAME picture under

@@ -332,8 +332,16 @@ export function allotPhotos(
   // The bands are full-bleed screens of their own — never a kitchen or a bathroom (an empty band drops).
   // …and never a close-up, a dark shot or a thing instead of a place (photoCurate notBand, 11-25).
   const bandFit = (p: Photo): boolean => notBath(p) && !p.notBand;
-  const bandA = take(bandFit);
-  const bandB = take(bandFit);
+  // The BEST band photos, not the next in line (11-25 evening): highest bandScore first; a photo
+  // without a verdict keeps its old place behind the scored ones.
+  const bestBand = (): Photo | undefined => {
+    const fit = pool.filter(bandFit);
+    if (!fit.length) return undefined;
+    const top = fit.reduce((a, b) => ((b.bandScore ?? -1) > (a.bandScore ?? -1) ? b : a));
+    return take((p) => p === top);
+  };
+  const bandA = bestBand();
+  const bandB = bestBand();
   let contact = scene;
   let contactAlt = scene ? sceneAlt(d) : d.name;
   if (!contact) {
@@ -346,7 +354,9 @@ export function allotPhotos(
   const rowsN = Math.max(0, Math.min(opts.maxRows, pool.length - reserve));
   const rows: Photo[] = [];
   for (let i = 0; i < rowsN; i++) {
-    const p = take();
+    // A feature card's picture is never a bathroom, toilet or kitchen (11-25: Afamado's „Erkély/terasz”
+    // card showed a washbasin).
+    const p = take(notBath);
     if (p) rows.push(p);
   }
   const own = pool.splice(0, opts.maxGallery);

@@ -55,11 +55,12 @@ check(guardAt > 0 && prospectAt > guardAt, "főterv: a szobamodul-őr a link ké
   `planHasRooms @${guardAt} · createProspect @${prospectAt}`);
 check(/planHasRooms\(art\.path\)\)\)\s*\{\s*return \{ status: "held"/.test(one), "főterv: hiányzó szobamodul → held (nem skipped)");
 const prep = body("prepareDispatchProspect");
-check(/\n  await attachSecondPlan\(prospect\.id\);/.test(prep) && !/second\.ok/.test(prep),
-  "ADR-0433: a hiányzó második terv NEM tartja vissza a kiküldést (egy terv elég, tulaj 2026-11-08)");
+// Owner 2026-11-25 overrides ADR-0433 for the cold letter: „Csak az hagyható jóvá, ahol van második terv is.”
+check(/const att = await attachSecondPlan\(prospect\.id\);/.test(prep) && /if \(!att\.ok\) return \{ ok: false, status: "held"/.test(prep),
+  "2. terv nélkül nincs kiküldés: a sikertelen csatolás held (tulaj 2026-11-25, az ADR-0433 felülírva)");
 const second = body("attachSecondPlan");
 check(/planHasRooms\(m\.path\)/.test(second) && /for \(const m of passed\)/.test(second),
-  "2. terv: csak szobamodulos, Vera-PASS-os mock csatolható");
+  "2. terv: csak szobamodulos, a láncot megjárt mock csatolható");
 
 if (failed) {
   console.log(`\n❌ dispatch-rooms-guard-check: ${failed} hiba`);

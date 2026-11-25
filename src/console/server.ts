@@ -387,7 +387,7 @@ import { pricingPage, mapPage, regionsPage } from "./views.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
 import { approvalPage, approvalShot, decideApproval, listPendingApprovals, notSeenPage, selectedApproval, warmApprovalShots } from "./approvalQueue.js";
-import { approvalCopyPanel, copyEditFromForm, saveApprovalCopy } from "./approvalCopy.js";
+import { approvalCopyPanel, approvalLetter, copyEditFromForm, saveApprovalCopy } from "./approvalCopy.js";
 import { findScenario, listScenarios, stepCount } from "../elek/fkParse.js";
 import { latestSaves, loadSave, persistSave } from "../elek/testLogStore.js";
 import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody } from "../kb/kb.js";
@@ -2035,7 +2035,8 @@ async function handle(
       await requestPresence(cur.mobile);
     }
     const panel = cur ? await approvalCopyPanel(cur) : "";
-    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel, { cfg, notSeen: notSeen.length }));
+    const letter = cur ? await approvalLetter(cur) : null;
+    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel, { cfg, notSeen: notSeen.length, letter }));
   }
   // GET /jovahagyas/csatorna/:lead — the selected lead's channel, polled while the phone checks it.
   {

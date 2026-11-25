@@ -79,6 +79,12 @@ async function loadContext(item: PendingApproval): Promise<Loaded> {
   };
 }
 
+/** The letter the approval page shows in its „Levél” tab: the send's own prospect and tracked link. */
+export async function approvalLetter(item: PendingApproval): Promise<{ prospectId: string; link: string } | null> {
+  const r = await loadContext(item);
+  return r.ok ? { prospectId: r.ctx.prospectId, link: r.ctx.base.draft.link } : null;
+}
+
 /** The save form's fields. */
 export function copyEditFromForm(form: URLSearchParams): CopyEditInput {
   const parts: Partial<Record<EditableMailPart, string>> = {};

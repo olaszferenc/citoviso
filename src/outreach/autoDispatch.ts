@@ -24,11 +24,12 @@ import { getSetting, setSetting } from "../console/appSettings.js";
 import { createProspect, setProspectVariants } from "../console/data.js";
 import { logLeadActivity, SYSTEM_ACTOR } from "../console/leadActivity.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
-import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, reviewOf, verdictAckOf } from "./mockVerdictGate.js";
+import { ackCoversVerdicts, blockingVerdicts, hasPendingReview, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { MOCK_OWNER_APPROVED_SQL, MOCK_QA_PASSED_SQL, ownerApprovalBlock, QA_STALE_NOTE, qaBlockReason, qaReviewState } from "./mockQaReview.js";
+import { planChainPassed, secondPlanBlock, secondPlanOf } from "./secondPlan.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
 import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
@@ -433,6 +434,14 @@ async function dispatchOne(
   // The owner's yes on the approval page (owner 2026-11-25), on THIS file too.
   const ownerBlock = await ownerApprovalBlock(artifactId);
   if (ownerBlock) return { status: "held", note: ownerBlock };
+  // The second plan is part of the offer (owner 2026-11-25): through the whole chain, and the owner's yes on it too.
+  if (!opts.resend) {
+    const altBlock = await secondPlanBlock(leadId, artifactId);
+    if (altBlock) return { status: "held", note: altBlock };
+    const alt = await secondPlanOf(leadId, artifactId);
+    const altOwner = alt ? await ownerApprovalBlock(alt.id) : "nincs második terv";
+    if (altOwner) return { status: "held", note: `2. terv — ${altOwner}` };
+  }
   if (!(await planHasRooms(art.path))) {
     return { status: "held", note: "a mockból hiányzik a szobamodul — szobamodul nélküli terv nem megy ki" };
   }
@@ -534,7 +543,9 @@ export async function prepareDispatchProspect(
   if (!prospect) return { ok: false, status: "skipped", note: "a lead nem található" };
   // ADR-0433 (owner 2026-11-08, „A”): one plan is enough. A reviewed second plan is attached
   // when the lead has one; its absence no longer holds the send (it held 1536 of 1885 approvals).
-  await attachSecondPlan(prospect.id);
+  // Owner 2026-11-25: no letter without its second plan — a failed attach holds the row.
+  const att = await attachSecondPlan(prospect.id);
+  if (!att.ok) return { ok: false, status: "held", note: att.note, prospectId: prospect.id };
   return { ok: true, prospectId: prospect.id };
 }
 
@@ -593,10 +604,12 @@ export async function attachSecondPlan(
     .where("path", "is not", null)
     .orderBy("generated_at", "desc")
     .execute();
-  const reviewed = mocks.filter((m) => {
-    const r = reviewOf(m.inputs);
-    return r?.verdict === "pass" && r.copyHash === copyHashOf(m.inputs);
-  });
+  // Owner 2026-11-25: the second plan is the ONE that went through the whole chain (secondPlan.ts) —
+  // refreshed, machine gate, quality colleague; Vera's copy review on the current text as before.
+  const chosen = await secondPlanOf(p.lead_id, p.mock_artifact_id ?? "");
+  const chainOk = chosen ? await planChainPassed(chosen) : false;
+  // (the colleague reads the whole page, text included — Vera's separate copy verdict is not asked here)
+  const reviewed = mocks.filter((m) => chainOk && m.id === chosen?.id);
   const passed: typeof reviewed = [];
   for (const m of reviewed) if (await planHasRooms(m.path)) passed.push(m);
   const refusals: string[] = [];
@@ -610,8 +623,8 @@ export async function attachSecondPlan(
     note: passed.length
       ? `a második terv nem csatolható (${refusals.join(", ")}) — más sablon és azonos fotókészlet kell`
       : reviewed.length
-        ? "a Vera által ellenőrzött második tervből hiányzik a szobamodul — más sablonú, szobamodulos terv kell"
-        : "nincs második, Vera által ellenőrzött terv — a lead lapján kell rögzíteni Vera ítéletét a másik mockra",
+        ? "a láncot megjárt második tervből hiányzik a szobamodul — más sablonú, szobamodulos terv kell"
+        : "nincs második terv, ami végigjárta a láncot (frissítés → gépi kapu → minőségi kolléga)",
   };
 }
 
