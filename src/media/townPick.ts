@@ -28,7 +28,7 @@ import { clipImageEmbedding, photoKindAvailable } from "./photoKind.js";
 import LABELS from "./townPickLabels.json" with { type: "json" };
 
 /** Bump when the labels, the rules or the thresholds change: the send gate refuses an older pick. */
-export const TOWN_PICK_VERSION = 2;
+export const TOWN_PICK_VERSION = 3;
 /** The approved threshold variant (owner 2026-11-25: „Laza” + the second round). */
 export const TOWN_PICK_THRESHOLD = "laza";
 const T_MIN = 0.5;
@@ -205,6 +205,9 @@ export function townVerdict(s: TownScores, tier: TownTier, km?: number): string 
   if ((x.day ?? 1) < 0.4) return "sötét / alkonyi";
   // v2 (coordinator 2026-11-25, Fertőrákos: the Községháza with its lettering as the hero).
   if ((x.facade ?? 1) < 0.5) return "egyetlen (feliratos) épület homlokzata";
+  // v3 (blind run of 20 unseen towns, 2026-11-25: a thatched house, a tree-top walkway, a roof against the sky —
+  // pictures a guest would take for the lodging itself): never a single ordinary house, roof or structure up close.
+  if ((x.house ?? 1) < 0.5) return "egyetlen ház / tető / szerkezet közelről";
   const subject = tier === "town" ? s.town + s.land : s.land;
   if (subject < T_MIN) return `gyenge téma-pont ${subject.toFixed(2)}`;
   if (s.q < Q_MIN) return `gyenge minőség ${s.q.toFixed(2)}`;
@@ -501,7 +504,8 @@ function rankOf(s: TownScores, c: Cand): number {
 
 /** v2: a grey, overcast, washed-out picture goes back in the rank (Hegykő, 2026-11-25) — never out. */
 export function brightBonus(s: TownScores): number {
-  return 0.25 * ((s.x.bright ?? 1) - 1);
+  // v3: a frame of mostly empty sky goes back too (blind run 2026-11-25) — never out.
+  return 0.25 * ((s.x.bright ?? 1) - 1) + 0.2 * ((s.x.skyfill ?? 1) - 1);
 }
 
 /**
@@ -590,11 +594,12 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
 
   const heroCount = () => accepted.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO).length;
 
-  // ② the landscape around — always asked (the gallery wants a landscape too), more when the town is thin.
+  // ② the landscape around — ONLY when the town itself gave fewer than HEROES_WANT good heroes (coordinator
+  // 2026-11-25, speed: the geosearch rings were ~40 % of a town's time and rarely changed the pick).
   const c2: Cand[] = [];
   const rings: [number, number][] = [[0, 0], [0.11, 0], [-0.11, 0], [0, 0.16], [0, -0.16]];
-  const thin = heroCount() < HEROES_WANT || accepted.length < HEROES_WANT + GALLERY_WANT;
-  for (const [dl, dg] of thin ? rings : rings.slice(0, 1)) c2.push(...(await byGeo(net, t.lat + dl, t.lon + dg, "land", dl || dg ? "környék ~12 km" : "környék 0–10 km")));
+  const thin = heroCount() < HEROES_WANT;
+  if (thin) for (const [dl, dg] of rings) c2.push(...(await byGeo(net, t.lat + dl, t.lon + dg, "land", dl || dg ? "környék ~12 km" : "környék 0–10 km")));
   // Own country only, from the picture's coordinate (a coordinate-less fallback picture is not taken).
   const own: Cand[] = [];
   for (const c of c2) {
@@ -605,7 +610,7 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     own.push(c);
   }
   const before = accepted.length;
-  await judge(own, thin ? 60 : 25);
+  await judge(own, 60);
   // The country check runs only on the accepted ones (few) — Nominatim is a shared service.
   for (let i = accepted.length - 1; i >= before; i--) {
     const a = accepted[i]!;

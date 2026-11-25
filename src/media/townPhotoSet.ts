@@ -5,10 +5,9 @@
 // at least one lead with an e-mail address and fewer than DISPATCH_MIN_OWN_PHOTOS own photos. A lead
 // without an e-mail never triggers a gathering (it may still use a set another lead's town already has).
 //
-// Who gathers (no manual start anywhere):
-//   · the scrape chain, after the contact step, for its new e-mail leads' towns (scraper/run.ts);
-//   · the mock generation, on the spot, when the set is missing (generator/generateEngine.ts);
-//   · the one-time backfill (scripts/town-photo-sets.mts), towns by their e-mail no-photo lead count.
+// Who gathers: ONLY the mock generation, just in time (owner 2026-11-25: no backfill, neither top 500 nor
+// all towns) — when the chain reaches a concrete e-mail lead with no / few own photos, before its mock, and the
+// town has no current set. The set is cached per town, so the town's next lead takes it from there.
 //
 // SHARING OUT: the town's e-mail leads are numbered (oldest first); lead #i gets hero i mod n, and its
 // gallery is the town's local pool (gallery + the other heroes) rotated by i — two leads of one town
@@ -265,34 +264,4 @@ export async function townsInNeed(opts: { scrapeRunId?: string; country?: string
     .map((e) => ({ city: e.city, country: e.country, lat: median(e.lats), lon: median(e.lons), leads: e.leads }))
     .sort((a, b) => b.leads - a.leads || a.city.localeCompare(b.city))
     .slice(0, opts.limit ?? Infinity);
-}
-
-/** Towns gathered at the end of one scrape run, at most — the rest are gathered by the mock generation. */
-export const SCRAPE_TOWN_SETS_MAX = 20;
-
-/**
- * After a scrape run (the contact step included): gather the sets of its new e-mail leads' towns that
- * have none yet. Never throws — a gap here only means the generation gathers on the spot.
- */
-export async function gatherTownSetsForRun(scrapeRunId: string, log: (line: string) => void = console.log): Promise<number> {
-  let done = 0;
-  try {
-    const towns = await townsInNeed({ scrapeRunId });
-    for (const t of towns) {
-      if (done >= SCRAPE_TOWN_SETS_MAX) break;
-      const have = await readTownPhotoSet(t.country, t.city);
-      if (have && isCurrentPick(have)) continue;
-      const set = await ensureTownPhotoSet(t, "scrape").catch((e: Error) => {
-        log(`  településkép: ${t.city} — hiba: ${e.message}`);
-        return null;
-      });
-      if (set) {
-        done++;
-        log(`  településkép: ${t.city} (${t.country}) — ${set.tier}, ${set.heroes.length} hero, ${set.gallery.length} helyi galériakép`);
-      }
-    }
-  } catch (e) {
-    log(`  településkép-gyűjtés kihagyva: ${(e as Error).message}`);
-  }
-  return done;
 }
