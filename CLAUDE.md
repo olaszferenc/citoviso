@@ -117,6 +117,23 @@ ui-shot ellenőrzéssel. Kétség esetén: terv-először.
 
 ---
 
+## 2c. TESZT-DOKTRÍNA — GENERÁLT KIMENET HIBÁJA = AUTOMATA SZABÁLY, VAK MÉRÉS (⚠️ MEGKERÜLHETETLEN, tulaj 2026-11-25)
+
+A gép által generált kimenet (mock, kép, hero, szöveg, levél, kontakt-találat) hibáját a teszt soha nem példányonként javítja.
+
+1. **Egy hiba = egy általános szabály.** Pl. „feliratos középület nem lehet hero”, nem pedig „Fertőrákosnál cseréld a képet”. A szabály
+   a választóban, a kapuban vagy az újragenerálásban él, és ha bukik, a gép MAGA lép tovább: következő jelölt → tartalék → nem küldjük ki.
+   ⛔ Tilos a kézi csere, és tilos olyan javítás vagy utasítás, amely egy konkrét leadre, településre vagy fájlra szól.
+2. **A kész kimenetet is a gép ítéli meg** (render-kapu, mérhető feltételekkel), nem az ember szeme. Az emberi átnézés csak arra jó, hogy új szabályt találjunk.
+3. **Igazolás VAKON:** a javítást új, eddig nem látott mintán kell lefuttatni (≥20 elem, vegyes: ország, méret, szélsőeset), emberi
+   beavatkozás nélkül, és csak utána nézzük meg. A jelentésben jó / gyenge / rossz arány szerepeljen. A már átnézett példákon mért javulás nem bizonyíték.
+4. **Ha a vak futásban rossz marad,** új szabály kell. A kép kicserélése nem javítás.
+
+> Miért: 2026-11-25-én 8 kép nélküli mockon településenként soroltuk fel, mi rossz. A tulaj: „ha itt manuálisan megmondjuk, mi a rossz
+> és mire cseréld le, annak pont semmi értelme… élesben ugyanúgy el fog hasalni”.
+
+---
+
 ## 3. SESSION ZÁRÁSA (MIELŐTT A FELHASZNÁLÓ ELMEGY)
 
 ⚠️ Ha a felhasználó zárást kér, MIND A HÁROM lépés jár, külön kérés nélkül. Nem emlékeztetsz rá — MEGCSINÁLOD.
