@@ -22,8 +22,12 @@ lista felül áll, alatta a kiválasztott lead.
 
 - **A kiválasztott lead fejlécében** a neve és a települése mellett a **„Keresés”** gomb új ablakban
   megnyitja a Google-t a szállás nevével, a településsel és az e-mail-címmel; alatta az
-  elérhetőségei jelvényként, benne az adattal, és egy sor arról, hogyan megy ki.
-- **A megkeresés szövege** (alapból összecsukva, a címére kattintva nyílik le): a levél szövege.
+  elérhetőségei jelvényként, benne az adattal. A megkeresés e-mailben megy.
+- **A megkeresés szövege** (alapból összecsukva, a címére kattintva nyílik le): a levél tárgya és
+  bekezdései, szerkeszthetően. Ha átírsz valamit, nyomd meg a **„Mentés”** gombot, mielőtt a
+  **„Mehet”**-re koppintasz — a „Mehet” a szöveget nem menti el. Üresen hagyott mező = a gépi szöveg
+  megy; a **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros
+  **„Nem mentettem”** sáv sorolja fel az okokat.
 - **„Mehet”** — a jóváhagyásod mindkét tervre, ebben a mostani állapotukban szól. A lead visszakerül a
   kiküldési sorba, és hétköznap 8 és 16 óra között kimegy. Ha bármelyik terv a jóváhagyásod után
   megváltozik (például a folyamat újragenerálja), nem megy ki, hanem újra a jóváhagyásodra vár.
@@ -31,5 +35,5 @@ lista felül áll, alatta a kiválasztott lead.
 - Alul a nézet: **„1. terv”** / **„2. terv”** a terv teljes oldala, **„Levél”** pedig pontosan az a
   levél, amit a lead megkap, képpel együtt. **„Asztali”** / **„Mobil”** a szélesség.
 - **„Megkereső link megnyitása (nem számít kattintásnak)”** — új lapon megnyitja azt az oldalt, amire
-  a levél linkje visz. A te megnyitásod nem számít a lead kattintásának; a „Levél” nézetben lévő
+  a levél linkje visz (a „Levél” fül és ez a gomb akkor látszik, ha a levél elkészíthető). A te megnyitásod nem számít a lead kattintásának; a „Levél” nézetben lévő
   linkek ugyanígy.
