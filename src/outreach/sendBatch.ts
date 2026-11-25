@@ -14,7 +14,7 @@ import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { renderGateFor, renderGateReason } from "./mockRenderGate.js";
-import { qaBlockReason, qaReviewState } from "./mockQaReview.js";
+import { ownerApprovalBlock, qaBlockReason, qaReviewState } from "./mockQaReview.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import {
   ackCoversVerdicts,
@@ -574,6 +574,9 @@ export async function sendOutreachMail(
   if (p.artifactId && !opts.sampleTo) {
     const qaBlock = qaBlockReason(await qaReviewState(p.artifactId));
     if (qaBlock) return { ...base, outcome: { kind: "skipped", reason: qaBlock } };
+    // …and the owner's yes on the approval page (owner 2026-11-25) — no outreach without it.
+    const ownerBlock = await ownerApprovalBlock(p.artifactId);
+    if (ownerBlock) return { ...base, outcome: { kind: "skipped", reason: ownerBlock } };
   }
 
   // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).

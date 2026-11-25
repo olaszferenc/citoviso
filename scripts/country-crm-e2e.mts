@@ -254,10 +254,38 @@ check("ismeretlen ország → nem ítélhető (zárva)", !leadPhoneVerdict("777 
 
 // ── ⑤ approval queue ──────────────────────────────────────────────────────────────────────
 console.log("⑤ jóváhagyási sor");
-async function held(leadId: string): Promise<void> {
-  const art = await artifact(leadId);
-  await db.insertInto("outreach_dispatch").values({ lead_id: leadId, artifact_id: art, queued_by: "e2e", status: "held", note: APPROVAL_PENDING_NOTE } as never).execute();
+// Owner 2026-11-25: the page lists only what went through the WHOLE chain — current generator, ≥5 own
+// photos, the machine render gate and the quality colleague passed on the mock file as it is.
+const { mkdtempSync, writeFileSync, statSync } = await import("node:fs");
+const { tmpdir } = await import("node:os");
+const { RENDER_GATE_VERSION } = await import("../src/outreach/mockRenderGate.js");
+const mockDir = mkdtempSync(`${tmpdir()}/crme2e-`);
+async function held(leadId: string, whole = true): Promise<void> {
+  const file = `${mockDir}/${leadId}.html`;
+  writeFileSync(file, "<!doctype html><title>e2e</title>");
+  const mtime = Math.floor(statSync(file).mtimeMs / 1000);
+  const photos = Array.from({ length: 6 }, (_, i) => ({ url: `https://example.invalid/${i}.jpg` }));
+  const inputs = {
+    review: { verdict: "pass", note: "MEHET (egylépéses): e2e" },
+    siteData: { photos },
+    ...(whole
+      ? {
+          qaReview: { verdict: "pass", note: "e2e", by: "e2e", at: "2026-11-25T00:00:00Z", mtime },
+          renderGate: { version: RENDER_GATE_VERSION, mtime, at: "2026-11-25T00:00:00Z", verdict: "pass", slots: 6, findings: [] },
+        }
+      : {}),
+  };
+  await db.updateTable("lead").set({ raw: sql`raw || '{"material":{"placesPhotos":6}}'::jsonb` } as never).where("id", "=", leadId).execute();
+  const art = await db
+    .insertInto("mock_artifact")
+    .values({ lead_id: leadId, status: "approved", path: file, generated_at: new Date(), inputs } as never)
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await db.insertInto("outreach_dispatch").values({ lead_id: leadId, artifact_id: art.id, queued_by: "e2e", status: "held", note: APPROVAL_PENDING_NOTE } as never).execute();
 }
+const qHalf = await lead("Félkész Vendégház", { country: "HU", city: "Tihany", email: "info@felkesz.example" });
+await held(qHalf, false);
+check("a teljes kört meg nem járt sor (nincs kolléga, nincs kapu) NEM jelenik meg a jóváhagyó lapon", !(await listPendingApprovals()).some((i) => i.leadId === qHalf));
 const qHu = await lead("Levendula Apartman", { country: "HU", city: "Badacsony", email: "info@levendula.example" });
 await held(qHu);
 const onlyHu = await listPendingApprovals();
@@ -270,6 +298,18 @@ check("minden tétel hordozza az országát", both.find((i) => i.leadId === qCz)
 const pageBoth = approvalPage(both, null, "");
 check("HU + CZ: ország-szűrő (chip) mindkét országgal", pageBoth.includes('data-k="cc" data-v="CZ"') && pageBoth.includes('data-k="cc" data-v="HU"'), pageBoth.match(/data-k="cc"[^>]*/g)?.join(" | ") ?? "nincs chip");
 check("HU + CZ: a sorok ország-attribútuma (szűrhető)", pageBoth.includes('data-cc="CZ"') && pageBoth.includes('data-cc="HU"'));
+{
+  const { decideApproval } = await import("../src/console/approvalQueue.js");
+  const { ownerApprovalBlock } = await import("../src/outreach/mockQaReview.js");
+  const artHu = (await db.selectFrom("outreach_dispatch").select("artifact_id").where("lead_id", "=", qHu).executeTakeFirstOrThrow()).artifact_id!;
+  check("a tulaj „Mehet” előtt a levél nem mehet ki", (await ownerApprovalBlock(artHu)) !== null);
+  check("„Mehet”: a sor újra sorban", await decideApproval(qHu, true, "e2e-tulaj"));
+  check("„Mehet” után a mockfájlon a tulaj jóváhagyása", (await ownerApprovalBlock(artHu)) === null);
+  writeFileSync(`${mockDir}/${qHu}.html`, "<!doctype html><title>e2e v2</title>");
+  const { utimesSync } = await import("node:fs");
+  utimesSync(`${mockDir}/${qHu}.html`, new Date(), new Date(Date.now() + 5000));
+  check("a jóváhagyás óta változott mock újra a tulajhoz kell", (await ownerApprovalBlock(artHu)) !== null);
+}
 
 // ── ⑥ partner quiet hours ─────────────────────────────────────────────────────────────────
 console.log("⑥ partner csendes órái");

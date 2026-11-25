@@ -28,8 +28,12 @@ import {
   type Presence,
 } from "../mms/messenger.js";
 
-/** The dispatch note the single-pass chain writes on a lead waiting for the owner. */
-export const APPROVAL_PENDING_NOTE = "JÓVÁHAGYÁSRA VÁR (egylépéses átnéző: MEHET)";
+import { APPROVAL_PENDING_NOTE, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
+import { cachedRenderGate } from "../outreach/mockRenderGate.js";
+import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "../outreach/mockPhotoGate.js";
+
+/** The dispatch note of a lead waiting for the owner (the colleague's pass writes it — mockQaReview.ts). */
+export { APPROVAL_PENDING_NOTE };
 const APPROVED_NOTE = "tulaj jóváhagyta (jóváhagyó lap)";
 const REJECTED_NOTE = "tulaj: nem mehet ki (jóváhagyó lap)";
 
@@ -92,7 +96,12 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
            d.queued_at
       from outreach_dispatch d
       join lead l on l.id = d.lead_id
+      join mock_artifact a on a.id = d.artifact_id
      where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE}
+       and a.status = 'approved'
+       and ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}
+       and ${MOCK_OWN_PHOTOS_OK_SQL}
+       and ${MOCK_CURRENT_GENERATOR_SQL}
      order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   // ORSZÁG-RÉTEG 3/5: a mobile of the lead's OWN country, and only where the country's row lets
   // the mobile pair go (the local modem; a foreign mobile-only lead is held, not offered).
@@ -104,6 +113,17 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
   const mobile = (r: (typeof rows.rows)[number]): string | null => mobileOf(r.phone, ccOf(r));
   const cfg = await getMessengerConfig();
   const presence = await presenceOf(rows.rows.map((r) => mobile(r)).filter((p): p is string => !!p));
+  // Owner 2026-11-25: only what went through the WHOLE chain is shown — the machine render gate passed
+  // on the current file (cached verdict, current rule version) and the quality colleague passed THIS file.
+  const whole: typeof rows.rows = [];
+  for (const r of rows.rows) {
+    const qa = await qaReviewState(r.main_id);
+    if (qa.state !== "pass") continue;
+    const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", r.main_id).executeTakeFirst();
+    if (cachedRenderGate(a?.inputs, qa.review.mtime)?.verdict !== "pass") continue;
+    whole.push(r);
+  }
+  rows.rows.splice(0, rows.rows.length, ...whole);
   const lang = consoleLang();
   return rows.rows.map((r) => {
     const m = mobile(r);
@@ -197,6 +217,17 @@ export function warmApprovalShots(items: readonly PendingApproval[]): void {
 
 /** Records the owner's yes/no. Only a row still waiting is touched; returns whether it was. */
 export async function decideApproval(leadId: string, approve: boolean, by: string): Promise<boolean> {
+  // The yes is stamped on the mock file it was given for (the dispatcher and the send path ask for it).
+  if (approve) {
+    const row = await db
+      .selectFrom("outreach_dispatch")
+      .select("artifact_id")
+      .where("lead_id", "=", leadId)
+      .where("status", "=", "held")
+      .where("note", "=", APPROVAL_PENDING_NOTE)
+      .executeTakeFirst();
+    if (!row?.artifact_id || !(await recordOwnerApproval(row.artifact_id, by))) return false;
+  }
   const r = await db
     .updateTable("outreach_dispatch")
     .set({ status: approve ? "queued" : "cancelled", note: `${approve ? APPROVED_NOTE : REJECTED_NOTE} · ${by}` })

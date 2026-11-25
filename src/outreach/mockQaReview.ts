@@ -25,6 +25,17 @@ export const QA_FAIL_NOTE_MIN = 10;
 export const QA_HOLD_PREFIX = "minőségi kolléga:";
 /** The dispatch note of a row held because its mock changed after the pass. */
 export const QA_STALE_NOTE = "minőségi kolléga: a mock az átnézés óta változott — újra át kell nézni";
+/**
+ * The dispatch note of a row waiting for the OWNER's yes on the approval page (/jovahagyas).
+ * Owner 2026-11-25: „csak akkor mehet ki egy e-mailes megkeresés, hogyha azt jóváhagyom a jóváhagyási
+ * felületen. Csak azokat lássam jóváhagyandónak, amelyen a teljes kör végigment.” The colleague's pass
+ * moves the row here; the owner's „Mehet” queues it again WITH his approval on the mock file.
+ */
+export const APPROVAL_PENDING_NOTE = "JÓVÁHAGYÁSRA VÁR (egylépéses átnéző: MEHET)";
+/** `mock_artifact.inputs` key holding the owner's approval. */
+export const OWNER_APPROVAL_KEY = "ownerApproval";
+/** The dispatch note of a row held because its mock changed after the owner's yes. */
+export const OWNER_STALE_NOTE = "tulaj: a mock a jóváhagyása óta változott — újra jóvá kell hagynia";
 
 export interface QaReview {
   readonly verdict: "pass" | "fail";
@@ -44,6 +55,47 @@ export type QaState =
 
 /** SQL: the mock (alias `a`) carries a pass (freshness is checked on the file, in qaReviewState). */
 export const MOCK_QA_PASSED_SQL = sql<boolean>`(a.inputs->${QA_REVIEW_KEY}->>'verdict') = 'pass'`;
+
+/** SQL: the mock (alias `a`) carries the owner's approval (freshness is checked on the file). */
+export const MOCK_OWNER_APPROVED_SQL = sql<boolean>`(a.inputs->${OWNER_APPROVAL_KEY}->>'mtime') is not null`;
+
+export interface OwnerApproval {
+  readonly by: string;
+  readonly at: string;
+  /** Mock file mtime (seconds) the owner approved. */
+  readonly mtime: number;
+}
+
+export function ownerApprovalOf(inputs: unknown): OwnerApproval | null {
+  const r = (inputs as Record<string, unknown> | null)?.[OWNER_APPROVAL_KEY] as Partial<OwnerApproval> | undefined;
+  if (!r || typeof r.mtime !== "number") return null;
+  return { by: String(r.by ?? ""), at: String(r.at ?? ""), mtime: r.mtime };
+}
+
+/** Why the mock may not go out for want of the owner's yes; null when he approved THIS file. */
+export async function ownerApprovalBlock(artifactId: string): Promise<string | null> {
+  const a = await db.selectFrom("mock_artifact").select(["path", "inputs"]).where("id", "=", artifactId).executeTakeFirst();
+  const mtime = await mockMtime(a?.path);
+  if (mtime == null) return "a mock fájlja hiányzik";
+  const ok = ownerApprovalOf(a?.inputs);
+  if (!ok) return "tulaj: még nem hagyta jóvá a jóváhagyó lapon (kiküldés csak a jóváhagyása után)";
+  if (ok.mtime !== mtime) return OWNER_STALE_NOTE;
+  return null;
+}
+
+/** Stamp the owner's yes on the mock file as it is now. */
+export async function recordOwnerApproval(artifactId: string, by: string): Promise<boolean> {
+  const a = await db.selectFrom("mock_artifact").select(["path"]).where("id", "=", artifactId).executeTakeFirst();
+  const mtime = await mockMtime(a?.path);
+  if (mtime == null) return false;
+  const ok: OwnerApproval = { by, at: new Date().toISOString(), mtime };
+  await db
+    .updateTable("mock_artifact")
+    .set({ inputs: sql`jsonb_set(coalesce(inputs, '{}'::jsonb), '{ownerApproval}', ${JSON.stringify(ok)}::jsonb, true)` })
+    .where("id", "=", artifactId)
+    .execute();
+  return true;
+}
 
 export function qaReviewOf(inputs: unknown): QaReview | null {
   const r = (inputs as Record<string, unknown> | null)?.[QA_REVIEW_KEY] as Partial<QaReview> | undefined;
@@ -88,7 +140,8 @@ export function qaBlockReason(s: QaState): string | null {
 
 /**
  * Record the colleague's verdict on the mock file as it is NOW. A fail holds the artifact's queued
- * dispatch rows with the reason; a pass re-queues the rows an earlier fail or a stale review held.
+ * dispatch rows with the reason; a pass moves the queued rows (and those an earlier fail or a stale
+ * review held) to the owner's approval page — `requeued` counts them.
  */
 export async function recordQaReview(
   artifactId: string,
@@ -119,12 +172,12 @@ export async function recordQaReview(
       .executeTakeFirst();
     held = Number(r.numUpdatedRows ?? 0);
   } else {
+    // A pass does not send: the row goes to the owner's approval page (owner 2026-11-25).
     const r = await db
       .updateTable("outreach_dispatch")
-      .set({ status: "queued", note: null })
+      .set({ status: "held", note: APPROVAL_PENDING_NOTE })
       .where("artifact_id", "=", artifactId)
-      .where("status", "=", "held")
-      .where("note", "like", `${QA_HOLD_PREFIX}%`)
+      .where((eb) => eb.or([eb("status", "=", "queued"), eb.and([eb("status", "=", "held"), eb("note", "like", `${QA_HOLD_PREFIX}%`)])]))
       .executeTakeFirst();
     requeued = Number(r.numUpdatedRows ?? 0);
   }

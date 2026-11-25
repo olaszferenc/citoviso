@@ -21,7 +21,7 @@ import { db } from "../src/db/client.js";
 import { DISPATCH_PRIORITY } from "../src/outreach/autoDispatch.js";
 import { ensureHeroShot } from "../src/outreach/heroShot.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "../src/outreach/mockPhotoGate.js";
-import { QA_REVIEW_KEY, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
 
@@ -130,7 +130,11 @@ async function queue(limit: number): Promise<void> {
     .innerJoin("mock_artifact as a", "a.id", "outreach_dispatch.artifact_id")
     .innerJoin("lead as l", "l.id", "outreach_dispatch.lead_id")
     .select(["outreach_dispatch.artifact_id as artifactId", "l.name as name", "a.inputs as inputs"])
-    .where("outreach_dispatch.status", "=", "queued")
+    // Queued rows, and rows already on the owner's page whose mock changed since the pass (stale → look again).
+    .where((eb) => eb.or([
+      eb("outreach_dispatch.status", "=", "queued"),
+      eb.and([eb("outreach_dispatch.status", "=", "held"), eb("outreach_dispatch.note", "=", APPROVAL_PENDING_NOTE)]),
+    ]))
     .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
     .where(MOCK_OWN_PHOTOS_OK_SQL)
     .where(MOCK_CURRENT_GENERATOR_SQL)
@@ -182,7 +186,7 @@ try {
       console.error(`⛔ ${r.error}`);
       process.exitCode = 1;
     } else {
-      console.log(`✅ ${cmd === "pass" ? "jóváhagyva" : "NEM jóváhagyva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor újra sorban` : ""}`);
+      console.log(`✅ ${cmd === "pass" ? "jóváhagyva" : "NEM jóváhagyva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor a tulaj jóváhagyó lapjára került` : ""}`);
     }
   } else if (cmd === "status") {
     await status();

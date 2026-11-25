@@ -13,7 +13,6 @@ import { MODULE_CATALOG } from "../modules.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { countOpenReplies } from "../replies/store.js";
 import type { NavNumbers } from "./nav.js";
-import { APPROVAL_PENDING_NOTE } from "./approvalQueue.js";
 
 const TTL_MS = 15_000;
 let cache: { at: number; value: NavNumbers } | null = null;
@@ -27,12 +26,8 @@ export async function getNavNumbers(): Promise<NavNumbers> {  if (cache && Date.
     db.selectFrom("partner").select(db.fn.countAll().as("n")).where("active", "=", true).executeTakeFirst(),
     getDisabledModules(),
     countOpenReplies(),
-    db
-      .selectFrom("outreach_dispatch")
-      .select(db.fn.countAll().as("n"))
-      .where("status", "=", "held")
-      .where("note", "=", APPROVAL_PENDING_NOTE)
-      .executeTakeFirst(),
+    // Only what went through the whole chain counts (owner 2026-11-25) — the same list the page shows.
+    import("./approvalQueue.js").then((m) => m.listPendingApprovals()).then((l) => ({ n: l.length })),
   ]);
   const value: NavNumbers = {
     players: Number(players?.n ?? 0),
