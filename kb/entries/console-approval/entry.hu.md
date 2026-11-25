@@ -4,12 +4,17 @@ title: Jóváhagyás — mehet-e ki a megkeresés, és hol
 audience: operator
 category: lead-path
 anchors: console.approval
-updated: 2026-11-08
+updated: 2026-11-25
 ---
 
 A **„Jóváhagyás”** lapon döntöd el, hogy egy elkészült, átnézett mock megkeresése kimehet-e a
 leadnek. A lap két fülből áll: **„Jóváhagyásra vár”** (az új megkeresések) és
 **„Messengeren nem nézte meg”** (akiknek Viberen vagy WhatsAppon már kiment, de nem nézték meg).
+A listán csak az a lead jelenik meg, amelyiknek a terve végigment a teljes láncon: a mostani
+generátorral készült (a nyitókép-javítással együtt), legalább 5 saját fotója van, a gépi ellenőrzésen
+átment, és a minőségellenőrző kolléga ezt a változatot átnézte és jónak találta. Ami ezek közül
+bármelyiken elakadt, az nem kerül ide, és a menüben látható szám sem számolja — előbb kijavítják,
+utána jelenik meg itt. Megkeresés csak a te jóváhagyásod után megy ki.
 A fülek fölötti sor mutatja a messenger-út állapotát: bekapcsolva, kikapcsolva, vagy a fék
 leállította. A lap a teljes képernyő-szélességet használja, hogy a terv minél nagyobban látsszon.
 
@@ -56,7 +61,9 @@ Telefonon a lista felül áll, alatta a kiválasztott lead.
   szöveged megy a messengeren is. Üresen hagyott mező = a gépi szöveg megy; a
   **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros
   **„Nem mentettem”** sáv sorolja fel az okokat.
-- **„Mehet”** — a lead visszakerül a kiküldési sorba, és hétköznap 9 és 16 óra között kimegy.
+- **„Mehet”** — a jóváhagyásod erre a tervre, ebben a mostani állapotában szól. A lead visszakerül a
+  kiküldési sorba, és hétköznap 8 és 16 óra között kimegy. Ha a terv a jóváhagyásod után megváltozik
+  (például újrarenderelik), nem megy ki, hanem újra a jóváhagyásodra vár.
   **„Nem mehet ki”** — a megkeresés törlődik. Mindkettő után a következő lead nyílik meg.
 - Alul a terv teljes oldala: **„1. terv”** / **„2. terv”**, és **„Asztali”** / **„Mobil”**
   szélességben.
