@@ -146,6 +146,24 @@ function codeKey(): string | null {
   return codeKeyMemo;
 }
 
+/**
+ * The CLIP image embedding of image bytes (unnormalised, as the model gives it) — shared with the
+ * town-photo picker (media/townPick.ts), which scores the same embedding against its own labels.
+ * Null when the model is missing or the bytes are not an image.
+ */
+export async function clipImageEmbedding(buf: Buffer): Promise<Float32Array | null> {
+  if (!photoKindAvailable()) return null;
+  let input: Float32Array;
+  try {
+    input = await pixels(buf);
+  } catch {
+    return null;
+  }
+  const sess = await getSession();
+  const res = await sess.run({ pixel_values: new ort.Tensor("float32", input, [1, 3, SIZE, SIZE]) });
+  return res.image_embeds!.data as Float32Array;
+}
+
 /** Classify image bytes. Null when the model is missing or the bytes are not an image. */
 export async function classifyPhotoBuffer(buf: Buffer): Promise<PhotoKind | null> {
   if (!photoKindAvailable()) return null;
@@ -167,15 +185,8 @@ export async function classifyPhotoBuffer(buf: Buffer): Promise<PhotoKind | null
 }
 
 async function classifyPhotoBufferFresh(buf: Buffer): Promise<PhotoKind | null> {
-  let input: Float32Array;
-  try {
-    input = await pixels(buf);
-  } catch {
-    return null;
-  }
-  const sess = await getSession();
-  const res = await sess.run({ pixel_values: new ort.Tensor("float32", input, [1, 3, SIZE, SIZE]) });
-  const emb = res.image_embeds!.data as Float32Array;
+  const emb = await clipImageEmbedding(buf);
+  if (!emb) return null;
   const norm = Math.hypot(...emb);
   const logits = LABELS.labels.map((l) => (100 * l.embed.reduce((a, x, i) => a + x * (emb[i] ?? 0), 0)) / norm);
   const max = Math.max(...logits);
@@ -311,6 +322,16 @@ const BACKSTAGE_MAX = 0.4;
 function backstageMass(v: PhotoKind): number {
   const p = v.probs ?? {};
   return [...NOT_HERO_TOP].reduce((a, l) => a + (p[l] ?? 0), 0);
+}
+
+/**
+ * The lodging from OUTSIDE or its view (house, garden, pool, balcony view, shore, courtyard) — the
+ * probability mass of those labels. A few-photo lead keeps its own hero only when this is high
+ * (plan kepnelkuli-hero ⑨, ADR-XXXX); else its town's picture opens the page.
+ */
+export function outsideScore(v: PhotoKind): number {
+  const p = v.probs ?? {};
+  return HERO_OUTSIDE.reduce((a, l) => a + (p[l] ?? 0), 0);
 }
 
 /** How well a photo opens the page: outside views count fully, rooms partly. */
