@@ -7,13 +7,15 @@
 // SOURCES (no key, no cost, licences CC0 / public domain / CC BY / CC BY-SA only):
 //   · Wikimedia Commons search (the bulk — measured 2026-11-25: Openverse's Flickr hits were mostly no
 //     room at all, 109 of 1186 passed);
-//   · Openverse (api.openverse.org, anonymous: 200 requests/day) over Flickr and Commons. Nothing is
+//   · Openverse (api.openverse.org, anonymous: 200 requests/day) over Flickr and Commons.
+// Only Wikimedia-hosted pictures go on the page (Flickr's CDN refuses a non-browser client). Nothing is
 // downloaded into the repo: the page hot-links the provider's CDN (live.staticflickr.com,
 // upload.wikimedia.org — both made for it) and prints the credit, like the town photo.
 // JUDGE: the production CLIP vision model (media/photoKind.ts) against stock-rooms-labels.json —
 // the best subject label is a room (bedroom, bathroom, living room, kitchen, terrace, dining), the
 // forbidden subjects (people, text, a lobby, a museum, clutter, a drawing…) stay under 0.25, the
-// quality pair ≥ 0.5, and the picture fits its style.
+// quality pair ≥ 0.5, the picture fits its style, and four yes/no questions hold (no person, a colour
+// photograph, a tidy room, a real room not a model, a guest room — not a corridor, a restaurant kitchen or a view).
 // OUTPUT: src/engine/stockRooms.json — per photo the URL, style, room, credit, licence and dHash (the
 // tenant uploader refuses a library picture by it, engine/stock.ts isStockDhash).
 
@@ -52,7 +54,7 @@ const COMMONS_QUERIES: Record<Style, string[]> = {
   urban: ["hotel room", "apartment interior", "modern bedroom", "loft apartment", "hotel room Budapest", "hotel room Vienna", "studio apartment interior", "modern kitchen interior", "modern bathroom", "serviced apartment", "hotel room Prague", "hotel suite living room", "hotel room Berlin", "hotel room Warsaw", "hotel room London", "hotel room Paris", "design hotel room", "boutique hotel room", "city apartment living room", "modern apartment bathroom", "hotel bathroom", "hotel room Zagreb", "hotel room Bratislava", "apartment kitchen"],
 };
 
-const ROOM_QUOTA: Record<Room, number> = { bedroom: 0.33, bathroom: 0.15, living: 0.15, kitchen: 0.12, terrace: 0.15, dining: 0.1 };
+const ROOM_QUOTA: Record<Room, number> = { bedroom: 0.6, bathroom: 0, living: 0.25, kitchen: 0, terrace: 0, dining: 0.15 };
 
 interface Hit {
   readonly id: string;
@@ -192,6 +194,9 @@ interface Lab {
   embed: number[];
 }
 const LAB = (LABELS as unknown as { labels: Lab[] }).labels;
+const PAIR_MIN: Record<string, number> = { empty: 0.45, photo: 0.9, tidy: 0.85, room: 0.8, real: 0.35, ...(JSON.parse(process.env.ROOM_PAIR_MIN ?? "{}") as Record<string, number>) };
+// Calibrated 2026-11-25 on the 349 round-1 pictures: „empty” is biased low (median 0.43), the others sit ~0.95.
+const PAIRS = (LABELS as unknown as { pairs?: { key: string; yesEmbed: number[]; noEmbed: number[] }[] }).pairs ?? [];
 const dot = (a: number[], b: Float32Array) => a.reduce((s, x, i) => s + x * (b[i] ?? 0), 0);
 function softmax(xs: number[]): number[] {
   const m = Math.max(...xs);
@@ -217,7 +222,7 @@ function judge(h: Hit, emb: Float32Array): Scored | string {
   p.forEach((v, i) => (v > p[top]! ? (top = i) : 0));
   const bad = subj.reduce((a, l, i) => a + (l.kind === "bad" ? p[i]! : 0), 0);
   if (subj[top]!.kind !== "room") return `subject: ${subj[top]!.key}`;
-  if (bad >= 0.25) return "forbidden subject";
+  if (bad >= 0.2) return "forbidden subject";
   if (p[top]! < 0.35) return "weak room";
   const styles = LAB.filter((l) => l.kind === "style");
   const sp = softmax(styles.map(sim));
@@ -232,11 +237,23 @@ function judge(h: Hit, emb: Float32Array): Scored | string {
     own = sp[best]!;
     style = styles[best]!.key as Style;
   }
+  // Round 2 (2026-11-25, after the eye check of the first build: people, a drawing, a b/w shot, a hotel
+  // corridor, luggage on the bed and a village view got through): four yes/no questions, each ≥ 0.6.
+  for (const pr of PAIRS) {
+    const a = (100 * dot(pr.yesEmbed, emb)) / n;
+    const b = (100 * dot(pr.noEmbed, emb)) / n;
+    if (1 / (1 + Math.exp(b - a)) < (PAIR_MIN[pr.key] ?? 0.6)) return `pair: ${pr.key}`;
+  }
   const qg = sim(LAB.find((l) => l.kind === "qgood")!);
   const qb = sim(LAB.find((l) => l.kind === "qbad")!);
   const q = 1 / (1 + Math.exp(-(qg - qb)));
-  if (q < 0.5) return "quality";
-  return { ...h, style, room: subj[top]!.key as Room, roomP: p[top]!, styleP: own, q };
+  if (q < 0.6) return "quality";
+  // Bathrooms, kitchens and terraces stay with the hand-reviewed local library (engine/stock.ts): the eye
+  // check of 2026-11-25 found toilets, hostel wash rooms, dated kitchens and football stadiums („terrace”)
+  // among the automatic picks.
+  const room = subj[top]!.key as Room;
+  if (room === "bathroom" || room === "kitchen" || room === "terrace") return "room: bathroom/kitchen/terrace (local library)";
+  return { ...h, style, room, roomP: p[top]!, styleP: own, q };
 }
 
 async function main(): Promise<void> {
@@ -267,8 +284,14 @@ async function main(): Promise<void> {
         why.download = (why.download ?? 0) + 1;
         continue;
       }
-      const emb = await clipImageEmbedding(b);
-      stats.clipRuns++;
+      // The embedding is cached next to the picture: a rule change re-judges without re-running CLIP.
+      const ef = path.join(CACHE, "img", `${batch[k]!.id}.emb.json`);
+      let emb: Float32Array | null = existsSync(ef) ? Float32Array.from(JSON.parse(readFileSync(ef, "utf8")) as number[]) : null;
+      if (!emb) {
+        emb = await clipImageEmbedding(b);
+        stats.clipRuns++;
+        if (emb) writeFileSync(ef, JSON.stringify(Array.from(emb)));
+      }
       if (!emb) continue;
       const v = judge(batch[k]!, emb);
       if (typeof v === "string") {
@@ -282,7 +305,7 @@ async function main(): Promise<void> {
   }
   // Wikimedia only on the page: Flickr's CDN refuses a non-browser client (403), so the send gate's
   // render — which fetches with our honest bot UA — would see a broken picture (measured 2026-11-25).
-  for (let i = ok.length - 1; i >= 0; i--) if (!/^https:\/\/upload\.wikimedia\.org\//.test(ok[i]!.url)) ok.splice(i, 1);
+  for (let i = ok.length - 1; i >= 0; i--) if (!/^https:\/\/(?:upload|thumb)\.wikimedia\.org\//.test(ok[i]!.url)) ok.splice(i, 1);
   // Per style: room quotas, best first, one view once.
   const out: Scored[] = [];
   for (const style of Object.keys(QUERIES) as Style[]) {

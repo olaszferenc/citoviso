@@ -318,7 +318,15 @@ export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, loc
   const style = styledStyleOf(d);
   const want = target - own - localCount;
   const picks: Photo[] = [];
+  // The town page's three sample cards wear their own pictures (townCardKinds): never again in the gallery,
+  // however many rounds the gallery walks a short list (dev run 2026-11-25: the card's bedroom twice).
   const used = new Set<string>();
+  if (localCount > 0) {
+    for (const k of townCardKinds(d)) {
+      const c = stockCardPhoto(d, k, alt);
+      if (c) used.add(c.url.startsWith(STOCK_PREFIX) ? c.url.slice(STOCK_PREFIX.length) : c.url);
+    }
+  }
   for (let round = 0; picks.length < want && round < 12; round++) {
     for (const cat of cats) {
       if (picks.length >= want) break;
@@ -373,4 +381,32 @@ export function stockHeroBackdrop(d: SiteData, alt: string): Photo | undefined {
       : ordered(seed, cat);
   const e = pool[0];
   return e ? toPhoto(e, alt) : undefined;
+}
+
+// ── the town page's three MINTA room cards (plan kepnelkuli-hero, coordinator 2026-11-25) ─────
+// A lead with no own photo and the town's pictures shows three sample cards instead of one: a bedroom,
+// a bathroom and — by the same signals the gallery uses — a terrace, kitchen or living room. Each card a
+// different picture, taken from the END of its category (the gallery takes from the front).
+
+export type CardKind = "bedroom" | "bathroom" | "terrace" | "kitchen" | "living";
+
+/** The three kinds of the town page's sample cards. */
+export function townCardKinds(d: SiteData): CardKind[] {
+  const cats = stockGalleryCategories(d, false);
+  const third = (["terrace", "kitchen", "living"] as const).find((k) => cats.includes(k)) ?? "living";
+  return ["bedroom", "bathroom", third];
+}
+
+/** One sample picture for a card of `kind` (styled library first for a bedroom / living room). */
+export function stockCardPhoto(d: SiteData, kind: CardKind, alt: string): Photo | undefined {
+  const style = styledStyleOf(d);
+  if (kind === "bedroom") return stockRoomPhotos(d, 1, () => alt)[0];
+  if (style && kind === "living") {
+    const list = styledOrdered(stockSeedOf(d), style, "living");
+    const e = list[list.length - 1];
+    if (e && list.length > 1) return styledPhoto(e, alt);
+  }
+  const list = ordered(stockSeedOf(d), kind);
+  const e = list[list.length - 1];
+  return e && list.length > 1 ? toPhoto(e, alt) : undefined;
 }

@@ -16,6 +16,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { langForCountry } from "../i18n/lang.js";
 import type { TownPhoto } from "../engine/recipe.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL } from "../outreach/mockPhotoGate.js";
@@ -41,6 +42,8 @@ const fold = (x: string): string => x.normalize("NFD").replace(/[̀-ͯ]/g, "").t
 export function townName(city: string): string {
   return city
     .split(",")[0]!
+    // An administrative prefix is no part of the town's name („Općina Brela”, „Grad Makarska”, „Gmina …”).
+    .replace(/^(?:op[cć]ina|grad|gmina|obec|mesto|město|gemeinde|stadt|comune di|commune de|municipiul|comuna)\s+/i, "")
     .replace(/\s+\S+(?:\s+\S+)?\s+(?:utca|út|útja|tér|köz|sor|sétány|dűlő|puszta|ulica|cesta)\b.*$/i, "")
     .replace(/\s+\d.*$/, "")
     .trim();
@@ -99,7 +102,7 @@ export async function townHasEmailLeadInNeed(country: string, city: string): Pro
      where btrim(coalesce(l.raw->>'email', '')) <> ''
        and l.contact_block_at is null
        and upper(coalesce(l.raw->>'country', ${country.toUpperCase()})) = ${country.toUpperCase()}
-       and lower(l.raw->>'city') like ${`${townName(city).toLowerCase()}%`}
+       and l.raw->>'city' ilike ${`%${townName(city)}%`}
        and ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}
      limit 50`.execute(db);
   const key = townKey(city);
@@ -166,7 +169,7 @@ export async function leadSlotInTown(leadId: string, country: string, city: stri
       from lead l
      where btrim(coalesce(l.raw->>'email', '')) <> ''
        and upper(coalesce(l.raw->>'country', ${country.toUpperCase()})) = ${country.toUpperCase()}
-       and lower(l.raw->>'city') like ${`${townName(city).toLowerCase()}%`}
+       and l.raw->>'city' ilike ${`%${townName(city)}%`}
      order by l.created_at, l.id`.execute(db);
   const key = townKey(city);
   const ids = rows.rows.filter((r) => r.city && townKey(r.city) === key).map((r) => r.id);
@@ -205,7 +208,17 @@ export interface LeadTownPhotos {
 export function shareTownSet(set: TownPhotoSetRow, slot: number, galleryMax = 6): LeadTownPhotos {
   const n = set.heroes.length;
   const hero = n ? set.heroes[slot % n]! : null;
-  const pool = [...set.gallery, ...set.heroes.filter((h) => h !== hero)];
+  // One view once on a page: a near-duplicate of the hero or of an earlier pool picture leaves (a set picked
+  // before the stricter dedupe of 2026-11-25 may still hold two shots of one series).
+  const near = (a: TownPick, b: TownPick): boolean => {
+    const d = a.dhash && b.dhash ? hashDistance(a.dhash, b.dhash) : null;
+    return d !== null && d <= NEAR_DUP_BITS + 6;
+  };
+  const pool: TownPick[] = [];
+  for (const p of [...set.gallery, ...set.heroes.filter((h) => h !== hero)]) {
+    if ((hero && near(p, hero)) || pool.some((q) => near(p, q))) continue;
+    pool.push(p);
+  }
   const shift = pool.length ? slot % pool.length : 0;
   const rotated = [...pool.slice(shift), ...pool.slice(0, shift)];
   return {

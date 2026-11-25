@@ -8,7 +8,7 @@ import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
-import { isStockPhoto, stockRoomPhotos } from "./stock.js";
+import { isStockPhoto, stockCardPhoto, stockRoomPhotos, townCardKinds, type CardKind } from "./stock.js";
 import { isSamePicture, sizelessPhotoKey } from "./samePicture.js";
 // Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
@@ -242,6 +242,26 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   });
   // One card stands for the whole place or a kind — any inside photo fits it.
   const pick = (i: number): Photo | undefined => (n === 1 ? photos.single : photos.cards[i]);
+  // THE TOWN PAGE (plan kepnelkuli-hero, coordinator 2026-11-25: „tele kell lennie képpel”): no own photo
+  // but the town's pictures, nothing stated about the units → three MINTA cards by KIND (bedroom,
+  // bathroom, terrace / kitchen / living room), each its own sample picture. The names are kinds of
+  // space every lodging has or the source signals (stockGalleryCategories), never a count of rooms.
+  const ownCount = d.photos.filter((p) => !isStockPhoto(p) && p.url !== d.townPhoto?.url).length;
+  if (d.stock?.cards && ownCount === 0 && d.townGallery?.length && !names && !whole && n === 1) {
+    const label: Record<CardKind, string> = {
+      bedroom: T(d, "Hálószoba"),
+      bathroom: T(d, "Fürdőszoba"),
+      terrace: T(d, "Terasz"),
+      kitchen: T(d, "Konyha"),
+      living: T(d, "Nappali"),
+    };
+    return townCardKinds(d).map((kind, i) => {
+      const proto = base[0]!;
+      const name = label[kind];
+      const photo = stockCardPhoto(d, kind, T(d, "Illusztráció — {name}", { name }));
+      return { ...proto, name, ...(i > 0 ? { description: undefined } : {}), ...(photo ? { photo } : {}) } as Room;
+    });
+  }
   const own = base.map((r, i) => {
     const photo = d.photos.length ? pick(i) : undefined;
     return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
@@ -342,8 +362,17 @@ export function allotPhotos(
   // The bands are full-bleed screens of their own — never a kitchen or a bathroom (an empty band drops).
   // …and never a close-up, a dark shot or a thing instead of a place (photoCurate notBand, 11-25).
   const bandFit = (p: Photo): boolean => notBath(p) && !p.notBand;
-  const bandA = take(bandFit);
-  const bandB = take(bandFit);
+  // A town page (no own photo besides the town's hero): the bands take the town's LOCAL pictures instead of
+  // staying empty grey screens (coordinator 2026-11-25); the gallery then shows the rest of them.
+  const local = (d.stock?.gallery ?? []).filter((p) => !isStockPhoto(p));
+  const usedLocal = new Set<string>();
+  const fromLocal = (): Photo | undefined => {
+    const p = pool.length ? undefined : local.find((x) => !usedLocal.has(x.url));
+    if (p) usedLocal.add(p.url);
+    return p;
+  };
+  const bandA = take(bandFit) ?? fromLocal();
+  const bandB = take(bandFit) ?? fromLocal();
   let contact = scene;
   let contactAlt = scene ? sceneAlt(d) : d.name;
   if (!contact) {
@@ -361,8 +390,10 @@ export function allotPhotos(
   }
   const own = pool.splice(0, opts.maxGallery);
   // The stock fill (mock, fewer than six own photos) completes the gallery, never another slot.
-  const extra = d.stock?.gallery ?? [];
-  const gallery = [...own, ...extra].slice(0, Math.max(own.length, opts.maxGallery));
+  const extra = (d.stock?.gallery ?? []).filter((p) => !usedLocal.has(p.url));
+  // The town page carries 5–7 local pictures AND the MINTA rooms (plan kepnelkuli-hero): up to 12 there.
+  const cap = d.townGallery?.length ? Math.max(own.length, opts.maxGallery, 12) : Math.max(own.length, opts.maxGallery);
+  const gallery = [...own, ...extra].slice(0, cap);
   return { hero, bandA, bandB, contact, contactAlt, gallery, rows };
 }
 

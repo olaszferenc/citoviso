@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-kepnelkuli-hero-telepuleskep-tar.md) — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár
 - [ADR-0478](decisions/0478-elesites-gyorsitasa-a-mock-kapu-uresjarata-ki.md) — Élesítés gyorsítása: a mock-kapu üresjárata ki, képítélet-tár, a `--go` átveszi a próbafuttatást, a deploy mindig a main szkriptjével fut, a fordítás nem állít meg
 - [ADR-0477](decisions/0477-orszagfuggo-kontaktkereso-hr-ingyenes-kereso-a.md) — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval
 - [ADR-0476](decisions/0476-terhatasu-boritokep-mindenkinek-es-az-osszes.md) — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése

@@ -751,7 +751,7 @@ function localTownPhotos(data: SiteData): Photo[] {
   for (const t of data.townGallery ?? []) {
     if (on.has(t.url)) continue;
     on.add(t.url);
-    out.push({ url: t.url, alt: t.city, provenance: "generated", subject: "exterior", bedroom: false });
+    out.push({ url: t.url, alt: townLabel(data, t), provenance: "generated", subject: "exterior", bedroom: false });
   }
   return out;
 }
@@ -782,7 +782,7 @@ function withTownHero(data: SiteData): SiteData {
   // generator stored a town photo only for a lead with no own photo, so an older mock is unchanged.)
   return {
     ...data,
-    photos: [{ url: t.url, alt: t.city, provenance: "generated", subject: "exterior", bedroom: false }, ...data.photos],
+    photos: [{ url: t.url, alt: townLabel(data, t), provenance: "generated", subject: "exterior", bedroom: false }, ...data.photos],
   };
 }
 
@@ -818,12 +818,21 @@ function withMockNotes(html: string, data: SiteData): string {
       : esc(t.license);
     const credit =
       `<p class="cit-town-credit" style="margin:0;padding:10px 16px;font-size:.75rem;line-height:1.4;opacity:.7;text-align:center">` +
-      `${T(data, "Borítókép")}: ${esc(t.city)} · ${T(data, "Fotó")}: ` +
+      `${T(data, "Borítókép")}: ${esc(townLabel(data, t))} · ${T(data, "Fotó")}: ` +
       `<a href="${esc(t.pageUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.author)}</a>, Wikimedia Commons, ${license}</p>`;
     const i = out.lastIndexOf("</body>");
     out = i >= 0 ? out.slice(0, i) + credit + out.slice(i) : out + credit;
   }
   return withSampleMarks(withPictureCredits(out, data), data);
+}
+
+/**
+ * What a town picture shows, for its credit: the town itself, or — a fallback picture from the landscape
+ * around or the region (plan kepnelkuli-hero ②) — „<town> környéke”, never the bare town name over a
+ * picture of the next village (Garáb, 2026-11-25: a Hollókő view).
+ */
+function townLabel(data: SiteData, t: { readonly city: string; readonly pick?: { readonly tier: string } }): string {
+  return t.pick && t.pick.tier !== "town" ? T(data, "{town} környéke", { town: t.city }) : t.city;
 }
 
 /**
@@ -840,10 +849,10 @@ function withPictureCredits(html: string, data: SiteData): string {
     if (seen.has(t.url) || !html.includes(esc(t.url))) continue;
     seen.add(t.url);
     rows.push(
-      `<li>${esc(t.city)} · ${T(data, "Fotó")}: <a href="${esc(t.pageUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.author)}</a>, Wikimedia Commons, ${lic(t.license, t.licenseUrl)}</li>`,
+      `<li>${esc(townLabel(data, t))} · ${T(data, "Fotó")}: <a href="${esc(t.pageUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.author)}</a>, Wikimedia Commons, ${lic(t.license, t.licenseUrl)}</li>`,
     );
   }
-  for (const m of html.matchAll(/https:\/\/(?:live\.staticflickr\.com|upload\.wikimedia\.org)\/[^"'\s)]+/g)) {
+  for (const m of html.matchAll(/https:\/\/(?:upload|thumb)\.wikimedia\.org\/[^"'\s)]+/g)) {
     const e = styledStockEntry(m[0].replace(/&amp;/g, "&"));
     if (!e || seen.has(e.url)) continue;
     seen.add(e.url);
@@ -880,8 +889,8 @@ function withSampleMarks(html: string, data: SiteData): string {
   const label = jsonForScript(T(data, "MINTA"));
   const script =
     `<style data-cit-sample-css>.cit-sample-badge{position:absolute;top:8px;left:8px;z-index:2;padding:2px 7px;border-radius:4px;` +
-    `background:color-mix(in srgb,var(--cit-ink,currentColor) 72%,transparent);color:var(--cit-bg,Canvas);font:600 11px/1.4 system-ui,sans-serif;letter-spacing:.06em;pointer-events:none}</style>` +
-    `<script>(function(){var L=${label};function mark(){document.querySelectorAll('img[data-cit-sample]').forEach(function(i){var p=i.parentElement;` +
+    `background:color-mix(in srgb,var(--cit-ink,currentColor) 72%,transparent);color:var(--cit-bg,Canvas);font:600 11px/1.4 system-ui,sans-serif;letter-spacing:.06em;pointer-events:none;overflow:hidden;white-space:nowrap}</style>` +
+    `<script>(function(){var L=${label};function mark(){document.querySelectorAll('img[data-cit-sample]').forEach(function(i){if(i.closest('[data-cit-module=rooms]'))return;var p=i.parentElement;` +
     `if(!p||p.querySelector(':scope>.cit-sample-badge'))return;if(getComputedStyle(p).position==='static')p.style.position='relative';` +
     `var b=document.createElement('span');b.className='cit-sample-badge';b.textContent=L;p.appendChild(b);});}` +
     `if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mark);else mark();})();</script>`;
@@ -980,6 +989,12 @@ export function renderSite(
   if (data.contact.phone) {
     const phone = onePhone(data.contact.phone);
     if (phone !== data.contact.phone) data = { ...data, contact: { ...data.contact, phone } };
+  }
+  // An icon glyph scraped with the address („Makarska, \uE0C8 Ul. Kralja Petra”, coordinator 2026-11-25 —
+  // a portal's icon font in the Private Use Area) is no character of the address: off, every country.
+  if (data.contact.address && /[\uE000-\uF8FF\uFFFD]/.test(data.contact.address)) {
+    const address = data.contact.address.replace(/[\uE000-\uF8FF\uFFFD]/g, " ").replace(/\s+,/g, ",").replace(/\s{2,}/g, " ").trim();
+    data = { ...data, contact: { ...data.contact, address } };
   }
   // ADR-0338: the guest-facing address drops the property's own country („… 8646 Hungary”).
   if (data.contact.address && data.place?.country) {

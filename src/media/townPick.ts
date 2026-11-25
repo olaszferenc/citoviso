@@ -22,13 +22,13 @@
 // Measured on the 22-town plan sample (2026-11-24): 18 own town picture, 3 fallback, 1 none.
 
 import { dHashFromBuffer } from "../generator/photoHash.js";
-import { hashDistance } from "../engine/samePicture.js";
+import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { reverseGeocode } from "../scraper/enrichGeo.js";
 import { clipImageEmbedding, photoKindAvailable } from "./photoKind.js";
 import LABELS from "./townPickLabels.json" with { type: "json" };
 
 /** Bump when the labels, the rules or the thresholds change: the send gate refuses an older pick. */
-export const TOWN_PICK_VERSION = 1;
+export const TOWN_PICK_VERSION = 2;
 /** The approved threshold variant (owner 2026-11-25: „Laza” + the second round). */
 export const TOWN_PICK_THRESHOLD = "laza";
 const T_MIN = 0.5;
@@ -203,6 +203,8 @@ export function townVerdict(s: TownScores, tier: TownTier, km?: number): string 
   if ((x.sport ?? 1) < 0.5) return "sportpálya / játszótér";
   if ((x.wide ?? 1) < 0.5) return "közeli részlet";
   if ((x.day ?? 1) < 0.4) return "sötét / alkonyi";
+  // v2 (coordinator 2026-11-25, Fertőrákos: the Községháza with its lettering as the hero).
+  if ((x.facade ?? 1) < 0.5) return "egyetlen (feliratos) épület homlokzata";
   const subject = tier === "town" ? s.town + s.land : s.land;
   if (subject < T_MIN) return `gyenge téma-pont ${subject.toFixed(2)}`;
   if (s.q < Q_MIN) return `gyenge minőség ${s.q.toFixed(2)}`;
@@ -213,11 +215,15 @@ export function townVerdict(s: TownScores, tier: TownTier, km?: number): string 
  * Judge picture bytes as a town hero with the approved rule — the render gate re-judges the page's
  * town hero with it. Null = the model is missing (the caller decides; the send gate refuses).
  */
-export async function judgeTownPicture(buf: Buffer, tier: TownTier = "town"): Promise<{ ok: boolean; reason: string | null; scores: TownScores } | null> {
+export async function judgeTownPicture(
+  buf: Buffer,
+  tier: TownTier = "town",
+  asHero = false,
+): Promise<{ ok: boolean; reason: string | null; scores: TownScores } | null> {
   const emb = await clipImageEmbedding(buf);
   if (!emb) return null;
   const scores = scoreTownEmbedding(emb);
-  const reason = townVerdict(scores, tier);
+  const reason = townVerdict(scores, tier) ?? (asHero && !heroView(scores) ? "felülnézeti, térképszerű légifotó nem nyitókép" : null);
   return { ok: reason === null, reason, scores };
 }
 
@@ -298,7 +304,7 @@ export function kmBetween(a: { lat: number; lon: number }, b: { lat: number; lon
 export const FREE_LICENSE = /^(?:cc[ -]?by(?:[ -]sa)?(?:[ -]\d(?:\.\d)?)?(?:[ -][a-z]{2,})?|cc0(?:[ -]1\.0)?|public domain|pd(?:[ -].*)?)$/i;
 /** File names of forbidden subjects (many languages — the files are named by their uploaders). */
 export const BAD_FILE_NAME =
-  /c[ií]mer|coat[ _-]?of[ _-]?arms|wappen|\bgrb\b|zastava|flag|\bmap\b|térkép|karta|locator|location|logo|montage|collage|kollázs|cemetery|temető|groblje|friedhof|grave|interior|belső|unutra|statue|szobor|\bkip\b|portrait|\bbust\b|plaque|tábla|ploča|train|vonat|vlak|locomotive|mozdony|\bbus\b|busz|\btram\b|^File:ISS\d|astronaut|view of earth|station|állomás|kolodvor|bahnhof|stadium|night|éjszak|\bnoć|nacht|hotel|apartm|szálló|panzió|pension|vendégház|\bsign\b/i;
+  /c[ií]mer|coat[ _-]?of[ _-]?arms|wappen|\bgrb\b|zastava|flag|\bmap\b|térkép|karta|locator|location|logo|montage|collage|kollázs|cemetery|temető|groblje|friedhof|grave|interior|belső|unutra|statue|szobor|\bkip\b|portrait|\bbust\b|plaque|tábla|ploča|train|vonat|vlak|locomotive|mozdony|\bbus\b|busz|\btram\b|^File:ISS\d|astronaut|view of earth|station|állomás|kolodvor|bahnhof|stadium|night|éjszak|\bnoć|nacht|hotel|apartm|szálló|panzió|pension|vendégház|\bsign\b|községház|polgármester|városház|rathaus|gemeindeamt|zgrada op[cć]ine|op[cć]inska zgrada|hivatal|town hall|city hall|fortepan/i;
 
 interface Cand {
   readonly title: string;
@@ -418,6 +424,13 @@ export async function countryAtPoint(lat: number, lon: number): Promise<string |
 
 // ── the style of the place (which sample rooms fit) ───────────────────────────
 
+const OVERPASS_HOSTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
+
 /** The sample-room style of a town alone (the backfill's --restyle): its Wikidata item, then the rule below. */
 export async function townStyleOf(t: TownPickInput, wikidataId?: string): Promise<TownStyle> {
   const net = new Net();
@@ -427,19 +440,29 @@ export async function townStyleOf(t: TownPickInput, wikidataId?: string): Promis
 }
 
 async function styleOf(net: Net, t: TownPickInput, wd: any, accepted: readonly { s: TownScores; c: Cand }[]): Promise<TownStyle> {
-  // Coast: an OSM coastline within 5 km (Overpass, free; two public instances, a retry each). No answer
+  // Coast: an OSM coastline within 5 km (Overpass, free; four public instances, three rounds — on 2026-11-25 two timed out and one answered HTML). No answer
   // → not called a coast: a guess from the pictures took the Danube for a harbour (Budapest, 2026-11-25).
+  // First the town's own Wikidata item: „located in or next to body of water” (P206) naming a sea, a bay,
+  // a gulf, a strait or an ocean (Makarska → Adriatic Sea, a sea). Overpass only when Wikidata says nothing.
+  const SEA_CLASSES = new Set(["Q165", "Q9430", "Q39594", "Q1322134", "Q37901", "Q1210", "Q166620", "Q31615"]);
+  const waters = claim(wd, "P206").map((v: { id?: string }) => v.id).filter(Boolean) as string[];
+  if (waters.length) {
+    const e = await net.wikidata({ action: "wbgetentities", ids: waters.slice(0, 10).join("|"), props: "claims" });
+    for (const id of waters) {
+      if (claim(e?.entities?.[id], "P31").some((c: { id?: string }) => c.id && SEA_CLASSES.has(c.id))) return "mediterranean";
+    }
+  }
   let coast = false;
   const q = `[out:json][timeout:25];way["natural"="coastline"](around:5000,${t.lat},${t.lon});out ids 1;`;
-  outer: for (const host of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
-    for (let i = 0; i < 2; i++) {
+  outer: for (const host of [...OVERPASS_HOSTS, ...OVERPASS_HOSTS, ...OVERPASS_HOSTS]) {
+    for (let i = 0; i < 1; i++) {
       try {
         net.stats.apiCalls++;
         const r = await fetch(host, {
           method: "POST",
           headers: { "User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded" },
           body: "data=" + encodeURIComponent(q),
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(15000),
         });
         if (r.ok) {
           coast = (((await r.json()) as { elements?: unknown[] }).elements ?? []).length > 0;
@@ -473,7 +496,20 @@ async function styleOf(net: Net, t: TownPickInput, wd: any, accepted: readonly {
 
 function rankOf(s: TownScores, c: Cand): number {
   const subject = c.tier === "town" ? s.town + s.land : s.land;
-  return 0.6 * subject + 0.4 * s.q + (c.quality ? 0.1 : 0) + (c.origin === "wikidata P18" ? 0.05 : 0);
+  return 0.6 * subject + 0.4 * s.q + (c.quality ? 0.1 : 0) + (c.origin === "wikidata P18" ? 0.05 : 0) + brightBonus(s);
+}
+
+/** v2: a grey, overcast, washed-out picture goes back in the rank (Hegykő, 2026-11-25) — never out. */
+export function brightBonus(s: TownScores): number {
+  return 0.25 * ((s.x.bright ?? 1) - 1);
+}
+
+/**
+ * v2: may this picture OPEN the page? A top-down, map-like aerial reads as no townscape (Sopron,
+ * 2026-11-25) — it may stay in the gallery; an oblique aerial panorama (Primošten) opens fine.
+ */
+export function heroView(s: TownScores): boolean {
+  return (s.x.aerial ?? 1) >= 0.3;
 }
 
 /** The hot-link URL at a Wikimedia standard thumbnail width (960 / 1280 / 1920 — 1600 answers 400). */
@@ -482,8 +518,10 @@ function sizedUrl(c: Cand, hero: boolean): string {
   return c.thumb330.replace(/\/330px-/, `/${w}px-`);
 }
 
-/** Two pictures closer than this (dHash bits) are the same view. */
-const SAME_VIEW_BITS = 10;
+/** Two pictures closer than this (dHash bits) are the same view — kept well above the send gate's own
+ *  near-duplicate bar (samePicture.NEAR_DUP_BITS), since the gate hashes the page-size file, not the 330 px
+ *  thumbnail (Balatonboglár, 2026-11-25: two shots of one series failed the gate as „the same picture”). */
+const SAME_VIEW_BITS = NEAR_DUP_BITS + 6;
 
 /**
  * Pick the town's pictures. Never throws for a network gap (fewer candidates → a lower tier or
@@ -630,11 +668,11 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     ...(a.km !== undefined ? { km: a.km } : {}),
     bucket: a.s.bucket,
     ...(a.dhash ? { dhash: a.dhash } : {}),
-    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO,
+    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s),
   });
 
   // Heroes: the hero-sized ones, best tier first; a fallback tier only fills when the town has fewer than 3.
-  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO);
+  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s));
   const heroes: typeof accepted = [];
   // At most 3 of one kind (5 harbour views of Makarska would make its leads' pages look alike).
   for (const a of heroPool) {
@@ -670,4 +708,64 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     ...(wd ? { wikidata: wd.id } : {}),
     stats: net.stats,
   };
+}
+
+/**
+ * Re-screen a STORED set under the current rules without searching again (v1 → v2, 2026-11-25): each picture's
+ * 330 px thumbnail is judged anew; the rejected leave, heroes are re-chosen (hero-sized, a view not a map)
+ * and re-ranked with the brightness bonus, the rest fills the gallery round-robin. Network: one thumbnail
+ * per picture (~12 per town).
+ */
+export async function rescreenTownPicks(
+  heroes: readonly TownPick[],
+  gallery: readonly TownPick[],
+): Promise<{ heroes: TownPick[]; gallery: TownPick[]; dropped: { title: string; why: string }[] }> {
+  const net = new Net();
+  const kept: { p: TownPick; s: TownScores; score: number; hero: boolean }[] = [];
+  const dropped: { title: string; why: string }[] = [];
+  for (const p of [...heroes, ...gallery]) {
+    if (BAD_FILE_NAME.test(`File:${p.title}`)) {
+      dropped.push({ title: p.title, why: "fájlnév: tiltott téma" });
+      continue;
+    }
+    const b = await net.buf(p.url.replace(/\/(?:960|1280|1920)px-/, "/330px-"));
+    const emb = b ? await clipImageEmbedding(b) : null;
+    if (!emb) {
+      kept.push({ p, s: null as never, score: p.score, hero: p.heroOk });
+      continue;
+    }
+    const s = scoreTownEmbedding(emb);
+    const why = townVerdict(s, p.tier, p.km);
+    if (why) {
+      dropped.push({ title: p.title, why });
+      continue;
+    }
+    const wasHeroSized = heroes.includes(p) || p.heroOk;
+    kept.push({ p, s, score: p.score + brightBonus(s), hero: wasHeroSized && heroView(s) });
+    await sleep(100);
+  }
+  const tierRank: Record<TownTier, number> = { town: 0, land: 1, region: 2 };
+  kept.sort((a, b) => tierRank[a.p.tier] - tierRank[b.p.tier] || b.score - a.score);
+  const newHeroes: typeof kept = [];
+  for (const k of kept.filter((x) => x.hero)) {
+    if (newHeroes.length >= HEROES_MAX) break;
+    if (newHeroes.length >= HEROES_WANT && k.p.tier !== newHeroes[0]!.p.tier) break;
+    newHeroes.push(k);
+  }
+  const rest = kept.filter((k) => !newHeroes.includes(k) && k.p.tier !== "region");
+  const order: GalleryBucket[] = ["strand", "square", "sight", "landscape"];
+  const newGallery: typeof kept = [];
+  for (let round = 0; newGallery.length < GALLERY_MAX && round < GALLERY_MAX; round++) {
+    let added = false;
+    for (const bk of order) {
+      const k = rest.filter((x) => x.p.bucket === bk)[round];
+      if (k && newGallery.length < GALLERY_MAX) {
+        newGallery.push(k);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+  const out = (k: (typeof kept)[number], hero: boolean): TownPick => ({ ...k.p, score: +k.score.toFixed(3), heroOk: hero });
+  return { heroes: newHeroes.map((k) => out(k, true)), gallery: newGallery.map((k) => out(k, k.hero)), dropped };
 }

@@ -49,7 +49,10 @@ import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 10;
+export const RENDER_GATE_VERSION = 11;
+
+/** A town page (no / few own photos, plan kepnelkuli-hero) carries at least this many distinct pictures (coordinator 2026-11-25: „tele kell lennie képpel”). */
+export const TOWN_PAGE_MIN_PICTURES = 12;
 
 /** The only places a MARKED sample picture may stand (plan kepnelkuli-hero ⑩, ADR-XXXX). */
 const SAMPLE_MODULES = new Set(["gallery", "rooms"]);
@@ -72,7 +75,7 @@ const QUIET_MS = 500;
 /** Vision subjects that never belong on a lodging page shown to its owner. */
 const FORBIDDEN_SUBJECTS = new Set(["ad_banner", "sign_map", "people_doc", "toilet"]);
 
-export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render";
+export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render" | "thin";
 
 export interface RenderFinding {
   readonly code: RenderFindingCode;
@@ -200,6 +203,19 @@ const MEASURE_JS = `(() => {
 })()`;
 
 /**
+ * The bytes a town picture was PICKED on (media/townPick.ts judges the 330 px Wikimedia thumbnail): the
+ * gate re-judges the very same input, so a borderline score cannot flip between the pick and the page
+ * (Garáb, 2026-11-25: „sports ground” on the 1920 px file, a village view on the 330 px one). Falls back
+ * to the page's own bytes when the thumbnail cannot be fetched.
+ */
+async function townJudgeBytes(url: string, pageBytes: Buffer): Promise<Buffer> {
+  const small = url.replace(/\/(?:960|1280|1920)px-/, "/330px-");
+  if (small === url) return pageBytes;
+  const r = await fetch(small, { headers: { "user-agent": PORTAL_USER_AGENT }, signal: AbortSignal.timeout(15000) }).catch(() => null);
+  return r?.ok ? Buffer.from(await r.arrayBuffer()) : pageBytes;
+}
+
+/**
  * Render one mock HTML file like a phone and judge it. Pure of the DB except for reading the
  * cached vision verdicts (no paid call). Throws only on a launch failure.
  */
@@ -214,6 +230,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     throw e;
   });
   let measure: PageMeasure;
+  let opening: PageMeasure = { slots: [], broken: [], scrollWidth: 0, innerWidth: 0, wideText: [], brokenWords: [] };
   try {
     // The PAGE renders with the browser's own UA: Google Fonts answers a bot UA with another font
     // file, the headline then fits where a phone's Fraunces does not (measured 11-24, Crystal
@@ -302,7 +319,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     await page.goto(`file://${mockAbs}`, { waitUntil: "networkidle", timeout: 60000 });
     // The first screen exactly as it opens (the hero's fitted headline can reflow after a scroll).
     await page.waitForTimeout(1200);
-    const opening = (await page.evaluate(MEASURE_JS)) as PageMeasure;
+    opening = (await page.evaluate(MEASURE_JS)) as PageMeasure;
     // Walk the page so lazy images load, then measure from the top.
     const height = (await page.evaluate("document.documentElement.scrollHeight")) as number;
     for (let y = 0; y < height; y += VIEWPORT.height / 2) {
@@ -337,6 +354,16 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
 
   const findings: RenderFinding[] = [];
   const slots = measure.slots;
+
+  // A TOWN PAGE, measured as a phone opens it (coordinator 2026-11-25): the first screen, unscrolled, shows a
+  // real, loaded picture in the hero (a parallax layer that never paints = a grey band), and the page holds
+  // at least TOWN_PAGE_MIN_PICTURES distinct pictures. A failing page is regenerated, never sent.
+  if (town.hero || town.gallery.length) {
+    const heroShown = opening.slots.some((sl) => sl.y < VIEWPORT.height && sl.h >= VIEWPORT.height * 0.3 && !opening.broken.includes(sl.u));
+    if (!heroShown) findings.push({ code: "thin", detail: "mobilon az első képernyőn nincs betöltött nyitókép (szürke sáv)" });
+    const distinct = new Set(slots.map((sl) => sizelessPhotoKey(sl.u))).size;
+    if (distinct < TOWN_PAGE_MIN_PICTURES) findings.push({ code: "thin", detail: `kevés kép a lapon: ${distinct} (legalább ${TOWN_PAGE_MIN_PICTURES} kell)` });
+  }
 
   // repeat — group slots by picture (URL key, then dHash), ignore stacked layers of one place.
   const hashOf = new Map<string, string | undefined>();
@@ -384,7 +411,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     if (heroUrl && heroBytes && isTown(heroUrl)) {
       // The TOWN's picture opens the page (plan kepnelkuli-hero, ADR-XXXX): re-judged with the very rule
       // that picked it (media/townPick.ts) — a vehicle, an interior, a road, a dusk field never opens.
-      const tv = await judgeTownPicture(heroBytes);
+      const tv = await judgeTownPicture(await townJudgeBytes(heroUrl, heroBytes), "town", true);
       if (!tv) findings.push({ code: "render", detail: "a településkép-szabály nem futtatható — ellenőrizetlen nyitókép nem mehet ki" });
       else if (!tv.ok) findings.push({ code: "subject", detail: `a település-nyitókép elbukik a szabályon (${tv.reason}): ${fileOf(heroUrl)}` });
     } else if (heroUrl && stockUrl(heroUrl)) {
@@ -442,6 +469,12 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
         continue;
       }
       if (!b) continue; // not served → the broken-image rule speaks for it
+      if (isTown(u)) {
+        // A town page's band shows the town's LOCAL picture (templateKit.allotPhotos): the town rule judges it.
+        const tv = await judgeTownPicture(await townJudgeBytes(u, b));
+        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a sávban lévő helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}` });
+        continue;
+      }
       const v = await classifyPhotoBuffer(b);
       if (v && !isShowcase(v)) {
         findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${v.label}): ${fileOf(u)}` });
@@ -456,7 +489,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
       if (isTown(u)) {
         // A local picture of the town (gallery) is a sight by design: the town rule judges it.
         if (u === heroUrl) continue;
-        const tv = await judgeTownPicture(b);
+        const tv = await judgeTownPicture(await townJudgeBytes(u, b));
         if (tv && !tv.ok) findings.push({ code: "subject", detail: `a helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}` });
         continue;
       }
