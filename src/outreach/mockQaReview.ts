@@ -32,6 +32,12 @@ export const QA_STALE_NOTE = "minőségi kolléga: a mock az átnézés óta vá
  * moves the row here; the owner's „Mehet” queues it again WITH his approval on the mock file.
  */
 export const APPROVAL_PENDING_NOTE = "JÓVÁHAGYÁSRA VÁR (egylépéses átnéző: MEHET)";
+/**
+ * The dispatch note of a row the colleague has not looked at yet. Owner 2026-11-25: the rows the old
+ * one-step reviewer had parked as „JÓVÁHAGYÁSRA VÁR” showed in the CRM as awaiting HIS approval
+ * („1664 jóváhagyandó … ezek a régiek”) — a row only says that after the colleague's pass.
+ */
+export const QA_WAIT_NOTE = "minőségi kolléga: még nem nézte át — a tulaj lapjára csak az ő jóváhagyása után kerül";
 /** `mock_artifact.inputs` key holding the owner's approval. */
 export const OWNER_APPROVAL_KEY = "ownerApproval";
 /** The dispatch note of a row held because its mock changed after the owner's yes. */

@@ -13,8 +13,10 @@
 //                 is no mock yet (the town photo is the default a new mock will get).
 // - no image    = no own photo and the shown mock has no town photo either (nophoto gate).
 // - sent        = any prospect of the lead has `sent_at` (any channel).
-// - mock ready  = the shown mock is not rejected, its stored review verdict is „pass”, and
-//                 the owner did not refuse it on /jovahagyas (dispatch cancelled/skipped).
+// - mock ready  = the shown mock is not rejected, it is made by the current generator (hero fix),
+//                 the quality colleague passed it, and the owner did not refuse it on /jovahagyas
+//                 (dispatch cancelled/skipped). Owner 2026-11-25: the old machine review's „pass”
+//                 alone counted 1600+ old mocks as ready — only the whole chain counts.
 // - contact ok  = an e-mail address, or a HU mobile whose Viber/WhatsApp check has run.
 // - sendable    = not sent, mock ready, contact ok.
 // - waiting     = not sent and not sendable; mock first, then contact (one bucket per lead).
@@ -24,6 +26,8 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { isHuMobileE164, normalizePhone } from "../text/phone.js";
+import { MOCK_QA_PASSED_SQL } from "../outreach/mockQaReview.js";
+import { MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 import { pickShownMock } from "./leadFilters.js";
 import { reportPeriod, type ReportPeriod } from "./reportData.js";
 
@@ -95,13 +99,14 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
       from lead l`.execute(db);
 
   const mocks = await sql<{ lead_id: string; status: string; pass: boolean; flag: boolean; town: boolean; generated_at: Date }>`
-    select m.lead_id, m.status,
-           (m.inputs->>'reviewVerdict' = 'pass' and m.inputs->'review'->>'verdict' = 'pass') as pass,
-           coalesce(m.inputs->>'reviewVerdict' = 'flag', false) as flag,
-           coalesce(jsonb_typeof(m.inputs->'siteData'->'townPhoto') = 'object', false) as town,
-           m.generated_at
-      from mock_artifact m
-     order by m.generated_at desc`.execute(db);
+    select a.lead_id, a.status,
+           coalesce(a.inputs->>'reviewVerdict' = 'pass' and a.inputs->'review'->>'verdict' = 'pass'
+                    and ${MOCK_QA_PASSED_SQL} and ${MOCK_CURRENT_GENERATOR_SQL}, false) as pass,
+           coalesce(a.inputs->>'reviewVerdict' = 'flag', false) as flag,
+           coalesce(jsonb_typeof(a.inputs->'siteData'->'townPhoto') = 'object', false) as town,
+           a.generated_at
+      from mock_artifact a
+     order by a.generated_at desc`.execute(db);
   const mocksByLead = new Map<string, { status: string; pass: boolean; flag: boolean; town: boolean }[]>();
   for (const m of mocks.rows) {
     const list = mocksByLead.get(m.lead_id) ?? [];

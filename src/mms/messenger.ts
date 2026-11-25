@@ -506,12 +506,13 @@ export async function requestPresence(phone: string): Promise<void> {
 
 /** Numbers of leads waiting for the owner's approval with no fresh presence read (requested ones first). */
 export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH): Promise<string[]> {
-  const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
+  // The colleague's not-yet-reviewed rows count too: their contact is checked while they wait (owner 2026-11-25).
+  const { APPROVAL_PENDING_NOTE, QA_WAIT_NOTE } = await import("../outreach/mockQaReview.js");
   const { normalizePhone } = await import("../text/phone.js");
   const rows = await sql<{ phone: string | null }>`
     select l.raw->>'phone' as phone
       from outreach_dispatch d join lead l on l.id = d.lead_id
-     where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
+     where d.status = 'held' and d.note in (${APPROVAL_PENDING_NOTE}, ${QA_WAIT_NOTE}) and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   // Leads with an e-mail address first (owner 2026-11-08: the e-mail + Viber leads are what matters).
   const phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
@@ -561,12 +562,13 @@ export async function whatsappPresenceDue(now: Date = new Date()): Promise<strin
   if ((await getMessengerConfig()).whatsapp === false) return [];
   const last = Date.parse((await getSetting(WA_LOOKUP_AT_KEY)) ?? "");
   if (Number.isFinite(last) && now.getTime() - last < WA_LOOKUP_EVERY_MS) return [];
-  const { APPROVAL_PENDING_NOTE } = await import("../console/approvalQueue.js");
+  // The colleague's not-yet-reviewed rows count too: their contact is checked while they wait (owner 2026-11-25).
+  const { APPROVAL_PENDING_NOTE, QA_WAIT_NOTE } = await import("../outreach/mockQaReview.js");
   const { normalizePhone } = await import("../text/phone.js");
   const rows = await sql<{ phone: string | null }>`
     select l.raw->>'phone' as phone
       from outreach_dispatch d join lead l on l.id = d.lead_id
-     where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE} and coalesce(l.raw->>'phone', '') <> ''
+     where d.status = 'held' and d.note in (${APPROVAL_PENDING_NOTE}, ${QA_WAIT_NOTE}) and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   let phones = [...new Set(rows.rows.map((r) => normalizePhone(r.phone ?? "")).filter((p): p is string => !!p && /^\+36(20|30|31|50|70)\d{7}$/.test(p)))];
   if (!phones.length) return [];
