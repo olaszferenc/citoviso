@@ -5,6 +5,7 @@
 
 const PATHS: Readonly<Record<string, string>> = {
   check: `<path d="M20 6 9 17l-5-5"/>`,
+  dot: `<circle cx="12" cy="12" r="2.6"/>`,
   parking: `<rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M9.5 16V8H13a2.5 2.5 0 0 1 0 5H9.5"/>`,
   wifi: `<path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8 15.5a5 5 0 0 1 8 0"/><path d="M12 19h.01"/>`,
   coffee: `<path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 9h2a2 2 0 0 1 0 4h-2"/><path d="M8 2v2M12 2v2"/>`,
@@ -34,38 +35,46 @@ const PATHS: Readonly<Record<string, string>> = {
   telescope: `<path d="m3 14 4-8 5 2-4 8z"/><path d="m12 8 6-3 2 3-6 3M9 16l3 5M13 15l4 6"/>`,
 };
 
+// Whole words only (owner 2026-11-25: „Kutyusokat” got a check mark, „Légkondicionálás” the dumbbell via
+// „kondi”, „mosogatógéppel” a mountain via „tó”): `W(...)` anchors each stem at a letter boundary
+// (Unicode-aware — JS \b treats ó/ő as non-word and split „mosogató|géppel”), the more specific rules
+// come first, and a label nothing fits gets the neutral dot.
+const W = (stems: string): RegExp => new RegExp(`(?<![\\p{L}])(?:${stems})`, "iu");
+const WEND = (stems: string): RegExp => new RegExp(`(?<![\\p{L}])(?:${stems})(?![\\p{L}])`, "iu");
 const RULES: ReadonlyArray<readonly [RegExp, string]> = [
-  [/parkol|garázs/i, "parking"],
-  [/wifi|wi-fi|internet|net\b/i, "wifi"],
-  [/e-?bike|e-?töltő|e-?tolto|ev[- ]?tölt|ev[- ]?tolt|elektromos tölt|tölt(ő|o)\b/i, "ev"],
-  [/bicik|bicaj|bringa|kerékpár|kerekpar|kétkerék|ketkerek/i, "bike"],
-  [/bor(bár|bar|vidék|videk|kóstoló|kostolo)|szőlő|szolo|sommelier|pezsgő|pezsgo/i, "wine"],
-  [/étterem|etterem|vacsora|bisztró|bisztro|gasztro|menü|menu|à la carte|a la carte/i, "restaurant"],
-  [/reggeli|kávé|kave|büfé|teabár|teabar|kemencés|kemences|kenyér|kenyer/i, "coffee"],
-  [/kutya|állat|allat|kedvenc|macska/i, "pet"],
-  [/gyerek|család|csalad|játsz|jatsz|bébi|bebi|pancsol|homokozó|homokozo/i, "child"],
-  [/fitnesz|fitness|kondi|edző|edzo|torna|jóga|joga/i, "fitness"],
-  [/masszázs|masszazs|gyógy|gyogy|orvosi|reuma|kúra|kura/i, "spa"],
-  [/csillag|távcső|tavcso|planetár|planetar|obszervat/i, "telescope"],
-  [/kály|kaly|kemence|tűz|tuz|kandalló|kandallo|bogrács|bograc|grill|szalonna/i, "fire"],
-  [/nap(oz|sü|su|le)|erkél|erkel|terasz.*nap/i, "sun"],
-  [/csomag|poggyász|poggyasz|megőrz|megorz|locker/i, "luggage"],
-  [/ébreszt|ebreszt|0[-–]24|éjjel[- ]?nappal|ejjel|órad|orad|check-?in|recepció|recepcio|concierge/i, "clock"],
-  [/kert|udvar|terasz|természet|termeszet|erdő|erdo|zöld|zold|hinta/i, "garden"],
-  [/medence|úsz|usz|jacuzzi|pezsgőfürdő|pezsgofurdo|dézsa|deza|szauna|wellness|fürdődéz|gyógyvíz|gyogyviz|termál|termal/i, "pool"],
-  [/panoráma|panorama|kilátás|kilatas|tó\b|tona|balaton|hegy|vitorlá|vitorla|strand/i, "view"],
-  [/klíma|klima|légkond|legkond|padlófűt|padlofut|hősziv|hosziv/i, "ac"],
-  [/fürdő|furdo|zuhany|kád|kad|köpeny|kopeny/i, "bath"],
-  [/konyh/i, "kitchen"],
-  [/ágy|agy|szoba|háló|halo|matrac|len ágynem|paplan/i, "bed"],
-  [/központ|kozpont|belváros|belvaros|elhelyezked|közel|kozel|perc|séta|seta|állomás|allomas/i, "location"],
-  [/bejárat|bejarat|kulcs|önálló|onallo|privát|privat|okoszár|okoszar|széf|szef/i, "key"],
+  [W("klíma|klima|légkond|legkond|padlófűt|padlofut|hőszivatty|hoszivatty"), "ac"],
+  [W("kuty|kutyus|állat|allat|háziállat|haziallat|kedvenc|macsk"), "pet"],
+  [W("kiságy|kisagy|etetőszék|etetoszek|gyerek|család|csalad|játsz|jatsz|bébi|bebi|baba|pancsol|homokozó|homokozo"), "child"],
+  [W("parkol|garázs|garazs"), "parking"],
+  [W("wifi|wi-fi|internet"), "wifi"],
+  [W("e-?bike|e-?töltő|e-?tolto|elektromos autó|elektromosautó|töltőállomás|toltoallomas"), "ev"],
+  [W("bicik|bicaj|bringa|kerékpár|kerekpar"), "bike"],
+  [W("borbár|borbar|borvidék|borvidek|borkóstoló|borkostolo|szőlő|szolo|sommelier"), "wine"],
+  [W("étterem|etterem|vacsora|bisztró|bisztro|gasztro|félpanzió|felpanzio"), "restaurant"],
+  [W("reggeli|kávé|kave|büfé|bufe|teabár|teabar"), "coffee"],
+  [W("konyh|mosogatógép|mosogatogep|főzőfülke|fozofulke|mikró|mikro|hűtő|huto"), "kitchen"],
+  [W("fitnesz|fitness|edzőterem|edzoterem|konditerem|torna|jóga|joga"), "fitness"],
+  [W("masszázs|masszazs|gyógy|gyogy|reuma|kúra|kura"), "spa"],
+  [W("csillagvizsg|távcső|tavcso|planetár|planetar|obszervat"), "telescope"],
+  [W("medence|úszómedence|uszomedence|jacuzzi|pezsgőfürdő|pezsgofurdo|dézsa|dezsa|szauna|wellness|termál|termal"), "pool"],
+  [W("kály|kaly|kemence|tűz|tuz|kandalló|kandallo|bogrács|bogracs|grill|szalonnasüt"), "fire"],
+  [W("napoz|napágy|napagy|erkély|erkely"), "sun"],
+  [W("csomagmegőrz|csomagmegorz|poggyász|poggyasz|locker"), "luggage"],
+  [W("éjjel-nappal|0-24|recepció|recepcio|check-?in|concierge"), "clock"],
+  [W("stég|steg|vízpart|vizpart|panoráma|panorama|kilátás|kilatas|balaton|strand|vitorl"), "view"],
+  [WEND("tó|tópart|hegy|hegyek"), "view"],
+  [W("kert|udvar|terasz|pergol|természet|termeszet|erdő|erdo|hinta"), "garden"],
+  [W("fürdő|furdo|zuhany|kád|kad|fürdőköpeny|furdokopeny"), "bath"],
+  [W("ágy|szoba|háló|matrac|ágynemű|agynemu|paplan"), "bed"],
+  [WEND("agy|agyak|halo|haloszoba"), "bed"],
+  [W("központ|kozpont|belváros|belvaros|közel|kozel|séta|seta|állomás|allomas"), "location"],
+  [W("bejárat|bejarat|kulcs|önálló|onallo|privát|privat|széf|szef"), "key"],
 ];
 
-/** Best-fit icon name for a Hungarian amenity label; neutral check mark if none matches. */
+/** Best-fit icon name for a Hungarian amenity label; a neutral dot if none matches (never a wrong icon). */
 export function matchIcon(label: string): string {
   for (const [re, name] of RULES) if (re.test(label)) return name;
-  return "check";
+  return "dot";
 }
 
 /** Render a named icon as an inline SVG (currentColor stroke). */
