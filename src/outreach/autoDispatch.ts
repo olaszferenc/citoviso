@@ -28,7 +28,7 @@ import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, revi
 import { sendOutreachMail } from "./sendBatch.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
-import { MOCK_QA_PASSED_SQL, QA_STALE_NOTE, qaBlockReason, qaReviewState } from "./mockQaReview.js";
+import { MOCK_OWNER_APPROVED_SQL, MOCK_QA_PASSED_SQL, ownerApprovalBlock, QA_STALE_NOTE, qaBlockReason, qaReviewState } from "./mockQaReview.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
 import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
@@ -346,7 +346,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       // …and the mock that goes out actually shows them, made by the fixed generator (2026-11-24) — else it stays queued.
       .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWN_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
       // …and the quality colleague passed it (owner 2026-11-25, mockQaReview.ts) — else it stays queued for the look.
-      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_QA_PASSED_SQL})`)
+      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_QA_PASSED_SQL} and ${MOCK_OWNER_APPROVED_SQL})`)
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(1)
@@ -430,6 +430,9 @@ async function dispatchOne(
   const qa = await qaReviewState(artifactId);
   const qaBlock = qaBlockReason(qa);
   if (qaBlock) return { status: "held", note: qa.state === "stale" ? QA_STALE_NOTE : qaBlock };
+  // The owner's yes on the approval page (owner 2026-11-25), on THIS file too.
+  const ownerBlock = await ownerApprovalBlock(artifactId);
+  if (ownerBlock) return { status: "held", note: ownerBlock };
   if (!(await planHasRooms(art.path))) {
     return { status: "held", note: "a mockból hiányzik a szobamodul — szobamodul nélküli terv nem megy ki" };
   }

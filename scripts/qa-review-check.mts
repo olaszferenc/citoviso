@@ -1,4 +1,4 @@
-// gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: minőségi kolléga minden levél előtt + engedélylistás képszűrő)
+// gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: minőségi kolléga + tulaj-jóváhagyás minden levél előtt + engedélylistás képszűrő)
 //
 // ① No letter leaves without the quality colleague's pass on THIS mock file (src/outreach/mockQaReview.ts):
 //    the dispatcher's claim, its per-row check and the shared send path all ask for it; only the
@@ -7,7 +7,7 @@
 //    is "junk" and stays off the page, out of the hero and out of the opening. Hermetic: no DB, no model.
 import { readFileSync } from "node:fs";
 import { isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
-import { QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, ownerApprovalOf, QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
 
 let failed = 0;
 function check(label: string, ok: boolean): void {
@@ -42,6 +42,27 @@ check(
     fn.indexOf("qaReviewState(p.artifactId)") < fn.indexOf("getEmailSender().send("),
 );
 
+// ── ①b the owner's yes on the approval page (owner 2026-11-25) ──
+check("tulaj-jóváhagyás: fájl-időbélyeg nélkül nem számít", ownerApprovalOf({ ownerApproval: { by: "x" } }) === null);
+check("tulaj-jóváhagyás: időbélyeggel számít", ownerApprovalOf({ ownerApproval: { by: "x", at: "y", mtime: 5 } })?.mtime === 5);
+check("bekötés: a kiküldő csak tulaj-jóváhagyott mockot vesz fel a sorból", /\$\{MOCK_OWNER_APPROVED_SQL\}/.test(dispatch));
+check(
+  "bekötés: a kiküldő soronként is ellenőrzi a friss tulaj-jóváhagyást, a levél ELŐTT",
+  one.includes("ownerApprovalBlock(artifactId)") && one.indexOf("ownerApprovalBlock(artifactId)") < one.indexOf("sendOutreachMail("),
+);
+check(
+  "bekötés: a közös küldési út tulaj-jóváhagyás nélkül nem küld (csak a mintalevél kivétel)",
+  /if \(p\.artifactId && !opts\.sampleTo\) \{[\s\S]{0,400}ownerApprovalBlock\(p\.artifactId\)/.test(fn) &&
+    fn.indexOf("ownerApprovalBlock(p.artifactId)") < fn.indexOf("getEmailSender().send("),
+);
+const qaSrc = src("src/outreach/mockQaReview.ts");
+check("a kolléga jóváhagyása NEM küld: a sort a tulaj lapjára teszi", /status: "held", note: APPROVAL_PENDING_NOTE/.test(qaSrc) && !/status: "queued"/.test(qaSrc));
+const aq = src("src/console/approvalQueue.ts");
+check("a jóváhagyó lap csak a teljes kört mutatja (kapu + kolléga + 5 saját kép + új generátor)",
+  /qaReviewState\(r\.main_id\)/.test(aq) && /cachedRenderGate\(/.test(aq) && /LEAD_OWN_PHOTOS_SQL/.test(aq) && /MOCK_CURRENT_GENERATOR_SQL/.test(aq));
+check("a „Mehet” a mockfájlra bélyegzi a tulaj jóváhagyását", /recordOwnerApproval\(row\.artifact_id/.test(aq));
+check("a várakozó-jegyzet egy helyen él", APPROVAL_PENDING_NOTE.startsWith("JÓVÁHAGYÁSRA VÁR"));
+
 // ── ② the allow-list ──
 const K = (kind: PhotoKind["kind"], label: string, extra: Partial<PhotoKind> = {}): PhotoKind => ({
   kind, label, score: 0.5, sight: 0, never: 0, ok: kind === "ok" ? 0.9 : 0.2, probs: { "the outside of a house": kind === "ok" ? 0.8 : 0 }, ...extra,
@@ -71,4 +92,4 @@ if (failed) {
   console.error(`⛔ ${failed} eset megbukott — kolléga-jóváhagyás vagy engedélylistás képszűrő nélkül menne ki levél.`);
   process.exit(1);
 }
-console.log("✅ qa-review-check: minőségi kolléga nélkül nincs levél, a képszűrő engedélylistás.");
+console.log("✅ qa-review-check: minőségi kolléga és tulaj-jóváhagyás nélkül nincs levél, a képszűrő engedélylistás.");
