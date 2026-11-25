@@ -25,7 +25,7 @@ import {
   type TenantModule,
   type TenantModuleView,
 } from "../tenant/modules.js";
-import { MODCFG_STYLE, hasSettingsScreen, tocNav, tocScript, type TocItem } from "./moduleConfigViews.js";
+import { MODCFG_STYLE, hasSettingsScreen, moduleDescFor, tocNav, tocScript, type TocItem } from "./moduleConfigViews.js";
 import { bookingsSection, hoursLeft } from "./bookingViews.js";
 import type { InboxItem } from "../booking/requests.js";
 import type { BookingsTabData } from "./bookingViews.js";
@@ -2759,7 +2759,10 @@ export function modulesSection(
       if (!items.length) return "";
       const cards = items
         .map((m) => {
-          const desc = m.publicDesc ? `<p>${esc(T(lang, m.publicDesc))}</p>` : "";
+          // HR dev-próba (2026-11-25): the calendar-sync portals are the lodging country's —
+          // no Szállás.hu for a Croatian owner (the same wording the order configurator shows).
+          const descHu = m.publicDesc ? moduleDescFor(m.id, m.publicDesc, mv.syncPortals) : m.publicDesc;
+          const desc = descHu ? `<p>${esc(T(lang, descHu))}</p>` : "";
           // A module with no page surface (the custom e-mail address is a mailbox,
           // not a section) gets no thumbnail and no preview link — an empty frame
           // and a button that shows nothing would both be lies.
@@ -3687,6 +3690,9 @@ export interface MultilangAdminData {
     readonly langs: readonly { code: string; name: string }[];
   }[];
   readonly primaryLangName: string;
+  /** The site's own language CODE — its name is shown in the reader's language
+   *  (HR dev-próba 2026-11-25: „horvát” on a Croatian admin). Absent = primaryLangName. */
+  readonly primaryLang?: string;
   /** Pickable target languages, flat (supported set minus the site's own language). */
   readonly options: readonly { code: string; name: string }[];
   /** The paid state; null = never purchased. */
@@ -3859,7 +3865,7 @@ export function multilangSection(ml: MultilangAdminData, lang = "hu"): string {
     ? `<p style="margin:8px 0 4px"><strong>${T(lang, "A megvásárolt nyelvek")}</strong> ` +
       `<span class="citui-hint">${T(lang, "(a választás a fizetéssel véglegessé vált):")}</span></p>`
     : `<p style="margin:8px 0 4px"><strong>${T(lang, "Válasszon legfeljebb {count} nyelvet", { count: ml.count })}</strong> ` +
-      `<span class="citui-hint">${T(lang, "(az oldal saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLangName) })}</span></p>`;
+      `<span class="citui-hint">${T(lang, "(az oldal saját nyelve — {name} — nem számít bele):", { name: esc(ml.primaryLang ? langNameLocalized(ml.primaryLang, lang) : ml.primaryLangName) })}</span></p>`;
 
   // ── ADR-0128 kontraktus §2: a három sáv kártyaként, egységárral ──────────────
   // Az egységár teszi összehasonlíthatóvá őket; a `cap` és a `totalTargets` a

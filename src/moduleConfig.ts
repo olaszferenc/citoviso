@@ -53,6 +53,13 @@ export interface ModuleField {
   readonly max?: number;
   /** Unit rendered after a number input, e.g. "éjszaka". */
   readonly suffix?: string;
+  /**
+   * NEMZETKÖZI (HR dev-próba, 2026-11-25): marks a MONEY unit and holds what follows the
+   * currency sign. `suffix` stays the forint wording (a Hungarian site reads it byte for
+   * byte); a site priced in another currency reads `<sign> / <this in its language>`
+   * („€ / osoba / noć”).
+   */
+  readonly currencySuffix?: string;
   readonly options?: readonly ModuleFieldOption[];
   /** Cap for `lines` fields. */
   readonly maxItems?: number;
@@ -92,8 +99,6 @@ export interface ModuleConfigDef {
   /** Owner-facing validation messages; empty array = valid. */
   readonly validate?: (config: ModuleConfigValues) => string[];
 }
-
-const NOTIFY_HELP = "Ide küldjük az értesítést. Erre a címre érkeznek a vendégek üzenetei.";
 
 export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> = {
   // The old "Hogyan mutassuk a képeket?" selector (grid/carousel/mosaic) was removed:
@@ -315,7 +320,15 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
   enquiry: {
     version: 1,
     fields: [
-      { key: "notifyEmail", type: "email", label: "Hová küldjük az érdeklődéseket?", help: NOTIFY_HELP },
+      // The help is a LITERAL on purpose: the catalog harvests registry text by field name
+      // (`help: "…"`), so a shared const left it out of the catalog and a Croatian owner
+      // read it in Hungarian (HR dev-próba, 2026-11-25).
+      {
+        key: "notifyEmail",
+        type: "email",
+        label: "Hová küldjük az érdeklődéseket?",
+        help: "Ide küldjük az értesítést. Erre a címre érkeznek a vendégek üzenetei.",
+      },
       {
         key: "askPhone",
         type: "toggle",
@@ -330,6 +343,9 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         help: "Ez jelenik meg az űrlap alatt. Csak olyat írjon, amit tartani tud.",
       },
     ],
+    // ⚠️ The stored default is the Hungarian SOURCE string, i.e. a catalog KEY, not a fact in
+    // Hungarian: wherever it is shown, a value still equal to it is rendered through T() in
+    // the site's language (localizedDefault below). A Hungarian site reads it unchanged.
     defaults: { notifyEmail: "", askPhone: true, responseNote: "24 órán belül válaszolunk" },
   },
 
@@ -434,6 +450,7 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         min: 0,
         max: 100000,
         suffix: "Ft / fő / éj",
+        currencySuffix: "fő / éj",
         // ⛔ HÁROM ÁLLAPOT, nem kettő (KB-őr FLAG, 2026-09-14). A „kitöltetlen" és a
         // „nálam nincs idegenforgalmi adó" NEM ugyanaz: az elsőnél nem tudjuk az
         // összeget, a másodiknál TUDJUK, hogy nincs. A 0-t ezért nem üresnek vesszük,
@@ -489,7 +506,12 @@ export const MODULE_CONFIG_REGISTRY: Readonly<Record<string, ModuleConfigDef>> =
         label: "Rövid magyarázat",
         placeholder: "Évente néhányszor írunk, akciókról és szabad időpontokról.",
       },
-      { key: "notifyEmail", type: "email", label: "Hová küldjük az új feliratkozókat?", help: NOTIFY_HELP },
+      {
+        key: "notifyEmail",
+        type: "email",
+        label: "Hová küldjük az új feliratkozókat?",
+        help: "Ide küldjük az értesítést. Erre a címre érkeznek a vendégek üzenetei.",
+      },
     ],
     defaults: {
       title: "Maradjunk kapcsolatban",
@@ -542,6 +564,17 @@ export function effectiveModuleConfig(
   if (!def) return { ...(stored ?? {}) };
   const industryLayer = (industry && def.industryDefaults?.[industry]) || {};
   return { ...def.defaults, ...industryLayer, ...(stored ?? {}) };
+}
+
+/**
+ * True when a stored text value is still the catalog default of that field — the Hungarian
+ * SOURCE string, which is a catalog key, not owner text. The caller then shows it through
+ * T() in the site's language (HR dev-próba 2026-11-25: „24 órán belül válaszolunk” stood
+ * pre-filled on a Croatian owner's form). Anything the owner typed is shown as typed.
+ */
+export function isCatalogDefaultText(moduleId: string, key: string, value: unknown): value is string {
+  const d = MODULE_CONFIG_REGISTRY[moduleId]?.defaults[key];
+  return typeof d === "string" && d !== "" && value === d;
 }
 
 /**

@@ -752,7 +752,7 @@
       if (bar && bar.contains(a)) return; // handled above
       a.setAttribute("href", want.href);
       var txt = (a.textContent || "").trim();
-      if (/foglal|érdeklőd/i.test(txt)) a.textContent = want.title;
+      if (txt === other.title || txt === want.title || /foglal|érdeklőd/i.test(txt)) a.textContent = want.title;
     });
     syncNavLinks();
   }

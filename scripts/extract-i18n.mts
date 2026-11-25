@@ -134,9 +134,11 @@ async function main(): Promise<void> {
   // T(lang, m.label) — a dynamic argument the T()-scan above cannot see. So the
   // labels are HARVESTED here by field name instead. Discovered by the pseudo-locale
   // guard: a Polish tenant's module list read "Nyitvatartás, érkezés".
+  // `why` (2026-11-25, Bábel): a module's requirement sentence (modules.ts requires[].why) is
+  // shown through T(lang, r.why) on the Modulok tab and the setup wizard.
   // These files are NOT in the lint's list on purpose: their literals are DATA and
   // must stay literal — wrapping them would break the harvest.
-  const DATA_FIELDS = /\b(?:label|publicLabel|publicDesc|help|note|placeholder|suffix):\s*"((?:[^"\\]|\\.)+)"/g;
+  const DATA_FIELDS = /\b(?:label|publicLabel|publicDesc|help|note|placeholder|suffix|currencySuffix|why):\s*"((?:[^"\\]|\\.)+)"/g;
   const DATA_FILES = [
     "src/modules.ts",
     "src/moduleConfig.ts",

@@ -252,6 +252,7 @@ export async function multilangCardData(input: MultilangCardInput): Promise<Mult
     totalTargets: catalog.totalTargets,
     regions: catalog.regions,
     primaryLangName: langName(primaryLang),
+    primaryLang,
     options: catalog.options,
     state: state
       ? {
