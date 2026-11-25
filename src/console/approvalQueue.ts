@@ -545,7 +545,8 @@ export function approvalPage(
   };
   const row = (i: PendingApproval): string =>
     `<a href="/jovahagyas?lead=${esc(i.leadId)}"${cur && i.leadId === cur.leadId ? ' class="on"' : ""} data-f data-grp="${groupOf(i)}" data-ch="${groupOf(i)}" data-site="${i.qualification === "no_site" ? "none" : "old"}" data-chk="${i.channel.channel === "check" ? "wait" : "done"}" data-alt="${i.altId ? "yes" : "no"}"${multi ? ` data-cc="${esc(i.country || "-")}"` : ""} data-s="${esc(`${i.name} ${i.city}`.toLowerCase())}"><b>${esc(i.name)}</b><small>${esc(sub(i))}</small>${contactBadges(i, lang)}</a>`;
-  const groups = APPROVAL_GROUPS.map((g) => {
+  void APPROVAL_GROUPS;
+  const _groups = APPROVAL_GROUPS.map((g) => {
     const its = items.filter((i) => groupOf(i) === g);
     if (!its.length) return "";
     return `<div class="aq-grp" data-grp="${g}"><span>${chIcon(g)}${esc(groupTitle(g, lang))} · <span class="c">${its.length}</span></span><small>${esc(groupHint(g, lang))}</small></div>${its.map(row).join("")}`;
@@ -561,7 +562,8 @@ export function approvalPage(
     `<nav class="aq-list"><div class="aq-cnt">${esc(T(lang, "Jóváhagyásra vár"))}: ${items.length}${
       // ORSZÁG-RÉTEG 3/5: a multi-country queue counts per country (each has its own window and cap).
       multi ? ` <small class="aq-ccn">${countries.map((c) => `${esc(c || "?")} ${items.filter((i) => i.country === c).length}`).join(" · ")}</small>` : ""
-    }</div>${items.length ? filters : ""}${groups}` +
+    // Owner 2026-11-25: „A messengeres rész kuka” — one plain list, no channel groups.
+    }</div>${items.length ? filters : ""}${items.map(row).join("")}` +
     (items.length ? `<div class="aq-none" hidden>${esc(T(lang, "Nincs a szűrőnek megfelelő lead."))}</div>` : "") +
     `</nav>`;
   const top = pageTop("wait", items.length, ctx.notSeen, ctx.cfg, lang);
@@ -594,11 +596,11 @@ export function approvalPage(
     ` <a class="aq-search" href="https://www.google.com/search?q=${encodeURIComponent([cur.name, cur.city, cur.email].filter(Boolean).join(" "))}" target="_blank" rel="noopener">${ic("search", 13)}${esc(T(lang, "Keresés"))}</a>` +
     ` <small class="aq-sub"><a href="/lead/${esc(cur.leadId)}" target="_blank" rel="noopener">${esc(T(lang, "lead lapja"))}</a></small></h2>` +
     contactDataBadges(cur, lang) +
-    ladder(cur, lang) +
+    // Owner 2026-11-25: „A messengeres rész kuka” — no channel ladder; the letter goes by e-mail.
     `<div class="aq-act">${form(true)}${form(false)}</div></div>`;
   const right =
     `<div class="aq-main">${head}${copyPanel}${tabs}<div class="aq-view"><iframe class="aq-frame" title="${esc(cur.name)}" data-main="${esc(cur.mainId)}" src="/mock/${esc(cur.mainId)}"></iframe></div></div>`;
-  return layout(T(lang, "Jóváhagyás"), `${CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}${right}</div></div>${SCRIPT}${presencePoll(cur)}`, {
+  return layout(T(lang, "Jóváhagyás"), `${CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}${right}</div></div>${SCRIPT}`, {
     active: "/jovahagyas",
   });
 }

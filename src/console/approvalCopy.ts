@@ -266,6 +266,8 @@ export async function approvalCopyPanel(
         `<label class="aq-f"><span>${esc(T(lang, "{app}-üzenet szövege (a kép alatt)", { app }))}</span><textarea rows="4" readonly>${esc(caption.text)}</textarea></label>` +
         `<div class="aq-fix">${esc(o?.pairSms ? T(lang, "A saját SMS-szöveged megy ide is.") : T(lang, "Ékezetesen megy, rövidítés nélkül. Ha átírod a lenti SMS-t, a te szöveged megy ide is."))}</div></div>`
       : "";
+  // Owner 2026-11-25: „A messengeres rész kuka” — the Viber/WhatsApp caption and the MMS + SMS columns are
+  // no longer shown on the approval page (the e-mail is the channel); kept computed for the save path.
   const smsCol = sms
     ? `${msgCol}<div class="aq-ch"><h3>${esc(app ? T(lang, "Ha MMS + SMS-re esik vissza") : T(lang, "MMS + SMS"))}</h3><div class="aq-to">${esc(T(lang, "Címzett"))}: ${esc(ctx.phone ?? "")} · ${esc(T(lang, "előbb MMS-ben a terv képe, utána ez az SMS"))}</div>` +
       `<label class="aq-f"><span>${esc(T(lang, "SMS szövege"))}</span><textarea name="sms" rows="6" data-link="${esc(sms.link)}">${esc(smsText)}</textarea></label>` +
@@ -273,6 +275,7 @@ export async function approvalCopyPanel(
       `<div class="aq-fix">${esc(T(lang, "Ékezetek nélkül megy ki (GSM-7), mint a gépi szöveg. A linket betűre hagyd benne: ez viszi a leiratkozást és a tájékoztatót."))}</div></div>`
     : `<div class="aq-ch"><h3>${esc(T(lang, "MMS + SMS"))}</h3><div class="aq-to">${esc(T(lang, "Nincs magyar mobilszám — SMS nem megy ki."))}</div></div>`;
 
+  void smsCol;
   const edited = o ? `<span class="aq-ed">${esc(T(lang, "saját szöveg"))}${o.by ? ` · ${esc(o.by)}` : ""}</span>` : "";
   const err = posted?.reasons.length
     ? `<div class="aq-err">${esc(T(lang, "Nem mentettem"))}:<ul>${posted.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`
@@ -284,7 +287,7 @@ export async function approvalCopyPanel(
     `<small>${esc(T(lang, "Üresen hagyott mező = a gépi szöveg megy."))}</small></div>`;
   return (
     `${CSS}<div class="aq-copy-wrap"><details class="aq-copy">${summary}${edited}<small>${esc(mail.subject)}</small></summary>` +
-    `<form method="post" action="/jovahagyas/${esc(item.leadId)}/szoveg">${err}${warn}<div class="aq-cols">${mailCol}<div>${smsCol}</div></div>${buttons}</form></details></div>` +
+    `<form method="post" action="/jovahagyas/${esc(item.leadId)}/szoveg">${err}${warn}<div class="aq-cols">${mailCol}</div>${buttons}</form></details></div>` +
     SCRIPT(GSM7_BASIC, PAIR_SMS_MAX_SEGMENTS)
   );
 }
