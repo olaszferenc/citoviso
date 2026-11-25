@@ -88,7 +88,7 @@ while :; do
   lap "#$ATTEMPT rebase" "$T"
   echo "── kapuk: typecheck…"
   T=$(date +%s)
-  # ⏱️ INCREMENTAL (2026-11-25, ADR: `_planning/decisions/*-commit-land-gyorsitas-*`): tsc's own build-info cache, one per worktree (in its git dir, never
+  # ⏱️ INCREMENTAL (2026-11-25, ADR-0480): tsc's own build-info cache, one per worktree (in its git dir, never
   # in the tree). It re-checks exactly the files whose content — or whose dependencies — changed, the
   # official TypeScript mechanism; a type error is reported the same way (red test: rc 2). Measured on a
   # loaded machine: 145 s plain → 28 s with a warm cache. CIT_TSC_FULL=1 = the old full check.
