@@ -15,7 +15,7 @@ Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `
 
 ## Mérés (dev DB, $0)
 - 52 település (első kör): 49 saját kép, 3 környék, 0 semmi; 65 s/település → gyorsítva 32 s/település (3 párhuzamos, nice).
-- Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. A vak 20 (v3) eredménye a zárójelentésben.
+- Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. Vak 20 (v3, just-in-time): 7 jó, 7 gyenge, 2 rossz (vasúti épület; egyetlen tető, határeset), 4 lapot a kapu visszatartott (kép nélkül, illetve kevesebb mint 12 kép).
 
 ## Nyitott
 - A `town_photo_dispatch` kapcsolót a tulaj nyitja. Élesítés csak az ő kérésére.
