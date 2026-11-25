@@ -1,7 +1,7 @@
 # 2026-11-25 — HR kontaktkereső országfüggővé téve, mérve Makarskán és Baška Vodán (dev DB)
 
 **Session:** `citf21c0fb2`, koordinátor `cit9b4690e3`, brief `~/rc-briefs/hr-kontaktkereso-20261125.md`.
-**ADR:** ADR-XXXX „Országfüggő kontaktkereső (HR)”. **Élesen:** semmi (prod DB, éles lánc, valódi üzenet: semmi).
+**ADR:** ADR-0477 „Országfüggő kontaktkereső (HR)”. **Élesen:** semmi (prod DB, éles lánc, valódi üzenet: semmi).
 
 ## Mi változott
 - Repó: `src/countryLexicon/hr.json`. Új kulcsok: `chainKontaktSearchEngines` (startpage, qwant), `chainKontaktAggregatorRegex`

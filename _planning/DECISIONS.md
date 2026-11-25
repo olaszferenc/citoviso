@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-hr-kontaktkereso-orszagfuggo-kereso-es-db-kapcsolo.md) — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval
+- [ADR-0477](decisions/0477-orszagfuggo-kontaktkereso-hr-ingyenes-kereso-a.md) — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval
 - [ADR-0476](decisions/0476-terhatasu-boritokep-mindenkinek-es-az-osszes.md) — Térhatású borítókép mindenkinek, és az összes meglévő mock újrarenderelése
 - [ADR-0475](decisions/0475-hr-dev-proba-makarska-telepules-index-mint.md) — HR dev-próba (Makarska): település-index mint ingyenes portálkép-forrás + a felderítés hamis „saját honlap” ítéletei
 - [ADR-0474](decisions/0474-generator-javitas-kapunyitas-mas-temaju.md) — Generátor-javítás: kapunyitás más témájú szárnnyal, névből növő nagy kerettel, parallax mobilon, levélkép intro nélkül, a mock-oldalon intro

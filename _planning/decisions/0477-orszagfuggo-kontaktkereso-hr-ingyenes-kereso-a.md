@@ -1,4 +1,4 @@
-## ADR-XXXX — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval
+## ADR-0477 — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval
 
 **Státusz:** ELFOGADVA (brief `hr-kontaktkereso-20261125`, koordinátor `cit9b4690e3`) — a szótár-kulcsok a repóban;
 a lánc-kód (`~/rc-briefs/uj-lanc-hr/`) az éles lánc (`~/rc-briefs/uj-lanc/`) cseréjére **a koordinátor engedélyére vár**
