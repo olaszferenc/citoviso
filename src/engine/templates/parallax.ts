@@ -199,6 +199,9 @@ const PARALLAX_CSS = `
   .t-conline>*{min-width:0}.t-conline b,.t-conline small{overflow-wrap:anywhere}
   .t-conline b{font-family:var(--cit-font-display);font-weight:800;font-size:16px;text-transform:uppercase;letter-spacing:.5px}
   .t-conline small{color:var(--cit-muted);font-size:13px;display:block;text-transform:none;letter-spacing:0}
+  /* the e-mail as typed (lower case, no tracking) and smaller on a phone; a break, if one is still
+     needed, lands before the @ (<wbr>) — never „…GMAIL.CO / M” (quality colleague, 2026-11-25) */
+  .t-conline b a.t-mail{text-transform:none;letter-spacing:0;font-size:clamp(13px,3.6vw,16px)}
   .t-conphoto img{border-radius:6px;box-shadow:var(--cit-shadow);aspect-ratio:4/3;object-fit:cover;width:100%}
 
   /* FOOTER — dark, multi-column */
@@ -251,7 +254,13 @@ const PARALLAX_PIN_JS = `
     var hero=document.querySelector('.t-par--hero');
     function tick(){
       var vh=innerHeight;
+      // A BAND on a portrait phone: a screen-tall window over a landscape photo shows a third of its
+      // width — a bed became a pillow, a shower a shutter (quality colleague, 2026-11-25). There the
+      // layer is the band's own height + 25 % and drifts through it (still moving, the photo whole).
+      var tall=vh>innerWidth;
       for(var i=0;i<items.length;i++){var it=items[i],r=it.p.getBoundingClientRect();if(r.bottom<-50||r.top>vh+50)continue;
+        if(tall&&it.p.classList.contains('t-par--band')){var h=Math.round(r.height*1.25),k=Math.min(1,Math.max(0,(vh-r.top)/(vh+r.height)));
+          it.l.style.height=h+'px';it.l.style.transform='translate3d(0,'+Math.round(-(h-r.height)*k)+'px,0)';continue;}
         it.l.style.height=vh+'px';it.l.style.transform='translate3d(0,'+(-r.top)+'px,0)';}
       var c=hero&&hero.querySelector('canvas');
       if(c){var hr=hero.getBoundingClientRect();hero.style.overflow='hidden';c.style.transform='translate3d(0,'+Math.max(0,-hr.top)+'px,0)';}
@@ -496,7 +505,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       ? `<div class="t-conline">${CONTACT_ICONS.phone}<div><b>${esc(c.phone)}</b><small>${T(data, "Hívjon bizalommal")}</small></div></div>`
       : "",
     c.email
-      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
+      ? `<div class="t-conline">${CONTACT_ICONS.mail}<div><b><a class="t-mail" href="mailto:${esc(c.email)}">${esc(c.email).replace("@", "<wbr>@")}</a></b><small>${T(data, "Írjon nekünk")}</small></div></div>`
       : "",
     c.address
       ? `<div class="t-conline">${CONTACT_ICONS.location}<div><b>${esc(c.address)}</b><small>${T(data, "Megközelítés")}</small></div></div>`

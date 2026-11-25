@@ -24,6 +24,7 @@ import path from "node:path";
 import ort from "onnxruntime-node";
 import sharp from "sharp";
 import { config } from "../config.js";
+import { readPhotoText } from "./photoText.js";
 import LABELS from "./photoKindLabels.json" with { type: "json" };
 
 /**
@@ -74,7 +75,7 @@ export const PHOTO_MIN_LUMA = 50;
 /** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
 export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 3;
+const VERSION = 4;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -156,6 +157,15 @@ export async function classifyPhotoBuffer(buf: Buffer): Promise<PhotoKind | null
     else if (quality.luma < PHOTO_MIN_LUMA) why = `túl sötét kép (fényerő ${Math.round(quality.luma)})`;
     else if (quality.lap < PHOTO_MIN_SHARPNESS) why = `elmosódott kép (élesség ${Math.round(quality.lap)})`;
     if (why) kind = "junk";
+  }
+  // A date stamp burned into the photo (Virágeső „2011/08/26”, quality colleague 11-25): junk, read
+  // only for photos that would otherwise stay (Tesseract, local — media/photoText.ts).
+  if (kind === "ok") {
+    const t = await readPhotoText(buf).catch(() => null);
+    if (t?.dateStamp) {
+      kind = "junk";
+      why = `dátumbélyegző a fotón (${t.dateStamp})`;
+    }
   }
   const byLabel: Record<string, number> = {};
   LABELS.labels.forEach((l, i) => {
@@ -275,6 +285,28 @@ export function isHeroWorthy(v: PhotoKind): boolean {
 export function isShowcase(v: PhotoKind): boolean {
   if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
   return !NOT_HERO_TOP.has(v.label) && backstageMass(v) < BACKSTAGE_MAX;
+}
+
+/**
+ * A FULL-BLEED BAND is a screen of its own: it must show the place, not a thing in it (quality
+ * colleague, 2026-11-25 — five of ten mocks failed on a band of a pillow, a shutter, a lamp, a dark
+ * sofa, a flower box or a chimney dish). Showcase-fit, its best label one of the wide scenes, little
+ * mass on the close-up labels, and not dark.
+ */
+const BAND_TOP = new Set([
+  "the outside of a house", "a guesthouse building", "a garden with a terrace", "a swimming pool", "a balcony with a view",
+  "a lake shore", "a courtyard", "a living room", "a bedroom with a bed", "a hotel room interior", "an outdoor hot tub",
+  "a wooden barrel sauna", "a balcony with a table and chairs",
+]);
+/** Close-up label mass above which a photo is a detail shot, not a band. */
+export const BAND_DETAIL_MAX = 0.2;
+/** A band darker than this (mean luma) reads as a black screen on a phone. */
+export const BAND_MIN_LUMA = 70;
+export function isBandWorthy(v: PhotoKind): boolean {
+  if (!isShowcase(v) || !BAND_TOP.has(v.label)) return false;
+  const detail = Object.entries(v.probs).reduce((a, [l, p]) => a + (LABELS.labels.find((x) => x.label === l)?.kind === "detail" ? p : 0), 0);
+  if (detail >= BAND_DETAIL_MAX) return false;
+  return !v.quality || v.quality.luma >= BAND_MIN_LUMA;
 }
 
 /**

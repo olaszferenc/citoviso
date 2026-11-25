@@ -30,3 +30,19 @@ export function ratingOnFiveStars(d: Pick<SiteData, "rating">): number {
 export function honestStars(d: Pick<SiteData, "rating">): number {
   return d.rating ? Math.max(1, Math.min(5, Math.round(ratingOnFiveStars(d)))) : 0;
 }
+
+/** Below this (on five stars) a mock does not print the rating (owner's quality colleague, 2026-11-25). */
+export const MOCK_RATING_MIN = 4.0;
+/** Fewer reviews than this is no rating worth showing on a mock. */
+export const MOCK_RATING_MIN_COUNT = 3;
+
+/**
+ * A mock is a sales piece: a 1★ or a 2,5★ in the sticky bottom bar of every screen sells against us
+ * (Castor 1★, Lili 2,5★ — failed by the quality colleague, 2026-11-25). The real rating stays true
+ * where it is shown; below the floor, or from a handful of reviews, it is simply not shown.
+ */
+export function mockRatingShown(d: Pick<SiteData, "rating">): boolean {
+  if (!d.rating) return false;
+  const count = d.rating.count;
+  return ratingOnFiveStars(d) >= MOCK_RATING_MIN && (count ?? 0) >= MOCK_RATING_MIN_COUNT;
+}

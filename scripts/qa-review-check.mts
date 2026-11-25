@@ -6,7 +6,8 @@
 //    (src/media/photoKind.ts): a picture that is not surely the lodging, or too small / dark / blurred,
 //    is "junk" and stays off the page, out of the hero and out of the opening. Hermetic: no DB, no model.
 import { readFileSync } from "node:fs";
-import { isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import { isBandWorthy, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import { mockRatingShown } from "../src/engine/rating.js";
 import { APPROVAL_PENDING_NOTE, ownerApprovalOf, QA_HOLD_PREFIX, QA_WAIT_NOTE, QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
 
 let failed = 0;
@@ -99,6 +100,31 @@ const labels = JSON.parse(src("src/media/photoKindLabels.json")) as { labels: { 
 for (const l of ["a locomotive", "a car", "a dog", "a plate of food", "a close-up of a decorative pillow", "a coffee machine", "a refrigerator"]) {
   check(`címke a gagyi képre: ${l}`, labels.labels.some((x) => x.label === l && x.kind !== "ok"));
 }
+
+// ── ③ the quality colleague's first ten (2026-11-25): rating floor, band = a place, desktop word break, date stamp ──
+check("1★ / 2,5★ nem kerül a mockra", !mockRatingShown({ rating: { value: 1, count: 40 } }) && !mockRatingShown({ rating: { value: 2.5, count: 12 } }));
+check("4,6★ 2 véleményből sem (kevés vélemény)", !mockRatingShown({ rating: { value: 4.6, count: 2 } }));
+check("4,6★ 30 véleményből marad", mockRatingShown({ rating: { value: 4.6, count: 30 } }));
+check("a renderelés a mockon leveszi a gyenge értékelést (minden hely egy vágással)", /!mockRatingShown\(data\)/.test(src("src/engine/render.ts")));
+check("sávkép: fürdő nem jó", !isBandWorthy(K("ok", "a sauna or jacuzzi", { probs: { "a sauna or jacuzzi": 0.6 } })));
+check("sávkép: a ház kívülről jó", isBandWorthy(K("ok", "the outside of a house")));
+check("sávkép: párna-közeli (közeli-címkék ≥ 0,2) nem jó",
+  !isBandWorthy(K("ok", "a bedroom with a bed", { probs: { "a bedroom with a bed": 0.5, "a close-up of a decorative pillow": 0.25 } })));
+check("a sávokat a közelkép-jelzés nélküli képek töltik", /bandFit/.test(src("src/engine/templateKit.ts")) && /notBand/.test(src("src/generator/photoCurate.ts")));
+check("telefonon a sávkép nem képernyőnyi ablak (a fotó nagy része látszik)", /t-par--band'\)\)\{var h=Math\.round\(r\.height\*1\.25\)/.test(src("src/engine/templates/parallax.ts")));
+const gate = src("src/outreach/mockRenderGate.ts");
+check("a kapu a levél képét (asztali első képernyő) is nézi szótörésre", /DESKTOP_VIEWPORT/.test(gate) && /desktopBrokenWords/.test(gate));
+check("a kapu a sávképet is méri (isBandWorthy)", /isBandWorthy\(v\)/.test(gate));
+check("a dátumbélyegzős fotó junk (helyi szövegfelismerő)", /dátumbélyegző a fotón/.test(kindSrc) && /readPhotoText/.test(kindSrc));
+check("az e-mail a kapcsolat-sorban nem nagybetűs, a @ előtt törhet", /a\.t-mail\{text-transform:none/.test(src("src/engine/templates/parallax.ts")) && /<wbr>@/.test(src("src/engine/templates/parallax.ts")));
+
+// ── ④ the pipeline refreshes its own mocks (owner 2026-11-25: „Ha te manuálisan javítasz valamit … semmi értelme”) ──
+const tick = src("scripts/outreach-dispatch.mts");
+check("a kiküldő időzítője minden futásban frissíti a léc alatti várakozó mockokat", /refreshStaleQueue\(budget\)/.test(tick));
+const refresh = src("src/generator/mockRefresh.ts");
+check("a frissítés a léc alattiakat veszi (not MOCK_CURRENT_GENERATOR_SQL) és a kollégához küldi vissza",
+  /not \$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(refresh) && /note: QA_WAIT_NOTE/.test(refresh));
+check("a kézi kör ugyanazt a függvényt hívja (egy út)", /refreshMock\(row\)/.test(src("scripts/rerender-terhatas.mts")));
 
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — kolléga-jóváhagyás vagy engedélylistás képszűrő nélkül menne ki levél.`);

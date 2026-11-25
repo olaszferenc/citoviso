@@ -117,6 +117,12 @@ export interface Photo {
    */
   readonly backstage?: boolean;
   /**
+   * Not fit for a full-bleed band (local classifier, generator/photoCurate.ts, 2026-11-25): a
+   * close-up, a dark shot or no wide scene — it may stand in the gallery, never fill a band screen.
+   * Absent = band-fit or no verdict.
+   */
+  readonly notBand?: boolean;
+  /**
    * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
    * for the hero and the outdoor photos only. Answers "is this the SAME picture under
    * another URL?" (portals republish each other's photos) via engine/samePicture.ts.

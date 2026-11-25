@@ -9,7 +9,7 @@ import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./
 import { amenityIconSvg } from "./amenityIcon.js";
 import { honestStars } from "./rating.js";
 import { isStockPhoto, stockRoomPhotos } from "./stock.js";
-import { isSamePicture } from "./samePicture.js";
+import { isSamePicture, sizelessPhotoKey } from "./samePicture.js";
 // Copy hooks for the preview editor (ADR-0323) — every template marks the copy it shows.
 import { copyHook } from "./copyFields.js";
 export { copyHook, highlightHook, hookPick } from "./copyFields.js";
@@ -303,7 +303,11 @@ export function allotPhotos(
   const distinct: Photo[] = [];
   for (const p of d.photos) {
     if (isStockPhoto(p)) continue;
-    if (distinct.some((q) => q.url === p.url || isSamePicture(q.dhash, p.dhash))) continue;
+    // The sizeless key too (gate-opening's gatePhotoOf does the same): one portal photo at two sizes
+    // is one picture — the band repeated the hero (Ági Apartman, 11-25).
+    // (web addresses only: a data: URL has no path to compare)
+    const sameFile = (q: Photo): boolean => /^https?:/i.test(p.url) && sizelessPhotoKey(q.url) === sizelessPhotoKey(p.url);
+    if (distinct.some((q) => q.url === p.url || sameFile(q) || isSamePicture(q.dhash, p.dhash))) continue;
     distinct.push(p);
   }
   const hero = distinct[0];
@@ -326,8 +330,10 @@ export function allotPhotos(
   const lastOutdoor = [...pool].reverse().find(outdoor);
   const scene = lastOutdoor ? take((p) => p === lastOutdoor) : undefined;
   // The bands are full-bleed screens of their own — never a kitchen or a bathroom (an empty band drops).
-  const bandA = take(notBath);
-  const bandB = take(notBath);
+  // …and never a close-up, a dark shot or a thing instead of a place (photoCurate notBand, 11-25).
+  const bandFit = (p: Photo): boolean => notBath(p) && !p.notBand;
+  const bandA = take(bandFit);
+  const bandB = take(bandFit);
   let contact = scene;
   let contactAlt = scene ? sceneAlt(d) : d.name;
   if (!contact) {

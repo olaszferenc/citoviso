@@ -39,19 +39,15 @@ import { gunzipSync, gzipSync } from "node:zlib";
 import { sql } from "kysely";
 
 import { db } from "../src/db/client.js";
-import type { Photo, Recipe, SiteData } from "../src/engine/recipe.js";
-import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
-import { DEPTH_TEMPLATES, withDepthArm } from "../src/generator/depthArm.js";
-import { renderSite } from "../src/engine/render.js";
-import { injectRuntime } from "../src/generator/runtime.js";
-import { secureMockPhotos } from "../src/generator/photoTransport.js";
-import { curateMockPhotos } from "../src/generator/photoCurate.js";
+import type { Recipe, SiteData } from "../src/engine/recipe.js";
+import { DEPTH_TEMPLATES } from "../src/generator/depthArm.js";
 import { photoKindAvailable } from "../src/media/photoKind.js";
-import { MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
+import { MOCK_HEROFIX_STAMP } from "../src/outreach/mockPhotoGate.js";
+import { refreshMock } from "../src/generator/mockRefresh.js";
 
 // 2026-11-25 (owner: „Nyitókép javítás nélkül nem mehet ki semmi”): the round with the LIVE hero fix +
 // photo allow-list code; the send gates (MOCK_CURRENT_GENERATOR_SQL) ask for this stamp.
-const STAMP = MOCK_HEROFIX_STAMP;
+const STAMP = MOCK_HEROFIX_STAMP; // refreshMock stamps the same
 const argv = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
   const i = argv.indexOf(name);
@@ -141,44 +137,14 @@ for (const row of todo.slice(0, LIMIT === Infinity ? undefined : LIMIT)) {
       await appendFile(path.join(BACKUP!, "state.jsonl"), JSON.stringify({ id: row.id, path: row.path, inputs } satisfies BackupLine) + "\n");
     }
 
-    const { heroDepth: _old, ...base } = stored;
-    let siteData = base as SiteData;
-    // ④ the photo fix on a current-generator mock (see the header)
-    if (new Date(String(row.generated_at)) >= new Date(MOCK_MIN_GENERATED_AT) && (siteData.photos?.length ?? 0) > 0) {
-      const c = await curateMockPhotos(siteData.photos as readonly Photo[]);
-      const kept = c.photos;
-      tally.dupes = (tally.dupes ?? 0) + c.duplicates.length;
-      tally.offPage = (tally.offPage ?? 0) + c.offPage.length;
-      if (c.heroMoved) tally.heroMoved = (tally.heroMoved ?? 0) + 1;
-      tally.photoFixed = (tally.photoFixed ?? 0) + 1;
-      siteData = { ...siteData, photos: kept };
-    }
-    if (recipe.template === "gate-opening") {
-      const photos = (siteData.photos ?? []) as readonly Photo[];
-      // Always recomputed: the hero fix can make the old gate photo the new hero (Vörösmarty tér,
-      // 11-24) — a stale gatePhoto would open the gate onto itself. No distinct photo → none.
-      const pick = gatePhotoOf(photos);
-      if (pick?.url !== siteData.gatePhoto?.url) {
-        const { gatePhoto: _stale, ...noGate } = siteData;
-        siteData = (pick ? { ...noGate, gatePhoto: pick } : noGate) as SiteData;
-        tally.gateChanged++;
-      }
-    }
-    const depth = await withDepthArm(siteData, { leadId: String(row.lead_id), artifactId: String(row.id), template: recipe.template });
-    siteData = depth.siteData;
-    const arm = depth.arm ?? "off";
-    arms.set(arm, (arms.get(arm) ?? 0) + 1);
-    if (depth.arm === "depth") tally.depth++;
-
-    // (the live tree has no country layer yet — the same render call as its rerender-mock.mts)
-    const html = await injectRuntime(renderSite(recipe, siteData, { phase: "mock" }), siteData.lang);
-    const secured = await secureMockPhotos(html, String(row.id), (siteData.photos ?? []).map((p) => p.url), String(row.lead_id));
-    await writeFile(row.path, secured.html, "utf8");
-    await db
-      .updateTable("mock_artifact")
-      .set({ inputs: JSON.stringify({ ...inputs, siteData, heroDepthArm: depth.arm, terhatasAt: STAMP }) } as never)
-      .where("id", "=", row.id)
-      .execute();
+    // The pipeline's own refresh step (generator/mockRefresh.ts) — the timer runs the same function.
+    const r = await refreshMock(row);
+    tally.dupes = (tally.dupes ?? 0) + r.duplicates;
+    tally.offPage = (tally.offPage ?? 0) + r.offPage;
+    if (r.heroMoved) tally.heroMoved = (tally.heroMoved ?? 0) + 1;
+    if (r.gateChanged) tally.gateChanged++;
+    arms.set(r.arm, (arms.get(r.arm) ?? 0) + 1);
+    if (r.depth) tally.depth++;
     tally.done++;
   } catch (e) {
     tally.failed++;

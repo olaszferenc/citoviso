@@ -25,6 +25,7 @@
 
 import { readFile } from "node:fs/promises";
 import { db } from "../src/db/client.js";
+import { refreshStaleQueue } from "../src/generator/mockRefresh.js";
 import {
   cancelDispatch,
   dispatchStatus,
@@ -51,6 +52,9 @@ function opt(name: string): string | undefined {
 const flag = (name: string) => args.includes(`--${name}`);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAIN_BUDGET_MS = 8 * 60_000;
+/** The refresh step's share of a firing, and the unit's whole budget (TimeoutStartSec=600, with air). */
+const REFRESH_BUDGET_MS = 75_000;
+const UNIT_BUDGET_MS = 9 * 60_000;
 
 function needBy(): string {
   const by = opt("by")?.trim();
@@ -61,6 +65,8 @@ function needBy(): string {
 async function main(): Promise<void> {
   switch (cmd) {
     case "tick": {
+      const tickStarted = Date.now();
+      try {
       const nowArg = opt("now");
       const now = nowArg ? new Date(nowArg) : new Date();
       if (Number.isNaN(now.getTime())) throw new Error("hibás --now");
@@ -86,6 +92,17 @@ async function main(): Promise<void> {
         if (r.status === "sent") done++;
         if (settings.ramp) await new Promise((res) => setTimeout(res, 3000 + Math.floor(Math.random() * 6000)));
       }
+      } finally {
+        // THE PIPELINE REFRESHES ITS OWN MOCKS (owner 2026-11-25): a waiting mock below the current
+        // generator's bar is re-rendered here, a batch per firing, inside the unit's 600 s — then the
+        // quality colleague looks at it again. Sends nothing.
+        const budget = Math.min(REFRESH_BUDGET_MS, UNIT_BUDGET_MS - (Date.now() - tickStarted));
+        if (!opt("now") && budget > 0) {
+          const r = await refreshStaleQueue(budget);
+          if (r.refreshed || r.failed) console.log(`mock-frissítés: ${JSON.stringify(r)}`);
+        }
+      }
+      return;
     }
     case "ramp": {
       // ramp <startCap> [--growth=30] [--max=3000] [--start=YYYY-MM-DD] | ramp off | ramp release
