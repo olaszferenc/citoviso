@@ -27,6 +27,7 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import { ackCoversVerdicts, blockingVerdicts, copyHashOf, hasPendingReview, reviewOf, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "./mockPhotoGate.js";
+import { MOCK_QA_PASSED_SQL, QA_STALE_NOTE, qaBlockReason, qaReviewState } from "./mockQaReview.js";
 import { dailyCapFor, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
@@ -441,6 +442,8 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .where(sql<boolean>`exists (select 1 from lead l where l.id = outreach_dispatch.lead_id and ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS})`)
       // …and the mock that goes out actually shows them (2026-11-24) — else it stays queued for a rerender.
       .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWN_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
+      // …and the quality colleague passed it (owner 2026-11-25, mockQaReview.ts) — else it stays queued for the look.
+      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_QA_PASSED_SQL})`)
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(CLAIM_SCAN)
@@ -534,6 +537,11 @@ async function dispatchOne(
     .executeTakeFirst();
   if (!art) return { status: "skipped", note: "a mock időközben törlődött" };
   if (art.status !== "approved") return { status: "held", note: `a mock nincs jóváhagyva (állapot: ${art.status})` };
+  // The quality colleague's look (owner 2026-11-25): the pass must be on THIS file — a re-render since
+  // makes it stale, and the row waits (held) for a new look; the colleague's next pass re-queues it.
+  const qa = await qaReviewState(artifactId);
+  const qaBlock = qaBlockReason(qa);
+  if (qaBlock) return { status: "held", note: qa.state === "stale" ? QA_STALE_NOTE : qaBlock };
   if (!(await planHasRooms(art.path))) {
     return { status: "held", note: "a mockból hiányzik a szobamodul — szobamodul nélküli terv nem megy ki" };
   }

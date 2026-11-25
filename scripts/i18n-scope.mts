@@ -54,6 +54,7 @@ const EXCEPTIONS: Readonly<Record<string, string>> = {
   // 2026-11-24: the rendered-mock quality gate's Hungarian literals are the operator-facing reasons
   // a send is skipped (dispatch note, send log, CLI report) — never a text of a letter or a page.
   "src/outreach/mockRenderGate.ts": "operátori ok (miért bukott a renderelt mock a minőségkapun) — vevőhöz nem jut",
+  "src/outreach/mockQaReview.ts": "operátori ok (a minőségi kolléga ítélete / hiánya a kiküldés előtt) — vevőhöz nem jut",
   // ADR-0462 kísérlet-motor: the Hungarian literals are the guard's house alert (alertHouse → the
   // operator's mailbox) and logs. The variant WORDING a lead reads is not in this file: it is the
   // catalog row (outreach_variant.template), used for Hungarian letters ONLY (assignVariants gives a
