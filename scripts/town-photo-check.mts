@@ -93,7 +93,7 @@ const gate = src("src/outreach/mockRenderGate.ts");
 check("render-kapu: minta csak galéria-/szobahelyen", /SAMPLE_MODULES = new Set\(\["gallery", "rooms"\]\)/.test(gate));
 check("render-kapu: jelöletlen minta bukik", /jelöletlen mintakép/.test(gate) && /data-cit-sample/.test(gate));
 check("render-kapu: minta a nyitóképen / nyitásban bukik", /mintakép a nyitóképen/.test(gate) && /mintakép a nyitásban/.test(gate));
-check("render-kapu: a település-hero a választó szabályával újraítélve", /judgeTownPicture\(await townJudgeBytes\(heroUrl, heroBytes\), "town", true\)/.test(gate) && /\/330px-/.test(gate));
+check("render-kapu: a település-hero a választó szabályával újraítélve", /judgeTownPicture\(await townJudgeBytes\(heroUrl, heroBytes\), town.heroTier \?\? "town", true\)/.test(gate) && /\/330px-/.test(gate));
 check("render: minden mintakép „MINTA” jelölést kap", /data-cit-sample="1"/.test(src("src/engine/render.ts")) && /T\(data, "MINTA"\)/.test(src("src/engine/render.ts")));
 check("csak e-mailes leadért gyűjt", /townHasEmailLeadInNeed/.test(src("src/media/townPhotoSet.ts")) && /hasEmail/.test(src("src/generator/townHero.ts")));
 

@@ -68,6 +68,8 @@ const SAMPLE_MODULES = new Set(["gallery", "rooms"]);
 /** The mock's town pictures (siteData.townPhoto / townGallery) — judged by the town rule, not the lodging rule. */
 export interface TownUrls {
   readonly hero?: string;
+  /** The pick's tier of the hero (town / land / region): the gate re-judges it at that tier, as it was picked. */
+  readonly heroTier?: "town" | "land" | "region";
   readonly gallery: readonly string[];
 }
 
@@ -429,7 +431,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     if (heroUrl && heroBytes && isTown(heroUrl)) {
       // The TOWN's picture opens the page (plan kepnelkuli-hero, ADR-0479): re-judged with the very rule
       // that picked it (media/townPick.ts) — a vehicle, an interior, a road, a dusk field never opens.
-      const tv = await judgeTownPicture(await townJudgeBytes(heroUrl, heroBytes), "town", true);
+      const tv = await judgeTownPicture(await townJudgeBytes(heroUrl, heroBytes), town.heroTier ?? "town", true);
       if (!tv) findings.push({ code: "render", detail: "a településkép-szabály nem futtatható — ellenőrizetlen nyitókép nem mehet ki" });
       else if (!tv.ok) findings.push({ code: "subject", detail: `a település-nyitókép elbukik a szabályon (${tv.reason}): ${fileOf(heroUrl)}` });
     } else if (heroUrl && stockUrl(heroUrl)) {
@@ -577,9 +579,10 @@ export async function renderGateFor(artifactId: string): Promise<RenderGateResul
   if (cached) return cached;
   let result: RenderGateResult;
   try {
-    const sd = (a.inputs as { siteData?: { townPhoto?: { url?: string }; townGallery?: { url?: string }[] } } | null)?.siteData;
+    const sd = (a.inputs as { siteData?: { townPhoto?: { url?: string; pick?: { tier?: "town" | "land" | "region" } }; townGallery?: { url?: string }[] } } | null)?.siteData;
     const town: TownUrls = {
       ...(sd?.townPhoto?.url ? { hero: sd.townPhoto.url } : {}),
+      ...(sd?.townPhoto?.pick?.tier ? { heroTier: sd.townPhoto.pick.tier } : {}),
       gallery: (sd?.townGallery ?? []).map((t) => t.url).filter((u): u is string => typeof u === "string"),
     };
     const r = await auditMockFile(mockAbs, town);

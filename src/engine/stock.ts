@@ -84,9 +84,9 @@ export function stockUrl(url: string | undefined | null): boolean {
 }
 
 // ── the STYLED sample-room library (owner 2026-11-25, ADR-0479, plan kepnelkuli-hero) ─────────
-// ~300 free-licence room photos per style (mediterranean / alpine / rural / urban), chosen by the
-// local CLIP model (scripts/stock-rooms-build.mts), HOT-LINKED from the provider's CDN (Flickr,
-// Wikimedia) and credited on the page. Same hard rules as the local library: gallery and room cards
+// free-licence room photos per style (mediterranean / alpine / rural / urban), chosen by the local CLIP
+// model (scripts/stock-rooms-build.mts) from Wikimedia Commons and Rawpixel (CC0), SELF-SERVED under
+// public/assets/stock/styled/ (coordinator 2026-11-25: no hot-linked sample picture) and credited on the page. Same hard rules as the local library: gallery and room cards
 // only, mock phase, „MINTA”-marked, never stored, never live (stockUrl() knows every URL of it).
 
 export type RoomStyle = "mediterranean" | "alpine" | "rural" | "urban";
@@ -324,7 +324,11 @@ export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, loc
   if (townPage) {
     for (const k of townCardKinds(d)) {
       const c = stockCardPhoto(d, k, alt);
-      if (c) used.add(c.url.startsWith(STOCK_PREFIX) ? c.url.slice(STOCK_PREFIX.length) : c.url);
+      // Both keys: the local library is matched by file, the styled one by URL (both under STOCK_PREFIX now).
+      if (c) {
+        used.add(c.url);
+        if (c.url.startsWith(STOCK_PREFIX)) used.add(c.url.slice(STOCK_PREFIX.length));
+      }
     }
   }
   for (let round = 0; picks.length < want && round < 12; round++) {
@@ -332,17 +336,18 @@ export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, loc
       if (picks.length >= want) break;
       const room = ROOM_OF[cat];
       if (style && room) {
-        // Bedrooms from the END: the room cards take from the front (stockRoomPhotos).
+        // Bedrooms: ONLY the last one — stockRoomPhotos keeps it back for the gallery; every other bedroom may
+        // stand on a room card (blind run 2026-11-25, Balatonszárszó: the gallery walked into a card's bedroom).
         const list = styledOrdered(seed, style, room);
-        const e = (room === "bedroom" ? [...list].reverse() : list).find((x) => !used.has(x.url));
+        const e = (room === "bedroom" ? list.slice(-1) : list).find((x) => !used.has(x.url));
         if (e) {
           used.add(e.url);
           picks.push(styledPhoto(e, alt));
           continue;
         }
       }
-      // Bedrooms from the END: the room cards take from the front (stockRoomPhotos).
-      const list = cat.startsWith("bedroom") ? [...stockBedrooms(d)].reverse() : ordered(seed, cat);
+      // Bedrooms: only the reserved last one (see above) — never a card's bedroom.
+      const list = cat.startsWith("bedroom") ? stockBedrooms(d).slice(-1) : ordered(seed, cat);
       const e = list.find((x) => !used.has(x.file));
       if (!e) continue;
       used.add(e.file);

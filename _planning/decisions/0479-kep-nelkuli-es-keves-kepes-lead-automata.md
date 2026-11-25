@@ -35,7 +35,8 @@ A kép nélküli leadek mockja eddig egyetlen vak Wikipedia-képet kapott (ADR-0
   - v2: 7 jó · 10 gyenge · 3 rossz. Mindhárom rossz „egyetlen ház, tető vagy szerkezet közelről”, ebből lett a v3-szabály.
   - v3 (just-in-time út): 7 jó · 7 gyenge · 2 rossz átment (vasúti épület felirattal; egyetlen tető, határeset), és 4 lapot a render-kapu magától visszatartott (1 kép nélkül, 3 kevesebb mint 12 képpel).
   - v4 (minőségi padló, a 33 értékelt hero-ból kalibrálva: látkép ≥0,45, tető/toronycsúcs ≥0,35, sima vidék nem hero; település-kép csak a saját közigazgatási határon belül vagy névvel; üres nyitókép a kapun; megszűnt hely kizárva): 18 mock → 7 jó · 6 gyenge · **0 rossz**; 5 lapot a kapu magától visszatartott (3 településkép nélkül, mert az üres nyitóképet mérte; 2 címsor-sortörés miatt). 2 településnek nincs kép nélküli, e-mailes leadje.
-  - Következő szabály: fakóság-padló a hero-ra (a gyengék fele szürke, párás), vak újraméréssel.
+  - v5 (fakóság-padló: CLIP „bright” ≥0,05; a környék- és régió-tartalékban a sima vidék is lehet hero, ha fényes és jó minőségű; bővebb régiós tájkép-keresés; saját kiszolgálású stílusos szobatár Commons + Rawpixel CC0-ból, az éles képszűrőn és a régi táron is átszűrve; kártya- és galéria-ismétlés javítva; a kapu a hero-t a választás saját szintjén ítéli): 18 mock → 8 jó · 7 gyenge · 2 rossz (épülethomlokzat felirattal; egyetlen tető) · 1 visszatartva (sehol nincs kép).
+  - A cél (0 rossz, ≤3 gyenge) nincs meg. A v5-ös tartalék-lazítás több gyenge tájképet enged be. Következő szabályok: a homlokzat- és tető-pár szigorítása a 4 kör ítéleteivel, a gyenge tájkép (fa, ég, park) kizárása a tartalékból is, ha van jobb.
 
 ### Eltérés
 - Az ADR-0436 4. pontja megszűnik: a hero nem ismétlődik a galériában.

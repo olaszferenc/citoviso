@@ -29,7 +29,7 @@ import { clipImageEmbedding, photoKindAvailable } from "./photoKind.js";
 import LABELS from "./townPickLabels.json" with { type: "json" };
 
 /** Bump when the labels, the rules or the thresholds change: the send gate refuses an older pick. */
-export const TOWN_PICK_VERSION = 4;
+export const TOWN_PICK_VERSION = 5;
 /** The approved threshold variant (owner 2026-11-25: „Laza” + the second round). */
 export const TOWN_PICK_THRESHOLD = "laza";
 const T_MIN = 0.5;
@@ -227,7 +227,7 @@ export async function judgeTownPicture(
   const emb = await clipImageEmbedding(buf);
   if (!emb) return null;
   const scores = scoreTownEmbedding(emb);
-  const reason = townVerdict(scores, tier) ?? (asHero && !heroView(scores) ? "felülnézeti, térképszerű légifotó nem nyitókép" : null);
+  const reason = townVerdict(scores, tier) ?? (asHero && !heroView(scores, tier) ? "a nyitókép-padló alatt (felülnézet, fakó, tető közelről vagy sima vidék)" : null);
   return { ok: reason === null, reason, scores };
 }
 
@@ -543,8 +543,8 @@ export function brightBonus(s: TownScores): number {
  * v2: may this picture OPEN the page? A top-down, map-like aerial reads as no townscape (Sopron,
  * 2026-11-25) — it may stay in the gallery; an oblique aerial panorama (Primošten) opens fine.
  */
-export function heroView(s: TownScores): boolean {
-  return (s.x.aerial ?? 1) >= 0.3 && heroQuality(s);
+export function heroView(s: TownScores, tier: TownTier = "town"): boolean {
+  return (s.x.aerial ?? 1) >= 0.3 && heroQuality(s, tier);
 }
 
 /** Plain countryside a hero must not be (v4): its best label is one of these and the town is hardly in it. */
@@ -557,10 +557,14 @@ const PLAIN_LAND = new Set(["a forest landscape", "green meadows and fields", "a
  * countryside (a forest, a meadow, a wheat field, rolling hills with the town under 0.2 — 11 of the 20 weak
  * heroes, 1 of the 14 good). Below the floor no hero: the landscape around, the region, else no letter.
  */
-export function heroQuality(s: TownScores): boolean {
+export function heroQuality(s: TownScores, tier: TownTier = "town"): boolean {
   if ((s.x.view ?? 1) < 0.45) return false;
   if ((s.x.roof ?? 1) < 0.35) return false;
-  if (PLAIN_LAND.has(s.top) && s.town < 0.2) return false;
+  // v5 dullness floor (3 blind runs, 54 judged heroes): CLIP „bright” under 0.05 — 2 weak, no good one lost.
+  if ((s.x.bright ?? 1) < 0.05) return false;
+  // Plain countryside never stands for the TOWN; as the landscape AROUND or of the region it may — when it is
+  // bright and good (v5, coordinator 2026-11-25: a page must go on with the area's landscape, not a blank hero).
+  if (PLAIN_LAND.has(s.top) && s.town < 0.2) return tier !== "town" && (s.x.bright ?? 1) >= 0.5 && s.q >= 0.6;
   return true;
 }
 
@@ -665,7 +669,7 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     }
   }
 
-  const heroCount = () => accepted.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s)).length;
+  const heroCount = () => accepted.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier)).length;
 
   // ② the landscape around — ONLY when the town itself gave fewer than HEROES_WANT good heroes (coordinator
   // 2026-11-25, speed: the geosearch rings were ~40 % of a town's time and rarely changed the pick).
@@ -706,10 +710,15 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
       if (!it || claim(it, "P297").length) break; // a whole country is too broad for „the region”
       c3.push(...(await byTitles(net, claim(it, "P18"), "region", `régió ${pid}`)));
       const cat = claim(it, "P373")[0];
-      if (cat) c3.push(...(await bySearch(net, `incategory:"${cat}" filew:>1599 filetype:bitmap`, "region", `régió-kategória ${pid}`, 30)));
+      if (cat) {
+        c3.push(...(await bySearch(net, `incategory:"${cat}" filew:>1599 filetype:bitmap`, "region", `régió-kategória ${pid}`, 30)));
+        // v5: the region's LANDSCAPES across its whole category tree (a village with no picture of its own still
+        // gets its area's best view — coordinator 2026-11-25, Fajsz / Biharugra / Csólyospálos).
+        c3.push(...(await bySearch(net, `deepcat:"${cat}" (landscape OR panorama OR látkép OR táj OR krajolik OR Landschaft) filew:>1599 filetype:bitmap`, "region", `régió-tájkép ${pid}`, 50)));
+      }
     }
     const before3 = accepted.length;
-    await judge(c3, 30);
+    await judge(c3, 60);
     for (let i = accepted.length - 1; i >= before3; i--) {
       const a = accepted[i]!;
       if (a.c.lat === undefined || a.c.lon === undefined) continue; // the region item itself vouches for it
@@ -746,11 +755,11 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     ...(a.km !== undefined ? { km: a.km } : {}),
     bucket: a.s.bucket,
     ...(a.dhash ? { dhash: a.dhash } : {}),
-    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s),
+    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier),
   });
 
   // Heroes: the hero-sized ones, best tier first; a fallback tier only fills when the town has fewer than 3.
-  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s));
+  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier));
   const heroes: typeof accepted = [];
   // At most 3 of one kind (5 harbour views of Makarska would make its leads' pages look alike).
   for (const a of heroPool) {
@@ -819,7 +828,7 @@ export async function rescreenTownPicks(
       continue;
     }
     const wasHeroSized = heroes.includes(p) || p.heroOk;
-    kept.push({ p, s, score: p.score + brightBonus(s), hero: wasHeroSized && heroView(s) });
+    kept.push({ p, s, score: p.score + brightBonus(s), hero: wasHeroSized && heroView(s, p.tier) });
     await sleep(100);
   }
   const tierRank: Record<TownTier, number> = { town: 0, land: 1, region: 2 };
