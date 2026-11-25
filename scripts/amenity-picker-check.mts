@@ -1,4 +1,5 @@
 // Regression guard for the AMENITY PICKER (plan F, owner-approved 2026-08-26;
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // frozen contract: assets/design-refs/tenant-admin/amenity-picker-f*.html).
 //
 // What it measures — the things that MATTER, not the convenient proxies:

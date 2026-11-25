@@ -1,4 +1,5 @@
 // Knowledge-base doctrine gate (ADR-0045, 03-INVARIANTS §J).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // Default (lint) mode — wired into pre-commit NOW: structural validity of every
 // kb/entries/<slug>/entry.hu.md (frontmatter fields, anchor grammar + global

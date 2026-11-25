@@ -1,4 +1,5 @@
 /**
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
  * Kapu — a teszt-módú Számlázz.hu-kulcs SOHA nem szolgálhatja ki az éles hostot
  * (tulajdonosi döntés, 2026-09-22; src/invoicing/keyGuard.ts).
  *

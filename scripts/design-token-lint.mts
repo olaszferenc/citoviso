@@ -1,4 +1,5 @@
 // ADR-0021 ① design-token doctrine guard — deterministic, no API (i18n-lint minta).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // Every first-party Citoviso surface (console, tenant admin, public homepage) must dress
 // EXCLUSIVELY from the central design core (public/assets/ui/citui.css --citui-* tokens):
 // a hardcoded colour silently detaches that surface from the core — a skin change would

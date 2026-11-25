@@ -1,4 +1,5 @@
 // GATE-OUTPUT GUARD — "ha egy kapu elbukik, elolvashatja-e bárki, MIÉRT?"
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // THE BUG IT CLOSES (mérve 2026-09-15, ADR-0171). A `hooks/pre-commit` 112 kapujából **73**
 // a `>/dev/null`-ra írta a stdout-ját, a hook pedig `set -e`-vel fut. Egy BUKÓ kapu kimenete

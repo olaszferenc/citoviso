@@ -1,4 +1,5 @@
 // NYELVI ŐR: a vendégnek szóló szöveg természetes, EGYSÉGESEN MAGÁZÓ magyar legyen.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS (tulaj, 2026-08-23): a sablonok fele tegezett („Válassz sarkot
 // magadnak", „Fedezd fel", „Írj nekünk"), a másik fele magázott, néhány hely pedig

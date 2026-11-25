@@ -1,4 +1,5 @@
 // ADR-0044 guard: a module we CHARGE for must be configurable by the owner who bought it.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // This exists because the opposite happened: 12 modules shipped as priced add-ons with a
 // bare ON/OFF flag and no settings whatsoever. Selling "Online foglalás" for 990 Ft/month

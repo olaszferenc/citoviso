@@ -1,4 +1,5 @@
 // Regression guard for PORTAL PHOTO ATTRIBUTION (2026-08-21).
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY THIS EXISTS: wiring portal photos into the renderer immediately put junk on the
 // page, because a listing page carries far more <img> tags than the property's gallery.

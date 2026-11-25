@@ -1,4 +1,5 @@
 // AI-mérés-őr: minden Anthropic hívásnak mérve kell lennie.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // WHY (feedback: "a doktrína hatóköre = az őr FÁJLLISTÁJA"): a mérés értéke nulla abban a
 // pillanatban, amikor valaki hozzáad egy 13. `messages.create` hívást és elfelejti mellé a

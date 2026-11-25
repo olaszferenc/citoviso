@@ -1,4 +1,5 @@
 // A lead-sáv MOCK-JELÖLÉSÉNEK őre: a pirula a LEGERŐSEBB mock-állapotot írja — ugyanazt,
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 // amit a lead-lista MOCK cellája —, és a jóváhagyott mock ténye sosem tűnik el.
 //
 // ⛔ MIÉRT (mérve 2026-09-12, Elek FK-004): a sáv a LEGUTÓBBI mock állapotát mondta

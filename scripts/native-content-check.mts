@@ -1,4 +1,5 @@
 // ADR-0059 gate: one content type appears ONCE, in the template's native section.
+// gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // ① INVENTORY (gépi scan): renders all 16 art templates and MEASURES which content
 //    types each one demonstrates in its own sections (rooms, selling-points, gallery,
