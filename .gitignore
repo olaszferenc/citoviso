@@ -107,4 +107,5 @@ data/
 assets/design-refs/console/**/*.regen.html
 
 # ADR-0472 depth hero: the ONNX model is fetched by scripts/depth-model-fetch.mts (sha256-pinned), never committed
+models
 models/

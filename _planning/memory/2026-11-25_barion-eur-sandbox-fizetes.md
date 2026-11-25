@@ -25,3 +25,16 @@ Session `cit234c10a1`, koordinátor `cit9b4690e3`, brief `~/rc-briefs/barion-eur
 
 ## Fájlok
 - scripts/lib/hr-world.mts · scripts/hr-vegproba-e2e.mts · MEMORY.md · ez a jegyzet
+
+## 2. kör (koordinátor: ④/⑤ döntés + order_intent kérdés)
+- **order_intent „submitted” + tenant_id NULL fizetés után: szándékos** (K-1, `orderIntentState`; migráció 0036 CHECK:
+  `kind='initial'` ⇒ `tenant_id IS NULL`; a riport a bérlőt a leaden át keresi). HU-n ugyanez. Nem módosítottam; a végpróba méri.
+- **Teszt-világ fotók:** `scripts/fixtures/hr-world/photos/sweet-1..7.jpg` (Sweet Apartments Makarska dev-lead `45331b54`,
+  saját oldal, mind a 7 CLIP-en átmegy). A világ egy 127.0.0.1-es szerveren szolgálja ki, a lead `raw.portalProfiles`
+  saját-oldal profilként kapja (a profil-URL is a helyi szerver: a photoQuality „idegen domain” szabálya miatt).
+- **Új kiküldési kapuk (11-25):** a minőségi kolléga pass-a és a tulaj jóváhagyása — a világ a valódi rögzítőkkel
+  (`recordQaReview`, `recordOwnerApproval`) adja meg; a kapuk változatlanok.
+- `~/bin/rc-wt-prepare.sh` (CIT-gépspecifikus) a `models/`-t is symlinkeli; `.gitignore`: `models` (a symlinkre is illik).
+  A meglévő munkafákba nem pótoltam.
+- Eredmény: `hr-vegproba-e2e` mock 33/33, `--barion-pay --szamlazz-test` 42/42 (számla OV-2026-98: 5,25 € = 7 € −25 % megkeresési
+  ajánlat, mert a hideg levél is kiment); `country-hr-fix-e2e`, `nemzetkozi-b-e2e` zöld.

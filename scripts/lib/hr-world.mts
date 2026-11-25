@@ -210,9 +210,36 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   await markMissingHrStrings();
   await approveHr();
 
+  let photoServer: http.Server | null = null;
   const parent = await createFixtureParent(db as never, `${o.base}w`);
   // ⚠️ ELEK_RUN: the transport delivers only to elek@ — the lead's own address is Elek's.
-  const raw = { name: "Apartmani Lavanda", country: "HR", city: "Makarska", lat: 43.296, lon: 17.017, email: "elek@citoviso.com", phone: "+385 21 612 345", address: "Obala kralja Tomislava 12, 21300 Makarska" };
+  // THE LODGING'S OWN PHOTOS (2026-11-25, coordinator): the rendered-mock quality gate (mockRenderGate.ts)
+  // refuses a stock picture and an unchecked page, so a picture-less world letter never goes out — rightly.
+  // Seven real photos of a Makarska dev lead (Sweet Apartments, own site, every one passes the CLIP
+  // classifier: rooms, balconies, a bathroom) live as a fixture and are served HERE, on 127.0.0.1 — no
+  // photo crosses the fence. They enter exactly as a scraped own-site profile does (lead.raw.portalProfiles).
+  const PHOTO_DIR = path.resolve(REPO, "scripts", "fixtures", "hr-world", "photos");
+  const photoFiles = readdirSync(PHOTO_DIR).filter((f) => f.endsWith(".jpg")).sort();
+  photoServer = http.createServer((req, res) => {
+    const f = path.basename(decodeURIComponent((req.url ?? "").split("?")[0]!));
+    if (!photoFiles.includes(f)) { res.writeHead(404).end(); return; }
+    res.writeHead(200, { "content-type": "image/jpeg", "cache-control": "max-age=3600" }).end(readFileSync(path.join(PHOTO_DIR, f)));
+  });
+  photoServer.listen(0, "127.0.0.1");
+  await once(photoServer, "listening");
+  // The own site IS this local server: the photo-quality rule (photoQuality.ts) drops a gallery image whose
+  // host is not the profile's — rightly — so page, images and portalHost share 127.0.0.1.
+  const siteUrl = `http://127.0.0.1:${(photoServer.address() as { port: number }).port}/`;
+  const photoBase = `${siteUrl}photos`;
+  const ownSite = {
+    url: siteUrl, title: "Apartmani Lavanda Makarska", portal: "own_site", portalHost: "127.0.0.1",
+    matchBand: "high", matchConfidence: 1, needsReview: false, matchReasons: ["teszt-világ: a szállás saját oldala"],
+    extractor: "dom", fetchedAt: new Date().toISOString(), prices: [], amenities: [], rooms: [], reviews: [],
+    photos: photoFiles.map((f, i) => ({ url: `${photoBase}/${f}`, width: 1024, height: 768, caption: `Apartmani Lavanda ${i + 1}`, vouched: true, sourceUrl: siteUrl, portalHost: "127.0.0.1", provenance: "portal" })),
+  };
+  const raw = { name: "Apartmani Lavanda", country: "HR", city: "Makarska", lat: 43.296, lon: 17.017, email: "elek@citoviso.com", phone: "+385 21 612 345", address: "Obala kralja Tomislava 12, 21300 Makarska",
+    portalProfiles: [ownSite],
+    material: { streetView: false, hasAnyImage: true, totalImages: photoFiles.length, placesPhotos: 0, portalPhotos: photoFiles.length, websiteImages: 0 } };
   const lead = await db.insertInto("lead").values({ scrape_run_id: parent.runId, name: raw.name, raw, qualification: "no_site" } as never)
     .returning("id").executeTakeFirstOrThrow();
   const copy = {
@@ -226,16 +253,19 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   const gen = await generateEngineMock(await loadLead(lead.id), "_e2e", { curatorCopy: copy as never, template: "wordmark-grow", skin: "coastal-fresh" });
   const art = await db.selectFrom("mock_artifact").select(["inputs", "path"]).where("id", "=", gen.artifactId).executeTakeFirstOrThrow();
   const mockPath = path.resolve(REPO, art.path!);
-  // No photo leaves this world (fence): the curator's no-photo acknowledgement is what a real
-  // operator gives on the send dialog for a picture-less lead.
-  const noPhotoAck = { at: new Date().toISOString(), by: "hr-world", reason: "teszt-világ (scratch DB): kép nélküli horvát mock, a fotó nem cél" };
   // The mock was just made by TODAY's generator (the qafix code). The send gate (MOCK_CURRENT_GENERATOR_SQL)
   // counts a mock as current by its generated_at only after MOCK_HEROFIX_LIVE_AT — a fresh mock made before
   // that hour carries the same stamp the re-render gives (mockRefresh.ts), so the world never depends on
   // the wall clock. The gate itself is untouched.
   const { MOCK_HEROFIX_STAMP } = await import("../../src/outreach/mockPhotoGate.js");
-  await db.updateTable("mock_artifact").set({ status: "approved", inputs: { ...(art.inputs as object), reviewVerdict: "pass", review: { verdict: "pass", by: "hr-world" }, noPhotoAck, terhatasAt: MOCK_HEROFIX_STAMP } } as never)
+  await db.updateTable("mock_artifact").set({ status: "approved", inputs: { ...(art.inputs as object), reviewVerdict: "pass", review: { verdict: "pass", by: "hr-world" }, terhatasAt: MOCK_HEROFIX_STAMP } } as never)
     .where("id", "=", gen.artifactId).execute();
+  // 2026-11-25: every cold letter needs the quality colleague's pass AND the owner's yes on the mock
+  // file (mockQaReview.ts). The world plays both roles through the real recorders — the send gates
+  // themselves are unchanged and still check both against the file's mtime.
+  const { recordQaReview, recordOwnerApproval } = await import("../../src/outreach/mockQaReview.js");
+  const qa = await recordQaReview(gen.artifactId, "pass", "teszt-világ: a horvát mock átnézve", "hr-world");
+  if (!qa.ok || !(await recordOwnerApproval(gen.artifactId, "hr-world"))) throw new Error(`hr-world: a teszt-mock jóváhagyása nem rögzíthető (${qa.ok ? "tulaj" : qa.error})`);
   const token = `elekhr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
   const p = await db.insertInto("prospect").values({ lead_id: lead.id, token, mock_artifact_id: gen.artifactId, contact_email: "elek@citoviso.com" } as never)
     .returning("id").executeTakeFirstOrThrow();
@@ -320,7 +350,7 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
     personalLetterPath,
     opCookie: mintOperatorCookieValue(op.id),
     async close() {
-      for (const s of [consoleServer, publicServer, frontServer]) {
+      for (const s of [consoleServer, publicServer, frontServer, photoServer]) {
         if (!s) continue;
         s.closeAllConnections();
         s.close();

@@ -231,8 +231,16 @@ try {
     if (inv) info("számla", JSON.stringify(Object.fromEntries(Object.entries(inv).filter(([k]) => /^(invoice_number|provider|currency|gross|net|vat_key|vat_rate|status|error|fx_rate|fx_date|buyer_country)$/.test(k)))).slice(0, 300));
     const oi = await db.selectFrom("order_intent").selectAll().where("id", "=", (await db.selectFrom("payment").select("order_intent_id").where("id", "=", pay.id).executeTakeFirstOrThrow()).order_intent_id).executeTakeFirst() as Record<string, unknown> | undefined;
     info("a rendelés a fizetés után", JSON.stringify(oi ? Object.fromEntries(Object.entries(oi).filter(([k]) => /^(status|tenant_id|domain_type|domain_name|price|currency|preset)$/.test(k))) : null).slice(0, 300));
+    // BY DESIGN (K-1, owner 2026-10-02; migration 0036 CHECK: kind='initial' ⇒ tenant_id IS NULL): an
+    // order_intent never moves past „submitted” — what it IS comes from its payments (orderIntentState),
+    // and a first order finds its tenant through the lead (revenueReport tenantOfLead). Measured here so a
+    // change to either side shows up.
+    const { orderIntentState } = await import("../src/console/views.js");
+    const pays = await db.selectFrom("payment").select(["order_intent_id as orderIntentId", "status", "created_at as createdAt"]).where("order_intent_id", "=", String(oi?.id)).execute();
+    const st = oi ? orderIntentState({ id: String(oi.id), kind: oi.kind as never, status: oi.status as never, createdAt: oi.created_at as never }, pays as never, []) : null;
+    check("a kezdő rendelés a fizetés után: a konzol „fizetve”-nek látja (submitted + paid fizetés), tenant_id üres — a bérlő a leaden át", st?.key === "paid" && oi?.status === "submitted" && oi?.tenant_id == null, JSON.stringify({ st, status: oi?.status, tenant_id: oi?.tenant_id }));
     const tenant = await db.selectFrom("tenant").selectAll().where("lead_id", "=", w.leadId).executeTakeFirst() as Record<string, unknown> | undefined;
-    check("élesítés (száraz: mock regisztrátor, mock levél): a bérlő létrejött", !!tenant,
+    check("élesítés (száraz: mock regisztrátor, mock levél): a bérlő létrejött, aktív, a leadhez kötve", tenant?.status === "active",
       JSON.stringify(tenant ? Object.fromEntries(Object.entries(tenant).filter(([k]) => /^(id|status|display_name|time_zone)$/.test(k))) : null).slice(0, 300));
   }
 
