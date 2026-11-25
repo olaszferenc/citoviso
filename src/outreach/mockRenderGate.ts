@@ -52,6 +52,8 @@ const DESKTOP_VIEWPORT = { width: 1216, height: 760 };
 /** An image smaller than this on screen is an icon / logo / avatar, not a photo slot. */
 const MIN_SLOT_PX = 80;
 const IMG_GAP_MS = 400;
+/** Network quiet = no request in flight and none started or finished for this long (Playwright's networkidle uses 500 ms). */
+const QUIET_MS = 500;
 
 /** Vision subjects that never belong on a lodging page shown to its owner. */
 const FORBIDDEN_SUBJECTS = new Set(["ad_banner", "sign_map", "people_doc", "toilet"]);
@@ -208,6 +210,30 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     page.on("requestfailed", (r) => {
       if (r.resourceType() === "image") failedNet.add(r.url());
     });
+    // OWN NETWORK-QUIET COUNTER (2026-11-25). Playwright's waitForLoadState("networkidle") after the
+    // scroll walk NEVER resolved here (measured 2/2 mocks: the full 60 s timeout every time, no request
+    // pending) — 60 s of idling per audited mock, 18 min per fixture gate, +60 s per lead in the send
+    // gate. The condition the measurement needs is exactly this: every request the page started has
+    // finished or failed, and nothing new started for QUIET_MS. Same 60 s upper bound as before.
+    const inflight = new Set<object>();
+    let lastNet = Date.now();
+    page.on("request", (r) => {
+      inflight.add(r);
+      lastNet = Date.now();
+    });
+    const settle = (r: object) => {
+      inflight.delete(r);
+      lastNet = Date.now();
+    };
+    page.on("requestfinished", settle);
+    page.on("requestfailed", settle);
+    const networkQuiet = async (timeoutMs: number): Promise<void> => {
+      const end = Date.now() + timeoutMs;
+      while (Date.now() < end) {
+        if (inflight.size === 0 && Date.now() - lastNet >= QUIET_MS) return;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    };
     const hostChain = new Map<string, Promise<void>>();
     await page.route("**/*", async (route) => {
       if (route.request().resourceType() !== "image") return route.continue();
@@ -266,7 +292,7 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       await page.evaluate(`window.scrollTo(0, ${y})`);
       await page.waitForTimeout(120);
     }
-    await page.waitForLoadState("networkidle", { timeout: 60000 }).catch(() => undefined);
+    await networkQuiet(60000);
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(300);
     const walked = (await page.evaluate(MEASURE_JS)) as PageMeasure;

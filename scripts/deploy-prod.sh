@@ -17,8 +17,8 @@
 #   GATE 6  systemd-időzítők: a cél-commit deploy/systemd/targets.json-jának MINDEN prod
 #           időzítője telepítve (éles alakra renderelve), engedélyezve ÉS futva — visszamérve;
 #           élesen futó, nem-deklarált időzítő is bukás. Nincs kapcsoló, ami átugorja.
-#   GATE 5  a fordítás-frissesség az ÉLES DB-n (ADR-0207) — blokkoló és visszaellenőrzött,
-#           de CSAK ha a tartomány fordítás-releváns fájlt érint (különben hangosan kihagyva).
+#   GATE 5  a fordítás-frissesség az ÉLES DB-n (ADR-0207) — visszaellenőrzött, de 2026-11-25 óta
+#           NEM blokkol (tulaj): hiánynál jegy Bábelnek + magyar fallback; CSAK ha a tartomány fordítás-releváns fájlt érint (különben hangosan kihagyva).
 # Rollback = the same script with the previously deployed SHA.
 #
 # Access model: the server never talks to GitHub. The dev machine pushes the named
@@ -338,6 +338,43 @@ SHA="$(git rev-parse --verify "$TARGET_REF^{commit}" 2>/dev/null)" || fail "isme
 git merge-base --is-ancestor "$SHA" origin/main \
   || fail "a $SHA NEM őse az origin/main-nek — előbb landolj (scripts/land.sh)"
 
+# ── THE DEPLOY TOOL IS ALWAYS origin/main's (2026-11-25) ─────────────────────────
+# A hotfix branch carries the deploy-prod.sh of the day it forked. 2026-11-25 21:08 (2e167ca4) its
+# 30 s console canary failed a healthy deploy (console up at 33 s) — main had the 120 s wait since
+# 11-16. So when this copy differs from origin/main's, origin/main's copy is run instead, with the
+# same arguments, from the same tree. CIT_DEPLOY_LOCAL_SCRIPT=1 keeps this copy (testing a change
+# to the deploy script itself before it lands) — loudly.
+SELF_SUM="$(sha256sum "$0" | cut -d' ' -f1)"
+MAIN_SUM="$(git show origin/main:scripts/deploy-prod.sh 2>/dev/null | sha256sum | cut -d' ' -f1)"
+if [ "$SELF_SUM" != "$MAIN_SUM" ]; then
+  if [ "${CIT_DEPLOY_LOCAL_SCRIPT:-}" = "1" ]; then
+    echo "⚠️  a deploy-prod.sh ELTÉR az origin/main-étől, és CIT_DEPLOY_LOCAL_SCRIPT=1 — a helyi példány fut" >&2
+  elif [ -n "${CIT_DEPLOY_REEXEC:-}" ]; then
+    fail "az origin/main deploy-prod.sh-ja újraindítva sem egyezik önmagával (fetch közben mozdult a main?) — indítsd újra"
+  else
+    MAIN_COPY="$(mktemp -t deploy-prod-main-XXXXXX.sh)"
+    git show origin/main:scripts/deploy-prod.sh >"$MAIN_COPY" || fail "az origin/main deploy-prod.sh-ja nem olvasható"
+    echo "── a deploy-prod.sh ebben a fában elavult: az origin/main példánya fut ($(git log -1 --format=%h origin/main -- scripts/deploy-prod.sh))"
+    CIT_DEPLOY_REEXEC=1 exec bash "$MAIN_COPY" "$TARGET_REF" "$@"
+  fi
+fi
+
+# ── --go after a green dry-run of the SAME commit (2026-11-25) ───────────────────
+# The dry-run's two slow LOCAL renders (GATE 1c/kép, GATE 1d — ~20 min) measure the target commit's
+# own tree in a throwaway worktree: for the same SHA and the same deploy script they cannot measure
+# anything else. Measured 11-25: the --go repeated them right after the dry-run (20:12→20:33).
+# A stamp younger than DEPLOY_DRY_STAMP_HOURS (default 6) is taken over; everything else
+# (scrape, migrations, timers, restart, verification) runs as before. CIT_DEPLOY_FULL=1 ignores it.
+DRY_STAMP_DIR="$(git rev-parse --git-common-dir)/cit-deploy-dryrun"
+DRY_STAMP_OK=""
+if [ "$GO" = "--go" ] && [ "${CIT_DEPLOY_FULL:-}" != "1" ] && [ -z "${FULL_KB_SHOTS:-}" ] && [ -z "${KB_SHOT_GATE_WAIVE:-}" ] && [ -f "$DRY_STAMP_DIR/$SHA" ]; then
+  read -r st_sha st_at st_sum <"$DRY_STAMP_DIR/$SHA" || true
+  st_age=$(( $(date +%s) - ${st_at:-0} ))
+  if [ "${st_sha:-}" = "$SHA" ] && [ "${st_sum:-}" = "$SELF_SUM" ] && [ "$st_age" -ge 0 ] && [ "$st_age" -lt $(( ${DEPLOY_DRY_STAMP_HOURS:-6} * 3600 )) ]; then
+    DRY_STAMP_OK="zöld próbafuttatás $(( st_age / 60 )) perce"
+  fi
+fi
+
 echo "── cél: $SHA ($(git log -1 --format=%s "$SHA"))"
 
 # ── GATE 4 — a deploy nem gázolja le a futó scrape-et ─────────────────────────
@@ -416,24 +453,10 @@ for v in LEGAL_ENTITY_NAME LEGAL_ENTITY_ADDRESS LEGAL_ENTITY_REG_NUMBER LEGAL_EN
 done
 echo "     ✓ szerkezet ép + az éles impresszum-adatok kitöltöttek"
 
-echo "── GATE 1c/kép — súgó-képek frissessége (újragyártás a cél-commiton, pixel-összevetés)…"
-# ⚠️ KIMONDOTT, EGYSZERI KIHAGYÁS (tulaj-döntés, 2026-09-24): egy ADR-0220 ELŐTTI
-# élesre épülő hotfix kb-shot-ja nem tud összevetni, és a kapunak nem volt kiútja —
-# egyetlen JS-sor javítása csak a teljes main (80 commit + 5 migráció) árán mehetett
-# volna ki. A kihagyás INDOKLÁST KÖVETEL, hangosan kiíródik, és az éles DEPLOYED-
-# naplóba is bekerül. Nem alapértelmezés: minden deploynál újra ki kell mondani.
-if [ -n "${KB_SHOT_GATE_WAIVE:-}" ]; then
-  [ "${#KB_SHOT_GATE_WAIVE}" -ge 20 ] || fail "KB_SHOT_GATE_WAIVE: az indoklás túl rövid (min. 20 karakter) — mondd ki, MIÉRT nem változhat súgó-kép"
-  echo "     ⚠️⚠️ KIHAGYVA (KB_SHOT_GATE_WAIVE): $KB_SHOT_GATE_WAIVE" >&2
-  WAIVED_NOTE=" kb-shot-gate-WAIVED[$(printf %s "$KB_SHOT_GATE_WAIVE" | tr -cd '[:alnum:] .,:;+/()-')]"
-else
-  kb_shot_gate "$SHA"
-fi
-
-echo "── GATE 1d — a három kiküldési sablon lerenderelve (18 minta-mock, minőségkapu)…"
-mock_render_gate "$SHA"
-
-# GATE 1c — tudásbázis-frissesség (ADR-0045/f, §J). The dev-time hooks guarantee the
+# GATE 1c — tudásbázis-frissesség (ADR-0045/f, §J). ⏱️ BEFORE the slow local renders (2026-11-25):
+# a missing tudasbazis-or verdict used to surface only after ~20 minutes of GATE 1c/kép + 1d
+# (bc7a8b5c: a whole dry-run lost); it needs nothing they produce, so it is asked first.
+# The dev-time hooks guarantee the
 # DETERMINISTIC layer at every commit; deploy-time re-verifies it on the TARGET commit's
 # own tree (the working tree in hand may differ), and enforces the JUDGMENT layer as
 # evidence: a fresh, range-bound tudasbazis-or PASS token (kb-gate.mjs). The guard
@@ -469,6 +492,29 @@ else
   echo "── GATE 1c — tudásbázis: első sync (nincs PROD_SHA) — kapu kihagyva"
 fi
 
+echo "── GATE 1c/kép — súgó-képek frissessége (újragyártás a cél-commiton, pixel-összevetés)…"
+# ⚠️ KIMONDOTT, EGYSZERI KIHAGYÁS (tulaj-döntés, 2026-09-24): egy ADR-0220 ELŐTTI
+# élesre épülő hotfix kb-shot-ja nem tud összevetni, és a kapunak nem volt kiútja —
+# egyetlen JS-sor javítása csak a teljes main (80 commit + 5 migráció) árán mehetett
+# volna ki. A kihagyás INDOKLÁST KÖVETEL, hangosan kiíródik, és az éles DEPLOYED-
+# naplóba is bekerül. Nem alapértelmezés: minden deploynál újra ki kell mondani.
+if [ -n "${KB_SHOT_GATE_WAIVE:-}" ]; then
+  [ "${#KB_SHOT_GATE_WAIVE}" -ge 20 ] || fail "KB_SHOT_GATE_WAIVE: az indoklás túl rövid (min. 20 karakter) — mondd ki, MIÉRT nem változhat súgó-kép"
+  echo "     ⚠️⚠️ KIHAGYVA (KB_SHOT_GATE_WAIVE): $KB_SHOT_GATE_WAIVE" >&2
+  WAIVED_NOTE=" kb-shot-gate-WAIVED[$(printf %s "$KB_SHOT_GATE_WAIVE" | tr -cd '[:alnum:] .,:;+/()-')]"
+elif [ -n "$DRY_STAMP_OK" ]; then
+  echo "     ✓ a próbafuttatás mérte ugyanerre a commitra ($DRY_STAMP_OK) — nem fut újra"
+else
+  kb_shot_gate "$SHA"
+fi
+
+echo "── GATE 1d — a három kiküldési sablon lerenderelve (18 minta-mock, minőségkapu)…"
+if [ -n "$DRY_STAMP_OK" ]; then
+  echo "     ✓ a próbafuttatás mérte ugyanerre a commitra ($DRY_STAMP_OK) — nem fut újra"
+else
+  mock_render_gate "$SHA"
+fi
+
 # Pending migrations (prod's applied ledger vs the target commit's files).
 ( set -o pipefail
   $SSH "sudo -u citoviso psql -d citoviso -t -A -c 'SELECT name FROM schema_migrations'" </dev/null | sort > /tmp/deploy-applied-migs.txt
@@ -481,6 +527,11 @@ timers_render
 timers_plan
 
 if [ "$GO" != "--go" ]; then
+  # The dry-run reached its end, every local gate green: the stamp lets the --go that follows skip
+  # the two slow LOCAL renders for this SAME commit (not a waived run, not a stale script).
+  if [ -z "${KB_SHOT_GATE_WAIVE:-}" ]; then
+    mkdir -p "$DRY_STAMP_DIR" && printf '%s %s %s\n' "$SHA" "$(date +%s)" "$SELF_SUM" >"$DRY_STAMP_DIR/$SHA"
+  fi
   echo
   echo "DRY-RUN vége. Élesítéshez (a tulaj scope-olt engedélyével): deploy-prod.sh $TARGET_REF --go"
   exit 0
@@ -564,7 +615,7 @@ fi
 if [ "$NEEDS_I18N" = "0" ]; then
   echo "── GATE 5 — fordítás: nincs fordítás-releváns változás a tartományban ✓ (kihagyva)"
 else
-  echo "── GATE 5 — fordítás-frissítés az éles adatbázison (blokkoló)…"
+  echo "── GATE 5 — fordítás-frissítés az éles adatbázison (hiány = jegy Bábelnek, nem állít meg)…"
   # On failure the measured gap becomes a ticket in Bábel's inbox; ~/rc-briefs/watch/babel-watch.py
   # hands it to his session (owner 2026-10-28: translation events trigger Bábel).
   GATE5_OUT="$($SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/i18n-pack-status.mts --ensure 2>&1 | tail -12" </dev/null)"
@@ -572,15 +623,24 @@ else
   echo "$GATE5_OUT"
   [ "$GATE5_RC" = "0" ] || {
     mkdir -p "$HOME/babel/beerkezo" \
-      && printf '# Deploy elbukott a GATE 5-ön — %s (%s)\n\nAz éles csomag a magod alkalmazása után is hiányos:\n\n```\n%s\n```\n\nFordítsd le a hiányt (babel-pack.mts export/kb-export <nyelv>, az élesen hiányzó sorokat a munka/prod-*-hiany.json mintájára méred), land, és szólj a Koordinátornak, hogy a deploy mehet.\n' \
+      && printf '# Deploy elbukott a GATE 5-ön — %s (%s)\n\nAz éles csomag a magod alkalmazása után is hiányos:\n\n```\n%s\n```\n\nA deploy ettől NEM állt meg (tulaj 2026-11-25): a hiányzó sorok élesen magyarul látszanak. Fordítsd le a hiányt (babel-pack.mts export/kb-export <nyelv>, az élesen hiányzó sorokat a munka/prod-*-hiany.json mintájára méred), land, és a következő deploy viszi ki.\n' \
         "$SHA" "$(date '+%F %T')" "$GATE5_OUT" > "$HOME/babel/beerkezo/$(date +%F-%H%M)-deploy-gate5.md"
-    fail "a nyelvi csomag HIÁNYOS a Bábel-mag alkalmazása után is — a servicek NEM lettek újraindítva. API-fordítás nincs (ADR-0412): Bábel fordítsa le a hiányt (babel-pack.mts export/kb-export <nyelv>), landoljon, és azzal a commit-tal deployolj (jegy: ~/babel/beerkezo/)"
+    echo "⚠️⚠️ GATE 5: a nyelvi csomag HIÁNYOS a Bábel-mag után is — a deploy MEGY TOVÁBB, a hiány magyarul (fallback) jelenik meg, amíg Bábel le nem fordítja (jegy: ~/babel/beerkezo/; tulaj 2026-11-25: fordítás nem állíthatja meg az élesítést)" >&2
+    I18N_NOTE=" i18n-gap"
   }
   # ⛔ A frissítő SAJÁT szavát nem fogadjuk el: független méréssel igazoljuk. Egy
   # „lefutottam" ág, ami nem bizonyít, pontosan az a hamis zöld, amitől ez a kapu véd.
   echo "── GATE 5b — visszaellenőrzés (független mérés)…"
-  $SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/kb-translation-coverage-check.mts 2>&1 | tail -12" </dev/null \
-    || fail "a frissítés után is maradt elavult fordítás — a servicek NEM lettek újraindítva"
+  if ! GATE5B_OUT="$($SSH "set -o pipefail; cd $APP && sudo -u citoviso npx tsx scripts/kb-translation-coverage-check.mts 2>&1 | tail -12" </dev/null)"; then
+    echo "$GATE5B_OUT"
+    mkdir -p "$HOME/babel/beerkezo" \
+      && printf '# Deploy GATE 5b: elavult fordítás maradt élesen — %s (%s)\n\nA deploy ettől NEM állt meg (tulaj 2026-11-25); a független mérés kimenete:\n\n```\n%s\n```\n\nFordítsd le, land, és a következő deploy viszi ki.\n' \
+        "$SHA" "$(date '+%F %T')" "$GATE5B_OUT" > "$HOME/babel/beerkezo/$(date +%F-%H%M)-deploy-gate5b.md"
+    echo "⚠️⚠️ GATE 5b: a frissítés után is maradt elavult fordítás — a deploy MEGY TOVÁBB, jegy Bábelnek (~/babel/beerkezo/)" >&2
+    I18N_NOTE=" i18n-gap"
+  else
+    echo "$GATE5B_OUT"
+  fi
 fi
 
 # GATE 6 — az időzítők a restart ELŐTT állnak fel: ha nem, a servicek nem indulnak újra.
@@ -605,7 +665,7 @@ $SSH "journalctl -u citoviso-console -u citoviso-public --since '-2 min' -p err 
 
 # Version ledger on the machine + audit tag on GitHub.
 TS="$(date +%Y%m%d-%H%M)"
-$SSH "echo \"$(date '+%F %T') deployed=$SHA prev=${PROD_SHA:-none} tag=prod/$TS${WAIVED_NOTE:-}\" >> /opt/citoviso/DEPLOYED" </dev/null
+$SSH "echo \"$(date '+%F %T') deployed=$SHA prev=${PROD_SHA:-none} tag=prod/$TS${WAIVED_NOTE:-}${I18N_NOTE:-}\" >> /opt/citoviso/DEPLOYED" </dev/null
 git tag -f "prod/$TS" "$SHA" && GIT_SSH_COMMAND="ssh" git push -q origin "prod/$TS" || echo "⚠️  tag-push nem ment — a DEPLOYED ledger attól még hiteles"
 
 echo

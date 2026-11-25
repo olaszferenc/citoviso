@@ -17,10 +17,11 @@
 // No model file → null (no claim). The CALLER decides what absence means: the generator goes on,
 // the send gate refuses (an unchecked page does not go out).
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import ort from "onnxruntime-node";
 import sharp from "sharp";
 import { config } from "../config.js";
@@ -114,9 +115,58 @@ async function pixels(buf: Buffer): Promise<Float32Array> {
   return out;
 }
 
+// VERDICT CACHE BY BYTES (2026-11-25). The send gate and the 18-mock fixture gate classify the same
+// portal photos on every run (~30 s per mock, measured), and the fixture gate runs on every commit,
+// land and deploy. A verdict is a pure function of: the image bytes, this file and photoText.ts (the
+// rules and thresholds — hashed, so a rule change can never be served a stale verdict even without a
+// VERSION bump), the label embeddings, the model file, the Tesseract data and the versions of the
+// three native/wasm packages. All of them are in the key; if any of them cannot be read, nothing is
+// cached (classified fresh, as before). Only non-null verdicts are stored.
+let codeKeyMemo: string | null | undefined;
+function codeKey(): string | null {
+  if (codeKeyMemo !== undefined) return codeKeyMemo;
+  try {
+    const h = createHash("sha256");
+    h.update(`v${VERSION}\0`);
+    const here = fileURLToPath(import.meta.url);
+    for (const f of [here, path.join(path.dirname(here), "photoText.ts")]) h.update(readFileSync(f)).update("\0");
+    h.update(JSON.stringify(LABELS)).update("\0");
+    h.update(readFileSync(path.resolve(process.cwd(), config.photoKindModelPath))).update("\0");
+    const tess = path.resolve(process.cwd(), path.dirname(config.photoKindModelPath), "tessdata");
+    if (existsSync(tess)) {
+      for (const f of readdirSync(tess).sort()) h.update(`${f}:${readFileSync(path.join(tess, f)).length}:${statSync(path.join(tess, f)).mtimeMs}\0`);
+    }
+    for (const pkg of ["onnxruntime-node", "sharp", "tesseract.js"]) {
+      h.update(`${pkg}@${JSON.parse(readFileSync(path.resolve(process.cwd(), "node_modules", pkg, "package.json"), "utf8")).version}\0`);
+    }
+    codeKeyMemo = h.digest("hex");
+  } catch {
+    codeKeyMemo = null;
+  }
+  return codeKeyMemo;
+}
+
 /** Classify image bytes. Null when the model is missing or the bytes are not an image. */
 export async function classifyPhotoBuffer(buf: Buffer): Promise<PhotoKind | null> {
   if (!photoKindAvailable()) return null;
+  const ck = codeKey();
+  const file = ck ? path.join(CACHE_DIR, `buf-${createHash("sha256").update(ck).update(buf).digest("hex")}.json`) : null;
+  if (file) {
+    try {
+      return JSON.parse(await readFile(file, "utf8")) as PhotoKind;
+    } catch {
+      // not cached yet
+    }
+  }
+  const v = await classifyPhotoBufferFresh(buf);
+  if (v && file) {
+    await mkdir(CACHE_DIR, { recursive: true }).catch(() => undefined);
+    await writeFile(file, JSON.stringify(v)).catch(() => undefined);
+  }
+  return v;
+}
+
+async function classifyPhotoBufferFresh(buf: Buffer): Promise<PhotoKind | null> {
   let input: Float32Array;
   try {
     input = await pixels(buf);
