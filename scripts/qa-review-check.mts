@@ -145,6 +145,12 @@ check("a kártyaképek nem fürdő/konyha", /const p = take\(notBath\);/.test(sr
 
 check("kapuszárny: a legjobb széles kép, közeli/sötét csak végső esetben", /b\.p\.bandScore \?\? -1/.test(src("src/engine/templates/gateOpening.ts")));
 
+{
+  const { matchIcon } = await import("../src/engine/icons.js");
+  const want: [string, string][] = [["Kutyusokat ingyen fogadnak", "pet"], ["Légkondicionálás és padlófűtés", "ac"], ["Konyha mosogatógéppel", "kitchen"], ["Kiságy és etetőszék", "child"], ["Agyagos talaj", "dot"], ["Saját stég", "view"]];
+  for (const [l, n] of want) check(`ikon: „${l}” → ${n} (egész szó, nem szótöredék)`, matchIcon(l) === n);
+}
+
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — kolléga-jóváhagyás vagy engedélylistás képszűrő nélkül menne ki levél.`);
   process.exit(1);
