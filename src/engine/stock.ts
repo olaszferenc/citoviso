@@ -308,10 +308,10 @@ export function stockRoomPhotos(d: SiteData, n: number, alt: (i: number) => stri
  */
 export const STOCK_GALLERY_TOWN_TARGET = 12;
 
-export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, localCount = 0): Photo[] {
+export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, localCount = 0, townPage = localCount > 0): Photo[] {
   const own = d.photos.filter((p) => !isStockPhoto(p)).length;
   if (own === 0) return [];
-  const target = localCount > 0 ? STOCK_GALLERY_TOWN_TARGET : STOCK_GALLERY_MIN;
+  const target = townPage ? STOCK_GALLERY_TOWN_TARGET : STOCK_GALLERY_MIN;
   if (own + localCount >= target) return [];
   const seed = stockSeedOf(d);
   const cats = stockGalleryCategories(d, needBedroom);
@@ -321,7 +321,7 @@ export function stockGallery(d: SiteData, needBedroom: boolean, alt: string, loc
   // The town page's three sample cards wear their own pictures (townCardKinds): never again in the gallery,
   // however many rounds the gallery walks a short list (dev run 2026-11-25: the card's bedroom twice).
   const used = new Set<string>();
-  if (localCount > 0) {
+  if (townPage) {
     for (const k of townCardKinds(d)) {
       const c = stockCardPhoto(d, k, alt);
       if (c) used.add(c.url.startsWith(STOCK_PREFIX) ? c.url.slice(STOCK_PREFIX.length) : c.url);

@@ -33,6 +33,7 @@ import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
 import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
+import { isStockPhoto } from "../stock.js";
 import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
@@ -254,6 +255,11 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // repeats the same sentence when the intro is short (measured).
   const rest = data.intro.startsWith(lede) ? data.intro.slice(lede.length).trim() : data.intro;
 
+  // The about frame: the second own photo; a town page without one (plan kepnelkuli-hero) takes the town's first
+  // LOCAL picture — never the hero again (dev run 2026-11-25: the town hero twice failed the send gate); with
+  // neither, no frame. A lead with one own photo and no town pictures keeps the old frame (its hero).
+  const localPics = (data.stock?.gallery ?? []).filter((p) => !isStockPhoto(p));
+  const aboutPic = photos[1] ?? localPics[0] ?? (photos.length && !data.townPhoto ? hero : undefined);
   const card = (p: { url: string; alt: string } | undefined, alt: string, delay = 0) =>
     `<div class="w-card" ${mo("rise", delay)}>${
       p ? `<img src="${esc(p.url)}" alt="${esc(p.alt || alt)}" loading="lazy">` : photoFill(alt)
@@ -314,7 +320,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const about = `<section id="cit-about">
     <div class="w-wrap">
       <div class="w-row${photos.length ? "" : " w-row--solo"}">
-        ${photos.length ? `<div class="w-fig">${card(photos[1] ?? hero, data.name)}</div>` : ""}
+        ${aboutPic ? `<div class="w-fig">${card(aboutPic, data.name)}</div>` : ""}
         <div>
           <span class="w-spark">${SPARK}</span>
           ${

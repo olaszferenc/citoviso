@@ -36,6 +36,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
 import { chromium } from "playwright-core";
+import sharp from "sharp";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { isSamePicture, sizelessPhotoKey } from "../engine/samePicture.js";
@@ -49,7 +50,14 @@ import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 11;
+export const RENDER_GATE_VERSION = 12;
+
+/**
+ * The opening screen's top part must carry a picture, not a near-blank band (coordinator 2026-11-25, Igal: an
+ * almost white hero). Measured on 20 blind first screens: Igal 95 % of its pixels light (luma > 200), every page
+ * with a picture ≤ 9 %. At or above this share the hero is blank.
+ */
+export const HERO_MAX_LIGHT_SHARE = 0.6;
 
 /** A town page (no / few own photos, plan kepnelkuli-hero) carries at least this many distinct pictures (coordinator 2026-11-25: „tele kell lennie képpel”). */
 export const TOWN_PAGE_MIN_PICTURES = 12;
@@ -231,6 +239,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
   });
   let measure: PageMeasure;
   let opening: PageMeasure = { slots: [], broken: [], scrollWidth: 0, innerWidth: 0, wideText: [], brokenWords: [] };
+  let heroLightShare = 0;
   try {
     // The PAGE renders with the browser's own UA: Google Fonts answers a bot UA with another font
     // file, the headline then fits where a phone's Fraunces does not (measured 11-24, Crystal
@@ -320,6 +329,12 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     // The first screen exactly as it opens (the hero's fitted headline can reflow after a scroll).
     await page.waitForTimeout(1200);
     opening = (await page.evaluate(MEASURE_JS)) as PageMeasure;
+    // The hero's CONTENT, not only its presence: the top of the first screen, as pixels.
+    const top = await page.screenshot({ clip: { x: 0, y: 0, width: VIEWPORT.width, height: Math.round(VIEWPORT.height * 0.6) } });
+    const g = await sharp(top).greyscale().raw().toBuffer();
+    let light = 0;
+    for (let i = 0; i < g.length; i++) if (g[i]! > 200) light++;
+    heroLightShare = g.length ? light / g.length : 0;
     // Walk the page so lazy images load, then measure from the top.
     const height = (await page.evaluate("document.documentElement.scrollHeight")) as number;
     for (let y = 0; y < height; y += VIEWPORT.height / 2) {
@@ -354,6 +369,9 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
 
   const findings: RenderFinding[] = [];
   const slots = measure.slots;
+  if (heroLightShare >= HERO_MAX_LIGHT_SHARE) {
+    findings.push({ code: "thin", detail: `a nyitóképernyő szinte üres (${Math.round(heroLightShare * 100)}% világos, kép nélkül)` });
+  }
 
   // A TOWN PAGE, measured as a phone opens it (coordinator 2026-11-25): the first screen, unscrolled, shows a
   // real, loaded picture in the hero (a parallax layer that never paints = a grey band), and the page holds

@@ -763,7 +763,10 @@ function withStockFill(data: SiteData): SiteData {
   const alt = T(data, "Illusztráció");
   // Plan kepnelkuli-hero ③: the town's LOCAL pictures come first after the own photos, then the MINTA rooms.
   const local = localTownPhotos(data);
-  const gallery = [...local, ...stockGallery(data, !hasOwnBedroomPhoto(data), alt, local.length)];
+  // A town page is one whose hero or gallery is the town's (plan kepnelkuli-hero): it fills up to ~15 pictures
+  // even when the town gave no picture besides its hero (blind run 2026-11-25: 3 pages of 7 pictures).
+  const townPage = Boolean(data.townPhoto) || local.length > 0;
+  const gallery = [...local, ...stockGallery(data, !hasOwnBedroomPhoto(data), alt, local.length, townPage)];
   const backdrop = data.photos.length === 0 ? stockHeroBackdrop(data, alt) : undefined;
   return { ...data, stock: { gallery, cards: true, ...(backdrop ? { backdrop } : {}) } };
 }

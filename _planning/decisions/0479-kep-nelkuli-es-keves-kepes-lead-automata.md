@@ -34,7 +34,8 @@ A kép nélküli leadek mockja eddig egyetlen vak Wikipedia-képet kapott (ADR-0
 - Vak mérés (§2c, 2×20 eddig nem látott település, beavatkozás nélkül):
   - v2: 7 jó · 10 gyenge · 3 rossz. Mindhárom rossz „egyetlen ház, tető vagy szerkezet közelről”, ebből lett a v3-szabály.
   - v3 (just-in-time út): 7 jó · 7 gyenge · 2 rossz átment (vasúti épület felirattal; egyetlen tető, határeset), és 4 lapot a render-kapu magától visszatartott (1 kép nélkül, 3 kevesebb mint 12 képpel).
-  - Következő szabályok: az állomás és a felirat erősebb tiltása, szigorúbb „ház közelről” küszöb, új jelölt-forrás a gyenge (fakó, erdő, ég) esetekre.
+  - v4 (minőségi padló, a 33 értékelt hero-ból kalibrálva: látkép ≥0,45, tető/toronycsúcs ≥0,35, sima vidék nem hero; település-kép csak a saját közigazgatási határon belül vagy névvel; üres nyitókép a kapun; megszűnt hely kizárva): 18 mock → 7 jó · 6 gyenge · **0 rossz**; 5 lapot a kapu magától visszatartott (3 településkép nélkül, mert az üres nyitóképet mérte; 2 címsor-sortörés miatt). 2 településnek nincs kép nélküli, e-mailes leadje.
+  - Következő szabály: fakóság-padló a hero-ra (a gyengék fele szürke, párás), vak újraméréssel.
 
 ### Eltérés
 - Az ADR-0436 4. pontja megszűnik: a hero nem ismétlődik a galériában.

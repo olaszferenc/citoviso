@@ -8,6 +8,7 @@
 // sending domain). Default cap + inter-send delay are deliberately conservative;
 // the operator raises them consciously per run, not by default.
 
+import { isClosedPlaceName } from "../scraper/closedPlace.js";
 import { buildDraftForProspect, composeBody, draftOfferPercent, type OutreachDraft } from "./draft.js";
 import { loadCopyOverride, withMailOverride } from "./copyOverride.js";
 import { stampOutreachOffer } from "../payment/offers.js";
@@ -388,6 +389,11 @@ export async function sendOutreachMail(
         },
       };
     }
+  }
+  // A closed place is never contacted (scraper/closedPlace.ts, 2026-11-25).
+  if (p.artifactId) {
+    const nm = (await db.selectFrom("lead").select("name").where("id", "=", p.leadId).executeTakeFirst())?.name;
+    if (isClosedPlaceName(nm)) return { ...base, outcome: { kind: "skipped", reason: `a hely megszűnt („${nm}”) — nem keressük meg` } }; // i18n-exempt: operátori ok
   }
   // Elek 10-13 O-1: a trialing or paying lead gets no cold letter — on the server, not only on the screen.
   const customer = await alreadyCustomerBlocks(p.leadId);

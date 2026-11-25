@@ -15,6 +15,7 @@
 
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { CLOSED_NAME_SQL_PATTERN } from "../scraper/closedPlace.js";
 import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { langForCountry } from "../i18n/lang.js";
 import type { TownPhoto } from "../engine/recipe.js";
@@ -100,6 +101,7 @@ export async function townHasEmailLeadInNeed(country: string, city: string): Pro
       from lead l
      where btrim(coalesce(l.raw->>'email', '')) <> ''
        and l.contact_block_at is null
+       and l.name !~* ${CLOSED_NAME_SQL_PATTERN}
        and upper(coalesce(l.raw->>'country', ${country.toUpperCase()})) = ${country.toUpperCase()}
        and l.raw->>'city' ilike ${`%${townName(city)}%`}
        and ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}
@@ -237,6 +239,7 @@ export async function townsInNeed(opts: { scrapeRunId?: string; country?: string
      where btrim(coalesce(l.raw->>'email', '')) <> ''
        and coalesce(l.raw->>'city', '') <> ''
        and l.contact_block_at is null
+       and l.name !~* ${CLOSED_NAME_SQL_PATTERN}
        and l.lifecycle_status not in ('disqualified', 'terminated')
        and ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}
        ${opts.scrapeRunId ? sql`and l.scrape_run_id = ${opts.scrapeRunId}` : sql``}

@@ -15,10 +15,11 @@ Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `
 
 ## Mérés (dev DB, $0)
 - 52 település (első kör): 49 saját kép, 3 környék, 0 semmi; 65 s/település → gyorsítva 32 s/település (3 párhuzamos, nice).
-- Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. Vak 20 (v3, just-in-time): 7 jó, 7 gyenge, 2 rossz (vasúti épület; egyetlen tető, határeset), 4 lapot a kapu visszatartott (kép nélkül, illetve kevesebb mint 12 kép).
+- Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. Vak 20 (v3, just-in-time): 7 jó, 7 gyenge, 2 rossz (vasúti épület; egyetlen tető, határeset), 4 lapot a kapu visszatartott (kép nélkül, illetve kevesebb mint 12 kép). Vak 20 (v4): 7 jó, 6 gyenge, 0 rossz; 5 visszatartva (3 üres nyitókép, 2 címsor-sortörés).
 
 ## Nyitott
 - A `town_photo_dispatch` kapcsolót a tulaj nyitja. Élesítés csak az ő kérésére.
 - A szobatár bővítése (Pexels: a kereső Cloudflare-ellenőrzést ad, saját böngészőprofilos kolléga kell).
-- A wordmark-grow sablon saját kép nélküli, település-hero-s leadnél megismétli a hero-t; javítani a sablonban kell, addig a kapu elbuktatja.
+- Fakóság-padló a hero-ra (a v4 gyengéinek fele szürke, párás), vak újraméréssel.
+- Openverse Flickr-ág a szobatárhoz: a Flickr CDN szerveroldali letöltésre 403-at ad, a render-kapunak kivétel kellene (döntés).
 - A „gyenge” kategória (fakó, borús, túl sok ég, sima erdő): a jobb jelölt sokszor nincs meg a Commonsban. Új jelölt-forrás kellene (pl. Wikivoyage banner, a szomszéd település nevezetessége), szabályként.
