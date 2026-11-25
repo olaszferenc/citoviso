@@ -46,9 +46,11 @@ import { persistMockLanguage, renderMockMeasured } from "../src/generator/mockLa
 import { secureMockPhotos } from "../src/generator/photoTransport.js";
 import { curateMockPhotos } from "../src/generator/photoCurate.js";
 import { photoKindAvailable } from "../src/media/photoKind.js";
-import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
+import { MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
 
-const STAMP = "2026-11-24-herofix";
+// 2026-11-25 (owner: „Nyitókép javítás nélkül nem mehet ki semmi”): the round with the LIVE hero fix +
+// photo allow-list code; the send gates (MOCK_CURRENT_GENERATOR_SQL) ask for this stamp.
+const STAMP = MOCK_HEROFIX_STAMP;
 const argv = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
   const i = argv.indexOf(name);
@@ -95,6 +97,11 @@ const rows = await db
         .as("linked"),
   ])
   .where(sql<string>`m.inputs->'recipe'->>'template'`, "in", templates)
+  // The mocks waiting to go out first (queued / held dispatch rows), then the already linked ones.
+  .orderBy(
+    (eb) => eb.exists(eb.selectFrom("outreach_dispatch as d").select("d.id").whereRef("d.artifact_id", "=", "m.id").where("d.status", "in", ["queued", "held"])),
+    "desc",
+  )
   .orderBy("linked", "desc")
   .orderBy("m.generated_at", "desc")
   .execute();

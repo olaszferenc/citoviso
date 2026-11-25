@@ -63,6 +63,10 @@ check("a jóváhagyó lap csak a teljes kört mutatja (kapu + kolléga + 5 sajá
 check("a „Mehet” a mockfájlra bélyegzi a tulaj jóváhagyását", /recordOwnerApproval\(row\.artifact_id/.test(aq));
 check("a várakozó-jegyzet egy helyen él", APPROVAL_PENDING_NOTE.startsWith("JÓVÁHAGYÁSRA VÁR"));
 
+const gateSrc = src("src/outreach/mockPhotoGate.ts");
+check("nyitókép-javítás nélkül semmi: a küldési kapu a javítás élesítése utáni vagy az azzal újrarenderelt mockot kéri",
+  /MOCK_HEROFIX_LIVE_AT/.test(gateSrc) && /terhatasAt/.test(gateSrc) && /STAMP = MOCK_HEROFIX_STAMP/.test(src("scripts/rerender-terhatas.mts")));
+
 // ── ② the allow-list ──
 const K = (kind: PhotoKind["kind"], label: string, extra: Partial<PhotoKind> = {}): PhotoKind => ({
   kind, label, score: 0.5, sight: 0, never: 0, ok: kind === "ok" ? 0.9 : 0.2, probs: { "the outside of a house": kind === "ok" ? 0.8 : 0 }, ...extra,

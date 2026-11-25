@@ -28,4 +28,10 @@ export const MOCK_OWN_PHOTOS_OK_SQL = sql<boolean>`(
  *  (prod/20261123-2242, 03643a66, 2026-11-23 21:42 UTC). A cold letter carries only a mock made by
  *  the fixed generator; an older one waits for its regeneration. Table alias `a` = mock_artifact. */
 export const MOCK_MIN_GENERATED_AT = "2026-11-23T21:42:31Z";
-export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz)`;
+/** 2026-11-25 (owner: „Nyitókép javítás nélkül nem mehet ki semmi”): the hero fix + photo allow-list went
+ *  live at prod/20261125-1427 (ec4b566c, 2026-11-25 13:27 UTC). A mock made before it goes out only after
+ *  the re-render with that code (scripts/rerender-terhatas.mts, stamp MOCK_HEROFIX_STAMP or later). */
+export const MOCK_HEROFIX_LIVE_AT = "2026-11-25T13:27:24Z";
+export const MOCK_HEROFIX_STAMP = "2026-11-25-herofix-live";
+export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
+  and (a.generated_at >= ${MOCK_HEROFIX_LIVE_AT}::timestamptz or coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}))`;
