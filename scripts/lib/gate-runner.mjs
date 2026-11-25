@@ -677,7 +677,7 @@ function landBlocking(job) {
 /** A gate that the land does not wait for: a browser gate without the land-blocking marker. */
 const hourlyGate = (job) => browserGate(job) && !landBlocking(job);
 
-// ── DOCS-ONLY DIFF: gates that provably read no doc skip (2026-11-25, ADR-XXXX) ─────────
+// ── DOCS-ONLY DIFF: gates that provably read no doc skip (2026-11-25, ADR-0480) ─────────
 // The hook sets CIT_GATE_DOCS_ONLY=1 when EVERY changed file is MEMORY.md or a _planning/**/*.md
 // (26 of 57 commits on main 11-24/25). A gate whose header (first 40 lines) carries
 //   // gate-scope: no-docs — <reason, ≥ 20 characters>

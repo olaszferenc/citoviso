@@ -1,4 +1,4 @@
-## ADR-XXXX — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra
+## ADR-0480 — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-25: „igen mehet” a mérés + javaslat után) · session `citd231e4fd` · **Épít:** ADR-0478
 (élesítés-gyorsítás), ADR-0227 (párhuzamos kapu-futtató), ADR-0229 (író-sáv jelölés mint mért ígéret), ADR-0275 (land-sor).

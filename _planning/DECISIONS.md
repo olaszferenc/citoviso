@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-commit-land-gyorsitas-tsc-inkrementalis-csak-dokumentum-gyors-sav.md) — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra
+- [ADR-0480](decisions/0480-commit-es-land-gyorsitasa-inkrementalis.md) — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra
 - [ADR-0479](decisions/0479-kep-nelkuli-es-keves-kepes-lead-automata.md) — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár
 - [ADR-0478](decisions/0478-elesites-gyorsitasa-a-mock-kapu-uresjarata-ki.md) — Élesítés gyorsítása: a mock-kapu üresjárata ki, képítélet-tár, a `--go` átveszi a próbafuttatást, a deploy mindig a main szkriptjével fut, a fordítás nem állít meg
 - [ADR-0477](decisions/0477-orszagfuggo-kontaktkereso-hr-ingyenes-kereso-a.md) — Országfüggő kontaktkereső (HR): ingyenes kereső a szótárból, aggregátor-szűrő, website-írás, egy kód dev/prod DB-kapcsolóval

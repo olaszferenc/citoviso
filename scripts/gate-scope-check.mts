@@ -1,4 +1,4 @@
-// GATE-SCOPE GUARD — the `// gate-scope: no-docs — <reason>` marker is a PROMISE, measured here (ADR-XXXX).
+// GATE-SCOPE GUARD — the `// gate-scope: no-docs — <reason>` marker is a PROMISE, measured here (ADR-0480).
 //
 // WHY: 26 of 57 commits on main (2026-11-24/25) changed only MEMORY.md or _planning/**/*.md, and each
 // still ran ~45 code gates at commit and again at land (~350 s of machine time, the six machine-wide
