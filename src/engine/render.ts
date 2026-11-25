@@ -21,6 +21,7 @@ import { onePhone } from "../text/phone.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { hungarianBedNote, hungarianRoomName, localRoomName } from "./roomNames.js";
 import { setHighlightSources } from "./copyFields.js";
+import { mockRatingShown } from "./rating.js";
 
 /** Templates escape their text, so compare against the escaped form. */
 function escapeForCompare(s: string): string {
@@ -881,6 +882,12 @@ export function renderSite(
     if (data.photos.some((p) => withoutStarRating(p.alt) !== p.alt)) {
       data = { ...data, photos: data.photos.map((p) => ({ ...p, alt: withoutStarRating(p.alt) })) };
     }
+  }
+  // A low or thin Google rating stays off the MOCK (rating.ts mockRatingShown) — every slot that
+  // prints it (stats band, sticky bar, reviews block, JSON-LD) reads these fields, so one cut here
+  // clears them all, and a plain rerender fixes an existing mock.
+  if (phase === "mock" && data.rating && !mockRatingShown(data)) {
+    data = { ...data, rating: undefined, googleRating: undefined, stats: (data.stats ?? []).filter((s) => s.icon !== "star") };
   }
   // A file name is no alt („kep_128.jpg”, Dobos 2026-10-26): the neutral „<név> — N. kép”.
   if (data.photos.length) {

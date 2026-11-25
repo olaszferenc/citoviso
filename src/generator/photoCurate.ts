@@ -8,7 +8,7 @@
 //      the front, so a bathtub there opens the page just as a bathtub hero would (11-24);
 //      those shots also carry Photo.backstage, and the opening sequence skips them
 
-import { classifyPhotoUrl, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
+import { classifyPhotoUrl, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
 
 export interface CuratedPhotos<T> {
@@ -34,8 +34,10 @@ export async function curateMockPhotos<T extends { url: string }>(input: readonl
     // opening sequence (wordmark-grow frame, gate leaf) skips it. A stale flag is cleared.
     const v = kindOf(p);
     const backstage = i > 0 && v != null && !isShowcase(v);
-    const { backstage: _old, ...rest } = p as typeof p & { backstage?: boolean };
-    return (backstage ? { ...rest, backstage: true } : rest) as T & { dhash?: string };
+    // A close-up / dark / non-scene shot never fills a full-bleed band (11-25, quality colleague).
+    const notBand = i > 0 && v != null && !isBandWorthy(v);
+    const { backstage: _old, notBand: _oldBand, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean };
+    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}) } as T & { dhash?: string };
   });
   return {
     photos: ordered,

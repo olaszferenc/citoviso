@@ -40,13 +40,15 @@ import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { classifyPhotoBuffer, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
+import { classifyPhotoBuffer, isBandWorthy, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 9;
+export const RENDER_GATE_VERSION = 10;
 
 const VIEWPORT = { width: 390, height: 844 };
+/** The letter's picture (heroShot.ts VIEWPORT): its first screen is measured too. */
+const DESKTOP_VIEWPORT = { width: 1216, height: 760 };
 /** An image smaller than this on screen is an icon / logo / avatar, not a photo slot. */
 const MIN_SLOT_PX = 80;
 const IMG_GAP_MS = 400;
@@ -88,6 +90,8 @@ interface PageMeasure {
   readonly innerWidth: number;
   readonly wideText: string[];
   readonly brokenWords: string[];
+  /** The desktop first screen = the letter's picture (filled by auditMockFile, not by MEASURE_JS). */
+  readonly desktopBrokenWords?: string[];
 }
 
 const fileOf = (u: string): string => decodeURIComponent(photoUrlKey(u).split("/").pop() ?? u);
@@ -271,6 +275,18 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       wideText: [...new Set([...opening.wideText, ...walked.wideText])].slice(0, 5),
       brokenWords: [...new Set([...opening.brokenWords, ...walked.brokenWords])].slice(0, 5),
     };
+    // THE LETTER'S PICTURE is the desktop first screen (heroShot.ts: 1216×760, our bot UA, finished
+    // hero). Measured only on the phone, „BALATONBOGLÁRO / N” went into Villa Aquamarine's letter
+    // image (quality colleague, 2026-11-25). Same switches and UA as the shot; images are not needed
+    // to measure a heading, so they are not fetched.
+    const desk = await browser.newPage({ viewport: DESKTOP_VIEWPORT, deviceScaleFactor: 1, userAgent: PORTAL_USER_AGENT });
+    await desk.addInitScript(
+      "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');document.documentElement.setAttribute('data-cit-no-motion','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
+    );
+    await desk.route("**/*", (route) => (route.request().resourceType() === "image" ? route.abort() : route.continue()));
+    await desk.goto(`file://${mockAbs}`, { waitUntil: "networkidle", timeout: 60000 });
+    await desk.waitForTimeout(1200);
+    measure = { ...measure, desktopBrokenWords: ((await desk.evaluate(MEASURE_JS)) as PageMeasure).brokenWords.slice(0, 5) };
   } finally {
     await browser.close().catch(() => undefined);
     release();
@@ -345,7 +361,11 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
     for (const m of html.matchAll(/class="ko-leaf [lr]"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
     // Parallax: the full-bleed bands and the contact picture are screens of their own (11-25: Linetta's
     // contact showed the bathroom with its toilet) — held to the opening's rule.
-    for (const m of html.matchAll(/class="t-par t-par--band"[^>]*background-image:url\('([^']+)'\)/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
+    const bands = new Set<string>();
+    for (const m of html.matchAll(/class="t-par t-par--band"[^>]*background-image:url\('([^']+)'\)/g)) {
+      opening.add(m[1]!.replace(/&amp;/g, "&"));
+      bands.add(m[1]!.replace(/&amp;/g, "&"));
+    }
     for (const m of html.matchAll(/class="t-conphoto"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
     const heroHash = heroBytes ? await dHashFromBuffer(heroBytes).catch(() => undefined) : undefined;
     for (const u of opening) {
@@ -371,6 +391,9 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       const v = await classifyPhotoBuffer(b);
       if (v && !isShowcase(v)) {
         findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${v.label}): ${fileOf(u)}` });
+      } else if (v && bands.has(u) && !isBandWorthy(v)) {
+        // A band is a screen of its own: a close-up, a dark shot or a thing instead of a place fails (11-25).
+        findings.push({ code: "subject", detail: `a széles sávképen közelkép / sötét / nem a helyet mutató kép (${v.label}): ${fileOf(u)}` });
       }
     }
     for (const u of urls) {
@@ -397,6 +420,9 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
   }
   if (measure.brokenWords.length) {
     findings.push({ code: "overflow", detail: `mobilon két sorba tört szó a címben: ${measure.brokenWords.join(" · ")}` });
+  }
+  if (measure.desktopBrokenWords?.length) {
+    findings.push({ code: "overflow", detail: `a levél képén (asztali nézet) két sorba tört szó a címben: ${measure.desktopBrokenWords.join(" · ")}` });
   }
   if (measure.wideText.length) {
     findings.push({ code: "overflow", detail: `mobilon kilógó, levágott szöveg: ${measure.wideText.join(" · ")}` });

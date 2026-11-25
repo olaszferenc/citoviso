@@ -34,7 +34,8 @@
     "onnxruntime-node": "1.31.1",
     "pg": "^8.22.0",
     "playwright-core": "^1.48.0",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.4",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

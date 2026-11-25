@@ -31,7 +31,10 @@ export const MOCK_MIN_GENERATED_AT = "2026-11-23T21:42:31Z";
 /** 2026-11-25 (owner: „Nyitókép javítás nélkül nem mehet ki semmi”): the hero fix + photo allow-list went
  *  live at prod/20261125-1427 (ec4b566c, 2026-11-25 13:27 UTC). A mock made before it goes out only after
  *  the re-render with that code (scripts/rerender-terhatas.mts, stamp MOCK_HEROFIX_STAMP or later). */
-export const MOCK_HEROFIX_LIVE_AT = "2026-11-25T13:27:24Z";
-export const MOCK_HEROFIX_STAMP = "2026-11-25-herofix-live";
+/** 2026-11-25 evening (the quality colleague failed all of the first ten): the band rule, the rating
+ *  floor, the date-stamp filter and the desktop word-break check join the same bar — the hero-fix-only
+ *  re-render (stamp „2026-11-25-herofix-live”) no longer counts; „2026-11-25-qafix” sorts after it. */
+export const MOCK_HEROFIX_LIVE_AT = "2026-11-25T22:00:00Z"; // set after the deploy on purpose: a new-code mock made before it is simply refreshed (mockRefresh.ts)
+export const MOCK_HEROFIX_STAMP = "2026-11-25-qafix";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
   and (a.generated_at >= ${MOCK_HEROFIX_LIVE_AT}::timestamptz or coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}))`;
