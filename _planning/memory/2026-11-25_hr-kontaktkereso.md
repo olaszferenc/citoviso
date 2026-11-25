@@ -59,4 +59,10 @@ hero-pontozás 1 API-hívás ($0,0387).
 - Az átnéző (`egylepes-elo` / `kor.sh`) prod-kötött; az `orszag.py` nem kapott DB-kapcsolót.
 - A Maps-panel címében marad az ikon-karakter (U+E0C8), és a csak irányítószámos cím is beíródik (a meglévő kód hibája, HU-n is).
 - A felderítés 2,5 km-es köre Baška Vodán Brelát is lefedi; a mock-szöveg ezért helyesen Brelát írja.
-- A `zz-foterv.mts` relatív útvonalra írja a mock HTML-t; dev-en a fő fa gyökeréből kell futtatni (vagy a fájlt oda tenni).
+- **Mock-fájl helye dev-en:** a `generateEngine.ts` (`mockArtifactPath`, ~799. sor) relatív fájlnevet ír a futó folyamat
+  könyvtárába; a :4600 konzol (`serveMock`) a saját könyvtárából, a fő fa GYÖKERÉBŐL olvassa (ott él minden dev-mock, NEM a `sites/`
+  alatt; a `rc-wt-prepare.sh` symlinkeli őket a munkafákba). Munkafából generált mock tehát a munkafa gyökerébe kerül, és a konzolon
+  404 („A mock fájl nem található”), amíg át nem teszed a fő fa gyökerébe. Nem kódhiba; a b90c2a43 a helyén, operátor-sütivel 200.
+- **„Üres szürke sáv” a mockon (2026-11-25, koordinátor):** a Parallax `t-par--band` háttérképe asztalin `background-attachment: fixed`,
+  mobilon JS-es parallax-réteg. A teljes oldalas képernyőkép (ui-shot full page) ezt nem rajzolja ki, ezért szürke; nézőablakban
+  görgetve a kép megjelenik (mérve mobilon és asztalin is). Nem mock-hiba; képernyőképes ellenőrzéshez nézőablaknyi kép kell.
