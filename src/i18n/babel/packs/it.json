@@ -1316,6 +1316,7 @@
  "a minta-honlap próba-űrlapja (megkeresés nélkül)": "modulo di prova del sito di esempio (senza proposta)",
  "A mobil hozza a megnyitások {m}-át, de a fizetésig {mp} jut el, asztalin {dp} — ha a különbség tartós, a mobil checkout a gyanús.": "Il mobile genera il {m} delle aperture, ma solo il {mp} arriva al pagamento, su desktop il {dp} — se la differenza è costante, il checkout mobile è sospetto.",
  "A mobil-páros kiment:": "La coppia mobile è stata inviata:",
+ "A mock a javított nyitóképpel készült, a minőségi kolléga átnézte és jónak találta, a jóváhagyó lapon nem lett „Nem mehet ki”, és van ellenőrzött elérhetősége, de még nem ment ki. Levél csak a te „Mehet”-ed után megy.": "Il mock è stato creato con l’immagine di copertina corretta, il collega della qualità l’ha controllato e l’ha trovato buono, nella pagina di approvazione non è stato scelto «Rifiuta» e c’è un contatto verificato, ma non è ancora stato inviato. L’e-mail parte solo dopo il tuo «Approva».",
  "A mock a portál-képekkel készül.": "Il mock viene creato con le immagini del portale.",
  "A mock elkészült, de településfotót sem kapott (betűs hős), ezért a képőr nem engedi ki.": "Il mock è pronto, ma non ha ricevuto nemmeno una foto della località (hero solo testo), quindi il controllo immagini non lo lascia uscire.",
  "A mock kép nélkül készül — a kiküldés előtt a kép-kapu megállít.": "Il mock viene creato senza immagini — prima dell'invio il controllo immagini lo bloccherà.",

@@ -1316,6 +1316,7 @@
  "a minta-honlap próba-űrlapja (megkeresés nélkül)": "formularz próbny strony przykładowej (bez propozycji)",
  "A mobil hozza a megnyitások {m}-át, de a fizetésig {mp} jut el, asztalin {dp} — ha a különbség tartós, a mobil checkout a gyanús.": "Mobile daje {m} otwarć, ale do płatności dociera {mp}, na komputerze {dp} — jeśli różnica się utrzymuje, podejrzany jest checkout mobilny.",
  "A mobil-páros kiment:": "Para mobilna została wysłana:",
+ "A mock a javított nyitóképpel készült, a minőségi kolléga átnézte és jónak találta, a jóváhagyó lapon nem lett „Nem mehet ki”, és van ellenőrzött elérhetősége, de még nem ment ki. Levél csak a te „Mehet”-ed után megy.": "Makieta powstała z poprawionym zdjęciem głównym, kolega od jakości ją sprawdził i uznał za dobrą, na stronie zatwierdzania nie wybrano „Odrzuć” i jest zweryfikowany kontakt, ale nie została jeszcze wysłana. E-mail wychodzi dopiero po Twoim „Zatwierdź”.",
  "A mock a portál-képekkel készül.": "Makieta jest tworzona ze zdjęć z portalu.",
  "A mock elkészült, de településfotót sem kapott (betűs hős), ezért a képőr nem engedi ki.": "Makieta jest gotowa, ale nie dostała nawet zdjęcia miejscowości (nagłówek z samym napisem), więc kontrola zdjęć jej nie przepuszcza.",
  "A mock kép nélkül készül — a kiküldés előtt a kép-kapu megállít.": "Makieta jest tworzona bez zdjęcia — przed wysyłką zatrzyma Cię kontrola zdjęć.",

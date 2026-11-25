@@ -308,6 +308,7 @@
  "a megújítás {datum} után leáll": "renewal stops after {datum}",
  "a megújítás leállítandó": "renewal must be stopped",
  "a mentések naplója 10. 27. óta él": "the save log has been running since Oct 27",
+ "A mock a javított nyitóképpel készült, a minőségi kolléga átnézte és jónak találta, a jóváhagyó lapon nem lett „Nem mehet ki”, és van ellenőrzött elérhetősége, de még nem ment ki. Levél csak a te „Mehet”-ed után megy.": "The mock was built with the corrected cover image, the quality colleague reviewed it and found it good, it was not marked “Reject” on the approval page, and it has a verified contact, but it has not been sent yet. The email only goes out after your “Approve”.",
  "A mock elkészült, de településfotót sem kapott (betűs hős), ezért a képőr nem engedi ki.": "The mock is ready, but it did not get a town photo either (lettering-only hero), so the image guard will not let it out.",
  "a mock linkje hiányzik!": "the mock link is missing!",
  "A mock, a levél és a jogi csomag nyelve. Csak ezen megy megkeresés.": "The language of the mock, the email and the legal pack. Outreach goes out only in this language.",
