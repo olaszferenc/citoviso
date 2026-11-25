@@ -2503,7 +2503,7 @@ if [ -f scripts/qa-review-check.mts ]; then
   npx tsx scripts/qa-review-check.mts
 fi
 # No/few-photo leads: the town-photo verdict, the sharing-out, the owner's dispatch switch (default OFF) and the
-# MINTA rule (owner 2026-11-25, ADR-XXXX). The gate SQL runs in a rolled-back dev-DB transaction.
+# MINTA rule (owner 2026-11-25, plan kepnelkuli-hero). The gate SQL runs in a rolled-back dev-DB transaction.
 if [ -f scripts/town-photo-check.mts ]; then
   echo "[pre-commit] town-photo-check (településkép-szabály, szétosztás, kapcsolós küldési kapu, MINTA)…"
   npx tsx scripts/town-photo-check.mts
