@@ -25,9 +25,8 @@ lista felül áll, alatta a kiválasztott lead.
   elérhetőségei jelvényként, benne az adattal. A megkeresés e-mailben megy.
 - **A megkeresés szövege** (alapból összecsukva, a címére kattintva nyílik le): a levél tárgya és
   bekezdései, szerkeszthetően. Ha átírsz valamit, nyomd meg a **„Mentés”** gombot, mielőtt a
-  **„Mehet”**-re koppintasz — a „Mehet” a szöveget nem menti el. Üresen hagyott mező = a gépi szöveg
-  megy; a **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros
-  **„Nem mentettem”** sáv sorolja fel az okokat.
+  **„Mehet”**-re koppintasz — a „Mehet” a szöveget nem menti el. Üresen hagyott mező = a gépi szöveg megy; ha már elmentettél saját szöveget, a **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros
+  **„Nem mentettem”** sáv sorolja fel az okokat. Ha a panel tetején sárga dobozban figyelmeztetés áll (például hogy a jogszerűségi kapu megállítaná a levelet, vagy a leadnek több e-mail-címe van), előbb javítsd a szöveget vagy válaszd ki a címet a lead lapján — ha nem javítható, nyomd a **„Nem mehet ki”** gombot.
 - **„Mehet”** — a jóváhagyásod mindkét tervre, ebben a mostani állapotukban szól. A lead visszakerül a
   kiküldési sorba, és a hétköznapi küldési ablakban (reggel 8-tól) kimegy. Ha bármelyik terv a jóváhagyásod után
   megváltozik (például a folyamat újragenerálja), nem megy ki, hanem újra a jóváhagyásodra vár.
