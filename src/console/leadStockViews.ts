@@ -177,7 +177,7 @@ export function leadStockReportBody(s: LeadStock, days: StockPreset, lang = cons
     dl(T(lang, "település / stock"), T(lang, "Nincs saját fotó: a mock a település fotóját vagy stockképet kap. Ide számít az is, akinek még nincs mockja.")) +
     dl(T(lang, "semmilyen kép"), T(lang, "A mock elkészült, de településfotót sem kapott (betűs hős), ezért a képőr nem engedi ki.")) +
     dl(T(lang, "Ebből kiküldött"), T(lang, "Bármelyik csatornán megkapta a linket.")) +
-    dl(T(lang, "Kiküldhető"), T(lang, "Az átnéző MEHET-et adott a mockra, a jóváhagyó lapon nem lett „Nem mehet ki”, és van ellenőrzött elérhetősége, de még nem ment ki.")) +
+    dl(T(lang, "Kiküldhető"), T(lang, "A mock a javított nyitóképpel készült, a minőségi kolléga átnézte és jónak találta, a jóváhagyó lapon nem lett „Nem mehet ki”, és van ellenőrzött elérhetősége, de még nem ment ki. Levél csak a te „Mehet”-ed után megy.")) +
     dl(T(lang, "Generálásra vár"), T(lang, "Nincs még kész, átnézett mockja, vagy a mock kész, de nincs ellenőrzött elérhetősége. Egy lead csak egy oszlopban szerepel, a mock-ok áll előrébb.")) +
     dl(T(lang, "Kontakt-ellenőrzés"), T(lang, "Van e-mail, vagy a magyar mobilszámon a Viber/WhatsApp-ellenőrzés lefutott.")) +
     dl(T(lang, "Mind"), T(lang, "E-mailen és messengeren is elérhető (a messenger mobilszámot jelent, így MMS-en is).")) +

@@ -21,7 +21,7 @@ import { db } from "../src/db/client.js";
 import { DISPATCH_PRIORITY } from "../src/outreach/autoDispatch.js";
 import { ensureHeroShot } from "../src/outreach/heroShot.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL } from "../src/outreach/mockPhotoGate.js";
-import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
 
@@ -133,7 +133,7 @@ async function queue(limit: number): Promise<void> {
     // Queued rows, and rows already on the owner's page whose mock changed since the pass (stale → look again).
     .where((eb) => eb.or([
       eb("outreach_dispatch.status", "=", "queued"),
-      eb.and([eb("outreach_dispatch.status", "=", "held"), eb("outreach_dispatch.note", "=", APPROVAL_PENDING_NOTE)]),
+      eb.and([eb("outreach_dispatch.status", "=", "held"), eb("outreach_dispatch.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE])]),
     ]))
     .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
     .where(MOCK_OWN_PHOTOS_OK_SQL)

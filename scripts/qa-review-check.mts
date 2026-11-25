@@ -7,7 +7,7 @@
 //    is "junk" and stays off the page, out of the hero and out of the opening. Hermetic: no DB, no model.
 import { readFileSync } from "node:fs";
 import { isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
-import { APPROVAL_PENDING_NOTE, ownerApprovalOf, QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, ownerApprovalOf, QA_HOLD_PREFIX, QA_WAIT_NOTE, QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
 
 let failed = 0;
 function check(label: string, ok: boolean): void {
@@ -66,6 +66,14 @@ check("a várakozó-jegyzet egy helyen él", APPROVAL_PENDING_NOTE.startsWith("J
 const gateSrc = src("src/outreach/mockPhotoGate.ts");
 check("nyitókép-javítás nélkül semmi: a küldési kapu a javítás élesítése utáni vagy az azzal újrarenderelt mockot kéri",
   /MOCK_HEROFIX_LIVE_AT/.test(gateSrc) && /terhatasAt/.test(gateSrc) && /STAMP = MOCK_HEROFIX_STAMP/.test(src("scripts/rerender-terhatas.mts")));
+
+// ── ①b the CRM says „awaiting the owner” only for the whole chain (owner 2026-11-25: „1664 … ezek a régiek”) ──
+check("a kollégára váró sor jegyzete NEM a tulaj-várakozóé, és a kolléga jóváhagyása átviszi (QA_HOLD_PREFIX)",
+  QA_WAIT_NOTE !== APPROVAL_PENDING_NOTE && QA_WAIT_NOTE.startsWith(QA_HOLD_PREFIX));
+check("a kolléga sora a kollégára váró sorokat is felveszi", /QA_WAIT_NOTE/.test(src("scripts/qa-review.mts")));
+const stock = src("src/console/leadStock.ts");
+check("Lead-állomány: „kiküldhető” csak kolléga-jóváhagyott, javított generátorú mock",
+  /\$\{MOCK_QA_PASSED_SQL\}/.test(stock) && /\$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(stock));
 
 // ── ② the allow-list ──
 const K = (kind: PhotoKind["kind"], label: string, extra: Partial<PhotoKind> = {}): PhotoKind => ({
