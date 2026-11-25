@@ -672,12 +672,23 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   // Contract gallery-cap: EVERY photo in the slot (the shared lightbox pages through all);
   // eleven show — the mosaic's full rows — the rest open in place under „Összes fotó”.
   const SHOWN = 11;
-  const galleryOf = (ordered: readonly Photo[]): string => {
-    if (!ordered.length) return "";
+  const galleryOf = (input: readonly Photo[]): string => {
+    if (!input.length) return "";
+    const ordered = [...input];
     const shown = Math.min(ordered.length, SHOWN);
     const spans = mosaicSpans(shown);
     // phone: two columns — an odd last visible photo takes the full row, never a hole
     const wide = shown % 2 ? shown - 1 : -1;
+    // The full-row tile is a showcase of its own — never a kitchen or a bathroom (11-25: Három Testvér
+    // and Vörösmarty tér closed their gallery with a full-width shower). Swap in the nearest showcase.
+    if (wide >= 0 && ordered[wide]!.backstage) {
+      for (let j = wide - 1; j >= 0; j--) {
+        if (!ordered[j]!.backstage) {
+          [ordered[j], ordered[wide]] = [ordered[wide]!, ordered[j]!];
+          break;
+        }
+      }
+    }
     return `<section id="ko-gallery" class="ko-sec">
     <div class="ko-wrap">
       <div class="ko-head" ${mo("up")}>

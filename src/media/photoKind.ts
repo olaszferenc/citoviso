@@ -26,8 +26,19 @@ import sharp from "sharp";
 import { config } from "../config.js";
 import LABELS from "./photoKindLabels.json" with { type: "json" };
 
-/** "ok" = the lodging; "sight" = a sight of the area; "never" = a document, plan, ad, toilet, map, logo, person. */
-export type PhotoKindClass = "ok" | "sight" | "never";
+/**
+ * "ok" = the lodging; "sight" = a sight of the area; "never" = a document, plan, ad, toilet, map, logo,
+ * person; "junk" = anything else that is not surely the lodging (a locomotive, a car, a dog, a plate of
+ * food, a cushion close-up, a fridge) or a photo too small, too dark or too blurred to show it.
+ */
+export type PhotoKindClass = "ok" | "sight" | "never" | "junk";
+
+/** Pixel measurements behind the quality rule (long edge px, mean luma 0–255, Laplacian variance). */
+export interface PhotoQuality {
+  readonly long: number;
+  readonly luma: number;
+  readonly lap: number;
+}
 
 export interface PhotoKind {
   readonly kind: PhotoKindClass;
@@ -37,14 +48,33 @@ export interface PhotoKind {
   /** Probability mass per class. */
   readonly sight: number;
   readonly never: number;
+  /** Probability mass of the lodging labels (kind "ok"). */
+  readonly ok?: number;
+  readonly quality?: PhotoQuality;
+  /** Operator-facing Hungarian reason when kind is "junk". */
+  readonly why?: string;
   /** Probability per label (photoKindLabels.json order-independent, keyed by label). */
   readonly probs: Readonly<Record<string, number>>;
 }
 
 /** A class at or above this mass takes the photo off the page. */
 export const PHOTO_KIND_THRESHOLD = 0.6;
+/**
+ * ALLOW-LIST, NOT A BLOCK-LIST (owner 2026-11-25: „Ugyanúgy kimenne a piros mozdony”). The 8 "never"
+ * labels let everything else through — a locomotive, a car, a dog, a plate of food, a cushion close-up.
+ * A photo now stays only when its best label is a lodging label AND the lodging labels together hold
+ * at least this mass. Measured 11-25 on 309 hand-labelled photos (the 18 sample mocks' 270 + 39 junk
+ * pictures): the block-list caught 15 of 60 junk photos; this rule catches 55 and drops 12 of 219
+ * good ones, half of them weak anyway (the house from the street behind bins, a house hidden by trees).
+ */
+export const PHOTO_OK_MIN = 0.4;
+/** Quality floor (same measurement): smaller, darker or blurrier photos are junk even when they show the lodging. */
+export const PHOTO_MIN_LONG_EDGE = 400;
+export const PHOTO_MIN_LUMA = 50;
+/** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
+export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 2;
+const VERSION = 3;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -108,12 +138,66 @@ export async function classifyPhotoBuffer(buf: Buffer): Promise<PhotoKind | null
   const mass = (k: string): number => probs.reduce((a, p, i) => a + (LABELS.labels[i]!.kind === k ? p : 0), 0);
   const sight = mass("sight");
   const never = mass("never");
-  const kind: PhotoKindClass = never >= PHOTO_KIND_THRESHOLD ? "never" : sight >= PHOTO_KIND_THRESHOLD ? "sight" : "ok";
+  const ok = mass("ok");
+  const top = LABELS.labels[best]!;
+  const quality = await measureQuality(buf).catch(() => null);
+  let kind: PhotoKindClass = never >= PHOTO_KIND_THRESHOLD ? "never" : sight >= PHOTO_KIND_THRESHOLD ? "sight" : "ok";
+  let why: string | undefined;
+  if (kind === "ok" && (ok < PHOTO_OK_MIN || top.kind !== "ok")) {
+    if (top.kind === "sight") kind = "sight";
+    else if (top.kind === "never") kind = "never";
+    else {
+      kind = "junk";
+      why = `nem biztosan szállás-kép (${top.label})`;
+    }
+  }
+  if (kind === "ok" && quality) {
+    if (quality.long < PHOTO_MIN_LONG_EDGE) why = `túl kicsi kép (${quality.long} px)`;
+    else if (quality.luma < PHOTO_MIN_LUMA) why = `túl sötét kép (fényerő ${Math.round(quality.luma)})`;
+    else if (quality.lap < PHOTO_MIN_SHARPNESS) why = `elmosódott kép (élesség ${Math.round(quality.lap)})`;
+    if (why) kind = "junk";
+  }
   const byLabel: Record<string, number> = {};
   LABELS.labels.forEach((l, i) => {
     byLabel[l.label] = +probs[i]!.toFixed(4);
   });
-  return { kind, label: LABELS.labels[best]!.label, score: probs[best]!, sight, never, probs: byLabel };
+  return {
+    kind,
+    label: top.label,
+    score: probs[best]!,
+    sight,
+    never,
+    ok: +ok.toFixed(4),
+    ...(quality ? { quality } : {}),
+    ...(why ? { why } : {}),
+    probs: byLabel,
+  };
+}
+
+/** Long edge, mean luma and sharpness (Laplacian variance of the greyscale image at 512 px). */
+export async function measureQuality(buf: Buffer): Promise<PhotoQuality> {
+  const meta = await sharp(buf).metadata();
+  const rotated = (meta.orientation ?? 1) >= 5;
+  const long = Math.max((rotated ? meta.height : meta.width) ?? 0, (rotated ? meta.width : meta.height) ?? 0);
+  const g = await sharp(buf).rotate().greyscale().resize(512, 512, { fit: "inside" }).raw().toBuffer({ resolveWithObject: true });
+  const { width: w, height: h } = g.info;
+  const d = g.data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i++) sum += d[i]!;
+  let ls = 0;
+  let ls2 = 0;
+  let n = 0;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const l = 4 * d[i]! - d[i - 1]! - d[i + 1]! - d[i - w]! - d[i + w]!;
+      ls += l;
+      ls2 += l * l;
+      n++;
+    }
+  }
+  const lap = n ? ls2 / n - (ls / n) ** 2 : 0;
+  return { long, luma: +(sum / Math.max(1, d.length)).toFixed(1), lap: +lap.toFixed(1) };
 }
 
 /** Classify a photo URL; the verdict is cached on disk per URL (a portal photo does not change). */
@@ -145,12 +229,12 @@ export async function classifyPhotoUrl(url: string, bytes?: Buffer): Promise<Pho
 }
 
 /**
- * Does this photo stay off a lodging page? "never" always; "sight" unless it is the hero (the
- * lodging's own yard with the church behind it was the one false alarm of the measurement).
+ * Does this photo stay off a lodging page? "never" and "junk" always; "sight" unless it is the hero
+ * (the lodging's own yard with the church behind it was the one false alarm of the measurement).
  */
 export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   if (!v) return false;
-  return v.kind === "never" || (v.kind === "sight" && !isHero);
+  return v.kind === "never" || v.kind === "junk" || (v.kind === "sight" && !isHero);
 }
 
 /** What a hero shows at its best: the place from outside, its garden, pool, view (full weight). */
@@ -158,7 +242,16 @@ const HERO_OUTSIDE = ["the outside of a house", "a guesthouse building", "a gard
 /** Inside rooms a guest would sleep or sit in (part weight): a hero only when nothing outside is. */
 const HERO_INSIDE = ["a living room", "a bedroom with a bed", "a hotel room interior", "a sauna or jacuzzi"];
 /** Never the first screen (11-24: a bathroom mirror, a stove, a Booking award banner). */
-const NOT_HERO_TOP = new Set(["a kitchen", "a bathroom with a shower", "a dining table", "a toilet"]);
+// 11-25: "a small kitchenette" joined the labels with the allow-list — it is a kitchen, never the opening
+// (Vörösmarty tér: the gate leaf was the kitchenette the moment the label existed).
+const NOT_HERO_TOP = new Set(["a kitchen", "a small kitchenette", "a bathroom with a shower", "a dining table", "a toilet"]);
+
+/** Kitchen/bathroom probability mass: a kitchen corner whose best label is "a museum exhibit" (Mia, 11-25) still opens on a kitchen. */
+const BACKSTAGE_MAX = 0.4;
+function backstageMass(v: PhotoKind): number {
+  const p = v.probs ?? {};
+  return [...NOT_HERO_TOP].reduce((a, l) => a + (p[l] ?? 0), 0);
+}
 
 /** How well a photo opens the page: outside views count fully, rooms partly. */
 export function heroScore(v: PhotoKind): number {
@@ -168,8 +261,8 @@ export function heroScore(v: PhotoKind): number {
 
 /** May this photo be the hero? Not a kitchen/bathroom/dining/toilet shot, not a non-lodging picture. */
 export function isHeroWorthy(v: PhotoKind): boolean {
-  if (v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
-  if (NOT_HERO_TOP.has(v.label)) return false;
+  if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
+  if (NOT_HERO_TOP.has(v.label) || backstageMass(v) >= BACKSTAGE_MAX) return false;
   return heroScore(v) >= 0.25;
 }
 
@@ -180,8 +273,8 @@ export function isHeroWorthy(v: PhotoKind): boolean {
  * Mia opened their wordmark-grow intro on a toilet and a bathtub).
  */
 export function isShowcase(v: PhotoKind): boolean {
-  if (v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
-  return !NOT_HERO_TOP.has(v.label);
+  if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
+  return !NOT_HERO_TOP.has(v.label) && backstageMass(v) < BACKSTAGE_MAX;
 }
 
 /**

@@ -318,13 +318,16 @@ export function allotPhotos(
     return i >= 0 && pool.length ? pool.splice(i, 1)[0] : undefined;
   };
   const outdoor = (p: Photo): boolean => Boolean(p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
-  const notBath = (p: Photo): boolean => !(p.subject && NEVER_SURROUNDINGS.has(p.subject));
+  // 11-25: the generator marks kitchen/bathroom shots `backstage` (photoCurate.ts); the vision `subject`
+  // is absent on the new mocks — Linetta's parallax contact showed the bathroom with its toilet.
+  const notBath = (p: Photo): boolean => !p.backstage && !(p.subject && NEVER_SURROUNDINGS.has(p.subject));
   // The contact's outdoor scene is chosen BEFORE the bands (contactPhotoOf's rule: the LAST outdoor
   // photo other than the hero) — a band must not take the only garden and leave the contact a room.
   const lastOutdoor = [...pool].reverse().find(outdoor);
   const scene = lastOutdoor ? take((p) => p === lastOutdoor) : undefined;
-  const bandA = take();
-  const bandB = take();
+  // The bands are full-bleed screens of their own — never a kitchen or a bathroom (an empty band drops).
+  const bandA = take(notBath);
+  const bandB = take(notBath);
   let contact = scene;
   let contactAlt = scene ? sceneAlt(d) : d.name;
   if (!contact) {

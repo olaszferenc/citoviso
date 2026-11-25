@@ -44,7 +44,7 @@ import { classifyPhotoBuffer, isHeroWorthy, isOffPagePhoto, isShowcase, photoKin
 import { createPhotoCache } from "./photoCache.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 7;
+export const RENDER_GATE_VERSION = 9;
 
 const VIEWPORT = { width: 390, height: 844 };
 /** An image smaller than this on screen is an icon / logo / avatar, not a photo slot. */
@@ -343,6 +343,10 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       }
     }
     for (const m of html.matchAll(/class="ko-leaf [lr]"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
+    // Parallax: the full-bleed bands and the contact picture are screens of their own (11-25: Linetta's
+    // contact showed the bathroom with its toilet) — held to the opening's rule.
+    for (const m of html.matchAll(/class="t-par t-par--band"[^>]*background-image:url\('([^']+)'\)/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
+    for (const m of html.matchAll(/class="t-conphoto"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
     const heroHash = heroBytes ? await dHashFromBuffer(heroBytes).catch(() => undefined) : undefined;
     for (const u of opening) {
       if (/\/assets\/stock\//.test(u)) continue;
@@ -366,7 +370,7 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       if (!b) continue; // not served → the broken-image rule speaks for it
       const v = await classifyPhotoBuffer(b);
       if (v && !isShowcase(v)) {
-        findings.push({ code: "subject", detail: `a nyitó-animációban nem odavaló kép (${v.label}): ${fileOf(u)}` });
+        findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${v.label}): ${fileOf(u)}` });
       }
     }
     for (const u of urls) {
@@ -374,7 +378,12 @@ export async function auditMockFile(mockAbs: string): Promise<Omit<RenderGateRes
       if (!b || /\/assets\/stock\//.test(u)) continue;
       const v = await classifyPhotoBuffer(b);
       if (isOffPagePhoto(v, u === heroUrl)) {
-        findings.push({ code: "subject", detail: `nem szállás-kép (${v!.label}, ${Math.round(Math.max(v!.never, v!.sight) * 100)}%): ${fileOf(u)}` });
+        findings.push({
+          code: "subject",
+          detail: v!.why
+            ? `${v!.why}: ${fileOf(u)}`
+            : `nem szállás-kép (${v!.label}, ${Math.round(Math.max(v!.never, v!.sight) * 100)}%): ${fileOf(u)}`,
+        });
       }
     }
   }

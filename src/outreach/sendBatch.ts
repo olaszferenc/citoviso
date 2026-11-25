@@ -14,6 +14,7 @@ import { stampOutreachOffer } from "../payment/offers.js";
 import { checkOutreachDraft } from "./outreachCheck.js";
 import { ensureHeroShot } from "./heroShot.js";
 import { renderGateFor, renderGateReason } from "./mockRenderGate.js";
+import { qaBlockReason, qaReviewState } from "./mockQaReview.js";
 import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealth.js";
 import {
   ackCoversVerdicts,
@@ -543,6 +544,14 @@ export async function sendOutreachMail(
     if (rendered.verdict === "fail") {
       return { ...base, outcome: { kind: "skipped", reason: renderGateReason(rendered) } };
     }
+  }
+
+  // ⛔⛔ THE QUALITY COLLEAGUE'S LOOK (owner 2026-11-25, mockQaReview.ts): no letter goes out on any
+  // path until a colleague has looked at this very mock file on a phone and passed it. The owner's
+  // sample (`sampleTo`) is itself a look and is exempt.
+  if (p.artifactId && !opts.sampleTo) {
+    const qaBlock = qaBlockReason(await qaReviewState(p.artifactId));
+    if (qaBlock) return { ...base, outcome: { kind: "skipped", reason: qaBlock } };
   }
 
   // ⛔⛔ KÉP-EGÉSZSÉG KAPU a KISZÁLLÍTOTT lapon (ADR-0134, Elek FK-003b L01).
