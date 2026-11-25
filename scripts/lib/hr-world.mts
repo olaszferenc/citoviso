@@ -39,11 +39,29 @@ export interface HrWorldOptions {
    * caller's env (unset = the production default: forint only). Omitted = the mock gateway.
    */
   readonly payment?: "mock" | "barion-test";
+  /**
+   * "szamlazz-test" = the real Számlázz.hu adapter with the dev .env's TEST (OV) Agent key — the key guard
+   * (src/invoicing/keyGuard.ts) refuses any other key in dev — and the fence lets www.szamlazz.hu through.
+   * A real TEST-account invoice is made (OV- prefix, no NAV report). Omitted = the mock invoicer.
+   */
+  readonly invoice?: "mock" | "szamlazz-test";
+}
+
+/** The dev .env's Számlázz.hu TEST Agent key (the key guard decides whether it may serve). */
+function szamlazzTestKey(repo: string): string {
+  for (const line of readFileSync(path.resolve(repo, ".env"), "utf8").split("\n")) {
+    const m = /^SZAMLAZZ_AGENT_KEY=(.*)$/.exec(line.trim());
+    if (m && m[1]) return m[1].replace(/^["']|["']$/g, "");
+  }
+  throw new Error("hr-world: a Számlázz-TESZT módhoz a dev .env SZAMLAZZ_AGENT_KEY-e kell");
 }
 
 /** The dev .env's Barion sandbox settings — only when they really point at the test hosts. */
 function barionSandboxEnv(repo: string): Record<string, string> {
-  const file = path.resolve(repo, ".env");
+  // BARION_SANDBOX_ENV_FILE: a separate sandbox shop's settings (same four keys, a 600 file outside the
+  // repo) — e.g. the EUR-wallet test shop (2026-11-25): the shared dev .env's shop has no euro account,
+  // and that shared file is not changed for one run. The same sandbox-only check applies to it.
+  const file = process.env.BARION_SANDBOX_ENV_FILE ? path.resolve(process.env.BARION_SANDBOX_ENV_FILE) : path.resolve(repo, ".env");
   const out: Record<string, string> = {};
   for (const line of readFileSync(file, "utf8").split("\n")) {
     const m = /^(BARION_(?:POSKEY|PAYEE|URL|PAY_URL))=(.*)$/.exec(line.trim());
@@ -136,6 +154,11 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
     Object.assign(process.env, barionSandboxEnv(REPO));
     process.env.PAYMENT_GATEWAY = "barion";
   }
+  const szamlazzTest = o.invoice === "szamlazz-test";
+  if (szamlazzTest) {
+    process.env.SZAMLAZZ_AGENT_KEY = szamlazzTestKey(REPO);
+    process.env.INVOICE_PROVIDER = "szamlazz";
+  }
 
   const scratch = scratchDbName(o.base);
   await sweepStaleScratchDbs(PG, o.base);
@@ -151,6 +174,9 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (/^https?:\/\/(127\.0\.0\.1|localhost)/.test(url)) return realFetch(input, init);
     if (barionTest && /^https:\/\/(api|secure)\.test\.barion\.com\//.test(url)) return realFetch(input, init);
+    if (szamlazzTest && /^https:\/\/www\.szamlazz\.hu\/szamla\//.test(url)) return realFetch(input, init);
+    // …and the MNB rate the foreign-currency invoice names (src/billing/fxRate.ts), as in production.
+    if (szamlazzTest && /^http:\/\/www\.mnb\.hu\/arfolyamok\.asmx/.test(url)) return realFetch(input, init);
     return new Response("blocked by hr-world fence", { status: 599 });
   }) as typeof fetch;
 
@@ -203,7 +229,12 @@ export async function buildHrWorld(o: HrWorldOptions): Promise<HrWorld> {
   // No photo leaves this world (fence): the curator's no-photo acknowledgement is what a real
   // operator gives on the send dialog for a picture-less lead.
   const noPhotoAck = { at: new Date().toISOString(), by: "hr-world", reason: "teszt-világ (scratch DB): kép nélküli horvát mock, a fotó nem cél" };
-  await db.updateTable("mock_artifact").set({ status: "approved", inputs: { ...(art.inputs as object), reviewVerdict: "pass", review: { verdict: "pass", by: "hr-world" }, noPhotoAck } } as never)
+  // The mock was just made by TODAY's generator (the qafix code). The send gate (MOCK_CURRENT_GENERATOR_SQL)
+  // counts a mock as current by its generated_at only after MOCK_HEROFIX_LIVE_AT — a fresh mock made before
+  // that hour carries the same stamp the re-render gives (mockRefresh.ts), so the world never depends on
+  // the wall clock. The gate itself is untouched.
+  const { MOCK_HEROFIX_STAMP } = await import("../../src/outreach/mockPhotoGate.js");
+  await db.updateTable("mock_artifact").set({ status: "approved", inputs: { ...(art.inputs as object), reviewVerdict: "pass", review: { verdict: "pass", by: "hr-world" }, noPhotoAck, terhatasAt: MOCK_HEROFIX_STAMP } } as never)
     .where("id", "=", gen.artifactId).execute();
   const token = `elekhr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
   const p = await db.insertInto("prospect").values({ lead_id: lead.id, token, mock_artifact_id: gen.artifactId, contact_email: "elek@citoviso.com" } as never)
