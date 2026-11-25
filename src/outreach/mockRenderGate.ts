@@ -16,7 +16,7 @@
 //              a cached paid vision verdict of ad / sign-map / document / toilet
 //   stock    — a sample picture (public/assets/stock or the styled library, engine/stock.ts) anywhere
 //              but a MARKED gallery / room-card slot: in the hero, the opening, a band, the contact
-//              picture, or without its „MINTA” mark (ADR-XXXX, plan kepnelkuli-hero ⑩; until
+//              picture, or without its „MINTA” mark (ADR-0479, plan kepnelkuli-hero ⑩; until
 //              2026-11-25 any sample picture failed the page)
 //   overflow — the page is wider than the phone (horizontal scroll)
 //   broken   — an image that does not load
@@ -54,7 +54,7 @@ export const RENDER_GATE_VERSION = 11;
 /** A town page (no / few own photos, plan kepnelkuli-hero) carries at least this many distinct pictures (coordinator 2026-11-25: „tele kell lennie képpel”). */
 export const TOWN_PAGE_MIN_PICTURES = 12;
 
-/** The only places a MARKED sample picture may stand (plan kepnelkuli-hero ⑩, ADR-XXXX). */
+/** The only places a MARKED sample picture may stand (plan kepnelkuli-hero ⑩, ADR-0479). */
 const SAMPLE_MODULES = new Set(["gallery", "rooms"]);
 
 /** The mock's town pictures (siteData.townPhoto / townGallery) — judged by the town rule, not the lodging rule. */
@@ -409,7 +409,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     // banner opened 9 of 18 letters) — never a bathroom, toilet, kitchen or a non-lodging picture.
     const heroBytes = heroUrl ? bodies.get(heroUrl) : undefined;
     if (heroUrl && heroBytes && isTown(heroUrl)) {
-      // The TOWN's picture opens the page (plan kepnelkuli-hero, ADR-XXXX): re-judged with the very rule
+      // The TOWN's picture opens the page (plan kepnelkuli-hero, ADR-0479): re-judged with the very rule
       // that picked it (media/townPick.ts) — a vehicle, an interior, a road, a dusk field never opens.
       const tv = await judgeTownPicture(await townJudgeBytes(heroUrl, heroBytes), "town", true);
       if (!tv) findings.push({ code: "render", detail: "a településkép-szabály nem futtatható — ellenőrizetlen nyitókép nem mehet ki" });

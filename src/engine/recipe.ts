@@ -151,7 +151,7 @@ export interface TownPhoto {
   readonly license: string;
   readonly licenseUrl?: string;
   /**
-   * The picker's stamp (media/townPick.ts, ADR-XXXX): which version and threshold judged it, from
+   * The picker's stamp (media/townPick.ts, ADR-0479): which version and threshold judged it, from
    * which tier („town” = the town itself, „land” = the landscape around, „region”). The send gate
    * (mockPhotoGate) lets a no-/few-photo mock go only with the CURRENT stamp. Absent = the old
    * single Wikipedia lookup (generator/townPhoto.ts, before 2026-11-25) — never sent.
@@ -425,7 +425,7 @@ export interface SiteData {
   readonly townPhoto?: TownPhoto;
   /**
    * LOCAL gallery pictures of the town (beach, main square, sight, landscape — media/townPick.ts,
-   * ADR-XXXX): free licence, credited like the town photo, shown in the MOCK's gallery after the own
+   * ADR-0479): free licence, credited like the town photo, shown in the MOCK's gallery after the own
    * photos and before the sample rooms. Persisted with the mock; never in `photos`, never a hero.
    */
   readonly townGallery?: readonly TownPhoto[];

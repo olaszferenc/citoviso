@@ -59,7 +59,7 @@ check(
 const qaSrc = src("src/outreach/mockQaReview.ts");
 check("a kolléga jóváhagyása NEM küld: a sort a tulaj lapjára teszi", /status: "held", note: APPROVAL_PENDING_NOTE/.test(qaSrc) && !/status: "queued"/.test(qaSrc));
 const aq = src("src/console/approvalQueue.ts");
-// 2026-11-25 (ADR-XXXX): DISPATCH_PHOTOS_OK_SQL = the ≥5 own-photo rule, or for fewer the CURRENT town pick (mockPhotoGate.ts).
+// 2026-11-25 (ADR-0479): DISPATCH_PHOTOS_OK_SQL = the ≥5 own-photo rule, or for fewer the CURRENT town pick (mockPhotoGate.ts).
 check("a jóváhagyó lap csak a teljes kört mutatja (kapu + kolléga + 5 saját kép / aktuális településkép + új generátor)",
   /qaReviewState\(r\.main_id\)/.test(aq) && /cachedRenderGate\(/.test(aq) && /LEAD_OWN_PHOTOS_SQL|DISPATCH_PHOTOS_OK_SQL/.test(aq) && /MOCK_CURRENT_GENERATOR_SQL/.test(aq));
 check("a „Mehet” a mockfájlra bélyegzi a tulaj jóváhagyását", /recordOwnerApproval\(row\.artifact_id/.test(aq));

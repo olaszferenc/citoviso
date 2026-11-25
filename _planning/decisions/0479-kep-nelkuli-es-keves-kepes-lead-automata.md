@@ -1,4 +1,4 @@
-## ADR-XXXX — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár
+## ADR-0479 — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár
 
 Dátum: 2026-11-25 · Döntéshozó: tulaj (a terv jóváhagyása, kiegészítésekkel) · Terv: `assets/design-refs/console/kepnelkuli-hero/`
 

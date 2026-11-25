@@ -327,7 +327,7 @@ function backstageMass(v: PhotoKind): number {
 /**
  * The lodging from OUTSIDE or its view (house, garden, pool, balcony view, shore, courtyard) — the
  * probability mass of those labels. A few-photo lead keeps its own hero only when this is high
- * (plan kepnelkuli-hero ⑨, ADR-XXXX); else its town's picture opens the page.
+ * (plan kepnelkuli-hero ⑨, ADR-0479); else its town's picture opens the page.
  */
 export function outsideScore(v: PhotoKind): number {
   const p = v.probs ?? {};

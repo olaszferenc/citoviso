@@ -438,7 +438,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .select(["id", "lead_id", "artifact_id", "note"])
       .where("status", "=", "queued")
       // Owner 2026-11-23: only leads with at least DISPATCH_MIN_OWN_PHOTOS own photos go out, and the
-      // mock that goes out actually shows them (2026-11-24); since 2026-11-25 (ADR-XXXX) a lead with
+      // mock that goes out actually shows them (2026-11-24); since 2026-11-25 (ADR-0479) a lead with
       // fewer goes too when its mock carries the CURRENT town pick (mockPhotoGate.DISPATCH_PHOTOS_OK_SQL).
       // The rest stay QUEUED, untouched, for a rerender (no hold churn, no lost place).
       .where(sql<boolean>`exists (select 1 from lead l, mock_artifact a where l.id = outreach_dispatch.lead_id and a.id = outreach_dispatch.artifact_id and ${DISPATCH_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)

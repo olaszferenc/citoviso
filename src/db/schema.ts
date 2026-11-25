@@ -1617,7 +1617,7 @@ export interface SitePlaceRatingTable {
 /** 0060: per-photo hero suitability, keyed by the query-less URL (photoKey()).
  *  Pixel size says nothing about SUBJECT — a 1200px outhouse shot passed every
  *  size/URL gate and became a hero. This caches what the vision pass saw. */
-/** 0153 (ADR-XXXX): the town's picked photos for leads with no / few own photos (media/townPhotoSet.ts). */
+/** 0153 (ADR-0479): the town's picked photos for leads with no / few own photos (media/townPhotoSet.ts). */
 export interface TownPhotoSetTable {
   country: string;
   city_key: string;

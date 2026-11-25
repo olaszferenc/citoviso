@@ -744,7 +744,7 @@ function injectWholeBand(html: string, data: SiteData, phase: RenderPhase): stri
  */
 export const OWN_PHOTOS_NO_STOCK = 5;
 
-/** The town's local pictures (siteData.townGallery, ADR-XXXX) as gallery photos — not on the page yet, each once. */
+/** The town's local pictures (siteData.townGallery, ADR-0479) as gallery photos — not on the page yet, each once. */
 function localTownPhotos(data: SiteData): Photo[] {
   const on = new Set(data.photos.map((p) => p.url));
   const out: Photo[] = [];
@@ -777,7 +777,7 @@ function withStockFill(data: SiteData): SiteData {
 function withTownHero(data: SiteData): SiteData {
   const t = data.townPhoto;
   if (!t || data.photos.some((p) => p.url === t.url)) return data;
-  // Plan kepnelkuli-hero ⑨ (ADR-XXXX): a few-photo lead whose own first photo does not show the lodging
+  // Plan kepnelkuli-hero ⑨ (ADR-0479): a few-photo lead whose own first photo does not show the lodging
   // from outside opens on the town too — the own photos follow, each once. (Before 2026-11-25 the
   // generator stored a town photo only for a lead with no own photo, so an older mock is unchanged.)
   return {
@@ -836,7 +836,7 @@ function townLabel(data: SiteData, t: { readonly city: string; readonly pick?: {
 }
 
 /**
- * Plan kepnelkuli-hero ③④ (ADR-XXXX): the town's local pictures and the styled MINTA rooms are free
+ * Plan kepnelkuli-hero ③④ (ADR-0479): the town's local pictures and the styled MINTA rooms are free
  * licence pictures whose licence asks for the credit — one folded list at the page's foot names each
  * picture that is ON the page: place or „Minta”, author (linked to its source page) and licence.
  */

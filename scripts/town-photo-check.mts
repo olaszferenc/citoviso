@@ -1,4 +1,4 @@
-// gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: kép nélküli / kevés képes lead településképe, ADR-XXXX)
+// gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: kép nélküli / kevés képes lead településképe, ADR-0479)
 //
 // The town-photo rules of plan assets/design-refs/console/kepnelkuli-hero/, checked without network or model:
 //   ① the verdict (Laza + round 2): a forbidden subject, an interior, a road, a sports ground, a close-up,

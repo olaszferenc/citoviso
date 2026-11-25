@@ -370,7 +370,7 @@ export async function sendOutreachMail(
       };
     }
   }
-  // 2026-11-25 (ADR-XXXX, plan kepnelkuli-hero ⑩): a lead with fewer own photos goes only with the town's
+  // 2026-11-25 (ADR-0479, plan kepnelkuli-hero ⑩): a lead with fewer own photos goes only with the town's
   // pictures picked by the CURRENT picker version and threshold — never the old single Wikipedia lookup,
   // never a typographic page.
   if (p.artifactId) {

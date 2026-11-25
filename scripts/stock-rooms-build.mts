@@ -1,5 +1,5 @@
 // Builds the STYLED sample-room library of the mock (owner 2026-11-25, approved plan
-// assets/design-refs/console/kepnelkuli-hero/, ADR-XXXX): ~300 free, freely licensed room photos per
+// assets/design-refs/console/kepnelkuli-hero/, ADR-0479): ~300 free, freely licensed room photos per
 // style — mediterranean, alpine, rural, urban — chosen by the local CLIP model, no human curation.
 //
 //   npx tsx scripts/stock-rooms-build.mts [--cache <dir>] [--per-style 300] [--pages 6]

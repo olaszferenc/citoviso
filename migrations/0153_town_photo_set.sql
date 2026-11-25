@@ -1,4 +1,4 @@
--- TELEPÜLÉS-KÉPTÁR a kép nélküli és kevés képes leadek mockjához (ADR-XXXX, terv:
+-- TELEPÜLÉS-KÉPTÁR a kép nélküli és kevés képes leadek mockjához (ADR-0479, terv:
 -- assets/design-refs/console/kepnelkuli-hero/, tulaj-jóváhagyás 2026-11-25).
 --
 -- Miért tábla: egy település képei nem a leadhez tartoznak, hanem a helyhez. Egyszer válogatjuk

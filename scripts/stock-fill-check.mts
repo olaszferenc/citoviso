@@ -266,7 +266,7 @@ console.log("⑨ no own photo + town photo → the town is the hero, credited; o
     const live = renderSite(recipe(t), d, { phase: "live" });
     check(`${t} LIVE: a településfotó, a forrás-sor és a minta-felirat is ott van (tulaj 11-16)`, live.includes("Koveskal.jpg") && live.includes("cit-town-credit") && live.split("Néhány kép minta: a helyükre a szállás saját fotói kerülnek.").length === 2);
   }
-  // Plan kepnelkuli-hero ⑨ (ADR-XXXX, 2026-11-25): a few-photo lead's stored town photo means the generator
+  // Plan kepnelkuli-hero ⑨ (ADR-0479, 2026-11-25): a few-photo lead's stored town photo means the generator
   // judged its own first photo no outside view — the town opens the page, the own photos follow, each once,
   // credited. (Before 2026-11-25 the generator stored a town photo only for a lead with no own photo.)
   const own2 = renderSite(recipe("parallax"), lead(2, { townPhoto: town }), { phase: "mock" });

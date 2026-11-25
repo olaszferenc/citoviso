@@ -1,4 +1,4 @@
-// MAINTENANCE of the stored town picture sets (ADR-XXXX, plan kepnelkuli-hero). There is NO backfill (owner
+// MAINTENANCE of the stored town picture sets (ADR-0479, plan kepnelkuli-hero). There is NO backfill (owner
 // 2026-11-25): a town's pictures are gathered just in time by the mock generation (generator/townHero.ts).
 // When the rules change, the stored sets are re-judged here without searching again:
 //   npx tsx scripts/town-photo-sets.mts --restyle   (only the sample-room style of the stored sets)

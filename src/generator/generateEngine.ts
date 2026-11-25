@@ -380,7 +380,7 @@ async function generateEngineMockInner(
   }
   if (photoSet.heroMoved) console.log("  ↳ a nyitókép helyére a legjobb külső/szoba-kép került"); // i18n-exempt: operator log
   const photos = photoSet.photos;
-  // NO OR FEW OWN PHOTOS → the TOWN's picture set (owner 2026-11-25, ADR-XXXX, plan
+  // NO OR FEW OWN PHOTOS → the TOWN's picture set (owner 2026-11-25, ADR-0479, plan
   // assets/design-refs/console/kepnelkuli-hero/; before: one Wikipedia lookup, ADR-0436): the town's
   // hero, shared out among its e-mail leads, opens the page unless a few-photo lead's own first photo
   // shows the lodging from outside; 4–6 local pictures join the gallery. Gathered here on the spot

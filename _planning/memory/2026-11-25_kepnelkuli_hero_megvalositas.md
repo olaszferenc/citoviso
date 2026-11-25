@@ -1,6 +1,6 @@
 # 2026-11-25 — Kép nélküli és kevés képes lead: településkép-tár (megvalósítás, `cit561ec018`)
 
-Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `cit9b4690e3` · ADR-XXXX · terv: `assets/design-refs/console/kepnelkuli-hero/` (befagyasztva, README a kontraktussal)
+Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `cit9b4690e3` · ADR-0479 · terv: `assets/design-refs/console/kepnelkuli-hero/` (befagyasztva, README a kontraktussal)
 
 ## Elvégzett munka
 - **Választó** (`src/media/townPick.ts`, v3): Commons-jelöltek (település → a környék tájképe csak kevés hero esetén, csak a saját országból → régió). Egy CLIP-beágyazás képenként. Laza küszöb, igen/nem kérdések: kültér, tágas kép, látkép, sportpálya, nappal, feliratos homlokzat, egyetlen ház közelről, felülnézet (csak hero), fényesség és üres ég (rangsor). GPS ≤15 km, fájlnév-tiltások. Kimenet: 3–6 hero, 4–6 helyi galériakép, stílus.

@@ -1,5 +1,5 @@
 // TOWN PHOTO PICKER — the pictures of a lead's TOWN for a mock without (enough) own photos
-// (owner 2026-11-25, approved plan assets/design-refs/console/kepnelkuli-hero/, ADR-XXXX).
+// (owner 2026-11-25, approved plan assets/design-refs/console/kepnelkuli-hero/, ADR-0479).
 //
 // Country-agnostic, automatic, no human curation, $0:
 //   SOURCE  Wikimedia Commons only, free licences only (CC0 / CC BY / CC BY-SA / public domain);

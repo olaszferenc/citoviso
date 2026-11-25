@@ -49,7 +49,7 @@ export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK
 export const TOWN_PHOTO_DISPATCH_KEY = "town_photo_dispatch";
 
 /**
- * A mock of a lead with NO or FEW own photos (owner 2026-11-25, ADR-XXXX, plan
+ * A mock of a lead with NO or FEW own photos (owner 2026-11-25, ADR-0479, plan
  * assets/design-refs/console/kepnelkuli-hero/ ⑩): it may go only with the town's pictures picked by the
  * CURRENT picker version and threshold (media/townPick.ts) — the town photo as the hero, or (a few-photo
  * lead whose own first photo opens the page) the local gallery pictures — and only while the owner's switch

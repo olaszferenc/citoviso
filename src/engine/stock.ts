@@ -83,7 +83,7 @@ export function stockUrl(url: string | undefined | null): boolean {
   return typeof url === "string" && (url.includes(STOCK_PREFIX) || styledUrlSet().has(url.replace(/[?#].*$/, "")));
 }
 
-// ── the STYLED sample-room library (owner 2026-11-25, ADR-XXXX, plan kepnelkuli-hero) ─────────
+// ── the STYLED sample-room library (owner 2026-11-25, ADR-0479, plan kepnelkuli-hero) ─────────
 // ~300 free-licence room photos per style (mediterranean / alpine / rural / urban), chosen by the
 // local CLIP model (scripts/stock-rooms-build.mts), HOT-LINKED from the provider's CDN (Flickr,
 // Wikimedia) and credited on the page. Same hard rules as the local library: gallery and room cards
@@ -303,7 +303,7 @@ export function stockRoomPhotos(d: SiteData, n: number, alt: (i: number) => stri
  * the typographic hero and no gallery) or already has enough.
  */
 /**
- * A page with the town's pictures (ADR-XXXX, plan kepnelkuli-hero): about 15 pictures in all — the hero,
+ * A page with the town's pictures (ADR-0479, plan kepnelkuli-hero): about 15 pictures in all — the hero,
  * 4–6 local pictures, the room cards — so the gallery is filled up to this many (own + local + MINTA).
  */
 export const STOCK_GALLERY_TOWN_TARGET = 12;

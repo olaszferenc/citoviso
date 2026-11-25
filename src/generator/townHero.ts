@@ -1,5 +1,5 @@
 // The TOWN's pictures on the mock of a lead with no or few own photos (owner 2026-11-25, approved
-// plan assets/design-refs/console/kepnelkuli-hero/ ⑨, ADR-XXXX). The generator's one call.
+// plan assets/design-refs/console/kepnelkuli-hero/ ⑨, ADR-0479). The generator's one call.
 //
 //   · 0 own photos → the town's hero (shared out among the town's e-mail leads) + 4–6 local pictures;
 //   · 1–4 own photos → the own photos first, each once; the own first photo stays the hero only when

@@ -1,5 +1,5 @@
 // THE TOWN'S PICTURE SET — stored once per town (town_photo_set), shared out among its leads
-// (owner 2026-11-25, approved plan assets/design-refs/console/kepnelkuli-hero/, ADR-XXXX).
+// (owner 2026-11-25, approved plan assets/design-refs/console/kepnelkuli-hero/, ADR-0479).
 //
 // ⛔ ONLY FOR E-MAIL LEADS (owner 2026-11-25): a town's pictures are gathered only when the town has
 // at least one lead with an e-mail address and fewer than DISPATCH_MIN_OWN_PHOTOS own photos. A lead
