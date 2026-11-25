@@ -1,6 +1,6 @@
 # 2026-11-25 — Élesítés gyorsítása (mock-kapu üresjárat, képítélet-tár, --go átveszi a próbát)
 
-**Session:** `citd231e4fd` (a tulaj fő sessionje, brief `~/rc-briefs/elesites-gyorsitas-20261125.md`) · ADR-XXXX · terv+mérés `_planning/elesites-gyorsitas-terv-20261125.md`
+**Session:** `citd231e4fd` (a tulaj fő sessionje, brief `~/rc-briefs/elesites-gyorsitas-20261125.md`) · ADR-0478 · terv+mérés `_planning/elesites-gyorsitas-terv-20261125.md`
 
 ## Mérés
 - d2e87422 útja ~110 perc; ~100 perc a `mock-render-fixtures-check` öt futása (2 commit, hotfix, dry-run, --go), ~20 perc/futás.

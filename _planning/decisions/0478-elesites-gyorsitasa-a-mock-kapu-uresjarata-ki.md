@@ -1,4 +1,4 @@
-## ADR-XXXX — Élesítés gyorsítása: a mock-kapu üresjárata ki, képítélet-tár, a `--go` átveszi a próbafuttatást, a deploy mindig a main szkriptjével fut, a fordítás nem állít meg
+## ADR-0478 — Élesítés gyorsítása: a mock-kapu üresjárata ki, képítélet-tár, a `--go` átveszi a próbafuttatást, a deploy mindig a main szkriptjével fut, a fordítás nem állít meg
 
 **Státusz:** ELFOGADVA (tulaj 2026-11-25: „Mehet” a mérés+terv után; a fordítás-pont a tulaj külön döntése ugyanaznap:
 „fordítás SKIPP … MAJD UTÓLAG”) · session `citd231e4fd` · terv és mérés: `_planning/elesites-gyorsitas-terv-20261125.md`.
