@@ -497,15 +497,7 @@ function contactDataBadges(i: PendingApproval, lang: string): string {
   const b: string[] = [];
   if (i.email) b.push(`<span class="aq-pill aq-data">${ic("mail", 12)}${esc(i.email)}</span>`);
   if (i.phone) b.push(`<span class="aq-pill aq-data">${ic("contact", 12)}${esc(i.phone)}</span>`);
-  const p = i.presence;
-  if (i.mobile) {
-    if (p?.viber === "yes") b.push(`<span class="aq-pill aq-data viber">${ic("sms", 12)}Viber${p.viberSeen ? ` · ${esc(p.viberSeen)}` : ""}</span>`);
-    // WhatsApp paused: a WhatsApp-only lead still shows WhatsApp (clock = it waits until it is back).
-    const held = "held" in i.channel && i.channel.held === true;
-    if ((i.waOn || held) && p?.whatsapp === "yes") b.push(`<span class="aq-pill aq-data whatsapp">${ic(held ? "clock" : "sms", 12)}WhatsApp</span>`);
-    if (!p || p.viber === "unknown" || (i.waOn && p.whatsapp === "unknown" && p.viber !== "yes")) b.push(`<span class="aq-pill aq-data">${ic("clock", 12)}${esc(T(lang, "Ellenőrzés vár"))}</span>`);
-    else if (p.viber !== "yes" && !held && !(i.waOn && p.whatsapp === "yes")) b.push(`<span class="aq-pill aq-data">${ic("photos", 12)}${esc(T(lang, "MMS + SMS"))}</span>`);
-  }
+  // Owner 2026-11-25: „A messengeres rész kuka” — only the contact data, no Viber/WhatsApp/MMS badges.
   return b.length ? `<div class="aq-badges aq-badges--data">${b.join("")}</div>` : "";
 }
 
@@ -513,14 +505,6 @@ function contactDataBadges(i: PendingApproval, lang: string): string {
 function contactBadges(i: PendingApproval, lang: string): string {
   const b: string[] = [];
   if (i.email) b.push(`<span class="aq-pill">${ic("mail", 11)}${esc(T(lang, "E-mail"))}</span>`);
-  if (i.mobile) {
-    const p = i.presence;
-    if (p?.viber === "yes") b.push(`<span class="aq-pill viber">${ic("sms", 11)}Viber</span>`);
-    const held = "held" in i.channel && i.channel.held === true;
-    if ((i.waOn || held) && p?.whatsapp === "yes") b.push(`<span class="aq-pill whatsapp">${ic(held ? "clock" : "sms", 11)}WhatsApp</span>`);
-    if (!p || p.viber === "unknown" || (i.waOn && p.whatsapp === "unknown" && p.viber !== "yes")) b.push(`<span class="aq-pill">${ic("contact", 11)}${esc(T(lang, "Mobil"))}</span>`);
-    else if (p.viber !== "yes" && !held && !(i.waOn && p.whatsapp === "yes")) b.push(`<span class="aq-pill">${ic("photos", 11)}${esc(T(lang, "MMS + SMS"))}</span>`);
-  }
   return b.length ? `<span class="aq-badges">${b.join("")}</span>` : "";
 }
 
