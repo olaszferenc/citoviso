@@ -20,6 +20,13 @@
 //   ④ a zár kivéve a könyvtárból (flock nélkül) → az ① átfedést lát.
 //   ⑤ örökölt fd-s zár (`exec 9>>…; flock 9`) → a ② nem megy tovább az árva gyerek miatt.
 //   ⑥ a `land.sh`-ból kivett `land_lock_acquire` sor → a ③ piros.
+//   ── a PUSH-ŐR (hooks/pre-push, ADR-XXXX) és a soros hotfix-merge (scripts/land-merge.sh) ──
+//   ⑦ a VALÓDI hooks/pre-push egy eldobható origin-re: zár nélkül a mainre push ELUTASÍTVA (a main
+//      nem mozdul); akkor sem, ha épp MÁS land tartja a zárat; a zártartó (land_lock_acquire) pushát átengedi;
+//      másik ágra (hotfix/…) zár nélkül is enged.
+//   ⑧ a VALÓDI scripts/land-merge.sh: a mainbe merge-el egy hotfix-ágat úgy, hogy a main FÁJA bájtra
+//      változatlan, a hotfix-commit a main őse, a merge két szülős; másodszorra „nincs teendő”.
+//   ⑨ visszarontás: a hook elutasítása kivéve (exit 0) → a ⑦ zár nélküli pusha átmegy → PIROS.
 //
 // ⛔ ÜRES HALMAZON MÉRNI HAMIS ZÖLD: a záró sor kiírja, hány állítás futott; nulla = bukás.
 //
@@ -64,6 +71,20 @@ assertInsideTmp(MAIN);
 git(MAIN, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "init");
 git(MAIN, "worktree", "add", "-q", "-b", "wt", WT);
 assertInsideTmp(WT);
+// ⑦–⑨: a throw-away origin and ONLY the real pre-push hook (never the real pre-commit: hooksPath
+// points at a private copy dir).
+const BARE = path.join(TMP, "origin.git");
+git(TMP, "init", "-q", "--bare", BARE);
+git(MAIN, "remote", "add", "origin", BARE);
+git(MAIN, "push", "-q", "origin", "main");
+const HOOKS = path.join(TMP, "hooks");
+fs.mkdirSync(HOOKS);
+const PRE_PUSH = path.join(ROOT, "hooks/pre-push");
+const installHook = (text: string) => fs.writeFileSync(path.join(HOOKS, "pre-push"), text, { mode: 0o755 });
+installHook(fs.readFileSync(PRE_PUSH, "utf8"));
+git(MAIN, "config", "core.hooksPath", HOOKS);
+git(MAIN, "config", "user.name", "t"); // land-merge.sh's commit-tree needs an identity
+git(MAIN, "config", "user.email", "t@t");
 
 // The fake land body: the real lock library, then START / (child) sleep / END into a shared log.
 // The sleep runs as a CHILD (`& wait`) on purpose — ② kills the land shell and leaves it orphaned.
@@ -182,6 +203,76 @@ function structure(text: string): string[] {
   return bad;
 }
 
+// ⑦ the push guard — returns whether the unlocked push to main was REFUSED (used by ⑨ too)
+function bareMain(): string {
+  return git(BARE, "rev-parse", "refs/heads/main").trim();
+}
+function commitIn(dir: string, msg: string): string {
+  git(dir, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", msg);
+  return git(dir, "rev-parse", "HEAD").trim();
+}
+function pushRun(extraEnv: Record<string, string>, ...args: string[]) {
+  return spawnSync("git", ["push", "-q", "origin", ...args], { cwd: WT, encoding: "utf8", env: { ...CHILD_ENV, ...extraEnv } });
+}
+async function pushGuard(record: boolean): Promise<boolean> {
+  git(WT, "fetch", "-q", "origin");
+  git(WT, "reset", "-q", "--hard", "origin/main");
+  commitIn(WT, `work ${Date.now()}`);
+  const before = bareMain();
+  const r = pushRun({}, "HEAD:main");
+  const refused = r.status !== 0 && bareMain() === before;
+  if (!record) return refused;
+  expect(refused, `⑦ zár nélkül a mainre push ÁTMENT (rc=${r.status}):\n${r.stderr}`);
+  expect(/land-soron át/.test(r.stderr ?? ""), `⑦ az elutasítás nem mondja meg, merre (land.sh / land-merge.sh):\n${r.stderr}`);
+  // Somebody else's land holds the lock (from the main tree) → a hand-made push from the worktree is still refused.
+  const other = path.join(TMP, "other-holds.sh");
+  fs.writeFileSync(other, `set -u\n. "$LOCKLIB"\nland_lock_acquire "$(git rev-parse --show-toplevel)" || exit 9\necho held >"$FLAG"\nsleep 3\n`);
+  const flag = path.join(TMP, `held-${Date.now()}`);
+  // Async on purpose: the holder must be REAPED when it ends (a zombie child of a blocked event loop
+  // keeps `kill -0` true, and the lock would never free).
+  const holderProc = spawn("bash", [other], { cwd: MAIN, env: { ...CHILD_ENV, LOCKLIB: LIB, FLAG: flag }, stdio: "ignore" });
+  const holderDone = new Promise((res) => holderProc.on("exit", res));
+  await until(() => fs.existsSync(flag), 10_000);
+  const spoof = pushRun({}, "HEAD:main");
+  await holderDone;
+  expect(fs.existsSync(flag) && spoof.status !== 0 && bareMain() === before, `⑦ MÁS land tartja a zárat, és a kézi push mégis átment (rc=${spoof.status})`);
+  const side = pushRun({}, "HEAD:refs/heads/hotfix/x");
+  expect(side.status === 0, `⑦ másik ágra (hotfix/x) zár nélkül a push elutasítva (rc=${side.status}):\n${side.stderr}`);
+  const locked = path.join(TMP, "locked-push.sh");
+  fs.writeFileSync(locked, `set -u\n. "$LOCKLIB"\nland_lock_acquire "$(git rev-parse --show-toplevel)" || exit 9\ngit push -q origin HEAD:main\n`);
+  const lr = spawnSync("bash", [locked], { cwd: WT, encoding: "utf8", env: { ...CHILD_ENV, LOCKLIB: LIB } });
+  expect(lr.status === 0 && bareMain() === git(WT, "rev-parse", "HEAD").trim(), `⑦ a zártartó land pusha elutasítva (rc=${lr.status}):\n${lr.stdout}${lr.stderr}`);
+  return refused;
+}
+
+// ⑧ the hotfix merge through the queue
+function landMerge(): void {
+  git(WT, "fetch", "-q", "origin");
+  git(WT, "checkout", "-q", "-B", "hotfix", "origin/main~0");
+  fs.writeFileSync(path.join(WT, "hotfix.txt"), "only on the hotfix line\n");
+  git(WT, "add", "hotfix.txt");
+  git(WT, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "hotfix");
+  const hot = git(WT, "rev-parse", "HEAD").trim();
+  git(WT, "push", "-q", "origin", "HEAD:refs/heads/hotfix/y");
+  git(WT, "checkout", "-q", "wt");
+  commitIn(MAIN, "main moves on");
+  const mainLock = path.join(TMP, "locked-main.sh");
+  fs.writeFileSync(mainLock, `set -u\n. "$LOCKLIB"\nland_lock_acquire "$(git rev-parse --show-toplevel)" || exit 9\ngit push -q origin main\n`);
+  spawnSync("bash", [mainLock], { cwd: MAIN, encoding: "utf8", env: { ...CHILD_ENV, LOCKLIB: LIB } });
+  const treeBefore = git(BARE, "rev-parse", "refs/heads/main^{tree}").trim();
+  const lm = path.join(ROOT, "scripts/land-merge.sh");
+  const r = spawnSync("bash", [lm, hot], { cwd: WT, encoding: "utf8", env: CHILD_ENV });
+  const head = bareMain();
+  const parents = git(BARE, "rev-list", "--parents", "-n1", head).trim().split(" ").length - 1;
+  const contains = spawnSync("git", ["merge-base", "--is-ancestor", hot, head], { cwd: BARE, env: CHILD_ENV }).status === 0;
+  expect(r.status === 0 && /IGAZOLTAN FENT/.test(r.stdout), `⑧ a land-merge.sh nem zárult igazoltan (rc=${r.status}):\n${r.stdout}${r.stderr}`);
+  expect(contains, "⑧ a hotfix-commit nem őse a mainnek a land-merge után");
+  expect(git(BARE, "rev-parse", "refs/heads/main^{tree}").trim() === treeBefore, "⑧ a land-merge MEGVÁLTOZTATTA a main tartalmát (a fa nem a régi)");
+  expect(parents === 2, `⑧ a land-merge commitja nem két szülős (${parents})`);
+  const again = spawnSync("bash", [lm, hot], { cwd: WT, encoding: "utf8", env: CHILD_ENV });
+  expect(again.status === 0 && /nincs teendő/.test(again.stdout) && bareMain() === head, `⑧ a második land-merge nem „nincs teendő” (rc=${again.status}):\n${again.stdout}${again.stderr}`);
+}
+
 const t0 = Date.now();
 try {
   await serialisation(LIB, true);
@@ -205,6 +296,16 @@ try {
   // ⑥ acquire removed from land.sh
   const landNoAcq = fs.readFileSync(LAND, "utf8").replace(/^land_lock_acquire .*$/m, "");
   expect(structure(landNoAcq).length > 0, "⑥ VISSZARONTÁS ZÖLD: land_lock_acquire nélkül is átment a ③");
+
+  await pushGuard(true);
+  landMerge();
+  // ⑨ the hook without its lock check
+  const hookText = fs.readFileSync(PRE_PUSH, "utf8");
+  const check = '} >&2\nexit 1\n';
+  expect(hookText.includes(check), "⑨ a visszarontás célsora nem található a hooks/pre-push-ban");
+  installHook(hookText.replace(check, "} >&2\nexit 0\n"));
+  expect(!(await pushGuard(false)), "⑨ VISSZARONTÁS ZÖLD: zár-ellenőrzés nélkül is elutasította a hook a pusht");
+  installHook(hookText);
 } catch (e) {
   failures.push(`kivétel: ${(e as Error).stack ?? e}`);
 } finally {
@@ -221,4 +322,4 @@ if (failures.length) {
   for (const f of failures) console.error(`   ✗ ${f}`);
   process.exit(1);
 }
-console.log(`✅ land-lock-check: ${asserts} állítás zöld (sorosítás · halott zártartó · land.sh-struktúra · 3 visszarontás piros) — ${secs} s`);
+console.log(`✅ land-lock-check: ${asserts} állítás zöld (sorosítás · halott zártartó · land.sh-struktúra · push-őr · land-merge · 4 visszarontás piros) — ${secs} s`);

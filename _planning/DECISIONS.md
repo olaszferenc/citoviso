@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-mainre-csak-a-land-soron-at-push-or.md) — A mainre csak a land-soron át: push-őr + soros hotfix-merge (land-merge.sh)
 - [ADR-0484](decisions/0484-orszagok-arazas-egy-crm-lap-az-orszagoknak-es.md) — „Országok / Árazás”: egy CRM-lap az országoknak és az áraiknak (1. fázis, migráció nélkül)
 - [ADR-0483](decisions/0483-orankenti-bongeszos-kapuk-kapunkenti-alap.md) — Óránkénti böngészős kapuk: kapunkénti alap, minden kapu ítéletet kap, legfeljebb 2 gépi hely
 - [ADR-0482](decisions/0482-bejovo-uzenet-orszaga-es-forditasa-a-konzol.md) — Bejövő üzenet országa és fordítása a konzol-nyelvre (Bábel a konzolon); közös ország-sáv minden riport-fülön

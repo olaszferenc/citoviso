@@ -244,7 +244,7 @@ fi
 # A GÉPSZINTŰ LAND-SOR (scripts/land-lock.sh): eldobható repóban a valódi `land-lock.sh` — két land sorba áll,
 # a leölt zártartó elenged, a land.sh a fetch előtt zár; 3 visszarontás piros. ~20 s.
 if [ -f scripts/land-lock-check.mts ] && \
-   changed_files | grep -qE '^scripts/(land\.sh|land-lock\.sh|land-lock-check\.mts)$'; then
+   changed_files | grep -qE '^scripts/(land\.sh|land-lock\.sh|land-lock-check\.mts|land-merge\.sh)$|^hooks/pre-push$'; then
   echo "[pre-commit] land-lock-check (a landok gépszintű sora: sorosít-e, elenged-e a halott land)…"
   npx tsx scripts/land-lock-check.mts >"$GATE_LOG" || gate_failed
 fi

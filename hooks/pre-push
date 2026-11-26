@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# PUSH GUARD — main moves ONLY through the machine-wide land queue (ADR-XXXX).
+#
+# Measured 2026-11-26: of the 18 commits that reached main in 8 hours, 8 were pushed by hand
+# (`Merge … into wt/<x>`, the hotfix `-s ours` merges) while another land held the queue. Every such
+# push made the running land's push bounce: fetch → rebase → the WHOLE gate suite again (12:11 start,
+# bounced 12:24, restarted 12:31 — 30+ min under the lock, the next land waiting behind it). The
+# queue (scripts/land-lock.sh) only works if nobody walks past it.
+#
+# So a push whose target is refs/heads/main is refused unless it comes from INSIDE the land that holds
+# the lock: the lock is really taken right now, and the PID the holder file names (land.sh /
+# land-merge.sh, written by land_lock_acquire) is an ANCESTOR of this hook's process. Ancestry, not an
+# exported variable: a land started from an older tree (whose land-lock.sh exports nothing) still
+# passes, and a hand-made push while somebody else's land holds the lock does not. Every other ref
+# (hotfix branches, tags, the deploy push to the server) is untouched.
+#   · your own work      → bash scripts/land.sh
+#   · a hotfix -s ours merge into main → bash scripts/land-merge.sh <ref>  (seconds, under the lock)
+# Guard: scripts/land-lock-check.mts ⑦–⑨.
+set -u
+main_push=0
+while read -r _lref _lsha rref _rsha; do
+  [ "$rref" = "refs/heads/main" ] && main_push=1
+done
+[ "$main_push" -eq 1 ] || exit 0
+
+common="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || common=""
+lock="$common/cit-land.lock"
+holder="$(sed -n 's/.* · PID \([0-9][0-9]*\) · .*/\1/p' "$lock.holder" 2>/dev/null | head -1)"
+inside=0
+if [ -n "$holder" ]; then
+  p=$$
+  while [ -n "$p" ] && [ "$p" -gt 1 ]; do
+    if [ "$p" = "$holder" ]; then inside=1; break; fi
+    p="$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')"
+  done
+fi
+if [ -n "$common" ] && [ "$inside" -eq 1 ] && ! flock -n "$lock" true 2>/dev/null; then
+  exit 0
+fi
+{
+  echo "⛔ pre-push: a mainre CSAK a gépszintű land-soron át lehet pusholni (ADR-XXXX)."
+  echo "   A sor mellett pusholt commit minden épp futó landot visszapattint: az elölről futtatja az összes kaput."
+  echo "   · saját munka:                   bash scripts/land.sh"
+  echo "   · hotfix -s ours merge a mainbe: bash scripts/land-merge.sh <ref>"
+} >&2
+exit 1
