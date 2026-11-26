@@ -26,7 +26,6 @@ import { sql } from "kysely";
 
 import { db } from "../db/client.js";
 import { isHuMobileE164, normalizePhone } from "../text/phone.js";
-import { MOCK_QA_PASSED_SQL } from "../outreach/mockQaReview.js";
 import { MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 import { pickShownMock } from "./leadFilters.js";
 import { swr } from "./swrCache.js";
@@ -137,7 +136,7 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
     ? await sql<{ id: string; lead_id: string; status: string; pass: boolean; flag: boolean; town: boolean }>`
         select a.id, a.lead_id, a.status,
                coalesce(i->>'reviewVerdict' = 'pass' and i->'review'->>'verdict' = 'pass'
-                        and ${MOCK_QA_PASSED_SQL} and ${MOCK_CURRENT_GENERATOR_SQL}, false) as pass,
+                        and i->'renderGate'->>'verdict' = 'pass' and ${MOCK_CURRENT_GENERATOR_SQL}, false) as pass,
                coalesce(i->>'reviewVerdict' = 'flag', false) as flag,
                coalesce(jsonb_typeof(i->'siteData'->'townPhoto') = 'object', false) as town
           from mock_artifact a

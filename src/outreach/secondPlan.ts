@@ -2,9 +2,10 @@
 // „nincs második mock. így maga a megkeresés nem hagyható jóvá … Csak az hagyható jóvá, ahol van második
 // terv is.”). This overrides ADR-0433 („one plan is enough”, 2026-11-08) for the cold letter.
 //
-// One rule, every step: the refresh step re-renders it, the quality colleague reviews it, the machine
-// gate judges it, the approval page lists a lead only when BOTH plans passed the whole chain, and the
-// dispatcher attaches exactly this plan (and refuses to send without it).
+// One rule, every step: the refresh step re-renders it, the machine gate judges it, the approval page
+// lists a lead only when BOTH plans passed the chain, and the dispatcher attaches exactly this plan (and
+// refuses to send without it). Owner 2026-11-26: the quality colleague's pass is not part of the chain;
+// a colleague's FAIL on the current file still holds (mockQaReview.ts).
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
@@ -54,7 +55,7 @@ async function mtimeOf(relPath: string | null): Promise<number | null> {
 export async function planChainPassed(plan: SecondPlan | null): Promise<boolean> {
   if (!plan || !plan.current) return false;
   const qa = await qaReviewState(plan.id);
-  if (qa.state !== "pass") return false;
+  if (qa.state === "fail" || qa.state === "nofile") return false;
   const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", plan.id).executeTakeFirst();
   const mtime = await mtimeOf(plan.path);
   return mtime != null && cachedRenderGate(a?.inputs, mtime, await stockOkFor(plan.id))?.verdict === "pass";
@@ -64,6 +65,6 @@ export async function planChainPassed(plan: SecondPlan | null): Promise<boolean>
 export async function secondPlanBlock(leadId: string, mainId: string): Promise<string | null> {
   const plan = await secondPlanOf(leadId, mainId);
   if (!plan) return "nincs második terv (más sablonú mock) — a megkeresés csak két tervvel mehet ki (tulaj 2026-11-25)";
-  if (!(await planChainPassed(plan))) return "a második terv még nem járta végig a láncot (frissítés → gépi kapu → minőségi kolléga)";
+  if (!(await planChainPassed(plan))) return "a második terv még nem járta végig a láncot (frissítés → gépi kapu), vagy a minőségi kolléga megfogta";
   return null;
 }

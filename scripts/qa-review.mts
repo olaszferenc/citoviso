@@ -1,5 +1,18 @@
 // The quality colleague's tool (owner 2026-11-25, src/outreach/mockQaReview.ts).
 //
+// ⛔ SINCE 2026-11-26 EVENING (owner, ADR-XXXX) THE COLLEAGUE IS A RULE FINDER, NOT A PER-ITEM GATE: the
+// owner's page and the dispatcher ask the machine render gate and the owner's yes; a colleague's `pass` is
+// not needed, a `fail` on the current file still holds that one mock. The day's work is a SAMPLE:
+//
+//   npx tsx scripts/qa-review.mts sample [--n 12] [--shard k/n]  → a random sample of the gate-PASSED, waiting
+//                                                            mocks (what the owner will see), with screenshots
+//   npx tsx scripts/qa-review.mts note <artifactId> "<hiba-fajta> — <hol>"   → a NON-blocking finding: the fault
+//                                                            KIND (the rule candidate) and where it shows
+//   npx tsx scripts/qa-review.mts findings [--since 24h]    → fault kinds across mocks, most frequent first;
+//                                                            a kind on ≥2 mocks = a rule for the gate/generator
+//   (seen the same kind on two mocks? STOP sampling, report the kind to the coordinator — do not fail 80 more)
+//
+// The old per-item queue stays for the hero pick and for holding a plainly broken page:
 //   npx tsx scripts/qa-review.mts queue [--limit 5]      → the next mocks to look at, with screenshots
 //   npx tsx scripts/qa-review.mts shots <artifactId>      → screenshots of one mock
 //   npx tsx scripts/qa-review.mts pass <artifactId> "<what you checked>"
@@ -19,7 +32,7 @@
 // runs the machine render gate — a mock that fails it needs regeneration, not eyes, and is listed
 // apart. Screenshots land in sites/_qa-review/<artifactId>/: the opening at 3 moments of its
 // animation, the page screen by screen at 390 px, and the letter's picture.
-import { mkdir, readFile, copyFile, rm } from "node:fs/promises";
+import { mkdir, readFile, copyFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
 import { chromium } from "playwright-core";
@@ -30,7 +43,8 @@ import { DISPATCH_PRIORITY } from "../src/outreach/autoDispatch.js";
 import { ensureHeroShot } from "../src/outreach/heroShot.js";
 import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "../src/outreach/mockPhotoGate.js";
 import { secondPlanOf } from "../src/outreach/secondPlan.js";
-import { APPROVAL_PENDING_NOTE, QA_HOLD_PREFIX, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
+import { CHAIN_WAIT_NOTES, QA_HOLD_PREFIX, QA_REVIEW_KEY, QA_WAIT_NOTE, faultTally, qaReviewState, recordQaFinding, recordQaReview } from "../src/outreach/mockQaReview.js";
+import { cachedRenderGate, stockOkFor } from "../src/outreach/mockRenderGate.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
 import { classifyPhotoUrl, isHeroCandidate } from "../src/media/photoKind.js";
@@ -207,7 +221,7 @@ async function queue(limit: number, half: "0-7" | "8-f" | null = null, shard: { 
     // Queued rows, and rows already on the owner's page whose mock changed since the pass (stale → look again).
     .where((eb) => eb.or([
       eb("outreach_dispatch.status", "=", "queued"),
-      eb.and([eb("outreach_dispatch.status", "=", "held"), eb("outreach_dispatch.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE])]),
+      eb.and([eb("outreach_dispatch.status", "=", "held"), eb("outreach_dispatch.note", "in", [...CHAIN_WAIT_NOTES])]),
     ]))
     .where(DISPATCH_PHOTOS_OK_SQL)
     .where(MOCK_CURRENT_GENERATOR_SQL)
@@ -267,6 +281,64 @@ async function queue(limit: number, half: "0-7" | "8-f" | null = null, shard: { 
   if (!shown) console.log("Nincs átnézendő mock a sorban.");
 }
 
+/**
+ * A RANDOM SAMPLE of what the owner will see (owner 2026-11-26): waiting rows whose main plan is current,
+ * photo-gated and PASSED by the machine render gate on its current file, not yet looked at by a colleague.
+ * The colleague Reads the sheets and records fault KINDS (`note`), not verdicts — unless the page is plainly
+ * broken, then `fail`. `--shard k/n` splits the sample between colleagues by the main plan id.
+ */
+async function sample(n: number, shard: { k: number; n: number } | null): Promise<void> {
+  const rows = await db
+    .selectFrom("outreach_dispatch")
+    .innerJoin("mock_artifact as a", "a.id", "outreach_dispatch.artifact_id")
+    .innerJoin("lead as l", "l.id", "outreach_dispatch.lead_id")
+    .select(["outreach_dispatch.artifact_id as artifactId", "outreach_dispatch.lead_id as leadId", "l.name as name", "a.inputs as inputs", "a.path as path"])
+    .where((eb) => eb.or([
+      eb("outreach_dispatch.status", "=", "queued"),
+      eb.and([eb("outreach_dispatch.status", "=", "held"), eb("outreach_dispatch.note", "in", [...CHAIN_WAIT_NOTES])]),
+    ]))
+    .where(DISPATCH_PHOTOS_OK_SQL)
+    .where(MOCK_CURRENT_GENERATOR_SQL)
+    .where(sql<boolean>`a.inputs->'renderGate'->>'verdict' = 'pass'`)
+    .where(sql<boolean>`a.inputs->${QA_REVIEW_KEY} is null`)
+    .orderBy(sql`random()`)
+    .limit(n * 6)
+    .execute();
+  const mine = (id: string): boolean => !shard || parseInt(id[0] ?? "0", 16) % shard.n === shard.k - 1;
+  let shown = 0;
+  for (const r of rows) {
+    if (shown >= n) break;
+    if (!mine(r.artifactId)) continue;
+    // The cached verdict must belong to the CURRENT file and rule version — else the gate has not judged this file yet.
+    let mtime = 0;
+    try {
+      mtime = Math.floor((await stat(path.resolve(process.cwd(), r.path ?? ""))).mtimeMs / 1000);
+    } catch {
+      continue;
+    }
+    if (cachedRenderGate(r.inputs, mtime, await stockOkFor(r.artifactId))?.verdict !== "pass") continue;
+    shown++;
+    const alt = await secondPlanOf(r.leadId, r.artifactId);
+    console.log(`\n▶ ${r.artifactId} · ${r.name} (1. terv${alt?.current ? `; 2. terv: ${alt.id}` : "; 2. terv még nincs"})`);
+    for (const f of await shots(r.artifactId)) console.log(`   ${f}`);
+  }
+  if (!shown) console.log("Nincs mintázható mock: a gépi kapu még nem engedett át átnézetlen, aktuális mockot.");
+  else console.log(`\n${shown} mock. Hiba-fajtát így rögzíts: qa-review.mts note <id> "<hiba-fajta> — <hol>"; összesítés: qa-review.mts findings`);
+}
+
+async function findings(sinceArg: string | undefined): Promise<void> {
+  const m = /^(\d+)(h|d)$/.exec(sinceArg ?? "24h");
+  const hours = m ? Number(m[1]) * (m[2] === "d" ? 24 : 1) : 24;
+  const since = new Date(Date.now() - hours * 3600_000);
+  const t = await faultTally(since);
+  if (!t.length) {
+    console.log(`Nincs rögzített hiba-fajta az utolsó ${hours} órában.`);
+    return;
+  }
+  console.log(`Hiba-fajták az utolsó ${hours} órában (mock · lead · példák) — ≥2 mock = szabály-jelölt:`);
+  for (const f of t) console.log(`  ${f.mocks >= 2 ? "⚑" : " "} ${String(f.mocks).padStart(3)} · ${String(f.leads).padStart(3)} · ${f.kind}  (${f.examples.join(", ")})`);
+}
+
 async function status(): Promise<void> {
   const r = await db
     .selectFrom("outreach_dispatch")
@@ -299,16 +371,33 @@ try {
       console.error(`⛔ ${r.error}`);
       process.exitCode = 1;
     } else {
-      console.log(`✅ ${cmd === "pass" ? "jóváhagyva" : "NEM jóváhagyva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor jóváhagyásra vár — a tulaj lapján csak akkor jelenik meg, ha a lead MÁSIK terve is átment` : ""}`);
+      console.log(`✅ ${cmd === "pass" ? "rendben (a passz nem feltétel: a gépi kapu és a tulaj dönt)" : "NEM mehet ki — ez a mock tartva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor a tulaj lapja felé` : ""}`);
     }
   } else if (cmd === "heroes" && arg) {
     await heroes(arg);
   } else if (cmd === "hero" && arg && rest[0]) {
     await hero(arg, Number(rest[0]), rest.slice(1).join(" "));
+  } else if (cmd === "sample") {
+    const ni = process.argv.indexOf("--n");
+    const si = process.argv.indexOf("--shard");
+    const sm = si > 0 ? /^(\d+)\/(\d+)$/.exec(process.argv[si + 1] ?? "") : null;
+    const shard = sm && Number(sm[1]) >= 1 && Number(sm[1]) <= Number(sm[2]) && Number(sm[2]) <= 16 ? { k: Number(sm[1]), n: Number(sm[2]) } : null;
+    await sample(ni > 0 ? Math.max(1, Math.min(40, Number(process.argv[ni + 1]) || 12)) : 12, shard);
+  } else if (cmd === "note" && arg) {
+    const text = rest.join(" ");
+    const [category, ...where] = text.split(/\s+—\s+|\s+-\s+/);
+    const r = await recordQaFinding(arg, category ?? "", where.join(" — "), BY);
+    if (!r.ok) {
+      console.error(`⛔ ${r.error}`);
+      process.exitCode = 1;
+    } else console.log(`✅ hiba-fajta rögzítve (${r.total}. ezen a mockon), semmi nincs visszatartva — összesítés: qa-review.mts findings`);
+  } else if (cmd === "findings") {
+    const si = process.argv.indexOf("--since");
+    await findings(si > 0 ? process.argv[si + 1] : undefined);
   } else if (cmd === "status") {
     await status();
   } else {
-    console.error('Használat: qa-review.mts queue [--limit N] [--half 0-7|8-f | --shard k/n] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
+    console.error('Használat: qa-review.mts sample [--n 12] [--shard k/n] | note <id> "<hiba-fajta> — <hol>" | findings [--since 24h] | queue [--limit N] [--half 0-7|8-f | --shard k/n] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
     process.exitCode = 2;
   }
 } finally {

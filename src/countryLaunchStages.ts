@@ -17,7 +17,6 @@ import { kbCoverage } from "./i18n/kbPacks.js";
 import { buyerCatalog, missingBuyerPackStrings } from "./i18n/packs.js";
 import { legalPackStatus } from "./legalPack.js";
 import { marketGate } from "./markets.js";
-import { MOCK_QA_PASSED_SQL } from "./outreach/mockQaReview.js";
 
 export interface PartCount {
   readonly total: number;
@@ -64,7 +63,7 @@ export async function countryLaunchStages(iso: string): Promise<LaunchStages> {
     select count(*) filter (where btrim(coalesce(l.raw->>'email','')) <> '') as email,
            count(*) filter (where btrim(coalesce(l.raw->>'phone','')) <> '') as phone,
            count(*) filter (where exists (select 1 from mock_artifact a where a.lead_id = l.id)) as made,
-           count(*) filter (where exists (select 1 from mock_artifact a where a.lead_id = l.id and ${MOCK_QA_PASSED_SQL})) as passed
+           count(*) filter (where exists (select 1 from mock_artifact a where a.lead_id = l.id and a.inputs->'renderGate'->>'verdict' = 'pass')) as passed
       from lead l where ${LEAD_COUNTRY_SQL} = ${cc}`.execute(db);
   const c = counts.rows[0] ?? { email: "0", phone: "0", made: "0", passed: "0" };
   const gate = await marketGate(cc);

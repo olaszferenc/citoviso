@@ -12,6 +12,16 @@
 //
 // A review is bound to the mock FILE it saw (mtime, like the render gate's cache): a re-render makes
 // it stale, and a stale review is no review.
+//
+// ⛔ THE PASS IS NOT A GATE ANY MORE (owner 2026-11-26 evening, ADR-XXXX). Measured on 11-26: 148 verdicts
+// by four colleagues, ~85 % fails, nearly all the SAME two or three generator faults failed one by one; every
+// generator fix made every pass stale (bound to the file), so the colleagues re-judged the same material all
+// day, and the owner's page got 2 leads. The colleague's value was in FINDING rules the machine gate missed,
+// not in judging each item. So: the owner's page and the dispatcher ask the MACHINE render gate (mockRenderGate.ts,
+// not acknowledgeable, re-judged on every rule change) and the owner's own yes — a colleague's PASS is not needed.
+// A colleague's FAIL on the current file still holds the row (a seen fault does not go out); a re-render clears
+// it by mtime. The colleague works on a SAMPLE (`qa-review.mts sample`) and records fault KINDS (`note`,
+// `findings`) that become rules — the 2c doctrine (one fault = one general rule, blind measurement).
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
@@ -37,7 +47,13 @@ export const APPROVAL_PENDING_NOTE = "JÓVÁHAGYÁSRA VÁR (egylépéses átnéz
  * one-step reviewer had parked as „JÓVÁHAGYÁSRA VÁR” showed in the CRM as awaiting HIS approval
  * („1664 jóváhagyandó … ezek a régiek”) — a row only says that after the colleague's pass.
  */
-export const QA_WAIT_NOTE = "minőségi kolléga: még nem nézte át — a tulaj lapjára csak az ő jóváhagyása után kerül";
+export const QA_WAIT_NOTE = "gépi kapura vár — a tulaj lapjára a render-kapu passza után kerül (mindkét tervvel)";
+/** The same row's note as written before 2026-11-26 (1 800+ live rows carry it); matched everywhere alongside the new one. */
+export const QA_WAIT_NOTE_LEGACY = "minőségi kolléga: még nem nézte át — a tulaj lapjára csak az ő jóváhagyása után kerül";
+/** Every note of a row waiting for the chain (owner's page / refresh / re-gate / messenger presence read). */
+export const CHAIN_WAIT_NOTES: readonly string[] = [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE, QA_WAIT_NOTE_LEGACY];
+/** `mock_artifact.inputs` key holding the colleague's non-blocking findings (fault kinds → rule candidates). */
+export const QA_FINDINGS_KEY = "qaFindings";
 /** `mock_artifact.inputs` key holding the owner's approval. */
 export const OWNER_APPROVAL_KEY = "ownerApproval";
 /** The dispatch note of a row held because its mock changed after the owner's yes. */
@@ -128,26 +144,106 @@ export async function qaReviewState(artifactId: string): Promise<QaState> {
   return review.verdict === "pass" ? { state: "pass", review } : { state: "fail", review };
 }
 
-/** Operator-facing reason why a mock may not go out yet; null when the colleague passed it. */
+/**
+ * Operator-facing reason why a mock may not go out; null when nothing blocks. Since 2026-11-26 only a
+ * colleague's FAIL on the current file (and a missing file) blocks — no review, a stale review or a pass
+ * all let the machine gate and the owner decide.
+ */
 export function qaBlockReason(s: QaState): string | null {
   switch (s.state) {
-    case "pass":
-      return null;
     case "fail":
       return `${QA_HOLD_PREFIX} nem hagyta jóvá — ${s.review.note}`;
-    case "stale":
-      return QA_STALE_NOTE;
     case "nofile":
       return "a mock fájlja hiányzik";
     default:
-      return `${QA_HOLD_PREFIX} még nem nézte át (kiküldés csak a jóváhagyása után)`;
+      return null;
   }
 }
 
+async function mtimeOfArtifact(artifactId: string): Promise<number | null> {
+  const a = await db.selectFrom("mock_artifact").select("path").where("id", "=", artifactId).executeTakeFirst();
+  return mockMtime(a?.path);
+}
+
+/** The current file's mtime (seconds) of a mock, null when the file is missing — the gates' binding key. */
+export const mockFileMtime = mtimeOfArtifact;
+
+export interface QaFinding {
+  /** Fault KIND, the rule candidate (e.g. „szobakártyán nem szoba”). */
+  readonly category: string;
+  /** Where it shows (sheet, screen) — so the coordinator finds it. */
+  readonly where: string;
+  readonly by: string;
+  readonly at: string;
+  readonly mtime: number;
+}
+
 /**
- * Record the colleague's verdict on the mock file as it is NOW. A fail holds the artifact's queued
- * dispatch rows with the reason; a pass moves the queued rows (and those an earlier fail or a stale
- * review held) to the owner's approval page — `requeued` counts them.
+ * A NON-blocking finding on a mock (owner 2026-11-26): the colleague names the fault kind and where it is;
+ * nothing is held. `findings` tallies the kinds across mocks — a kind seen on two or more mocks is a rule
+ * candidate for the render gate or the generator, not an item to fail one by one.
+ */
+export async function recordQaFinding(artifactId: string, category: string, where: string, by: string): Promise<{ ok: true; total: number } | { ok: false; error: string }> {
+  const c = category.trim();
+  if (c.length < 4) return { ok: false, error: "a hiba-fajta legalább 4 karakter (ebből lesz a szabály)" };
+  const mtime = await mtimeOfArtifact(artifactId);
+  if (mtime == null) return { ok: false, error: "nincs ilyen mock, vagy a fájlja hiányzik" };
+  const f: QaFinding = { category: c, where: where.trim(), by, at: new Date().toISOString(), mtime };
+  await db
+    .updateTable("mock_artifact")
+    .set({ inputs: sql`jsonb_set(coalesce(inputs, '{}'::jsonb), '{qaFindings}', coalesce(inputs->'qaFindings', '[]'::jsonb) || ${JSON.stringify([f])}::jsonb, true)` })
+    .where("id", "=", artifactId)
+    .execute();
+  const r = await db.selectFrom("mock_artifact").select(sql<number>`jsonb_array_length(coalesce(inputs->'qaFindings', '[]'::jsonb))`.as("n")).where("id", "=", artifactId).executeTakeFirst();
+  return { ok: true, total: Number(r?.n ?? 0) };
+}
+
+/** The fault KIND of a fail note: the text before the first „ — ” / „:” (the colleagues write „kind — where”). */
+export function faultKindOf(note: string): string {
+  const m = /^\s*(?:\(\d+\)\s*)?([^—:\n]{4,80}?)\s*(?:—|:|$)/u.exec(note);
+  return (m?.[1] ?? note.slice(0, 60)).trim().toLowerCase();
+}
+
+export interface FaultTally {
+  readonly kind: string;
+  readonly mocks: number;
+  readonly leads: number;
+  readonly examples: readonly string[];
+}
+
+/**
+ * Fault kinds across the mocks since `since` — from the non-blocking findings and from the fail notes —
+ * counted by mock and by lead, most frequent first. Two or more mocks with the same kind = a rule to write.
+ */
+export async function faultTally(since: Date): Promise<FaultTally[]> {
+  const rows = await sql<{ id: string; lead_id: string; kind: string }>`
+    select a.id, a.lead_id, f->>'category' as kind
+      from mock_artifact a, jsonb_array_elements(coalesce(a.inputs->'qaFindings', '[]'::jsonb)) f
+     where (f->>'at')::timestamptz >= ${since.toISOString()}::timestamptz
+    union all
+    select a.id, a.lead_id, a.inputs->'qaReview'->>'note' as kind
+      from mock_artifact a
+     where a.inputs->'qaReview'->>'verdict' = 'fail' and (a.inputs->'qaReview'->>'at')::timestamptz >= ${since.toISOString()}::timestamptz`.execute(db);
+  const by = new Map<string, { mocks: Set<string>; leads: Set<string>; examples: string[] }>();
+  for (const r of rows.rows) {
+    const k = faultKindOf(r.kind ?? "");
+    if (!k) continue;
+    const e = by.get(k) ?? { mocks: new Set(), leads: new Set(), examples: [] };
+    e.mocks.add(r.id);
+    e.leads.add(r.lead_id);
+    if (e.examples.length < 3) e.examples.push(r.id.slice(0, 8));
+    by.set(k, e);
+  }
+  return [...by.entries()]
+    .map(([kind, e]) => ({ kind, mocks: e.mocks.size, leads: e.leads.size, examples: e.examples }))
+    .sort((a, b) => b.mocks - a.mocks || a.kind.localeCompare(b.kind));
+}
+
+/**
+ * Record the colleague's verdict on the mock file as it is NOW. A fail holds the artifact's queued and
+ * chain-waiting dispatch rows with the reason (a seen fault does not go out); a pass moves the queued rows
+ * (and those an earlier fail held) to the owner's page — since 2026-11-26 the pass is not required there,
+ * the machine gate and the owner decide. `requeued` counts the moved rows.
  */
 export async function recordQaReview(
   artifactId: string,
@@ -174,7 +270,7 @@ export async function recordQaReview(
       .updateTable("outreach_dispatch")
       .set({ status: "held", note: `${QA_HOLD_PREFIX} ${n}`.slice(0, 1000) })
       .where("artifact_id", "=", artifactId)
-      .where("status", "=", "queued")
+      .where((eb) => eb.or([eb("status", "=", "queued"), eb.and([eb("status", "=", "held"), eb("note", "in", [...CHAIN_WAIT_NOTES, QA_STALE_NOTE])])]))
       .executeTakeFirst();
     held = Number(r.numUpdatedRows ?? 0);
   } else {

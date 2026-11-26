@@ -329,7 +329,7 @@ export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: Outr
       if (!s) return "";
       let detail = stepDetail(lang, s);
       if (stages && s.key === "contact") detail += ` · ${T(lang, "e-mail: {e} · telefon: {p}", { e: n(stages.contact.email), p: n(stages.contact.phone) })}`;
-      if (stages && s.key === "mock") detail += ` · ${T(lang, "a minőségi kollégán átment: {n}", { n: n(stages.mock.passed) })}`;
+      if (stages && s.key === "mock") detail += ` · ${T(lang, "a gépi kapun átment: {n}", { n: n(stages.mock.passed) })}`;
       if (stages && s.key === "sent" && stages.sendReason) detail += ` · ${T(lang, "miért áll: {why}", { why: stages.sendReason })}`;
       return listItem(lang, s.key, s.state, launchTitle(lang, s.key), detail, launchWho(lang, s.key));
     })

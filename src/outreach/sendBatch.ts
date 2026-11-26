@@ -589,9 +589,10 @@ export async function sendOutreachMail(
     }
   }
 
-  // ⛔⛔ THE QUALITY COLLEAGUE'S LOOK (owner 2026-11-25, mockQaReview.ts): no letter goes out on any
-  // path until a colleague has looked at this very mock file on a phone and passed it. The owner's
-  // sample (`sampleTo`) is itself a look and is exempt.
+  // ⛔⛔ THE QUALITY COLLEAGUE'S LOOK (owner 2026-11-25 / 11-26, mockQaReview.ts): a colleague's FAIL on
+  // this very mock file holds the letter on every path (a seen fault never goes out); since 11-26 the pass
+  // is not required — the machine render gate and the owner's yes decide. The owner's sample (`sampleTo`)
+  // is itself a look and is exempt.
   if (p.artifactId && !opts.sampleTo) {
     const qaBlock = qaBlockReason(await qaReviewState(p.artifactId));
     if (qaBlock) return { ...base, outcome: { kind: "skipped", reason: qaBlock } };

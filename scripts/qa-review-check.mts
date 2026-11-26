@@ -1,9 +1,10 @@
-// gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: minőségi kolléga + tulaj-jóváhagyás minden levél előtt + engedélylistás képszűrő)
+// gate-runner: land-blocking — kiküldési minőség (tulaj 2026-11-25: tulaj-jóváhagyás minden levél előtt + engedélylistás képszűrő; 2026-11-26: a minőségi kolléga szabályfelfedező, a passza nem kapu — a bukása tart)
 // gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
-// ① No letter leaves without the quality colleague's pass on THIS mock file (src/outreach/mockQaReview.ts):
-//    the dispatcher's claim, its per-row check and the shared send path all ask for it; only the
-//    owner's sample letter (`sampleTo`) is exempt. ② The photo filter is an ALLOW-list
+// ① The quality colleague's FAIL on THIS mock file holds the letter on every path (src/outreach/mockQaReview.ts):
+//    the dispatcher's per-row check and the shared send path ask it; the PASS is not required anywhere since
+//    2026-11-26 (ADR-XXXX) — the machine render gate and the owner's yes decide; only the owner's sample letter
+//    (`sampleTo`) is exempt from the fail too. ② The photo filter is an ALLOW-list
 //    (src/media/photoKind.ts): a picture that is not surely the lodging, or too small / dark / blurred,
 //    is "junk" and stays off the page, out of the hero and out of the opening. Hermetic: no DB, no model.
 import { readFileSync } from "node:fs";
@@ -31,15 +32,16 @@ const src = (p: string): string => readFileSync(new URL(`../${p}`, import.meta.u
 const R = (verdict: "pass" | "fail", note = "rendben"): QaReview => ({ verdict, note, by: "teszt", at: "2026-11-25T00:00:00Z", mtime: 1 });
 check("jóváhagyott, friss → mehet", qaBlockReason({ state: "pass", review: R("pass") }) === null);
 check("nem jóváhagyott → nem megy, az indokkal", (qaBlockReason({ state: "fail", review: R("fail", "WC a galériában") }) ?? "").includes("WC a galériában"));
-check("nincs átnézés → nem megy", qaBlockReason({ state: "missing" }) !== null);
-check("az átnézés óta változott mock → nem megy (újra át kell nézni)", qaBlockReason({ state: "stale", review: R("pass") }) === QA_STALE_NOTE);
+check("nincs átnézés → mehet (a kolléga passza nem kapu, tulaj 2026-11-26)", qaBlockReason({ state: "missing" }) === null);
+check("az átnézés óta változott mock → mehet (a bukás a fájlhoz kötött, az új fájlt a gépi kapu ítéli)", qaBlockReason({ state: "stale", review: R("fail") }) === null);
+check("az elavult-jegyzet még létezik (a régi sorok viselik)", QA_STALE_NOTE.length > 10);
 check("hiányzó mockfájl → nem megy", qaBlockReason({ state: "nofile" }) !== null);
 check("hibás tárolt ítélet nem számít átnézésnek", qaReviewOf({ qaReview: { verdict: "maybe", mtime: 1 } }) === null);
 check("a fájl-időbélyeg nélküli ítélet nem számít átnézésnek", qaReviewOf({ qaReview: { verdict: "pass" } }) === null);
 
 // ── ① the wiring ──
 const dispatch = src("src/outreach/autoDispatch.ts");
-check("bekötés: a kiküldő csak kolléga-jóváhagyott mockot vesz fel a sorból", /\$\{MOCK_QA_PASSED_SQL\}/.test(dispatch));
+check("bekötés: a kiküldő NEM kér kolléga-passzt a sorból (tulaj 2026-11-26)", !/\$\{MOCK_QA_PASSED_SQL\}/.test(dispatch));
 const one = dispatch.slice(dispatch.indexOf("async function dispatchOne("), dispatch.indexOf("export async function dispatchRecipient("));
 check(
   "bekötés: a kiküldő soronként is ellenőrzi a friss jóváhagyást, a levél ELŐTT",
@@ -70,7 +72,7 @@ const qaSrc = src("src/outreach/mockQaReview.ts");
 check("a kolléga jóváhagyása NEM küld: a sort a tulaj lapjára teszi", /status: "held", note: APPROVAL_PENDING_NOTE/.test(qaSrc) && !/status: "queued"/.test(qaSrc));
 const aq = src("src/console/approvalQueue.ts");
 // 2026-11-25 (ADR-0479): DISPATCH_PHOTOS_OK_SQL = the ≥5 own-photo rule, or for fewer the CURRENT town pick (mockPhotoGate.ts).
-check("a jóváhagyó lap csak a teljes kört mutatja (kapu + kolléga + 5 saját kép / aktuális településkép + új generátor)",
+check("a jóváhagyó lap csak a teljes kört mutatja (gépi kapu + 5 saját kép / aktuális településkép + új generátor; a kolléga bukása tart)",
   /qaReviewState\(r\.main_id\)/.test(aq) && /cachedRenderGate\(/.test(aq) && /LEAD_OWN_PHOTOS_SQL|DISPATCH_PHOTOS_OK_SQL/.test(aq) && /MOCK_CURRENT_GENERATOR_SQL/.test(aq));
 check("a „Mehet” a mockfájlra bélyegzi a tulaj jóváhagyását", /recordOwnerApproval\(row\.artifact_id/.test(aq));
 check("a várakozó-jegyzet egy helyen él", APPROVAL_PENDING_NOTE.startsWith("JÓVÁHAGYÁSRA VÁR"));
@@ -80,12 +82,18 @@ check("nyitókép-javítás nélkül semmi: a küldési kapu a javítás élesí
   /MOCK_HEROFIX_LIVE_AT/.test(gateSrc) && /terhatasAt/.test(gateSrc) && /STAMP = MOCK_HEROFIX_STAMP/.test(src("scripts/rerender-terhatas.mts")));
 
 // ── ①b the CRM says „awaiting the owner” only for the whole chain (owner 2026-11-25: „1664 … ezek a régiek”) ──
-check("a kollégára váró sor jegyzete NEM a tulaj-várakozóé, és a kolléga jóváhagyása átviszi (QA_HOLD_PREFIX)",
-  QA_WAIT_NOTE !== APPROVAL_PENDING_NOTE && QA_WAIT_NOTE.startsWith(QA_HOLD_PREFIX));
+check("a kapura váró sor jegyzete NEM a tulaj-várakozóé, és nem állítja, hogy a kolléga jóváhagyása kell",
+  QA_WAIT_NOTE !== APPROVAL_PENDING_NOTE && !QA_WAIT_NOTE.startsWith(QA_HOLD_PREFIX) && !/jóváhagyása után/.test(QA_WAIT_NOTE));
+check("a régi (11-26 előtti) várakozó-jegyzetet minden sor-illesztés ismeri (CHAIN_WAIT_NOTES)",
+  /CHAIN_WAIT_NOTES/.test(src("src/generator/mockRefresh.ts")) && /CHAIN_WAIT_NOTES/.test(src("src/mms/messenger.ts")) && /CHAIN_WAIT_NOTES/.test(src("src/console/approvalQueue.ts")));
+check("a kolléga eszköze mintát vesz és hiba-fajtát rögzít (sample / note / findings)",
+  /cmd === "sample"/.test(src("scripts/qa-review.mts")) && /recordQaFinding\(/.test(src("scripts/qa-review.mts")) && /faultTally\(/.test(src("scripts/qa-review.mts")));
+check("vak mérés: a kapu látatlan mintán, a kolléga és a tulaj által nem látott mockokon mér",
+  /QA_REVIEW_KEY\} is null/.test(src("scripts/gate-blind-sample.mts")) && /ownerApproval.*is null/.test(src("scripts/gate-blind-sample.mts")) && /renderGateFor\(/.test(src("scripts/gate-blind-sample.mts")));
 check("a kolléga sora a kollégára váró sorokat is felveszi", /QA_WAIT_NOTE/.test(src("scripts/qa-review.mts")));
 const stock = src("src/console/leadStock.ts");
-check("Lead-állomány: „kiküldhető” csak kolléga-jóváhagyott, javított generátorú mock",
-  /\$\{MOCK_QA_PASSED_SQL\}/.test(stock) && /\$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(stock));
+check("Lead-állomány: „kiküldhető” csak gépi kapun átment, javított generátorú mock",
+  !/\$\{MOCK_QA_PASSED_SQL\}/.test(stock) && /renderGate'->>'verdict' = 'pass'/.test(stock) && /\$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(stock));
 
 // ④ (owner 2026-11-25): <N own photos go out only once the town library is ready AND the owner opened it —
 // since 0155 the town-pick branch sits behind the lead's COUNTRY ROW switch (dispatch_photo_mode, default 'own' = closed).

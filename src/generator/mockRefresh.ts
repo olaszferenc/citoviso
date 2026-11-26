@@ -7,7 +7,7 @@
 // scripts/rerender-terhatas.mts by hand. Now the dispatcher's own timer (scripts/outreach-dispatch.mts
 // tick) re-renders a small batch of them every firing, from the persisted inputs through the CURRENT
 // engine (never the AI planner: the inputs ARE the design, §I), the photo curation included. The
-// refreshed mock goes back to the quality colleague (its row gets QA_WAIT_NOTE); the colleague's pass
+// refreshed mock goes back to the machine gate (its row gets QA_WAIT_NOTE; owner 2026-11-26); a colleague's pass
 // puts it on the owner's approval page — nothing is sent by a refresh.
 //
 // One function, two callers: this timer step and the manual round script (rerender-terhatas.mts).
@@ -21,7 +21,7 @@ import type { Photo, Recipe, SiteData } from "../engine/recipe.js";
 import { gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../media/photoKind.js";
 import { LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
-import { APPROVAL_PENDING_NOTE, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
+import { CHAIN_WAIT_NOTES, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
 import { RENDER_GATE_VERSION, renderGateFor } from "../outreach/mockRenderGate.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "./depthArm.js";
@@ -119,7 +119,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .select(["a.id as id", "a.lead_id as lead_id", "a.path as path", "a.inputs as inputs", "a.generated_at as generated_at", "d.id as dispatchId"])
     .where("d.status", "in", ["queued", "held"])
     // Not the rows a person or a rule took out (twins, no contact …): only those waiting for the review chain.
-    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
@@ -154,7 +154,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
       .innerJoin("lead as l", "l.id", "d.lead_id")
       .select(["d.lead_id as leadId", "d.artifact_id as mainId"])
       .where("d.status", "in", ["queued", "held"])
-      .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+      .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
       .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
       .where(MOCK_CURRENT_GENERATOR_SQL)
       .orderBy("d.queued_at")
@@ -180,7 +180,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .innerJoin("lead as l", "l.id", "d.lead_id")
     .select(db.fn.countAll().as("n"))
     .where("d.status", "in", ["queued", "held"])
-    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
@@ -203,7 +203,7 @@ export async function regateStaleQueue(budgetMs: number, limit = 40): Promise<{ 
     .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
     .select(["d.lead_id as leadId", "d.artifact_id as mainId", "a.inputs as inputs"])
     .where("d.status", "in", ["queued", "held"])
-    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(MOCK_CURRENT_GENERATOR_SQL)
     .orderBy(sql`(coalesce(a.inputs->'qaReview'->>'verdict', '') = 'pass') desc`)

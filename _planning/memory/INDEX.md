@@ -13,6 +13,7 @@
 - [2026-11-26_orszagok_arazas_2_fazis.md](2026-11-26_orszagok_arazas_2_fazis.md) — 2026-11-26 — „Országok / Árazás” 2. fázis: új ország listából, Indulás / Szünetel (SUB cita363cd23)
 - [2026-11-26_orszagok_arazas_1_fazis.md](2026-11-26_orszagok_arazas_1_fazis.md) — 2026-11-26 — „Országok / Árazás” 1. fázis: egy lap, táblázat + három fül (SUB cita363cd23)
 - [2026-11-26_orszag-sav-valasz-forditas.md](2026-11-26_orszag-sav-valasz-forditas.md) — 2026-11-26 — Riport ország-sáv minden fülön + bejövő üzenet országa és fordítása (Bábel)
+- [2026-11-26_minosegi_kollega_szabalyfelfedezo.md](2026-11-26_minosegi_kollega_szabalyfelfedezo.md) — 2026-11-26 — Miért nem jönnek a jóváhagyandók; a minőségi kolléga szabályfelfedező lesz
 - [2026-11-26_kivezetett_sablon_kapu.md](2026-11-26_kivezetett_sablon_kapu.md) — 2026-11-26 — Kivezetett sablon: kiküldési és próba-kapu (+ Freedom 50 új tervek)
 - [2026-11-26_fooldal-ar-orszag-szerint.md](2026-11-26_fooldal-ar-orszag-szerint.md) — 2026-11-26 — A főoldal ára a látogató országából, a nyelve a böngészőből (ADR-0490)
 - [2026-11-26_eles_konzol_gyorsitas.md](2026-11-26_eles_konzol_gyorsitas.md) — 2026-11-26 — Éles konzol gyorsítása (35 mp → 0,3 mp)

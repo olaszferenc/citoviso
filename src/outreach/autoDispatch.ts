@@ -27,7 +27,7 @@ import { assessMockPhotos, photoAcksOf, photoGateBlocks } from "./mockPhotoHealt
 import { ackCoversVerdicts, blockingVerdicts, hasPendingReview, verdictAckOf } from "./mockVerdictGate.js";
 import { sendOutreachMail } from "./sendBatch.js";
 import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "./mockPhotoGate.js";
-import { MOCK_OWNER_APPROVED_SQL, MOCK_QA_PASSED_SQL, ownerApprovalBlock, QA_STALE_NOTE, qaBlockReason, qaReviewState } from "./mockQaReview.js";
+import { MOCK_OWNER_APPROVED_SQL, ownerApprovalBlock, qaBlockReason, qaReviewState } from "./mockQaReview.js";
 import { dailyCapFor, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { planChainPassed, secondPlanBlock, secondPlanOf } from "./secondPlan.js";
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
@@ -465,8 +465,9 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       // fewer goes too when its mock carries the CURRENT town pick (mockPhotoGate.DISPATCH_PHOTOS_OK_SQL).
       // The rest stay QUEUED, untouched, for a rerender (no hold churn, no lost place).
       .where(sql<boolean>`exists (select 1 from lead l, mock_artifact a where l.id = outreach_dispatch.lead_id and a.id = outreach_dispatch.artifact_id and ${DISPATCH_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
-      // …and the quality colleague passed it (owner 2026-11-25, mockQaReview.ts) — else it stays queued for the look.
-      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_QA_PASSED_SQL} and ${MOCK_OWNER_APPROVED_SQL})`)
+      // …and the OWNER approved it on his page (owner 2026-11-25). Owner 2026-11-26: the quality colleague's
+      // pass is not asked here any more (mockQaReview.ts) — dispatchOne still holds a colleague-FAILED file.
+      .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWNER_APPROVED_SQL})`)
       // 0155: only the site classes the lead's country row picks (dispatch_sites).
       .where(DISPATCH_SITE_OK)
       .orderBy(DISPATCH_PRIORITY)
@@ -561,11 +562,11 @@ async function dispatchOne(
   // ADR-0423: a retired-template mock never goes out (templateGate.ts); a fresh mock re-queues it.
   const retired = retiredTemplateReason(art.inputs);
   if (retired) return { status: "held", note: retired };
-  // The quality colleague's look (owner 2026-11-25): the pass must be on THIS file — a re-render since
-  // makes it stale, and the row waits (held) for a new look; the colleague's next pass re-queues it.
+  // The quality colleague's look (owner 2026-11-25 / 11-26): only a FAIL on THIS file holds — a re-render
+  // since clears it by mtime; no review or a pass lets the machine gate and the owner's yes decide.
   const qa = await qaReviewState(artifactId);
   const qaBlock = qaBlockReason(qa);
-  if (qaBlock) return { status: "held", note: qa.state === "stale" ? QA_STALE_NOTE : qaBlock };
+  if (qaBlock) return { status: "held", note: qaBlock };
   // The owner's yes on the approval page (owner 2026-11-25), on THIS file too.
   const ownerBlock = await ownerApprovalBlock(artifactId);
   if (ownerBlock) return { status: "held", note: ownerBlock };

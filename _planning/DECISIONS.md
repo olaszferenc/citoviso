@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-minosegi-kollega-szabalyfelfedezo-nem-kapu.md) — A minőségi kolléga szabályfelfedező, nem darabonkénti kapu: a tulaj lapját a gépi render-kapu táplálja
 - [ADR-0494](decisions/0494-land-optimista-elokor-a-kapuk-a-land-zar-elott.md) — Land: optimista előkör — a kapuk a land-zár ELŐTT futnak, a zár alatt csak a push (2026-11-26)
 - [ADR-0493](decisions/0493-unnepnapok-automatikus-ingyenes-forrasbol-nager.md) — Ünnepnapok automatikus, ingyenes forrásból (Nager.Date), felvételkor és évente, forrás-jelöléssel
 - [ADR-0492](decisions/0492-orszagok-arazas-3-fazis-az-indulas-lista.md) — „Országok / Árazás” 3. fázis: az indulás-lista részletezve (Bábel négy részre, kontakt, mock, kiküldés oka)

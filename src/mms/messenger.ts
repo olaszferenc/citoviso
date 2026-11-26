@@ -529,13 +529,13 @@ async function messengerPhones(
 /** Numbers of leads waiting for the owner's approval with no fresh presence read (requested ones first). */
 export async function presenceDue(now: Date = new Date(), limit = PRESENCE_BATCH): Promise<string[]> {
   // The colleague's not-yet-reviewed rows count too: their contact is checked while they wait (owner 2026-11-25).
-  const { APPROVAL_PENDING_NOTE, QA_WAIT_NOTE } = await import("../outreach/mockQaReview.js");
+  const { CHAIN_WAIT_NOTES } = await import("../outreach/mockQaReview.js");
   const rows = await sql<{ phone: string | null; country: string | null; area_country: string | null }>`
     select l.raw->>'phone' as phone, l.raw->>'country' as country,
            (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id
              where sr.id = l.scrape_run_id) as area_country
       from outreach_dispatch d join lead l on l.id = d.lead_id
-     where d.status = 'held' and d.note in (${APPROVAL_PENDING_NOTE}, ${QA_WAIT_NOTE}) and coalesce(l.raw->>'phone', '') <> ''
+     where d.status = 'held' and d.note in (${sql.join(CHAIN_WAIT_NOTES)}) and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   // Leads with an e-mail address first (owner 2026-11-08: the e-mail + Viber leads are what matters).
   // ORSZÁG-RÉTEG 3/5: a mobile of the lead's own country, where its row lets Viber + the pair go.
@@ -587,13 +587,13 @@ export async function whatsappPresenceDue(now: Date = new Date()): Promise<strin
   const last = Date.parse((await getSetting(WA_LOOKUP_AT_KEY)) ?? "");
   if (Number.isFinite(last) && now.getTime() - last < WA_LOOKUP_EVERY_MS) return [];
   // The colleague's not-yet-reviewed rows count too: their contact is checked while they wait (owner 2026-11-25).
-  const { APPROVAL_PENDING_NOTE, QA_WAIT_NOTE } = await import("../outreach/mockQaReview.js");
+  const { CHAIN_WAIT_NOTES } = await import("../outreach/mockQaReview.js");
   const rows = await sql<{ phone: string | null; country: string | null; area_country: string | null }>`
     select l.raw->>'phone' as phone, l.raw->>'country' as country,
            (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id
              where sr.id = l.scrape_run_id) as area_country
       from outreach_dispatch d join lead l on l.id = d.lead_id
-     where d.status = 'held' and d.note in (${APPROVAL_PENDING_NOTE}, ${QA_WAIT_NOTE}) and coalesce(l.raw->>'phone', '') <> ''
+     where d.status = 'held' and d.note in (${sql.join(CHAIN_WAIT_NOTES)}) and coalesce(l.raw->>'phone', '') <> ''
      order by (coalesce(trim(l.raw->>'email'), '') <> '') desc, (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
   let phones = await messengerPhones(rows.rows, "whatsapp");
   if (!phones.length) return [];

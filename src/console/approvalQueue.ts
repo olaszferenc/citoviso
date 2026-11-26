@@ -1,6 +1,7 @@
 // Owner approval page for the new single-pass chain (owner 2026-11-06): every lead the
 // single-pass checker let through (MEHET) waits HELD with the PENDING note until the owner
-// looks at the whole site and says yes or no. Left: the waiting list. Right: the full site
+// looks at the whole site and says yes or no. Since 2026-11-26 (ADR-XXXX) the list is fed by the
+// MACHINE render gate on both plans, not by the quality colleague's pass (see mockQaReview.ts). Left: the waiting list. Right: the full site
 // of the selected lead (both plans, desktop or phone width), scaled to fit. "Mehet" puts the
 // row back on the dispatch queue, "Nem" cancels it; either way the next lead opens.
 
@@ -28,7 +29,7 @@ import {
   type Presence,
 } from "../mms/messenger.js";
 
-import { APPROVAL_PENDING_NOTE, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, CHAIN_WAIT_NOTES, mockFileMtime, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
 import { planChainPassed, secondPlanOf } from "../outreach/secondPlan.js";
 import { ownViewHref } from "./prospectPath.js";
 import { cachedRenderGate, stockOkFor } from "../outreach/mockRenderGate.js";
@@ -96,7 +97,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       from outreach_dispatch d
       join lead l on l.id = d.lead_id
       join mock_artifact a on a.id = d.artifact_id
-     where d.status = 'held' and d.note = ${APPROVAL_PENDING_NOTE}
+     where d.status = 'held' and d.note in (${sql.join(CHAIN_WAIT_NOTES)})
        and a.status = 'approved'
        and ${DISPATCH_PHOTOS_OK_SQL}
        and ${MOCK_CURRENT_GENERATOR_SQL}
@@ -112,13 +113,16 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
   const cfg = await getMessengerConfig();
   const presence = await presenceOf(rows.rows.map((r) => mobile(r)).filter((p): p is string => !!p));
   // Owner 2026-11-25: only what went through the WHOLE chain is shown — the machine render gate passed
-  // on the current file (cached verdict, current rule version) and the quality colleague passed THIS file.
+  // on the current file (cached verdict, current rule version). Owner 2026-11-26: the quality colleague's
+  // pass is NOT required (the colleague finds rules on a sample); a colleague's FAIL on this file still holds.
   const whole: typeof rows.rows = [];
   for (const r of rows.rows) {
     const qa = await qaReviewState(r.main_id);
-    if (qa.state !== "pass") continue;
+    if (qa.state === "fail" || qa.state === "nofile") continue;
+    const mtime = await mockFileMtime(r.main_id);
+    if (mtime == null) continue;
     const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", r.main_id).executeTakeFirst();
-    if (cachedRenderGate(a?.inputs, qa.review.mtime, await stockOkFor(r.main_id))?.verdict !== "pass") continue;
+    if (cachedRenderGate(a?.inputs, mtime, await stockOkFor(r.main_id))?.verdict !== "pass") continue;
     // …and its SECOND plan went through the same chain (owner 2026-11-25: „Csak az hagyható jóvá, ahol
     // van második terv is.”) — the very plan the dispatcher attaches (secondPlan.ts).
     const alt = await secondPlanOf(r.lead_id, r.main_id);
@@ -459,7 +463,7 @@ function pageTop(tab: "wait" | "notseen", waiting: number, notSeen: number, cfg:
       ? T(lang, "Messenger-út: a fék leállította ({why}) — minden MMS + SMS-ben megy, együtt.", { why: cfg.brake.reason })
       : T(lang, "Messenger-út: kikapcsolva — minden MMS + SMS-ben megy, együtt.");
   return (
-    `${tabs}<p class="aq-intro">${esc(tab === "wait" ? T(lang, "Itt döntöd el, mehet-e ki a megkeresés. Csak az a megkeresés van itt, amelynek mindkét terve végigment a láncon (gépi kapu, minőségi kolléga).") : intro)}</p>` +
+    `${tabs}<p class="aq-intro">${esc(tab === "wait" ? T(lang, "Itt döntöd el, mehet-e ki a megkeresés. Csak az a megkeresés van itt, amelynek mindkét terve átment a gépi kapun.") : intro)}</p>` +
     (tab === "wait" ? "" : `<div class="aq-state${on ? "" : " off"}"><span class="dot"></span><span>${esc(state)}</span><a href="/">${esc(T(lang, "Irányítópult"))}</a></div>`)
   );
 }
