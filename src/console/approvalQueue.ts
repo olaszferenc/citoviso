@@ -230,7 +230,9 @@ export async function decideApproval(leadId: string, approve: boolean, by: strin
       .select("artifact_id")
       .where("lead_id", "=", leadId)
       .where("status", "=", "held")
-      .where("note", "=", APPROVAL_PENDING_NOTE)
+      // Every chain-waiting note (owner 2026-11-26 22:43: „hiába kattintok a nem mehet ki gombra” — the page listed
+      // the gate-waiting rows since ADR-0495, but the decision only touched the old pending note).
+      .where("note", "in", [...CHAIN_WAIT_NOTES])
       .executeTakeFirst();
     if (!row?.artifact_id || !(await recordOwnerApproval(row.artifact_id, by))) return false;
     // The yes covers both plans the page showed (the second plan is part of the offer, 2026-11-25).
@@ -242,7 +244,7 @@ export async function decideApproval(leadId: string, approve: boolean, by: strin
     .set({ status: approve ? "queued" : "cancelled", note: `${approve ? APPROVED_NOTE : REJECTED_NOTE} · ${by}` })
     .where("lead_id", "=", leadId)
     .where("status", "=", "held")
-    .where("note", "=", APPROVAL_PENDING_NOTE)
+    .where("note", "in", [...CHAIN_WAIT_NOTES])
     .executeTakeFirst();
   return Number(r.numUpdatedRows ?? 0) > 0;
 }

@@ -75,6 +75,8 @@ const aq = src("src/console/approvalQueue.ts");
 check("a jóváhagyó lap csak a teljes kört mutatja (gépi kapu + 5 saját kép / aktuális településkép + új generátor; a kolléga bukása tart)",
   /qaReviewState\(r\.main_id\)/.test(aq) && /cachedRenderGate\(/.test(aq) && /LEAD_OWN_PHOTOS_SQL|DISPATCH_PHOTOS_OK_SQL/.test(aq) && /MOCK_CURRENT_GENERATOR_SQL/.test(aq));
 check("a „Mehet” a mockfájlra bélyegzi a tulaj jóváhagyását", /recordOwnerApproval\(row\.artifact_id/.test(aq));
+check("a Mehet / Nem mehet ki minden kapura váró sort elér (CHAIN_WAIT_NOTES a döntésben; tulaj 2026-11-26 22:43)",
+  (aq.match(/\.where\("note", "in", \[\.\.\.CHAIN_WAIT_NOTES\]\)/g) ?? []).length >= 2);
 check("a várakozó-jegyzet egy helyen él", APPROVAL_PENDING_NOTE.startsWith("JÓVÁHAGYÁSRA VÁR"));
 
 const gateSrc = src("src/outreach/mockPhotoGate.ts");
