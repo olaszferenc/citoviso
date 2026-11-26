@@ -27,9 +27,10 @@ import { reverseGeocode } from "../scraper/enrichGeo.js";
 import { namesTown } from "../generator/townPhoto.js";
 import { clipImageEmbedding, photoKindAvailable } from "./photoKind.js";
 import LABELS from "./townPickLabels.json" with { type: "json" };
+import { judgeTownCandidates, type JudgeItem, type JudgeVerdict } from "./townJudge.js";
 
 /** Bump when the labels, the rules or the thresholds change: the send gate refuses an older pick. */
-export const TOWN_PICK_VERSION = 5;
+export const TOWN_PICK_VERSION = 6;
 /** The approved threshold variant (owner 2026-11-25: „Laza” + the second round). */
 export const TOWN_PICK_THRESHOLD = "laza";
 const T_MIN = 0.5;
@@ -71,6 +72,8 @@ export interface TownPick {
   readonly dhash?: string;
   /** May stand as the hero (≥ 1600 px, ≥ 1.3:1)? Gallery pictures may be smaller. */
   readonly heroOk: boolean;
+  /** v6: the final judge's verdict on this picture (media/townJudge.ts), when it was judged. */
+  readonly judge?: { readonly verdict: JudgeVerdict; readonly reason: string };
 }
 
 export interface TownPickInput {
@@ -89,6 +92,9 @@ export interface TownPickStats {
   clipRuns: number;
   candidates: number;
   seconds: number;
+  judgeCalls?: number;
+  judgeCostUsd?: number;
+  judgeError?: string;
   rejected: Record<string, number>;
 }
 
@@ -587,7 +593,7 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
   if (!photoKindAvailable()) throw new Error("a képfelismerő modell hiányzik ezen a gépen — a településkép nem választható");
   const t0 = Date.now();
   const net = new Net();
-  const accepted: { c: Cand; s: TownScores; rank: number; km?: number; dhash?: string }[] = [];
+  const accepted: { c: Cand; s: TownScores; rank: number; km?: number; dhash?: string; buf: Buffer; verdict?: JudgeItem }[] = [];
   const seen = new Set<string>();
 
   const judge = async (cands: Cand[], max: number): Promise<void> => {
@@ -621,7 +627,7 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
           continue;
         }
         const dhash = await dHashFromBuffer(b).catch(() => undefined);
-        accepted.push({ c, s, rank: rankOf(s, c), ...(km !== undefined ? { km } : {}), ...(dhash ? { dhash } : {}) });
+        accepted.push({ c, s, rank: rankOf(s, c), buf: b, ...(km !== undefined ? { km } : {}), ...(dhash ? { dhash } : {}) });
       }
       await sleep(150);
     }
@@ -673,10 +679,13 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
 
   // ② the landscape around — ONLY when the town itself gave fewer than HEROES_WANT good heroes (coordinator
   // 2026-11-25, speed: the geosearch rings were ~40 % of a town's time and rarely changed the pick).
+  let landDone = false;
+  const collectLand = async (): Promise<void> => {
+  if (landDone) return;
+  landDone = true;
   const c2: Cand[] = [];
   const rings: [number, number][] = [[0, 0], [0.11, 0], [-0.11, 0], [0, 0.16], [0, -0.16]];
-  const thin = heroCount() < HEROES_WANT;
-  if (thin) for (const [dl, dg] of rings) c2.push(...(await byGeo(net, t.lat + dl, t.lon + dg, "land", dl || dg ? "környék ~12 km" : "környék 0–10 km")));
+  for (const [dl, dg] of rings) c2.push(...(await byGeo(net, t.lat + dl, t.lon + dg, "land", dl || dg ? "környék ~12 km" : "környék 0–10 km")));
   // Own country only, from the picture's coordinate (a coordinate-less fallback picture is not taken).
   const own: Cand[] = [];
   for (const c of c2) {
@@ -697,9 +706,15 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
       accepted.splice(i, 1);
     }
   }
+  };
+  if (heroCount() < HEROES_WANT) await collectLand();
 
-  // ③ the region — only when no hero has turned up yet.
-  if (heroCount() === 0 && wd) {
+  // ③ the region — only when no hero has turned up yet (and again when the judge found no good one, below).
+  let regionDone = false;
+  const collectRegion = async (): Promise<void> => {
+  if (regionDone || !wd) return;
+  regionDone = true;
+  {
     const c3: Cand[] = [];
     let it = wd.it;
     for (let lvl = 0; lvl < 2 && it; lvl++) {
@@ -728,19 +743,57 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
       }
     }
   }
+  };
+  if (heroCount() === 0) await collectRegion();
 
   // Order: the town before the landscape before the region, by rank inside a tier.
   const tierRank: Record<TownTier, number> = { town: 0, land: 1, region: 2 };
-  accepted.sort((a, b) => tierRank[a.c.tier] - tierRank[b.c.tier] || b.rank - a.rank);
-  // One view once: a near-identical picture (same dHash within SAME_VIEW_BITS) of a better one leaves.
-  const distinct: typeof accepted = [];
-  for (const a of accepted) {
-    const twin = distinct.some((d) => {
-      const dist = a.dhash && d.dhash ? hashDistance(a.dhash, d.dhash) : null;
-      return dist !== null && dist <= SAME_VIEW_BITS;
+  let distinct: typeof accepted = [];
+  const rebuild = (): void => {
+    accepted.sort((a, b) => tierRank[a.c.tier] - tierRank[b.c.tier] || b.rank - a.rank);
+    // One view once: a near-identical picture (same dHash within SAME_VIEW_BITS) of a better one leaves.
+    distinct = [];
+    for (const a of accepted) {
+      const twin = distinct.some((d) => {
+        const dist = a.dhash && d.dhash ? hashDistance(a.dhash, d.dhash) : null;
+        return dist !== null && dist <= SAME_VIEW_BITS;
+      });
+      if (!twin) distinct.push(a);
+    }
+  };
+  rebuild();
+  const heroSized = (a: (typeof accepted)[number]): boolean => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier);
+
+  // v6 THE FINAL JUDGE (media/townJudge.ts, coordinator 2026-11-25): CLIP pre-filters, a subscription `claude -p`
+  // image verdict decides — tier by tier (the town, then the landscape around, then the region), the CLIP top 6 of
+  // a tier in ONE call. Only „jó” may open a page; no „jó” in any tier → no hero → the lead gets no letter.
+  const judged = new Set<TownTier>();
+  const goodOf = async (tier: TownTier): Promise<(typeof accepted)[number][]> => {
+    const pool = distinct.filter((a) => a.c.tier === tier && heroSized(a)).slice(0, 6);
+    if (!pool.length || judged.has(tier)) return pool.filter((a) => a.verdict?.verdict === "jó");
+    judged.add(tier);
+    const note = tier === "town" ? "A képek a település saját képei." : tier === "land" ? "A képek a település KÖRNYÉKÉNEK tájképei (a lapon „a környék tája” felirattal jelennek meg)." : "A képek a település RÉGIÓJÁNAK tájképei.";
+    const r = await judgeTownCandidates(t.city, t.country, note, pool.map((a, i) => ({ id: `k${i + 1}`, buf: a.buf, title: a.c.title })));
+    net.stats.judgeCostUsd = +((net.stats.judgeCostUsd ?? 0) + r.costUsd).toFixed(4);
+    net.stats.judgeCalls = (net.stats.judgeCalls ?? 0) + 1;
+    if (r.error) net.stats.judgeError = r.error;
+    pool.forEach((a, i) => {
+      const v = r.items.find((x) => x.id === `k${i + 1}`);
+      if (v) a.verdict = v;
+      net.reject(`bíró: ${v?.verdict ?? "nincs ítélet"}`);
     });
-    if (twin) net.reject("ugyanaz a látvány");
-    else distinct.push(a);
+    return pool.filter((a) => a.verdict?.verdict === "jó");
+  };
+  let good = await goodOf("town");
+  if (!good.length) {
+    await collectLand();
+    rebuild();
+    good = await goodOf("land");
+  }
+  if (!good.length) {
+    await collectRegion();
+    rebuild();
+    good = await goodOf("region");
   }
 
   const toPick = (a: (typeof accepted)[number], hero: boolean): TownPick => ({
@@ -755,11 +808,12 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     ...(a.km !== undefined ? { km: a.km } : {}),
     bucket: a.s.bucket,
     ...(a.dhash ? { dhash: a.dhash } : {}),
-    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier),
+    heroOk: hero && a.verdict?.verdict === "jó",
+    ...(a.verdict ? { judge: { verdict: a.verdict.verdict, reason: a.verdict.reason.slice(0, 200) } } : {}),
   });
 
-  // Heroes: the hero-sized ones, best tier first; a fallback tier only fills when the town has fewer than 3.
-  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier));
+  // Heroes: ONLY the judge's „jó” pictures, in rank order (one tier — the first that had a good one).
+  const heroPool = good;
   const heroes: typeof accepted = [];
   // At most 3 of one kind (5 harbour views of Makarska would make its leads' pages look alike).
   for (const a of heroPool) {
@@ -769,7 +823,8 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     heroes.push(a);
   }
   // Gallery: the rest of the town and its landscape (never the region), round-robin over the buckets.
-  const rest = distinct.filter((a) => !heroes.includes(a) && a.c.tier !== "region");
+  // A picture the judge called „rossz” (it would pass for the lodging, a sign, a station…) stays off the gallery too.
+  const rest = distinct.filter((a) => !heroes.includes(a) && a.c.tier !== "region" && a.verdict?.verdict !== "rossz");
   const order: GalleryBucket[] = ["strand", "square", "sight", "landscape"];
   const byBucket = new Map(order.map((b) => [b, rest.filter((a) => a.s.bucket === b)]));
   const gallery: typeof accepted = [];

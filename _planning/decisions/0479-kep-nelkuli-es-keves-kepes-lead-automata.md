@@ -38,6 +38,13 @@ A kép nélküli leadek mockja eddig egyetlen vak Wikipedia-képet kapott (ADR-0
   - v5 (fakóság-padló: CLIP „bright” ≥0,05; a környék- és régió-tartalékban a sima vidék is lehet hero, ha fényes és jó minőségű; bővebb régiós tájkép-keresés; saját kiszolgálású stílusos szobatár Commons + Rawpixel CC0-ból, az éles képszűrőn és a régi táron is átszűrve; kártya- és galéria-ismétlés javítva; a kapu a hero-t a választás saját szintjén ítéli): 18 mock → 8 jó · 7 gyenge · 2 rossz (épülethomlokzat felirattal; egyetlen tető) · 1 visszatartva (sehol nincs kép).
   - A cél (0 rossz, ≤3 gyenge) nincs meg. A v5-ös tartalék-lazítás több gyenge tájképet enged be. Következő szabályok: a homlokzat- és tető-pár szigorítása a 4 kör ítéleteivel, a gyenge tájkép (fa, ég, park) kizárása a tartalékból is, ha van jobb.
 
+### v6 — végső bíró (koordinátor 2026-11-26)
+- A CLIP-küszöbök 4 vak kör után ~8 jó / 7 gyenge / 0–2 rossz körül megálltak. Ezért a CLIP csak előszűr: szintenként a legjobb 6 hero-jelöltet egy előfizetéses `claude -p` képes ítélet bírálja (`media/townJudge.ts`: `--tools ""`, adat-keretezés, írott általános kritériumlista, JSON-séma), és csak a „jó” lehet hero.
+- Ha a településen nincs „jó”, a környék, majd a régió jelöltjei kerülnek a bíró elé; ha egyik sem jó, nincs hero és nincs levél. A „rossz” kép a galériába sem kerül.
+- Költség API-egyenértékben a CLI `total_cost_usd`-jából, a válogatással tárolva: 1–2 hívás településenként, 0,8–2,8 cent.
+- 5. vak kör (20 új település): 13 kép nélküli lead → 7 kimenő (szememmel 5 jó, 2 határeset, 0 rossz), 6 kiesik a „csak jó” szabály miatt (46%).
+- ⚠️ Az éles gépen nincs `claude` CLI. Ott a bíró zártan bukik (nincs hero, nincs levél), amíg a település-válogatás ezen a gépen nem fut (a `kor.sh` mintája szerint), vagy amíg az éles gép nem kap CLI-t. Ez döntés.
+
 ### Eltérés
 - Az ADR-0436 4. pontja megszűnik: a hero nem ismétlődik a galériában.
 - A régi `generator/townPhoto.ts`-t a generátor már nem hívja.

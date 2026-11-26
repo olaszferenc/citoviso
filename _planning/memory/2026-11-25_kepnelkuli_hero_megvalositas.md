@@ -17,7 +17,11 @@ Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `
 - 52 település (első kör): 49 saját kép, 3 környék, 0 semmi; 65 s/település → gyorsítva 32 s/település (3 párhuzamos, nice).
 - Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. Vak 20 (v3, just-in-time): 7 jó, 7 gyenge, 2 rossz (vasúti épület; egyetlen tető, határeset), 4 lapot a kapu visszatartott (kép nélkül, illetve kevesebb mint 12 kép). Vak 20 (v4): 7 jó, 6 gyenge, 0 rossz; 5 visszatartva (3 üres nyitókép, 2 címsor-sortörés). Vak 20 (v5): 8 jó, 7 gyenge, 2 rossz, 1 visszatartva — a cél (0 rossz, ≤3 gyenge) még nincs meg.
 
+## v6 — végső bíró
+- `src/media/townJudge.ts`: a CLIP legjobb 6 jelöltjét egy előfizetéses `claude -p` képes ítélet bírálja, csak a „jó” lehet hero. 5. vak kör: 13 lead → 7 kimenő (0 rossz), 6 kiesik (46%).
+
 ## Nyitott
+- ⚠️ Élesen nincs `claude` CLI: a bíró ott zártan bukik. Döntés kell: a település-válogatás a Debianon fusson (a `kor.sh` mintája szerint), vagy CLI élesre.
 - A `town_photo_dispatch` kapcsolót a tulaj nyitja. Élesítés csak az ő kérésére.
 - A szobatár bővítése (Pexels: a kereső Cloudflare-ellenőrzést ad, saját böngészőprofilos kolléga kell).
 - Fakóság-padló a hero-ra (a v4 gyengéinek fele szürke, párás), vak újraméréssel.
