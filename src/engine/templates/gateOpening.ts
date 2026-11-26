@@ -510,6 +510,13 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   // The highlight list carries STANDARD items only, one per catalogue item (owner 2026-11-26); the hook keeps the
   // highlight's real index.
   const featSeen = new Set<string>();
+  // Not what a heading / the tagline already lists („Kert, terasz, parkoló” — colleague 2, 11-26).
+  for (const t of [data.tagline, firstSentence(data.intro), ...recipe.sections.flatMap((s) => [s.copy?.title, s.copy?.eyebrow, s.copy?.lead])]) {
+    for (const part of (t ?? "").split(/,|\s+és\s+|\s+and\s+|\s+und\s+|\s+i\s+|·|\//)) {
+      const k = catalogueIdFor(part.trim(), data.amenityIconMap);
+      if (k) featSeen.add(k);
+    }
+  }
   const featIdx = data.highlights
     .map((h, i) => ({ h, i, k: catalogueIdFor(h, data.amenityIconMap) }))
     .filter((x) => x.k !== null && !featSeen.has(x.k) && Boolean(featSeen.add(x.k)))

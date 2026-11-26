@@ -328,7 +328,10 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const gridKinds = new Set(data.highlights.slice(0, plan.rows.length).map((h) => catalogueIdFor(h, data.amenityIconMap)).filter(Boolean));
   // …nor what the headline / tagline / intro already lists (11-26, Malomvölgyi: „Parkoló, wifi, bringatároló” in
   // the title, then the same three tiles).
-  for (const t of [copyOf(recipe, "hero").lead, data.tagline, firstSentence(data.intro)]) {
+  // …and EVERY section heading (11-26, colleague 2: the „Nálunk” heading „Kert, terasz, parkoló” then the same tiles —
+  // ~20 of 27 failures).
+  const headings = recipe.sections.flatMap((s) => [s.copy?.title, s.copy?.eyebrow, s.copy?.lead, s.copy?.accent]);
+  for (const t of [copyOf(recipe, "hero").lead, data.tagline, firstSentence(data.intro), ...headings]) {
     for (const part of (t ?? "").split(/,|\s+és\s+|\s+and\s+|\s+und\s+|\s+i\s+|·|\//)) {
       const k = catalogueIdFor(part.trim(), data.amenityIconMap);
       if (k) gridKinds.add(k);
