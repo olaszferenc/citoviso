@@ -49,7 +49,7 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
   sorrendben (régió-felbontás, csempék, felderítés, lead, kontakt, mock, kiküldés). Ami nem kész, annál
   ott áll: **„Mi hiányzik, ki pótolja:”**. Ember csak két helyen kell: a kezdő ár jóváhagyásánál és a
   fizetési tárca megnyitásánál, mindkettő a tulaj döntése. A többit a gép vagy egy munkatárs (például
-  Bábel, a fordító) végzi. Az **„Adatok szerkesztése”** gomb nyitja meg az ország adatainak szerkesztőjét.
+  Bábel, a fordító) végzi. Az **„Adatok szerkesztése”** link (a doboz jobb felső sarkában) nyitja meg az ország adatainak szerkesztőjét.
 - **„Árazás”**: az ország ársora. Ugyanaz az űrlap, ami korábban az „Árazás és értékesítés” lapon
   volt (csomagok, modulok, alapdíj, saját domain, ajánlatok és próba); a részleteit külön súgó írja le.
   Ha több ország ugyanazt az ársort használja, a fül kiírja, melyek, mert a módosítás náluk is érvényes.
@@ -61,7 +61,7 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
   globális beállítás vagy az ország sora). A **„döntve”** jel azt mutatja, amiről a tulaj már
   döntött: ezek országonkénti beállítások lesznek.
 
-![Képernyőkép: egy ország „Ország” füle telefonon — felül az alapadatok, alatta (görgetve) az indítás és az indulás állapota](assets/hu/open-step.png)
+![Képernyőkép: egy ország „Ország” füle telefonon — az „Alapadatok” doboz](assets/hu/open-step.png)
 
 ## Új ország felvétele
 
@@ -78,7 +78,7 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
 
 ## Az adatok szerkesztője
 
-Az ország **„Ország”** fülén az **„Adatok szerkesztése”** gomb nyitja meg. A panel tetején hat lépés van: **„Adatok”** → **„Ár és fizetés”** → **„Nyelv”** → **„Jog”** →
+Az ország **„Ország”** fülén az **„Adatok szerkesztése”** link nyitja meg. A panel tetején hat lépés van: **„Adatok”** → **„Ár és fizetés”** → **„Nyelv”** → **„Jog”** →
 **„Megkeresés”** → **„Megnyitás”**. A lépés színe a lépés állapota, és írás közben frissül.
 
 - **Gyűjtő-lánc szótára** (az „Adatok” lépésben, külön sorban). A megnyitott piacon a gép ember

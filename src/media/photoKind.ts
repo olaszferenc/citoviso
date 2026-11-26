@@ -78,7 +78,7 @@ export const PHOTO_MIN_LUMA = 50;
 /** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
 export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 7;
+const VERSION = 8;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -322,12 +322,17 @@ export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   // 11-26 (quality colleague, Stéghouse): ONE person sitting on the jetty slipped through — the labels named
   // only bikinis and groups. A single person, an angler and children count too.
   if (seasonMass(v) >= SEASON_OFF_PAGE || isNightShot(v)) return true;
+  // A photo-wallpaper beach (palms, bungalow) cropped as a band reads as a real beach at a Siófok flat (11-26,
+  // quality colleague, Vandus) — and a palm beach is no Central-European lodging's own view: off the page.
+  if ((p["a photo wallpaper mural on a wall"] ?? 0) + (p["palm trees on a tropical beach"] ?? 0) >= MURAL_OFF_PAGE) return true;
   return peopleMass(v) >= PEOPLE_OFF_PAGE;
 }
 /** Snow, night, Christmas: the page shows the place as a guest books it, not one evening / one winter
  *  (quality colleague, 11-25 and 11-26: Kőmosó's band snowy, a gallery photo at night). */
 export const SEASON_LABELS = ["a snowy landscape", "a house covered in snow", "a building at night", "christmas decorations"];
 export const SEASON_OFF_PAGE = 0.25;
+/** Wall-mural / tropical-palm-beach mass from which a photo leaves the page. */
+export const MURAL_OFF_PAGE = 0.2;
 /** An OUTDOOR shot whose sky (top fifth) is this dark is a night shot (11-26: Borfa's lamp-lit courtyard and lit
  *  pool, Kőmosó's night yard measured 17–41; 64 fresh daytime photos: none under 55). Indoors the top is a ceiling. */
 export const NIGHT_TOP_LUMA = 45;

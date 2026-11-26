@@ -10,7 +10,8 @@ updated: 2026-11-26
 Az árakat az **„Országok / Árazás”** lapon (CRM › Országok / Árazás) egy ország **„Árazás”**
 fülén állítod be; a régi „Árazás és értékesítés” cím ide visz. A bejelentkezés nélküli főoldal-látogató
 **„Globális”** ársorát a lap táblázata alatti **„Globális ársor szerkesztése”** link nyitja: az a
-képernyő a piac-fülekkel együtt ugyanaz, mint az alábbi kép. Itt állítod be piaconként a valós árakat, a három csomag
+képernyő a piac-fülekkel együtt ugyanaz, mint az alábbi kép (a kép a piac-fülekes ársor-szerkesztőt mutatja; egy ország
+„Árazás” fülén ugyanez a szerkesztő nyílik, de felül az ország „Ár-régió: …” sorával és piac-fülek nélkül). Itt állítod be piaconként a valós árakat, a három csomag
 tartalmát, hogy a saját domain melyik csomagban jár díj nélkül, a lead-ajánlatokat, az ingyenes
 próbát és a kupont. Itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem hirdethet árat.
 Ez az árazás egyetlen forrása: a konfigurátor, a megrendelés és a levelek ár-sora is innen olvas.
@@ -18,7 +19,7 @@ Ez az árazás egyetlen forrása: a konfigurátor, a megrendelés és a levelek 
 **Hol találod:** a bal oldali menüben a **CRM** modul alatt, **„Országok / Árazás”** néven (telefonon röviden „Országok”); ott egy országra koppintva az **„Árazás”** fül. Mellette egy jelvény
 mutatja, hány modul eladható a katalógusból (például „13/14 eladó”).
 
-![Képernyőkép: az Árazás és értékesítés képernyő telefonon, teljes hosszában](assets/hu/screen.png)
+![Képernyőkép: a piac-fülekes ársor-szerkesztő (a „Globális ársor szerkesztése” képernyője) telefonon, teljes hosszában](assets/hu/screen.png)
 
 ## A lap felépítése
 

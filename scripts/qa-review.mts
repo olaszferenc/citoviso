@@ -195,7 +195,7 @@ async function hero(artifactId: string, n: number, why: string): Promise<void> {
   console.log(`✅ nyitókép rögzítve (${n}. jelölt), ${plans.length} terv újrarenderelve — most nézd át őket: shots <id>`);
 }
 
-async function queue(limit: number): Promise<void> {
+async function queue(limit: number, half: "0-7" | "8-f" | null = null): Promise<void> {
   const rows = await db
     .selectFrom("outreach_dispatch")
     .innerJoin("mock_artifact as a", "a.id", "outreach_dispatch.artifact_id")
@@ -210,11 +210,15 @@ async function queue(limit: number): Promise<void> {
     .where(MOCK_CURRENT_GENERATOR_SQL)
     .orderBy(DISPATCH_PRIORITY)
     .orderBy("outreach_dispatch.queued_at")
-    .limit(limit * 6)
+    .limit(limit * 12)
     .execute();
   let shown = 0;
+  // Two colleagues share the queue (owner 2026-11-26: „LEGYEN MÁSODIK KOLLÉGA”): --half 0-7 | 8-f keeps each to the
+  // rows whose MAIN plan id starts with its half — no row is rendered or judged twice.
+  const inHalf = (id: string): boolean => !half || (/^[0-7]/i.test(id) ? half === "0-7" : half === "8-f");
   for (const r of rows) {
     if (shown >= limit) break;
+    if (!inHalf(r.artifactId)) continue;
     // Both plans of the offer (owner 2026-11-25: „Csak az hagyható jóvá, ahol van második terv is.”) —
     // the second plan once the folyamat refreshed it with the current generator.
     // The hero first — the colleague's pick (owner 2026-11-25).
@@ -264,7 +268,9 @@ const [cmd, arg, ...rest] = process.argv.slice(2);
 try {
   if (cmd === "queue") {
     const li = process.argv.indexOf("--limit");
-    await queue(li > 0 ? Math.max(1, Number(process.argv[li + 1]) || 5) : 5);
+    const hi = process.argv.indexOf("--half");
+    const half = hi > 0 && (process.argv[hi + 1] === "0-7" || process.argv[hi + 1] === "8-f") ? (process.argv[hi + 1] as "0-7" | "8-f") : null;
+    await queue(li > 0 ? Math.max(1, Number(process.argv[li + 1]) || 5) : 5, half);
   } else if (cmd === "shots" && arg) {
     for (const f of await shots(arg)) console.log(f);
   } else if ((cmd === "pass" || cmd === "fail") && arg) {
@@ -282,7 +288,7 @@ try {
   } else if (cmd === "status") {
     await status();
   } else {
-    console.error('Használat: qa-review.mts queue [--limit N] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
+    console.error('Használat: qa-review.mts queue [--limit N] [--half 0-7|8-f] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
     process.exitCode = 2;
   }
 } finally {

@@ -262,6 +262,8 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     check("éjszakai kültéri kép (sötét ég) le az oldalról; beltéri sötét plafon nem", isNightShot(K("ok", "a garden with a terrace", { quality: { long: 1600, luma: 80, lap: 300, top: 30 } })) && !isNightShot(K("ok", "a living room", { quality: { long: 1600, luma: 80, lap: 300, top: 30 } })) && !isNightShot(K("ok", "a garden with a terrace", { quality: { long: 1600, luma: 120, lap: 300, top: 140 } })));
     check("szobakártya: ház/kert tartalék nincs (kapu, kerítés, farakás soha) — csak ágy vagy beltéri kanapé", !/placeLabel/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /\["a living room", "a hotel room interior", "a bedroom with a bed"\]\.includes\(v\.label\)/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")));
   }
+  check("fotótapéta / pálmás trópusi strand lekerül az oldalról (Vandus)", isOffPagePhoto(K("ok", "a living room", { probs: { "a photo wallpaper mural on a wall": 0.25 } }), false) && isOffPagePhoto(K("ok", "a lake shore", { probs: { "palm trees on a tropical beach": 0.3 } }), true));
+  check("két kolléga megosztja a sort: qa-review queue --half 0-7 | 8-f (nincs dupla renderelés)", /--half/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /inHalf\(r\.artifactId\)/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
 }
 
 if (failed) {
