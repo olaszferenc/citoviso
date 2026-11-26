@@ -140,7 +140,7 @@ check("nyitókép: sötét (fényerő < 80) nem lehet", !isHeroWorthy(K("ok", "t
 check("sáv: a legjobb pontszámú kép, nem a soron következő", /bestBand\(\)/.test(src("src/engine/templateKit.ts")));
 
 check("fürdő/WC sehol nincs az oldalon (galéria sem)", isOffPagePhoto(K("ok", "a bathroom with a shower", { probs: { "a bathroom with a shower": 0.5 } }), false));
-check("a kártyaképek nem fürdő/konyha, és nincs rajtuk jármű/ember/állat", /take\(\(x\) => notBath\(x\) && !x\.notCard\)/.test(src("src/engine/templateKit.ts")));
+check("a kártyaképek nem fürdő/konyha, és nincs rajtuk jármű/ember/állat", /const ok = \(x: Photo\): boolean => notBath\(x\) && !x\.notCard;/.test(src("src/engine/templateKit.ts")));
 
 check("kapuszárny: a legjobb széles kép, közeli/sötét csak végső esetben", /b\.p\.bandScore \?\? -1/.test(src("src/engine/templates/gateOpening.ts")));
 
@@ -151,6 +151,13 @@ check("kapuszárny: a legjobb széles kép, közeli/sötét csak végső esetben
 }
 
 check("nyitókép: a kolléga választ (heroes/hero), a sor előbb ezt kéri", /HERO_PICK_PREFIX/.test(src("scripts/qa-review.mts")) && /pinnedUrl/.test(src("src/generator/mockRefresh.ts")));
+
+check("ember (bikinis nő, csoport) sehol az oldalon", isOffPagePhoto(K("ok", "a swimming pool", { probs: { "a swimming pool": 0.6, "a woman in a bikini": 0.2 } }), false));
+check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél nincs csúsztatás", /ROW_LABELS\[matchIcon/.test(src("src/engine/templateKit.ts")) && /if \(!p\) break;/.test(src("src/engine/templateKit.ts")));
+{
+  const { matchIcon: mi } = await import("../src/engine/icons.js");
+  check("ikon: Infraszauna → pool, Tárcsán sütés → grill", mi("Infraszauna") === "pool" && mi("Tárcsán sütés-főzés") === "grill");
+}
 
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — kolléga-jóváhagyás vagy engedélylistás képszűrő nélkül menne ki levél.`);

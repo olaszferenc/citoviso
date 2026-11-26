@@ -50,8 +50,8 @@ export async function curateMockPhotos<T extends { url: string }>(
     const bedroom = v != null && v.label === "a bedroom with a bed" && (pr["a bedroom with a bed"] ?? 0) >= 0.35 && isShowcase(v);
     const notCard = v != null && ["a car", "a parking lot", "a street with parked cars", "a group of people", "a woman in a bikini", "a dog", "a cat"].reduce((a, l) => a + (pr[l] ?? 0), 0) >= 0.08;
     const notBand = i > 0 && v != null && (!isBandWorthy(v) || !bs);
-    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean };
-    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}) } as T & { dhash?: string };
+    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, kindLabel: _oldLabel, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean; kindLabel?: string };
+    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}), ...(v ? { kindLabel: v.label } : {}) } as T & { dhash?: string };
   });
   return {
     photos: ordered,

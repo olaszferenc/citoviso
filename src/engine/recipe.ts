@@ -126,6 +126,8 @@ export interface Photo {
   readonly bandScore?: number;
   /** A vehicle, a person or an animal in it (photoCurate): never a feature card's picture. */
   readonly notCard?: boolean;
+  /** The local classifier's best label (photoCurate): feature rows match it to their text. */
+  readonly kindLabel?: string;
   /**
    * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
    * for the hero and the outdoor photos only. Answers "is this the SAME picture under

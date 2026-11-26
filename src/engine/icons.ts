@@ -61,8 +61,9 @@ const RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [W("fitnesz|fitness|edzőterem|edzoterem|konditerem|torna|jóga|joga"), "fitness"],
   [W("masszázs|masszazs|gyógy|gyogy|reuma|kúra|kura"), "spa"],
   [W("csillagvizsg|távcső|tavcso|planetár|planetar|obszervat"), "telescope"],
-  [W("medence|úszómedence|uszomedence|jacuzzi|pezsgőfürdő|pezsgofurdo|dézsa|dezsa|szauna|wellness|termál|termal"), "pool"],
-  [W("grill|bogrács|bogracs|szalonnasüt"), "grill"],
+  // „szauna” and „medence” also inside compounds (Infraszauna, Sómedence).
+  [new RegExp("szauna|medence|jacuzzi|pezsgőfürdő|pezsgofurdo|dézsa|dezsa|wellness|termál|termal", "iu"), "pool"],
+  [W("grill|bogrács|bogracs|szalonnasüt|tárcsa|tarcsa|sütés|sutes"), "grill"],
   [W("kály|kaly|kemence|tűz|tuz|kandalló|kandallo"), "fire"],
   [W("napoz|napágy|napagy|erkély|erkely"), "sun"],
   [W("csomagmegőrz|csomagmegorz|poggyász|poggyasz|locker"), "luggage"],
