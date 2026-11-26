@@ -35,6 +35,7 @@ import {
   getDomainBuyoutPrice,
   getModulePrice,
   offeredTlds,
+  primaryTld,
   getDomainFreeInPackage,
   getPackageAssignment,
   HU_PRICING_REGION,
@@ -609,7 +610,8 @@ export async function buildManifest(
         if (!getDomainFreeInPackage(region) || !t) return null;
         return tierModules(a, t).filter((id) => !disabledSales.has(id) && !MODULE_CATALOG.find((m) => m.id === id)?.spine);
       })(),
-      exampleName: `${subdomainHost(leadName).split(".")[0]!}.hu`,
+      // The region's own first ending (HR: .com from the country row's pricing region); HU: .hu as always.
+      exampleName: `${subdomainHost(leadName).split(".")[0]!}${primaryTld(region)?.tld ?? ".hu"}`,
     },
     ...(opts.trial
       ? { trial: { ...opts.trial, privacyUrl: withC(opts.trial.privacyUrl) ?? opts.trial.privacyUrl, sub: subHost, clickwrap: lp.t(TRIAL_CLICKWRAP_V1) } }
