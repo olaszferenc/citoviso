@@ -192,7 +192,9 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   const card = sampleRooms(d)[0];
   check("szobakártya: hálószoba-kép nélkül a szállás belső (nem konyha/fürdő) képe, nem üres ágy-ikon", card?.photo?.url === ph(3).url);
   const g = galleryOrder([ph(5, { notCard: true }), ph(6), ph(7)], "");
-  check("galéria: jármű/ember/állat-kép nem nyit, a végére kerül", g[0]?.url === ph(6).url && g.at(-1)?.url === ph(5).url);
+  check("galéria: jármű/ember/állat-kép nem nyit, a végére kerül (kevés kép mellett)", g[0]?.url === ph(6).url && g.at(-1)?.url === ph(5).url);
+  const g2 = galleryOrder([ph(5, { notCard: true }), ph(6), ph(7), ph(8), ph(9), ph(10)], "");
+  check("galéria: 5+ tiszta kép mellett a jármű/állat-kép kimarad", !g2.some((p) => p.url === ph(5).url) && g2.length === 5);
   check("egyedül ülő ember (stég) lekerül az oldalról", isOffPagePhoto(K("ok", "a garden with a terrace", { probs: { "a person sitting on a pier": 0.2 } }), false));
   check("nyitókép-jelölt: a terasz akkor is a kolléga elé kerül, ha a gépi pontszáma 0.25 alatt van",
     isHeroCandidate(K("ok", "a balcony with a table and chairs", { probs: { "a balcony with a view": 0.12 } })) && !isHeroWorthy(K("ok", "a balcony with a table and chairs", { probs: { "a balcony with a view": 0.12 } })));

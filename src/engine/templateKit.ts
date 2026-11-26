@@ -431,7 +431,7 @@ export function allotPhotos(
   }
   // A vehicle / person / animal shot never leads the gallery (11-26, Jaja: the strip opened on an SUV).
   pool.sort((a, b) => Number(!!a.notCard) - Number(!!b.notCard));
-  const own = pool.splice(0, opts.maxGallery);
+  const own = pool.splice(0, opts.maxGallery).filter((p, _i, all) => !p.notCard || all.filter((q) => !q.notCard).length < GALLERY_CLEAN_MIN);
   // The stock fill (mock, fewer than six own photos) completes the gallery, never another slot.
   const extra = (d.stock?.gallery ?? []).filter((p) => !usedLocal.has(p.url));
   // The town page carries 5–7 local pictures AND the MINTA rooms (plan kepnelkuli-hero): up to 12 there.
@@ -658,6 +658,9 @@ export function heroPhoto(d: SiteData): Photo | undefined {
  * shows changes with the data (a room with or without its own photo, a lead with 2 or
  * 24 photos), and a hard-coded "skip #1–#4" would be wrong on both ends.
  */
+/** With this many clean pictures a vehicle / person / animal shot leaves the gallery. */
+export const GALLERY_CLEAN_MIN = 5;
+
 export function galleryOrder(photos: readonly Photo[], elsewhere: string): Photo[] {
   const shown = (p: Photo): boolean => {
     const u = esc(p.url);
@@ -672,7 +675,10 @@ export function galleryOrder(photos: readonly Photo[], elsewhere: string): Photo
   const shownOwn = own.filter(shown);
   const unseen = own.filter((p) => !shown(p) && !shownOwn.some((q) => isSamePicture(q.dhash, p.dhash)));
   // A vehicle / person / animal shot never leads the gallery (11-26, Jaja: the strip opened on an SUV).
-  return [...unseen.filter((p) => !p.notCard), ...unseen.filter((p) => p.notCard), ...stock];
+  // …and with ≥ 5 other pictures it leaves the gallery altogether (11-26, round 7: Alfa's silver car on
+  // thumbnail 2, Pince's black dog on thumbnail 1 — the most frequent last blocker of the day).
+  const clean = unseen.filter((p) => !p.notCard);
+  return [...clean, ...(clean.length >= GALLERY_CLEAN_MIN ? [] : unseen.filter((p) => p.notCard)), ...stock];
 }
 
 const GPAGER_PREV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;
