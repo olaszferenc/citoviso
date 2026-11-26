@@ -1982,6 +1982,13 @@ if [ -f scripts/owner-test-phone-check.mts ] && \
   echo "[pre-commit] owner-test-phone-check (teszt-szám csak [TESZT] leaden mentes)…"
   npx tsx scripts/owner-test-phone-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Tulaj 2026-11-26 („Végpróba … 7 € helyett 0,10 €”, ADR: testCharge.ts fejléce): a [TESZT] lead minden
+# rendelése a szolgáltató minimumát terheli, valódi lead soha; mind a négy rendelés-hely bekötve. Tiszta, ~2 s.
+if [ -f scripts/test-charge-check.mts ] && \
+   changed_files | grep -qE '^src/payment/(testCharge|providers|billing)\.ts$|^src/console/server\.ts$|^src/tenant/(moduleUpsell|multilangOrder)\.ts$|^src/outreach/ownerTestPhone\.ts$|^scripts/test-charge-check'; then
+  echo "[pre-commit] test-charge-check ([TESZT]-rendelés = szolgáltatói minimum)…"
+  npx tsx scripts/test-charge-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Egy telefon-szabály szerveren és kliensen, és nincs fotó-útvonalból „kihalászott” szám
 # (2026-10-05: „06/30 …” elutasítva; „069/6590698” egy képazonosítóból). Tiszta, ~2 s.
 if [ -f scripts/phone-normalize-check.mts ] && \

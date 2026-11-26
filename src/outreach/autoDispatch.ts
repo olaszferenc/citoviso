@@ -33,7 +33,7 @@ import { planChainPassed, secondPlanBlock, secondPlanOf } from "./secondPlan.js"
 import { leadEmails, outreachPrefill } from "../email/leadEmails.js";
 import { sharedContactBlocks, twinAlreadyContacted } from "./sharedContactGate.js";
 import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
-import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
+import { isTestLeadName, ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { allCountriesSync, countryConfigSync, countryOf, countryOfLeads, type CountryConfig } from "../country.js";
 import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
@@ -326,6 +326,15 @@ async function sharedPhoneHold(leadId: string): Promise<string | null> {
 }
 
 /**
+ * ADR-XXXX (owner 2026-11-26, „Végpróba”): a "[TESZT]" lead's letter goes to the OWNER's own address
+ * (sendOutreachMail already exempts it from the window, the one-shot and the shared contact). It is
+ * no market's letter, so it neither fills a country's daily cap nor the cold ramp's day total — and
+ * the tick sends it outside the window and past a full cap (runDispatchTick). The real leads' window
+ * and cap are untouched.
+ */
+const NOT_TEST_LEAD_SQL = sql<boolean>`not exists (select 1 from lead tl where tl.id = outreach_dispatch.lead_id and ltrim(tl.name) like '[TESZT]%')`; // the isTestLeadName() rule in SQL (LIKE: no escapes)
+
+/**
  * ORSZÁG-RÉTEG 3/5: leads the timer contacted today in ONE country — that country's day, in its
  * zone. NEMZETKÖZI B: a row without a country is NOBODY's (fail closed — never counted as HU).
  * Only rows claimed before migration 0140 carry a NULL country, and those were all sent on
@@ -337,6 +346,7 @@ export async function sentTodayIn(cfg: Pick<CountryConfig, "iso2" | "timeZone">)
     .select((eb) => eb.fn.countAll<string>().as("n"))
     .where("status", "=", "sent")
     .where("country", "=", cfg.iso2)
+    .where(NOT_TEST_LEAD_SQL)
     .where("sent_at", ">=", sql<Date>`(date_trunc('day', now() AT TIME ZONE ${cfg.timeZone}) AT TIME ZONE ${cfg.timeZone})`)
     .executeTakeFirstOrThrow();
   return Number(r.n);
@@ -352,6 +362,7 @@ export async function sentToday(): Promise<number> {
     .selectFrom("outreach_dispatch")
     .select((eb) => eb.fn.countAll<string>().as("n"))
     .where("status", "=", "sent")
+    .where(NOT_TEST_LEAD_SQL)
     .where(
       "sent_at",
       ">=",
@@ -420,6 +431,10 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     .execute();
 
   let settings = await getAutoDispatchSettings();
+  // ADR-XXXX: a closed window / a full cap does not end the tick while a "[TESZT]" lead may still go
+  // (to the owner's own address) — then only test leads are claimed, and the reason is reported when
+  // none is waiting.
+  let closed: Exclude<TickOutcome, { kind: "off" | "empty" | "done" }> | null = null;
   // 0155: the automatic approval (autoApprove.ts — replaces the Debian-cron auto-approve.mts) runs on this
   // timer, before the master switch: like the cron, it decides even while the sending is off. Off by default.
   if (settings.autoApprove) {
@@ -433,15 +448,15 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     if (!settings.enabled && !opts.force) return { kind: "off" };
     const cap = rampCapOn(settings.ramp!, budapestIsoDay(now));
     const sent = await sentToday();
-    if (sent >= cap) return { kind: "cap", sent, cap };
+    if (sent >= cap) closed = { kind: "cap", sent, cap };
   }
   // ORSZÁG-RÉTEG 3/5: the window and the cap are the LEAD's country's (zone, working days, its
   // own counter). Nothing open anywhere → the home country's reason, as before.
   const { open, homeWindow, homeCap } = await openCountries(now, settings);
-  if (!open.size) {
-    if (homeWindow) return { kind: "window", reason: homeWindow };
-    if (homeCap) return { kind: "cap", ...homeCap };
-    return { kind: "window", reason: "egyik ország küldési ablaka sincs nyitva, vagy mindegyik napi kvótája betelt" }; // i18n-exempt: operátori ok, sosem éri el a leadet
+  if (!open.size && !closed) {
+    if (homeWindow) closed = { kind: "window", reason: homeWindow };
+    else if (homeCap) closed = { kind: "cap", ...homeCap };
+    else closed = { kind: "window", reason: "egyik ország küldési ablaka sincs nyitva, vagy mindegyik napi kvótája betelt" }; // i18n-exempt: operátori ok, sosem éri el a leadet
   }
 
   // KÍSÉRLET-MOTOR (experiment.ts): the day's split of the cap among the enabled variants — the
@@ -459,6 +474,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     const rows = await trx
       .selectFrom("outreach_dispatch")
       .select(["id", "lead_id", "artifact_id", "note"])
+      .select(sql<string>`(select name from lead where lead.id = outreach_dispatch.lead_id)`.as("lead_name"))
       .where("status", "=", "queued")
       // Owner 2026-11-23: only leads with at least their country's minimum own photos (0155) go out, and the
       // mock that goes out actually shows them (2026-11-24); since 2026-11-25 (ADR-0479) a lead with
@@ -478,7 +494,8 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     for (const cand of rows) {
       const iso = cc.get(cand.lead_id) ?? null;
       const known = iso ? countryConfigSync(iso) : null;
-      if (known && !open.has(known.iso2)) continue;
+      // ADR-XXXX: a test lead goes whatever its country's window / cap; with everything closed, only it.
+      if (!isTestLeadName(cand.lead_name) && (closed || (known && !open.has(known.iso2)))) continue;
       const row = await trx
         .selectFrom("outreach_dispatch")
         .select(["id", "lead_id", "artifact_id", "note"])
@@ -497,7 +514,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     }
     return null;
   });
-  if (!claimed) return { kind: "empty" };
+  if (!claimed) return closed ?? { kind: "empty" };
 
   let result: { status: "sent" | "held" | "skipped"; note: string; prospectId?: string };
   try {

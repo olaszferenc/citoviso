@@ -22,6 +22,7 @@ import type {
   RecurringChargeRequest,
   RecurringChargeResult,
   WebhookResult,
+  RefundResult,
 } from "./gateway.js";
 
 const API = (process.env.BARION_URL ?? "https://api.barion.com").replace(/\/$/, "");
@@ -441,6 +442,58 @@ export class BarionGateway implements PaymentGateway {
     } catch (err) {
       console.error(`[barion] FinishReservation kivétel (${gatewayRef}):`, err);
       return false;
+    }
+  }
+
+  /**
+   * ADR-XXXX: refund a Succeeded payment (POST /v2/Payment/Refund — the request/response shape of the
+   * official barion-web-php SDK, RefundRequestModel / TransactionToRefundModel / RefundedTransactionModel,
+   * read 2026-11-26: PaymentId + TransactionsToRefund[{TransactionId, POSTransactionId, AmountToRefund,
+   * Comment}] → RefundedTransactions[{TransactionId, Total, Status, …}]). The transaction id comes from
+   * GetPaymentState: OUR transaction carries our POSTransactionId (fee lines carry null).
+   */
+  async refund(gatewayRef: string, totalMinor: number, currency: string, comment: string): Promise<RefundResult> {
+    try {
+      const stateUrl = `${API}/v2/Payment/GetPaymentState?POSKey=${encodeURIComponent(
+        this.posKey,
+      )}&PaymentId=${encodeURIComponent(gatewayRef)}`;
+      const state = (await (await fetchWithRateLimitRetry(stateUrl)).json()) as {
+        Status?: string;
+        Transactions?: { TransactionId?: string; POSTransactionId?: string | null }[];
+      };
+      if (state.Status !== SUCCEEDED) return { ok: false, error: `a fizetés nem Succeeded (${state.Status ?? "?"})` };
+      const own = state.Transactions?.find((t) => t.POSTransactionId) ?? state.Transactions?.[0];
+      if (!own?.TransactionId) return { ok: false, error: "a fizetésnek nincs tranzakció-azonosítója" };
+      const resp = await fetch(`${API}/v2/Payment/Refund`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          POSKey: this.posKey,
+          PaymentId: gatewayRef,
+          TransactionsToRefund: [
+            {
+              TransactionId: own.TransactionId,
+              POSTransactionId: own.POSTransactionId ?? null,
+              AmountToRefund: minorToMajor(totalMinor, currency),
+              Comment: comment.slice(0, 640),
+            },
+          ],
+        }),
+      });
+      const data = (await resp.json()) as {
+        RefundedTransactions?: { TransactionId?: string; Status?: string; Total?: number }[];
+        Errors?: { ErrorCode?: string; Title?: string; Description?: string }[];
+      };
+      if (data.Errors && data.Errors.length) {
+        const e = data.Errors[0]!;
+        return { ok: false, error: `${e.ErrorCode ?? "?"} — ${e.Title ?? e.Description ?? ""}` };
+      }
+      const r = data.RefundedTransactions?.[0];
+      if (!r?.TransactionId) return { ok: false, error: `ismeretlen válasz (HTTP ${resp.status})` };
+      if (r.Status && !/^(Succeeded|Prepared|Started|Pending)$/i.test(r.Status)) return { ok: false, error: `a visszautalás állapota: ${r.Status}` };
+      return { ok: true, ref: r.TransactionId };
+    } catch (err) {
+      return { ok: false, error: `kivétel: ${(err as Error).message}` };
     }
   }
 }

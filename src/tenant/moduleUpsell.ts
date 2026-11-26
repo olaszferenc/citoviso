@@ -26,6 +26,7 @@ import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
 import { couponRule } from "../payment/couponRule.js";
 import { bestActiveCouponForTenant } from "../payment/offers.js";
+import { testChargeForTenant } from "../payment/testCharge.js";
 import { isTrialOffer } from "../trial/offer.js";
 import { getAnnualFreeMonths, getModulePrice, loadPricing } from "../pricing.js";
 
@@ -147,6 +148,9 @@ export async function createFirstChargeOrder(
     months,
     coupon ? coupon.percent : 0,
   ).total;
+  // ADR-XXXX: a "[TESZT]" lead's upsell charges the provider minimum, without the coupon derivation.
+  const testCharge = await testChargeForTenant(tenantId, money.currency);
+  const charged = testCharge ?? price;
 
   const row = await db
     .insertInto("order_intent")
@@ -159,11 +163,11 @@ export async function createFirstChargeOrder(
       // ONLY the added modules: the price is for the difference, so the record
       // must say the same thing the buyer is paying for.
       modules: JSON.stringify(ids),
-      price,
+      price: charged,
       billing_period: period,
       status: "submitted",
       submitted_at: new Date(),
-      ...(coupon ? { offer_id: coupon.id, list_price: listPrice } : {}),
+      ...(coupon && testCharge === null ? { offer_id: coupon.id, list_price: listPrice } : {}),
       buyer_type: buyer.buyerType,
       buyer_name: buyer.buyerName,
       buyer_tax_number: buyer.taxNumber,
@@ -182,10 +186,11 @@ export async function createFirstChargeOrder(
     .executeTakeFirstOrThrow();
   return {
     orderId: row.id,
-    price,
+    // What is charged (ADR-XXXX: a test lead's minimum), so the bar's „levonva” figure is the card's.
+    price: charged,
     listPrice,
     months,
-    offerPercent: coupon?.percent ?? null,
+    offerPercent: testCharge === null ? (coupon?.percent ?? null) : null,
     // proba-C: the trial's own offer carries ONE name („Próba-kedvezmény”).
     offerKind: coupon ? ((await isTrialOffer(coupon.id)) ? "trial" : coupon.kind) : null,
   };

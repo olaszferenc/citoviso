@@ -49,6 +49,7 @@ import { billingEmails } from "../billing/partner.js";
 import { chargeRenewalWithToken, requestPayment } from "./service.js";
 import { addMonths, cancelSubscription } from "./subscription.js";
 import { applyOffer, bestActiveCouponForTenant } from "./offers.js";
+import { testChargeForTenant } from "./testCharge.js";
 import { payEntryUrl } from "./payEntryUrl.js";
 import { phoneChannelAllowed, phoneChannelRefusal } from "../sms/countryChannel.js";
 
@@ -379,7 +380,10 @@ async function findOrCreateRenewalOrder(
     );
   }
 
+  // ADR-XXXX: a "[TESZT]" lead renews at the provider minimum — no domain line, no coupon derivation.
+  const testCharge = await testChargeForTenant(sub.tenantId, sub.currency);
   const total = price + domainFee;
+  const charged = testCharge ?? total;
   const row = await db
     .insertInto("order_intent")
     .values({
@@ -389,15 +393,15 @@ async function findOrCreateRenewalOrder(
       pricing_region: region,
       currency: sub.currency,
       modules: JSON.stringify(moduleIds),
-      price: total,
+      price: charged,
       billing_period: period,
       status: "submitted",
       submitted_at: new Date(),
       renewal_period_start: periodStart,
       renewal_period_end: addMonths(periodStart, months),
       // ADR-0100: the fee is its own invoice line; the name says which domain.
-      ...(domainDue ? { domain_fee: domainFee, domain_name: domainDue.domain } : {}),
-      ...(offerId ? { offer_id: offerId, list_price: listPrice + domainFee } : {}),
+      ...(domainDue && testCharge === null ? { domain_fee: domainFee, domain_name: domainDue.domain } : {}),
+      ...(offerId && testCharge === null ? { offer_id: offerId, list_price: listPrice + domainFee } : {}),
       ...(buyer ?? {}),
     } as never)
     .returning("id")

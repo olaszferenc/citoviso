@@ -313,21 +313,23 @@ export async function auditMockFile(
     // gate. The condition the measurement needs is exactly this: every request the page started has
     // finished or failed, and nothing new started for QUIET_MS. Same 60 s upper bound as before.
     const inflight = new Set<object>();
-    let lastNet = Date.now();
+    // Elapsed time on the MONOTONIC clock: a wall clock can be frozen or set (the send path runs under a
+    // frozen Date in the test worlds, where this loop never ended — 2026-11-26), never an interval.
+    let lastNet = performance.now();
     page.on("request", (r) => {
       inflight.add(r);
-      lastNet = Date.now();
+      lastNet = performance.now();
     });
     const settle = (r: object) => {
       inflight.delete(r);
-      lastNet = Date.now();
+      lastNet = performance.now();
     };
     page.on("requestfinished", settle);
     page.on("requestfailed", settle);
     const networkQuiet = async (timeoutMs: number): Promise<void> => {
-      const end = Date.now() + timeoutMs;
-      while (Date.now() < end) {
-        if (inflight.size === 0 && Date.now() - lastNet >= QUIET_MS) return;
+      const end = performance.now() + timeoutMs;
+      while (performance.now() < end) {
+        if (inflight.size === 0 && performance.now() - lastNet >= QUIET_MS) return;
         await new Promise((r) => setTimeout(r, 100));
       }
     };

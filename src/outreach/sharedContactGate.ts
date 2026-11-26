@@ -28,6 +28,7 @@ import type { QualifiedLead } from "../scraper/types.js";
 import { leadEmails } from "../email/leadEmails.js";
 import { countryConfigSync, countryOf } from "../country.js";
 import { normalizePhoneIn, type PhoneRules } from "../text/phoneCountry.js";
+import { isTestLeadName } from "./ownerTestPhone.js";
 
 /** Leads that no longer receive anything — their contacts cannot collide. */
 export const INACTIVE = ["terminated", "disqualified"] as const;
@@ -238,7 +239,12 @@ export async function twinAlreadyContacted(
       ]),
     )
     .execute();
+  // ADR-XXXX: the owner's own test leads all carry HIS address — one earlier "[TESZT]" walk must not hold
+  // the next one (the same exemption as ownerTestPhone.ts). A REAL lead on the same contact still holds it.
+  const self = await q.selectFrom("lead").select("name").where("id", "=", leadId).executeTakeFirst();
+  const selfIsTest = isTestLeadName(self?.name);
   for (const s of sent) {
+    if (selfIsTest && isTestLeadName(s.name)) continue;
     const other = (typeof s.raw === "string" ? JSON.parse(s.raw) : s.raw) as QualifiedLead & { emailCuratedAt?: string | null };
     const sentTo = s.email ? keyOf("email", s.email) : null;
     const theirs = [

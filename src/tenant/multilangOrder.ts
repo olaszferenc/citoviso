@@ -15,6 +15,7 @@ import { multilangContentHash } from "./multilangCore.js";
 import { multilangPurchaseBlockedReason } from "./multilangCard.js";
 import { normalizeTargetLangs } from "./multilangGenerate.js";
 import { isSubscriptionFrozen } from "../payment/subscription.js";
+import { testChargeForTenant } from "../payment/testCharge.js";
 
 export interface MultilangOrderResult {
   readonly ok: boolean;
@@ -148,6 +149,8 @@ export async function createMultilangOrder(
     };
   }
 
+  // ADR-XXXX: a "[TESZT]" lead's order charges the provider minimum, without the coupon derivation.
+  const testCharge = await testChargeForTenant(tenantId, money.currency);
   const order = await db
     .insertInto("order_intent")
     .values({
@@ -157,11 +160,11 @@ export async function createMultilangOrder(
       pricing_region: money.region,
       currency: money.currency,
       modules: JSON.stringify(["multilang"]),
-      price,
+      price: testCharge ?? price,
       billing_period: "monthly", // N/A for a one-time fee; the column is NOT NULL
       status: "submitted",
       submitted_at: new Date(),
-      ...(coupon ? { offer_id: coupon.id, list_price: listPrice } : {}),
+      ...(coupon && testCharge === null ? { offer_id: coupon.id, list_price: listPrice } : {}),
       buyer_type: buyer.buyerType,
       buyer_name: buyer.buyerName,
       buyer_tax_number: buyer.taxNumber,

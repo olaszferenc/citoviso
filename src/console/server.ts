@@ -233,6 +233,7 @@ import { buildDraftForProspect } from "../outreach/draft.js";
 import { checkOutreachDraft } from "../outreach/outreachCheck.js";
 import { describeMailSendability, emailAlreadyMailed, sendOutreachMail } from "../outreach/sendBatch.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
+import { testChargeForLead } from "../payment/testCharge.js";
 import { sendOutreachSms, smsAllowlistBlocks } from "../outreach/sendOutreachSms.js";
 import { startOutreachPair, sendPairSmsHalf, pairJobState } from "../outreach/sendOutreachPair.js";
 import { cancelDispatch, enqueueDispatch, requeueDispatch } from "../outreach/autoDispatch.js";
@@ -1495,6 +1496,18 @@ async function handleOrderRequest(
     );
     return;
   }
+  // ADR-XXXX: a "[TESZT]" lead's order charges the provider minimum (testCharge.ts) — AFTER the
+  // client-price check (the configurator shows, and the buyer accepts, the real list figure) and
+  // before the twin lookup / the record, which must both see the charged amount. No domain fee and
+  // no offer ride on it: the invoice would split and derive them from a price that is not charged.
+  const testCharge = orderLeadRow ? await testChargeForLead(orderLeadRow.lead_id, money.currency) : null;
+  const chargedPrice = testCharge ?? price;
+  if (testCharge !== null) {
+    console.log(
+      `[console] TESZT-RENDELÉS: a(z) ${formatMinor(price, money.currency)} helyett ${formatMinor(testCharge, money.currency)} ` +
+        `terhelés (a szolgáltató minimuma, ADR-XXXX) — az ársor változatlan`,
+    );
+  }
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
   const commitmentMonths = domainEligible ? getDomainMinCommitmentMonths(region) : null;
   // ADR-0094 ④ / ADR-0109 ④: a custom-domain order freezes the package floor AT
@@ -1521,7 +1534,7 @@ async function handleOrderRequest(
         leadId: lockLead.lead_id,
         modules,
         billingPeriod,
-        price,
+        price: chargedPrice,
         domainType: effectiveDomainType,
         domainName: storedDomainName,
         platformLabel: storedPlatformLabel,
@@ -1539,7 +1552,7 @@ async function handleOrderRequest(
     artifactId,
     modules,
     billingPeriod,
-    price,
+    price: chargedPrice,
     money,
     domainType: effectiveDomainType,
     // Elek3 B1 (ADR-0032 / ADR-0356): a freely-chosen platform subdomain is a domain NAME
@@ -1550,14 +1563,14 @@ async function handleOrderRequest(
     platformLabel: domainEligible ? platformLabel : null,
     commitmentMonths,
     committedMinMonthly,
-    domainFee: domainFee || null,
+    ...(testCharge !== null ? { domainFee: null } : { domainFee: domainFee || null }),
     photoRightsDeclared: true,
     recurringConsent: true,
     legalPack: orderLegal.pack,
     buyer,
     preset: orderPresetId(modules, body.preset, currentPresets()),
     ...(prospectToken ? { prospectToken } : {}),
-    ...(offer ? { offerId: offer.id, listPrice } : {}),
+    ...(offer && testCharge === null ? { offerId: offer.id, listPrice } : {}),
   });
   console.log(
     `[console] CSOMAG-IGÉNY · ${rec?.leadName ?? "?"} (lead ${rec?.leadId ?? "?"}) · ` +
@@ -1610,7 +1623,7 @@ async function handleOrderRequest(
       await alertStuckOrder({
         orderIntentId: rec.orderIntentId,
         leadName: rec.leadName ?? null,
-        amountHuf: price ?? null,
+        amountHuf: chargedPrice ?? null,
         currency: money.currency,
         billingPeriod,
         buyerEmail: buyer.buyerEmail,

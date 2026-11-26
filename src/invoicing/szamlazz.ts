@@ -230,6 +230,56 @@ export class SzamlazzAgent implements InvoiceProvider {
       pdfBase64: pdf,
     };
   }
+
+  /**
+   * ADR-XXXX: the STORNO document of an issued invoice. Spec (docs.szamlazz.hu/agent/reversing_invoice,
+   * request / xml / response, read 2026-11-26): POST multipart to the same endpoint, field
+   * `action-szamla_agent_st`, root `xmlszamlast` (ns http://www.szamlazz.hu/xmlszamlast); children in the
+   * fixed order beallitasok (auth, eszamla, szamlaLetoltes, valaszVerzio) → fejlec (szamlaszam, keltDatum,
+   * teljesitesDatum). valaszVerzio=2 → the same `xmlszamlavalasz` answer as an issue; errors in the
+   * szlahu_error / szlahu_error_code headers. `tipus` is left out: the docs disagree on its meaning.
+   */
+  async stornoInvoice(invoiceNumber: string, currency: string, date: string): Promise<InvoiceResult> {
+    const xml =
+      '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<xmlszamlast xmlns="http://www.szamlazz.hu/xmlszamlast" ' +
+      'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
+      'xsi:schemaLocation="http://www.szamlazz.hu/xmlszamlast ' +
+      'https://www.szamlazz.hu/szamla/docs/xsds/agentst/xmlszamlast.xsd">' +
+      "<beallitasok>" +
+      this.authXml() +
+      t("eszamla", "false") +
+      t("szamlaLetoltes", "true") +
+      t("valaszVerzio", "2") +
+      "</beallitasok>" +
+      "<fejlec>" +
+      t("szamlaszam", invoiceNumber) +
+      t("keltDatum", date) +
+      t("teljesitesDatum", date) +
+      "</fejlec>" +
+      "</xmlszamlast>";
+    const form = new FormData();
+    form.append("action-szamla_agent_st", new Blob([xml], { type: "text/xml" }), "storno.xml");
+    const resp = await fetch(ENDPOINT, { method: "POST", body: form });
+    const errCode = resp.headers.get("szlahu_error_code");
+    const body = await resp.text();
+    if (errCode) {
+      throw new Error(`Számlázz sztornó hiba ${errCode}: ${szamlazzErrorText(resp.headers.get("szlahu_error") ?? "")}`);
+    }
+    if (!/<sikeres>\s*true\s*<\/sikeres>/i.test(body)) {
+      const code = pick(/<hibakod>([\s\S]*?)<\/hibakod>/i.exec(body));
+      const hmsg = pick(/<hibauzenet>([\s\S]*?)<\/hibauzenet>/i.exec(body));
+      throw new Error(`Számlázz sztornó sikertelen (${code ?? "?"}): ${hmsg ?? "ismeretlen hiba"}`);
+    }
+    const number =
+      pick(/<szamlaszam>([\s\S]*?)<\/szamlaszam>/i.exec(body)) ??
+      (resp.headers.get("szlahu_szamlaszam") ? decodeURIComponent(resp.headers.get("szlahu_szamlaszam")!) : "");
+    if (!number) throw new Error("Számlázz sztornó: a válaszban nincs bizonylatszám");
+    const net = Number(pick(/<szamlanetto>([\s\S]*?)<\/szamlanetto>/i.exec(body)) ?? "0");
+    const gross = Number(pick(/<szamlabrutto>([\s\S]*?)<\/szamlabrutto>/i.exec(body)) ?? "0");
+    const pdf = pick(/<pdf>([\s\S]*?)<\/pdf>/i.exec(body)) ?? undefined;
+    return { invoiceNumber: number, net: majorToMinor(net, currency), gross: majorToMinor(gross, currency), pdfBase64: pdf };
+  }
 }
 
 /**

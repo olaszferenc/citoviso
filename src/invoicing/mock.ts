@@ -50,4 +50,9 @@ export class MockInvoiceProvider implements InvoiceProvider {
     if (input.externalId) issuedByExternalId.set(input.externalId, res);
     return res;
   }
+
+  /** ADR-XXXX: the mock storno — a deterministic number, no document leaves the machine. */
+  async stornoInvoice(invoiceNumber: string, _currency: string, _date: string): Promise<InvoiceResult> {
+    return { invoiceNumber: `STORNO-${invoiceNumber}`, net: 0, gross: 0 };
+  }
 }
