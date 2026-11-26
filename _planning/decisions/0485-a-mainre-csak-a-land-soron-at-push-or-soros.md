@@ -1,4 +1,4 @@
-## ADR-XXXX — A mainre csak a land-soron át: push-őr + soros hotfix-merge (land-merge.sh)
+## ADR-0485 — A mainre csak a land-soron át: push-őr + soros hotfix-merge (land-merge.sh)
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva (tulaj: „Ok”, 2026-11-26, a „land 3 óra” panaszra)

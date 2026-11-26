@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PUSH GUARD — main moves ONLY through the machine-wide land queue (ADR-XXXX).
+# PUSH GUARD — main moves ONLY through the machine-wide land queue (ADR-0485).
 #
 # Measured 2026-11-26: of the 18 commits that reached main in 8 hours, 8 were pushed by hand
 # (`Merge … into wt/<x>`, the hotfix `-s ours` merges) while another land held the queue. Every such
@@ -38,7 +38,7 @@ if [ -n "$common" ] && [ "$inside" -eq 1 ] && ! flock -n "$lock" true 2>/dev/nul
   exit 0
 fi
 {
-  echo "⛔ pre-push: a mainre CSAK a gépszintű land-soron át lehet pusholni (ADR-XXXX)."
+  echo "⛔ pre-push: a mainre CSAK a gépszintű land-soron át lehet pusholni (ADR-0485)."
   echo "   A sor mellett pusholt commit minden épp futó landot visszapattint: az elölről futtatja az összes kaput."
   echo "   · saját munka:                   bash scripts/land.sh"
   echo "   · hotfix -s ours merge a mainbe: bash scripts/land-merge.sh <ref>"

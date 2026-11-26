@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # land-merge — record a branch (the hotfix line) as merged into main WITHOUT changing main's content,
-# through the machine-wide land queue (ADR-XXXX).
+# through the machine-wide land queue (ADR-0485).
 #
 #   bash scripts/land-merge.sh <ref> ["<message>"]
 #

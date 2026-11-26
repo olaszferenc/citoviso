@@ -20,7 +20,7 @@
 //   ④ a zár kivéve a könyvtárból (flock nélkül) → az ① átfedést lát.
 //   ⑤ örökölt fd-s zár (`exec 9>>…; flock 9`) → a ② nem megy tovább az árva gyerek miatt.
 //   ⑥ a `land.sh`-ból kivett `land_lock_acquire` sor → a ③ piros.
-//   ── a PUSH-ŐR (hooks/pre-push, ADR-XXXX) és a soros hotfix-merge (scripts/land-merge.sh) ──
+//   ── a PUSH-ŐR (hooks/pre-push, ADR-0485) és a soros hotfix-merge (scripts/land-merge.sh) ──
 //   ⑦ a VALÓDI hooks/pre-push egy eldobható origin-re: zár nélkül a mainre push ELUTASÍTVA (a main
 //      nem mozdul); akkor sem, ha épp MÁS land tartja a zárat; a zártartó (land_lock_acquire) pushát átengedi;
 //      másik ágra (hotfix/…) zár nélkül is enged.
