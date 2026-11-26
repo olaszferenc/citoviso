@@ -54,7 +54,7 @@ Lánc (uj-lanc-hr git): `felderito/{teruletek.py,osszes.sh,orzo.sh,felderito.py,
 - 70 csak-mobilos HU lead is vár: a fo-cand a településképre várakoztatja őket, de a gyűjtő az ADR-0479 szerint csak e-mailesért fut.
 - Szemét városnév („277-es számú ajtó”).
 
-**Mellékes:** a dev DB HU-sorában a `send_window_to` 17 volt; élesen és a migrációban 20. Ez minden commitnál buktatta a country-layer-check-et (a tiszta mainen is). Visszaállítottam 20-ra (csak dev).
+**Mellékes:** a dev DB HU-sorának `send_window_to = 17` értéke HELYES (F4, ADR-0487, migráció 0155). A régi mainen ez buktatta a country-layer-check-et; a megoldás a rebase, nem a sor átírása. Rövid ideig 20-ra írtam, visszaállítva 17-re.
 
 **Átállás:** `bash ~/rc-briefs/uj-lanc-hr/atallas-reszek.sh check | go --stop-walk | rollback <tgz>`
 - Előfeltétel: a repó-commit landolva + fő-fa ff.
