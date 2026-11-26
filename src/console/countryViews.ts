@@ -489,11 +489,16 @@ export function readinessList(ed: CountryEditor): string {
 
 function marketLogHtml(lang: string, m: CountryMarketInfo): string {
   if (!m.log.length) return "";
-  return `<ul class="cty-gate__log">${m.log
-    .map((l) => `<li><span class="cty-mut cty-small">${esc(fmtAt(l.at))} · ${esc(l.actor)} · ${esc(
+  const item = (l: CountryMarketInfo["log"][number]): string =>
+    `<li><span class="cty-mut cty-small">${esc(fmtAt(l.at))} · ${esc(l.actor)} · ${esc(
       l.action === "approve" ? T(lang, "elindítva / megnyitva") : l.action === "pause" ? T(lang, "szüneteltetve") : l.action === "resume" ? T(lang, "folytatva") : T(lang, "lezárva"),
-    )}</span> — ${esc(l.reason)}</li>`)
-    .join("")}</ul>`;
+    )}</span> — ${esc(l.reason)}</li>`;
+  // The newest six in view; the older ones behind a summary that opens (a long history must not bury the box).
+  const shown = m.log.slice(0, 6);
+  const older = m.log.slice(6);
+  return `<ul class="cty-gate__log">${shown.map(item).join("")}</ul>${older.length
+    ? `<details class="cty-gate__older"><summary class="cty-small">${esc(T(lang, "+{n} korábbi bejegyzés", { n: older.length }))}</summary><ul class="cty-gate__log">${older.map(item).join("")}</ul></details>`
+    : ""}`;
 }
 
 /**

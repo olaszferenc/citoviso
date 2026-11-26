@@ -2452,7 +2452,12 @@ async function handle(
       tabHtml = pricingBody(...(await pricingArgs(row.region, notice, { iso, shared: countriesOfRegion(row.region) })));
     } else {
       const out = await outreachInfo(iso);
-      tabHtml = tab === "out" && out ? outreachTab(row, out) : countryTab(row, editor, out);
+      if (tab === "out" && out) tabHtml = outreachTab(row, out);
+      else {
+        // 3. fázis: the launch list's detail (Bábel broken down, contact, mock, the gate's reason).
+        const { countryLaunchStages } = await import("../countryLaunchStages.js");
+        tabHtml = countryTab(row, editor, out, await countryLaunchStages(iso));
+      }
     }
     return send(res, 200, hubCountryPage({ row, tab, notice, editor, editorOpen: rawStep !== null, tabHtml }));
   }

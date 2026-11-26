@@ -10,6 +10,7 @@
 import type { ReadinessItem } from "../countryReadiness.js";
 import { T } from "../i18n/mail.js";
 import type { LaunchStep } from "../scout/discoveryAreas.js";
+import type { LaunchStages } from "../countryLaunchStages.js";
 import { formatNumber } from "../text/money.js";
 import type { CountryOverview, CountryOverviewRow, CountryStatusKey, OutreachInfo, RunState } from "./countryData.js";
 import { COUNTRY_CSS, editorOverlay, editorScript, gateBlock, ICON, type CountryEditor } from "./countryViews.js";
@@ -293,7 +294,16 @@ function stepDetail(lang: string, s: LaunchStep): string {
   return T(lang, "{done} / {total}", { done: n(s.done), total: n(s.total) });
 }
 
-export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: OutreachInfo | null): string {
+/** 3. fázis: the Bábel breakdown under the language item — Felület / Levelek / Jogi csomag / Súgó. */
+function babelBreakdown(lang: string, st: LaunchStages): string {
+  const row = (label: string, p: { total: number; done: number }): string => {
+    const pct = p.total ? Math.round((p.done / p.total) * 100) : 100;
+    return `<li><span>${esc(label)}</span><span class="cty-mut cty-small">${esc(T(lang, "{done} / {total} · {pct}%", { done: n(p.done), total: n(p.total), pct }))}</span><span class="cty-bar"><span style="width:${pct}%"></span></span></li>`;
+  };
+  return `<ul class="hub-babel">${row(T(lang, "Felület"), st.babel.ui)}${row(T(lang, "Levelek"), st.babel.mail)}${row(T(lang, "Jogi csomag"), st.babel.legal)}${row(T(lang, "Súgó"), st.babel.kb)}</ul>`;
+}
+
+export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: OutreachInfo | null, stages: LaunchStages | null = null): string {
   const lang = consoleLang();
   const e = row.entry;
   const d = ed.draft;
@@ -311,10 +321,17 @@ export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: Outr
     .map((o) => {
       if ("r" in o) {
         const i = it(o.r);
-        return i ? listItem(lang, i.key, i.state, i.title, i.detail, whoFills(lang, i.key), i.pct, i.gating) : "";
+        if (!i) return "";
+        const li = listItem(lang, i.key, i.state, i.title, i.detail, whoFills(lang, i.key), i.pct, i.gating);
+        return i.key === "babel" && stages ? li.replace("</div></li>", `${babelBreakdown(lang, stages)}</div></li>`) : li;
       }
       const s = step(o.l);
-      return s ? listItem(lang, s.key, s.state, launchTitle(lang, s.key), stepDetail(lang, s), launchWho(lang, s.key)) : "";
+      if (!s) return "";
+      let detail = stepDetail(lang, s);
+      if (stages && s.key === "contact") detail += ` · ${T(lang, "e-mail: {e} · telefon: {p}", { e: n(stages.contact.email), p: n(stages.contact.phone) })}`;
+      if (stages && s.key === "mock") detail += ` · ${T(lang, "a minőségi kollégán átment: {n}", { n: n(stages.mock.passed) })}`;
+      if (stages && s.key === "sent" && stages.sendReason) detail += ` · ${T(lang, "miért áll: {why}", { why: stages.sendReason })}`;
+      return listItem(lang, s.key, s.state, launchTitle(lang, s.key), detail, launchWho(lang, s.key));
     })
     .join("");
   const wallet = it("wallet");
@@ -589,6 +606,9 @@ const HUB_CSS = `
 .hub-card__h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 8px}
 .hub-card__h h3{margin:0}
 .hub-facts{grid-template-columns:max-content 1fr}
+.hub-babel{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:4px;max-width:420px}
+.hub-babel li{display:grid;grid-template-columns:110px 1fr;gap:2px 8px;align-items:center;font-size:12.5px}
+.hub-babel .cty-bar{grid-column:1 / -1}
 .hub-who{display:block;margin-top:4px;font-size:12.5px;color:var(--citui-ink)}
 .cty-rd__i--na .cty-rd__ic{color:var(--citui-line-strong)}
 .hub-out{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}

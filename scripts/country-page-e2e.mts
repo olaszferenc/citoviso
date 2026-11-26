@@ -290,6 +290,9 @@ try {
   await page.goto(`${BASE}/countries?iso=HU`, { waitUntil: "networkidle" });
   check("három fül: Ország, Árazás, Kiküldés", (await page.locator(".hub-tabs [data-tab]").count()) === 3);
   check("Ország fül: alapadatok + Indítás + indulás-lista", (await page.locator(".hub-facts").count()) === 1 && (await page.locator("#hub-gate").count()) === 1 && (await page.locator("#hub-launch li").count()) >= 10);
+  // 3. fázis: the launch list's detail — Bábel in four parts with counts, the mock / contact detail.
+  check("3. fázis: a Bábel-sor négy részre bontva (Felület, Levelek, Jogi csomag, Súgó)", (await page.locator('#hub-launch [data-launch="babel"] .hub-babel li').count()) === 4);
+  check("3. fázis: kontakt e-mail/telefon, mock a minőségi kollégával", /e-mail: .* telefon:/.test((await page.locator('#hub-launch [data-launch="contact"]').textContent()) ?? "") && /minőségi kollégán átment/.test((await page.locator('#hub-launch [data-launch="mock"]').textContent()) ?? ""));
   await page.click('.hub-tabs [data-tab="price"]');
   await page.waitForLoadState("networkidle");
   check("Árazás fül: a régió árazó űrlapja", /tab=price/.test(page.url()) && (await page.locator('#pr2-form input[name="region"]').inputValue()) === "hu");

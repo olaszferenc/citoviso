@@ -307,7 +307,7 @@ export async function countryReadiness(country: string | null | undefined, opts:
   const paused = !!cfg?.pausedAt && cc !== HOME;
   const reasons = [
     ...(paused ? [T(lang, "az ország szüneteltetve ({by})", { by: cfg?.pausedBy ?? "—" })] : []),
-    ...(approved ? [] : [T(lang, "a piacot a tulaj még nem nyitotta meg")]),
+    ...(approved ? [] : [T(lang, "az ország nincs elindítva (Indulás)")]),
     ...failing,
   ];
   const open = approved && complete && !paused;

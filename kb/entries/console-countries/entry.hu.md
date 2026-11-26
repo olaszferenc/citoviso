@@ -47,7 +47,10 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
 - **„Ország”**: az **„Alapadatok”** (státusz, pénznem, ár-régió, nyelv, időzóna, hívószám, fizetés,
   csatorna, kiküldési ablak, napi keret, lead és előfizető), mellette az **„Indítás”** doboz (**„Indulás”**, **„Szüneteltetés”**,
   **„Folytatás”**), alatta **„Az indulás állapota”**: minden feltétel és a lánc minden lépése
-  sorrendben (régió-felbontás, csempék, felderítés, lead, kontakt, mock, kiküldés). Ami nem kész, annál
+  sorrendben (régió-felbontás, csempék, felderítés, lead, kontakt, mock, kiküldés). A **„Nyelvi csomag
+  (Bábel)”** sor alatt négy rész áll darabszámmal, százalékkal és sávval: **„Felület”**, **„Levelek”**,
+  **„Jogi csomag”**, **„Súgó”**. A kontakt sor az e-mailes és a telefonos leadek számát is mutatja, a mock
+  sor azt, hány ment át a minőségi kollégán, a kiküldés sor pedig, amíg áll, hogy miért. Ami nem kész, annál
   ott áll: **„Mi hiányzik, ki pótolja:”**. Ember csak két helyen kell: a kezdő ár jóváhagyásánál és a
   fizetési tárca megnyitásánál, mindkettő a tulaj döntése. A többit a gép vagy egy munkatárs (például
   Bábel, a fordító) végzi. Az **„Adatok szerkesztése”** link (a doboz jobb felső sarkában) nyitja meg az ország adatainak szerkesztőjét.
@@ -221,6 +224,7 @@ Németország ugyanazt a nyelvet beszéli, de más a szabályozásuk.
 
 ## Napló
 
-Minden döntés megmarad a doboz alján: időpont, a bejelentkezett operátor neve és a művelet (**„elindítva /
-megnyitva”**, **„szüneteltetve”**, **„folytatva”**, **„lezárva”**) — így a „miért fut / áll ez az ország?”
-kérdés hónapokkal később is megválaszolható.
+Az **„Indítás”** doboz alján a döntések naplója áll: időpont, a bejelentkezett operátor neve és a művelet
+(**„elindítva / megnyitva”**, **„szüneteltetve”**, **„folytatva”**, **„lezárva”**). A legutóbbi 6 bejegyzés
+látszik; a régebbieket a „+… korábbi bejegyzés” sor lenyitásával nézed meg (a lap a legutóbbi 50 döntést
+mutatja). Így a „miért fut / áll ez az ország?” kérdés hónapokkal később is megválaszolható.

@@ -205,7 +205,7 @@ export async function marketLog(
     .select(["action", "actor", "reason", "created_at"])
     .where("country", "=", cc)
     .orderBy("created_at", "desc")
-    .limit(20)
+    .limit(50)
     .execute();
   return rows.map((r) => ({ action: r.action, actor: r.actor, reason: r.reason, at: r.created_at }));
 }
