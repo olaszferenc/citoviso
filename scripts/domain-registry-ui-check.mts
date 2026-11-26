@@ -15,8 +15,11 @@
 //   ⑥ HELP: the „?” opens the help box, ESC closes it. JS errors: 0.
 //
 //   npx tsx scripts/domain-registry-ui-check.mts
+//   npx tsx scripts/domain-registry-ui-check.mts --self-test   (sabotage: the page's /sw.js is
+//     a 404, the 11-26 shape — ⑥ must go red on both widths, nothing else)
 
 process.env.CIT_SHOT = "1";
+const SELF_TEST = process.argv.includes("--self-test");
 
 import http from "node:http";
 import fs from "node:fs";
@@ -26,6 +29,7 @@ import { chromium } from "playwright-core";
 
 const { lifeSteps, attentionOf, domainStats } = await import("../src/console/domainRegistry.js");
 const { domainsPage, filterDomains, parseDomainsQuery } = await import("../src/console/domainRegistryViews.js");
+const { servePwa } = await import("../src/ui/pwa.js");
 type Rec = Parameters<typeof domainStats>[0][number];
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -34,10 +38,12 @@ const DAY = 86_400_000;
 const d = (s: string): Date => new Date(s);
 
 let failed = 0;
+const failedNames: string[] = [];
 const say = (ok: boolean, what: string, detail = ""): void => {
   if (ok) console.log(`✅ ${what}`);
   else {
     failed++;
+    failedNames.push(what);
     console.error(`❌ ${what}${detail ? `\n     ${detail}` : ""}`);
   }
 };
@@ -214,8 +220,12 @@ say(chip.all === ALL.length && chip.att === ATT.size && chip.run === 2 && chip.l
 
 // ── ① ② ⑤ ⑥ browser ─────────────────────────────────────────────────────────
 const MIME: Record<string, string> = { ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const u = new URL(req.url ?? "/", "http://localhost");
+  // Same order as the real console (src/console/server.ts): the PWA paths (/sw.js, manifest,
+  // icons) are answered first. Every console page registers /sw.js since 9b0f948e; a fixture
+  // server without them gives a 404 the real console never gives.
+  if (!SELF_TEST && (await servePwa("console", req.method ?? "GET", u.pathname, res))) return;
   if (u.pathname.startsWith("/assets/")) {
     const f = path.join(ROOT, "public", u.pathname);
     if (fs.existsSync(f)) {
@@ -316,6 +326,16 @@ try {
   server.close();
 }
 
+if (SELF_TEST) {
+  const want = ["⑥ asztali: JS-hiba 0", "⑥ mobil: JS-hiba 0"];
+  const exact = failedNames.length === want.length && want.every((w) => failedNames.includes(w));
+  if (exact) {
+    console.log("\n✅ self-test: a 404-es /sw.js a ⑥-ot pirosra vitte (mindkét méreten), mást nem.");
+    process.exit(0);
+  }
+  console.error(`\n⛔ self-test: a szabotázs nem a várt módon bukott: ${JSON.stringify(failedNames)}`);
+  process.exit(1);
+}
 if (failed) {
   console.error(`\n⛔ ${failed} ellenőrzés bukott — a /domains nem a jóváhagyott terv szerint viselkedik.`);
   process.exit(1);

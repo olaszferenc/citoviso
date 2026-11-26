@@ -4297,7 +4297,7 @@ a.rp-cc.on { background: var(--citui-navy-900); border-color: var(--citui-navy-9
 }
 /* Plan orszag-szuro-forditas ⑦–⑫ (2026-11-26): the lead's country chip beside a reply, and the
    conversation in the console language — Bábel's translation on top, the original dimmed under it. */
-.con-rep__iso { display: inline-block; vertical-align: 1px; margin-right: 6px; font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; border: 1px solid var(--citui-line-strong); border-radius: 5px; padding: 2px 4px; color: var(--citui-navy-700); background: var(--citui-surface); }
+.con-rep__iso { display: inline-block; vertical-align: 1px; margin-right: 6px; font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; border: 1px solid var(--citui-line-strong); border-radius: 5px; padding: 2px 4px; color: var(--citui-ink-brand-2); background: var(--citui-surface); }
 .con-rep__dh .con-rep__iso { margin-right: 0; }
 .con-rep__trh { display: block; font-size: 12px; font-weight: 700; color: var(--citui-link-ink); margin: 2px 0; }
 .con-rep__trt { display: block; }

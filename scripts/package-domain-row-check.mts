@@ -18,7 +18,10 @@ import { chromium, type Browser } from "playwright-core";
 const SELF_TEST = process.argv.includes("--self-test");
 const SHOT_DIR = process.argv.includes("--shot") ? process.argv[process.argv.indexOf("--shot") + 1] : null;
 const ORIGIN = "http://pkg-domain.test";
-const ARTIFACT_ID = "00000000-0000-4000-8000-0000000000k1";
+// A real artifact id is a uuid (mock_artifact.id). Since 01fca19e (ORSZÁG-RÉTEG 3/7) the
+// configurator looks the artifact up for its legal pack, so a non-uuid fixture id is a
+// Postgres error, not a page. This one is a valid uuid with no row → the home legal pack.
+const ARTIFACT_ID = "00000000-0000-4000-8000-0000000000c1";
 
 const { renderSite } = await import("../src/engine/render.js");
 const { TEMPLATES } = await import("../src/engine/templates.js");

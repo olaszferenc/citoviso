@@ -24,7 +24,7 @@
 //   ⑥ FAIL-SAFE — JS NÉLKÜL a gombok NEM tiltottak: a kapu kényelmi zár, a garancia a
 //      szerver-oldali §C. Egy halott szkript nem zárhatja ki a kezelőt a munkából.
 //
-// Piros önteszt (`--self-test`): mindhárom hibaosztályt előállítjuk a betöltött lapon,
+// Piros önteszt (`--self-test`): mind a négy hibaosztályt (a §C.2 sor hiánya a levél nyelvén is) előállítjuk a betöltött lapon,
 // és az őrnek PIROSRA kell mennie. A ③/b eset a lényeg: átlátszóra állított sávnál a
 // GEOMETRIAI verdikt zöld marad, a LÁTHATÓSÁGI megy pirosra.
 //
@@ -57,11 +57,28 @@ const VIEWPORTS = [
   { tag: "asztali 1280px", width: 1280, height: 900 },
 ] as const;
 
-/** The legally required tail of the cold letter — §C.1 opt-out, §C.2 advertiser id. */
-const TAIL_NEEDLES: readonly { needle: string; what: string }[] = [
-  { needle: "/unsubscribe", what: "a LEIRATKOZÓ link" },
-  { needle: "A megkeresés küldője", what: "a HIRDETŐ-azonosítás (§C.2)" },
-];
+/**
+ * The legally required tail of the cold letter — §C.1 opt-out, §C.2 advertiser id — in the
+ * LETTER'S OWN language. Since 9592e402 (ORSZÁG-RÉTEG 3/5, ADR-0456) a letter goes out in the
+ * lead's language, so a Hungarian needle never matches a translated letter (11-26: the newest
+ * park prospect was HR, its letter carried „Pošiljatelj poruke: …”, the guard read „missing”).
+ * The needle is the longest fixed fragment of the very template draft.ts prints
+ * (advertiserIdentity), in `lang` — the same rule the §C gate uses (outreachCheck.foreignGateMarks).
+ */
+const { T, prepareMailLang } = await import("../src/i18n/mail.js");
+function tailNeedles(lang: string): readonly { needle: string; what: string }[] {
+  const Z = "\u0000";
+  const identity =
+    T(lang, "A megkeresés küldője: {who}", { who: Z })
+      .split(Z)
+      .map((x) => x.trim())
+      .sort((a, b) => b.length - a.length)[0] ?? "";
+  return [
+    { needle: "/unsubscribe", what: "a LEIRATKOZÓ link" },
+    { needle: identity, what: `a HIRDETŐ-azonosítás (§C.2, ${lang})` },
+  ];
+}
+let TAIL_NEEDLES: readonly { needle: string; what: string }[] = tailNeedles("hu");
 
 async function bootConsole(): Promise<{ port: number; cookie: string }> {
   const { server } = (await import("../src/console/server.js")) as { server: Server };
@@ -97,6 +114,8 @@ async function bootConsole(): Promise<{ port: number; cookie: string }> {
  */
 interface PickedPage {
   readonly prospectId: string;
+  /** The letter's language — the legal tail is looked for in it. */
+  readonly lang: string;
   /** Non-null = no sendable prospect in the park; serve this HTML at the draft URL. */
   readonly fixtureHtml: string | null;
 }
@@ -114,7 +133,8 @@ async function pickProspect(): Promise<PickedPage> {
     if (!r.contact_email || r.email_sent_at) continue;
     if ((await describeMailSendability(r.id)).sendable) {
       console.log(`mért lap: VALÓDI kiküldhető prospect (${r.id.slice(0, 8)})`);
-      return { prospectId: r.id, fixtureHtml: null };
+      const { buildDraftForProspect } = await import("../src/outreach/draft.js");
+      return { prospectId: r.id, lang: (await buildDraftForProspect(r.id))?.lang ?? "hu", fixtureHtml: null };
     }
   }
   const { buildDraftForProspect, renderPairSmsDraft } = await import("../src/outreach/draft.js");
@@ -141,7 +161,7 @@ async function pickProspect(): Promise<PickedPage> {
         `PARK-FÜGGETLEN FIXTURE: a valódi piszkozat-nézet, „még nem ment ki" állapotban, ` +
         `a(z) ${r.id.slice(0, 8)} prospect valódi levelével. Adatbázis-írás és küldés nincs.`,
     );
-    return { prospectId: r.id, fixtureHtml: html };
+    return { prospectId: r.id, lang: d.lang, fixtureHtml: html };
   }
   throw new Error("egyetlen prospectre sem épül piszkozat — az őr nem tud mit mérni");
 }
@@ -330,7 +350,7 @@ async function measureViewport(
   cookie: string,
   origin: string,
   vp: (typeof VIEWPORTS)[number],
-  poison: "none" | "bar-into-panel" | "bar-transparent" | "clip-letter",
+  poison: "none" | "bar-into-panel" | "bar-transparent" | "clip-letter" | "drop-identity",
 ): Promise<void> {
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
   await ctx.addCookies([{ name: "cit_op_session", value: cookie, url: origin }]);
@@ -365,6 +385,15 @@ async function measureViewport(
       const pre = document.getElementById("mailbody");
       if (pre) { pre.style.maxHeight = "445px"; pre.style.overflow = "hidden"; }
     })()`);
+  }
+
+  if (poison === "drop-identity") {
+    // The letter without its §C.2 line, in the letter's own language (the 11-26 blind spot
+    // ran the other way: a present line read as missing; this proves a missing one reads so).
+    await page.evaluate(`((needle) => {
+      const pre = document.getElementById("mailbody");
+      if (pre) pre.textContent = (pre.textContent || "").split(needle).join("");
+    })(${JSON.stringify(TAIL_NEEDLES[1].needle)})`);
   }
 
   const shape = (await page.evaluate(SHAPE_JS)) as BarShape;
@@ -483,7 +512,7 @@ async function measureNoJs(browser: Browser, url: string, cookie: string, origin
 async function main(): Promise<void> {
   console.log(
     SELF_TEST
-      ? "KÜLDÉS-SÁV ŐR — ÖNTESZT MÓD (a három hibaosztálynak PIROSRA kell vinnie)"
+      ? "KÜLDÉS-SÁV ŐR — ÖNTESZT MÓD (mind a négy hibaosztálynak PIROSRA kell vinnie)"
       : "KÜLDÉS-SÁV ŐR — a küldés a levél után áll, tapad, és tényleg látszik",
   );
   const { port, cookie } = await bootConsole();
@@ -491,6 +520,9 @@ async function main(): Promise<void> {
   const picked = await pickProspect();
   const prospectId = picked.prospectId;
   FIXTURE_HTML = picked.fixtureHtml;
+  await prepareMailLang(picked.lang);
+  TAIL_NEEDLES = tailNeedles(picked.lang);
+  console.log(`a levél nyelve: ${picked.lang} — a §C.2 sor ezzel kezdődik: „${TAIL_NEEDLES[1].needle}”`);
   const url = `${origin}/prospect/${prospectId}/draft`;
   const browser = await chromium.launch({ executablePath: config.chromiumPath });
 
@@ -500,18 +532,23 @@ async function main(): Promise<void> {
   } else {
     // ⚑ PIROS ÁG. Minden mérgezés a BETÖLTÖTT lapon történik — a termék forrása nem
     // változik, tehát az önteszt nem hagyhat maga után romot.
-    const before = failed;
-    for (const p of ["bar-into-panel", "bar-transparent", "clip-letter"] as const) {
+    // Each poison must turn at least one assertion red on its own — a total count would
+    // pass while one class goes unseen.
+    const deaf: string[] = [];
+    let reds = 0;
+    for (const p of ["bar-into-panel", "bar-transparent", "clip-letter", "drop-identity"] as const) {
+      const before = failed;
       await measureViewport(browser, url, cookie, origin, VIEWPORTS[1], p);
+      reds += failed - before;
+      if (failed === before) deaf.push(p);
     }
-    const reds = failed - before;
     failed = 0;
-    console.log(`\n⚑ ÖNTESZT: a három mérgezés összesen ${reds} állítást vitt pirosra.`);
-    if (reds === 0) {
+    console.log(`\n⚑ ÖNTESZT: a négy mérgezés összesen ${reds} állítást vitt pirosra.`);
+    if (deaf.length) {
       failed = 1;
-      console.error("❌ AZ ŐR NEM TUD PIROSRA MENNI — ez díszlet, nem őr.");
+      console.error(`❌ AZ ŐR NEM MEGY PIROSRA ezen a hibaosztályon: ${deaf.join(", ")} — ott díszlet, nem őr.`);
     } else {
-      console.log("✅ az őr képes pirosra menni mindhárom hibaosztályon");
+      console.log("✅ az őr mind a négy hibaosztályon pirosra megy");
     }
   }
 
