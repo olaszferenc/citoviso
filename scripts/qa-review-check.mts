@@ -284,6 +284,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   }
   check("kapcsolat-kép: jármű/ember/állat nem; szobakártya csak ágy/kanapé (konyha, kályha nem), különben a szoba-blokk minden úton elmarad", /outdoor\(p\) && !p\.notCard/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /rs\.every\(\(r\) => !r\.photo\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
   check("parallax-rács: a címben/alcímben felsorolt tétel nem jön vissza csempeként", /firstSentence\(data\.intro\)\]\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
+  check("alkalmas nyitókép nélküli sor kikerül a kolléga-sorból (tartva), nem jön vissza ⭐-gal", /nincs mozgatható, alkalmas nyitókép/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
 }
 
 if (failed) {

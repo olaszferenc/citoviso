@@ -30,7 +30,7 @@ import { DISPATCH_PRIORITY } from "../src/outreach/autoDispatch.js";
 import { ensureHeroShot } from "../src/outreach/heroShot.js";
 import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "../src/outreach/mockPhotoGate.js";
 import { secondPlanOf } from "../src/outreach/secondPlan.js";
-import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, QA_HOLD_PREFIX, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
 import { classifyPhotoUrl, isHeroCandidate } from "../src/media/photoKind.js";
@@ -232,6 +232,15 @@ async function queue(limit: number, half: "0-7" | "8-f" | null = null, shard: { 
     // The hero first — the colleague's pick (owner 2026-11-25).
     const pin = await getHeroPin(r.leadId).catch(() => null);
     if (!pin?.actor.startsWith(HERO_PICK_PREFIX)) {
+      // No fit hero at all (sized, no kitchen/bath/person/vehicle/dark) → the row leaves the colleagues' queue on its
+      // own, held with a reason (11-26, colleagues 3 and 4: Napsugár, Csomor-lak, Vörösmarty came back ⭐ forever).
+      const { urls: cand } = await heroCandidates(r.artifactId).catch(() => ({ urls: [] as string[] }));
+      if (!cand.length) {
+        await db.updateTable("outreach_dispatch").set({ status: "held", note: `${QA_HOLD_PREFIX} nincs mozgatható, alkalmas nyitókép (≥ 1000×700, nem konyha/fürdő/ember/jármű/sötét)` })
+          .where("artifact_id", "=", r.artifactId).where("status", "in", ["queued", "held"]).execute();
+        console.log(`\n⏸ ${r.artifactId} · ${r.name} — nincs alkalmas nyitókép, kivéve a sorból (tartva)`);
+        continue;
+      }
       if (shown >= limit) break;
       shown++;
       console.log(`\n⭐ ${r.artifactId} · ${r.name} — előbb a nyitókép: qa-review.mts heroes ${r.artifactId}`);
@@ -290,7 +299,7 @@ try {
       console.error(`⛔ ${r.error}`);
       process.exitCode = 1;
     } else {
-      console.log(`✅ ${cmd === "pass" ? "jóváhagyva" : "NEM jóváhagyva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor a tulaj jóváhagyó lapjára került` : ""}`);
+      console.log(`✅ ${cmd === "pass" ? "jóváhagyva" : "NEM jóváhagyva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor jóváhagyásra vár — a tulaj lapján csak akkor jelenik meg, ha a lead MÁSIK terve is átment` : ""}`);
     }
   } else if (cmd === "heroes" && arg) {
     await heroes(arg);
