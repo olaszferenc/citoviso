@@ -39,7 +39,7 @@ import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
+import { collectFallbacks } from "../i18n/packs.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { behaviorWindowBlocks } from "../sms/sendWindow.js";
 import { normalizePhone } from "../text/phone.js";
@@ -529,10 +529,7 @@ export async function sendBehaviorMessage(c: BehaviorCandidate, deps: BehaviorDe
     if (verdict) return { kind: "skipped", reason: verdict };
     const d = await buildDraftForProspect(c.prospectId, { reserveLabel: !deps.dryRun });
     if (!d) return { kind: "skipped", reason: "a piszkozat nem állítható elő" }; // i18n-exempt: operátori kimenet
-    if (d.lang !== DEFAULT_LANG) {
-      const missing = (await missingBuyerPackStrings(d.lang)).length;
-      if (missing > 0) return { kind: "skipped", reason: `${d.lang} nyelvi csomagból ${missing} string hiányzik` }; // i18n-exempt: operátori kimenet
-    }
+    // ADR-XXXX (2026-11-26): no whole-pack hold — the letter's own Hungarian fallbacks hold it in the §C gate below.
     const trigger = c.trigger;
     const to = c.address;
     const trialHost = await trialCampaignHost(c.leadId);

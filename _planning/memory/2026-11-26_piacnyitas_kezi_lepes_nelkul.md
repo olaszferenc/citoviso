@@ -59,3 +59,27 @@ Lánc (uj-lanc-hr git): `felderito/{teruletek.py,osszes.sh,orzo.sh,felderito.py,
 **Átállás:** `bash ~/rc-briefs/uj-lanc-hr/atallas-reszek.sh check | go --stop-walk | rollback <tgz>`
 - Előfeltétel: a repó-commit landolva + fő-fa ff.
 - A `--stop-walk` PID szerint leállítja az élő bejárást (folytatható), másol, öntesztel, majd az orzo.sh-val újraindítja.
+
+## Nyelvi csomag nem zárja a piacot — „Bábelre vár” üzenet-szinten (ADR-XXXX, koordinátor 2026-11-26 16:00)
+
+**Mérve élesen 15:50:** az éles terv nyitott piaca csak a HU volt. A HR egyetlen oka: „Nyelvi csomag (Bábel): hr: 4270 / 4293”. A lánc az audit (a) óta csak nyitott piacra dolgozik, így minden HR lead kiesett.
+
+Ráadásul öt kiküldő út a TELJES csomag bármely hiányánál a nyelv minden levelét tartotta (`sendBatch`, `sendOutreachSms`, `nonOpenerFollowup`, `trialCampaign`, `behaviorMessage`).
+
+**Javítás:**
+- A `countryReadiness` babel tétele: `gating: !okLang`, hiánynál `warn`.
+- A küldő utak az ÜZENET saját szövegét mérik: `draft.untranslated`, `letter.untranslated`, `sms.untranslated`, a levél-keret `collectFallbacks`-a (új: `sendBatch` frameFallbacks), és a §C.
+- Őr: `country-layer-check` (egyik küldő út sem nézi a teljes csomagot, mind méri a sajátját; a babel tétel nem kapuzó).
+
+**Vak mérés (dev, a valódi hr csomag és két valódi HR levél):**
+- (i) Egy új, lefordítatlan vevő-oldali felirat landja után (ideiglenes katalógus-bejegyzés): hr hiány 1, a HR NYITVA, a babel tétel `warn`.
+- (ii) Egy levél-mondat („Saját honlapot viszont nem találtunk.”) kivéve a dev DB csomagjából és a Bábel-seedből:
+  - az a levél, amelyben szerepel (4d81365a): TARTVA „Bábelre vár … 1 szöveg”;
+  - a másik levél (84e67d32), amelyben nincs: nyelvileg MEHET;
+  - a HR nyitva marad.
+- Minden visszaállítva: seed-fájl, DB-sor, a dev HR piac pending.
+
+**Közben (3. pont):**
+- (a) Dev: 3 lead okkal félretéve („nincs jó kép”: Tiszaörs, Pilismarót, Fedémes), a várólista 97 → 91.
+- (b) `fo-cand` csak e-mailes leaddel. Élesen mérve: 70 → 35 lead, a 35 kieső mind e-mail nélküli.
+- (c) Városnév-szabály, vak minta élesről, 90 település: 72 ismert, 18 rossz név (utcacím, ajtószám, NTAK, irányítószám a név elején), mind a valódi településére esik vissza, 0 téves.

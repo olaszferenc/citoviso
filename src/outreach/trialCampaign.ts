@@ -45,7 +45,7 @@ import { plannedSiteSlug } from "../conversion/provision.js";
 import { ownedSiteForLead } from "../conversion/owned.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
+import { collectFallbacks } from "../i18n/packs.js";
 import { getEscalationConfig, legacyOutreachPercent } from "../payment/offers.js";
 import { sendSms, type SmsMessage, type SmsSendResult } from "../sms/sender.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
@@ -622,10 +622,10 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   if ("error" in built) return { kind: "skipped", reason: built.error };
   const { letter, lang, market } = built;
   if (lang !== DEFAULT_LANG) {
-    // Measured, never provisioned (no AI spend from a campaign run): a half-translated
-    // letter reads as a scam, so a gap means no letter.
-    const missing = (await missingBuyerPackStrings(lang)).length;
-    if (missing > 0) return { kind: "skipped", reason: `${lang} nyelvi csomagból ${missing} string hiányzik` }; // i18n-exempt: operátori CLI-kimenet
+    // A half-translated letter reads as a scam: THIS letter's own Hungarian fallbacks hold it (ADR-XXXX,
+    // 2026-11-26 — on the message, not on the whole pack; the mail frame is measured below as well).
+    const own = letter.untranslated;
+    if (own === undefined || own.length > 0) return { kind: "skipped", reason: `NYELV: ${own?.length ?? "?"} szövegrész nincs ${lang} nyelven (Bábelre vár) — TARTVA, magyarul nem megy ki` }; // i18n-exempt: operátori CLI-kimenet
   }
   // §C gate on the text that goes out — the cold letter's own judge (CheckableLetter).
   const gate = checkOutreachDraft(letter, c.leadName, lang, market);

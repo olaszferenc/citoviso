@@ -5459,7 +5459,7 @@
   "Megkeresés-riport",
   "Megkeresés-tölcsér",
   "Megkeresés-tölcsér — hol akadnak el",
-  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.",
+  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.",
   "Megkeresések",
   "Megkereső link megnyitása (nem számít kattintásnak)",
   "Megkezdett rendelés",

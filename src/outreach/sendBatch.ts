@@ -36,7 +36,7 @@ import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { collectFallbacks, ensureLanguagePack, missingBuyerPackStrings } from "../i18n/packs.js";
+import { collectFallbacks, ensureLanguagePack } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { countryConfigSync } from "../country.js";
 import { babelHoldReason, outreachWindowBlocksIn } from "./countryOutreach.js";
@@ -306,8 +306,8 @@ export async function describeMailSendability(prospectId: string): Promise<MailS
  * `probe` (Elek FK-004 Z1/Z2): run the gate sequence WITHOUT provisioning anything,
  * so a SCREEN can ask the very same question the button answers. The only difference
  * is the language-pack step — `ensureLanguagePack` would pay an AI call and write the
- * DB, which a GET render must never do; in probe mode the gap is MEASURED instead
- * (missingBuyerPackStrings — the buyer-side measure the readiness reads), so the probe is never more permissive than the real send. Use
+ * DB, which a GET render must never do; in probe mode the letter's own fallbacks are measured against the
+ * pack as it is (before Bábel's seed is applied), so the probe is never more permissive than the real send. Use
  * with `dryRun`, or nothing will stop it from actually sending.
  */
 export async function sendOutreachMail(
@@ -472,26 +472,22 @@ export async function sendOutreachMail(
   const override = await loadCopyOverride(prospectId);
   const d = { ...d0, draft: withMailOverride(d0.draft, override, d0.lang) };
 
-  // ADR-0070 §3 — LANGUAGE gate: for a non-Hungarian lead the draft must have a
-  // COMPLETE pack behind it. A missing translation falls back to Hungarian per
-  // string (tSync), which a green pipeline would happily send — and a half-Polish,
-  // half-Hungarian cold mail reads as a scam. Not sending beats sending wrong.
+  // ADR-0070 §3 — LANGUAGE gate, ON THE LETTER (ADR-XXXX, 2026-11-26): a half-Polish, half-Hungarian cold
+  // mail reads as a scam, so a letter whose OWN text has a Hungarian fallback is held („Bábelre vár”) — here
+  // on the draft, below on the letter that actually goes out (letter.untranslated) and in the §C gate. A gap
+  // elsewhere in the buyer pack (a string this letter does not use) no longer holds every letter of the
+  // language: one new console/page string used to stop a whole country until Bábel translated it.
   if (d.lang !== DEFAULT_LANG) {
-    // ⚠️ The ONE step where probe and send may differ, and it differs by DESIGN:
-    // ensureLanguagePack PROVISIONS (AI call + DB write). A screen asking "would this
-    // go out?" must not spend money, so it measures the gap instead. Measuring is the
-    // STRICTER of the two — it reports a gap the send would have filled — so the probe
-    // can never claim sendable where the send would refuse.
-    const missing = opts.probe
-      ? (await missingBuyerPackStrings(d.lang)).length
-      : (await ensureLanguagePack(d.lang), (await missingBuyerPackStrings(d.lang)).length);
-    if (missing > 0) {
+    // Bábel's committed seed is applied first (no AI call — ADR-0412); a probe screen does not write.
+    if (!opts.probe) await ensureLanguagePack(d.lang);
+    const own = d.draft.untranslated;
+    if (own?.length) {
       return {
         ...base,
         outcome: {
           kind: "skipped",
           // ORSZÁG-RÉTEG 3/5: TARTVA „Bábelre vár” — never a Hungarian fallback (owner 2026-11-17).
-          reason: babelHoldReason(d.lang, missing),
+          reason: babelHoldReason(d.lang, own.length),
         },
       };
     }
@@ -769,9 +765,10 @@ export async function sendOutreachMail(
     heroShotPath && remoteHeroActive() && (await storeMailHero(d.input.token, heroShotPath)) ? mailHeroUrl(d.input.token) : undefined;
   // ADR-0067: the draft prose is already in the lead's language (draft.ts) —
   // declare it on the message too, and localize the image alt text.
-  const msg = buildOutreachEmail(
+  const toAddress = p.contactEmail;
+  const { value: msg, fallbacks: frameFallbacks } = collectFallbacks(() => buildOutreachEmail(
     letter,
-    p.contactEmail,
+    toAddress,
     {
       heroShotPath,
       lang: d.lang,
@@ -784,7 +781,12 @@ export async function sendOutreachMail(
       noImage: !variants.image,
       ...(variants.priceLine !== undefined ? { noPriceBox: true } : {}),
     },
-  );
+  ));
+  // ADR-XXXX (2026-11-26): the mail FRAME's own strings too (privacy line, footer, alt text) — the whole-pack
+  // hold used to cover them; now one Hungarian fallback in THIS letter's frame holds THIS letter.
+  if (d.lang !== DEFAULT_LANG && frameFallbacks.length) {
+    return { ...base, outcome: { kind: "skipped", reason: babelHoldReason(d.lang, frameFallbacks.length) } };
+  }
   // Belt-and-braces: refuse to hand anything UNSUBSCRIBABLE to the raw adapter.
   // What the law requires (Grt./GDPR) is a working opt-out the recipient can act
   // on — that is the IN-BODY link, which §C.1 separately checks for presence and

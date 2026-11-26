@@ -697,7 +697,13 @@ SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file}
     "a mobil-csatorna az ország-sorból (modem-pár kapu, a szám a lead országában)",
     /const pairBlock = modemPairBlocks\(cc\)/.test(sms) && /normalizePhoneIn\(d\.phone, cc\)/.test(sms) && /isMobileE164In\(to, cc\)/.test(sms),
   );
-  check("hiányzó nyelvi csomag = TARTVA „Bábelre vár” (levél, mobil)", /babelHoldReason\(d\.lang, missing\)/.test(batch) && /babelHoldReason\(d\.lang, missing\)/.test(sms));
+  // ADR-XXXX (2026-11-26): the hold is on the MESSAGE — the letter's / SMS's own Hungarian fallbacks
+  check("lefordítatlan saját szöveg = TARTVA „Bábelre vár” (levél, mobil — üzenet-szinten)",
+    /const own = d\.draft\.untranslated;/.test(batch) && /babelHoldReason\(d\.lang, own\.length\)/.test(batch) &&
+      /babelHoldReason\(d\.lang, letter\.untranslated\.length\)/.test(batch) &&
+      /const own = d\.sms\.untranslated;/.test(sms) && /babelHoldReason\(d\.lang, own\?\.length \?\? 1\)/.test(sms));
+  check("a nyelvi csomag hiánya nem zárja a piacot (gating: false, figyelmeztetés)",
+    /key: "babel",\s*gating: !okLang,/.test(readFileSync("src/countryReadiness.ts", "utf8")));
   check(
     "a kvóta országonként (saját nap, saját számláló), a sor az országot nézi",
     /dailyCapFor\(cfg, DISPATCH_HOME_COUNTRY, rampCap\)/.test(auto) && /countryOfLeads\(rows\.map/.test(auto) && /country: known\?\.iso2 \?\? iso/.test(auto),
@@ -967,8 +973,13 @@ console.log("\n⑫ nyitás előtti teljesség (ország-réteg 3/8)");
   check("a pénz-út hiánylistáját (marketOpenGaps) csak a teljesség olvassa", moneyReaders.length === 0, moneyReaders.join(", "));
   const fullCatalogGates = grepL("missingPackStrings\\(").filter((f) => f.startsWith("src/outreach/") || f.startsWith("src/console/"));
   check("a megkeresés-kapuk a vevő-oldali mérést olvassák (nincs teljes-katalógus kapu)", fullCatalogGates.length === 0, fullCatalogGates.join(", "));
-  const buyerReaders = ["src/outreach/sendBatch.ts", "src/outreach/sendOutreachSms.ts", "src/outreach/nonOpenerFollowup.ts", "src/outreach/trialCampaign.ts", "src/outreach/behaviorMessage.ts", "src/countryReadiness.ts"];
-  check("…és mind ugyanazt a függvényt (missingBuyerPackStrings)", buyerReaders.every((f) => /missingBuyerPackStrings\(/.test(src(f))), buyerReaders.filter((f) => !/missingBuyerPackStrings\(/.test(src(f))).join(", "));
+  // ADR-XXXX (2026-11-26): the readiness MEASURES the pack (a warning), the send paths hold on the message's own text
+  check("a teljesség a vevő-oldali mérést olvassa (missingBuyerPackStrings)", /missingBuyerPackStrings\(/.test(src("src/countryReadiness.ts")));
+  const sendPaths = ["src/outreach/sendBatch.ts", "src/outreach/sendOutreachSms.ts", "src/outreach/nonOpenerFollowup.ts", "src/outreach/trialCampaign.ts", "src/outreach/behaviorMessage.ts"];
+  const wholePack = sendPaths.filter((f) => /missingBuyerPackStrings\(/.test(src(f)));
+  check("a küldő utak nem a teljes csomagot nézik, hanem az üzenet saját szövegét (ADR-XXXX)", wholePack.length === 0, wholePack.join(", "));
+  const unmeasured = sendPaths.filter((f) => !/untranslated|collectFallbacks\(/.test(src(f)));
+  check("…és mind méri a saját szövegét (untranslated / collectFallbacks)", unmeasured.length === 0, unmeasured.join(", "));
   const con = src("src/console/server.ts");
   const mkRoute = con.slice(con.indexOf('path === "/settings/markets"'), con.indexOf('path === "/countries"'));
   check("a jóváhagyás a szerveren is a teljességet nézi", /const ready = await countryReadiness\(country, \{ lang \}\);/.test(mkRoute) && /if \(!ready\.complete\)/.test(mkRoute));

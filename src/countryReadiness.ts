@@ -200,16 +200,22 @@ export async function countryReadiness(country: string | null | undefined, opts:
         : T(lang, "{n} terület a felderítéshez", { n: areas }),
   });
 
-  // ── ② the language pack, buyer-side (the send gates' own measure) ──────────────────────────
+  // ── ② the language pack, buyer-side ───────────────────────────────────────────────────────
+  // NOT GATING (ADR-XXXX, owner rule 2026-11-25 — a missing translation never blocks; Hungarian fallback, Bábel
+  // after): a new buyer-side string landing must not shut an OPEN market for the chain, the incoming trial or
+  // the payment (2026-11-26: hr 4270/4293 shut HR for the whole chain). The protection lives on the MESSAGE:
+  // a letter / SMS / mock whose OWN text has an untranslated part is held („Bábelre vár”, sendBatch.ts,
+  // sendOutreachSms.ts, nonOpenerFollowup.ts, mockVerdictGate.ts langVerdict, outreachCheck.ts). Only a
+  // country with no default language at all stays gating.
   const plang = cfg?.defaultLang ?? "";
   const scope = (await buyerCatalog()).length;
   const okLang = /^[a-z]{2,3}$/.test(plang);
   const missing = okLang ? (await missingBuyerPackStrings(plang, { withSeed: true })).length : scope;
   items.push({
     key: "babel",
-    gating: true,
+    gating: !okLang,
     title: T(lang, "Nyelvi csomag (Bábel)"),
-    state: okLang && missing === 0 ? "ok" : "bad",
+    state: !okLang ? "bad" : missing === 0 ? "ok" : "warn",
     detail: !okLang
       ? T(lang, "nincs alapnyelv megadva")
       : plang === "hu"

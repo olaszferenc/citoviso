@@ -558,7 +558,7 @@ function stepBody(ed: CountryEditor, step: CountryStep): string {
         <button type="button" class="cty-btn cty-btn--sm" data-goto="data" data-sub="identity">${esc(T(lang, "Ár-régió, pénznem ›"))}</button> <a class="cty-lnk" href="/countries?iso=${encodeURIComponent(ed.iso)}&tab=price">${esc(T(lang, "Árazás fül ›"))}</a>`;
     }
     case "babel":
-      return `${st}<p class="cty-small cty-mut">${esc(T(lang, "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.", { lang: r.defaultLang || "—" }))}</p>
+      return `${st}<p class="cty-small cty-mut">${esc(T(lang, "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.", { lang: r.defaultLang || "—" }))}</p>
         <button type="button" class="cty-btn cty-btn--sm" data-goto="data" data-sub="identity">${esc(T(lang, "Alapnyelv módosítása ›"))}</button>`;
     case "legal":
       return `${st}<p class="cty-small cty-mut">${esc(T(lang, "ÁSZF, elállás, adatkezelés, DPA, impresszum, süti, megkeresés jogi bekezdése, leiratkozó — az ország nyelvén. A fogyasztói vitarendező (FR, PT) csak a magánszemély-utat zárja, a céges utat nem."))}</p>`;

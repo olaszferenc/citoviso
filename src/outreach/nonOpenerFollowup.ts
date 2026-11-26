@@ -39,7 +39,7 @@ import { recipientKey } from "../email/address.js";
 import { buildNonOpenerEmail, renderNonOpenerLetter, type NonOpenerLetter } from "../email/nonOpenerEmail.js";
 import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
-import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
+import { collectFallbacks } from "../i18n/packs.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
 import { allCountriesSync, countryConfigSync, countryOfLeads } from "../country.js";
 import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
@@ -392,9 +392,10 @@ export async function sendNonOpenerFollowup(c: NonOpenerCandidate, deps: NonOpen
   const built = await buildNonOpenerLetterFor(c, { dryRun: deps.dryRun, senderName });
   if ("error" in built) return { kind: "skipped", reason: built.error };
   if (built.lang !== DEFAULT_LANG) {
-    // A half-translated letter reads as a scam — a gap means no letter (no AI spend here).
-    const missing = (await missingBuyerPackStrings(built.lang)).length;
-    if (missing > 0) return { kind: "skipped", reason: `${built.lang} nyelvi csomagból ${missing} string hiányzik` }; // i18n-exempt: operátori kimenet
+    // A half-translated letter reads as a scam — THIS letter's own Hungarian fallbacks hold it (ADR-XXXX,
+    // 2026-11-26: on the message, not on the whole pack; unmeasured = held).
+    const own = (built.send as { untranslated?: readonly string[] }).untranslated;
+    if (own === undefined || own.length > 0) return { kind: "skipped", reason: `NYELV: ${own?.length ?? "?"} szövegrész nincs ${built.lang} nyelven (Bábelre vár) — TARTVA, magyarul nem megy ki` }; // i18n-exempt: operátori kimenet
   }
   const gate = checkOutreachDraft(built.gate, c.leadName, built.lang, built.market);
   if (gate.verdict === "FLAG") return { kind: "skipped", reason: `§C FLAG: ${gate.reasons.join(" · ")}` }; // i18n-exempt: operátori kimenet
