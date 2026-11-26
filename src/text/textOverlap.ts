@@ -33,9 +33,7 @@ export function stripProperNames(text: string, proper: readonly string[]): strin
 const SHORT_CONTENT = new Set(["fő", "tó"]);
 
 export function contentStems(text: string): string[] {
-  return words(text)
-    .filter((w) => (w.length >= 3 || SHORT_CONTENT.has(w)) && !FUNCTION_WORDS.has(w))
-    .map((w) => w.slice(0, 5));
+  return words(text).filter((w) => (w.length >= 3 || SHORT_CONTENT.has(w)) && !FUNCTION_WORDS.has(w));
 }
 
 function sharedRun(a: string, b: string): number {
@@ -52,11 +50,16 @@ function sharedRun(a: string, b: string): number {
   return best;
 }
 
-/** Two stems name the same word when one is the other's prefix („tér” ~ „téren”, „kert” ~ „kertb…”), 3+ letters. */
+/**
+ * Two words are the same word when one is the other plus a SUFFIX of at most 3 letters („tér” ~ „téren”,
+ * „kert” ~ „kertről”), or when both are 6+ letters and share their first 5 („légkondicionált” ~
+ * „légkondicionálás”). „nap” ~ „napernyő” is NOT (blind sample 11-27: a POI line „Családi nap” matched).
+ */
 function sameStem(a: string, b: string): boolean {
   if (a === b) return true;
   const [s, l] = a.length <= b.length ? [a, b] : [b, a];
-  return s.length >= 3 && l.startsWith(s);
+  if (s.length >= 3 && l.startsWith(s) && l.length - s.length <= 3) return true;
+  return s.length >= 6 && l.slice(0, 5) === s.slice(0, 5);
 }
 
 /**
@@ -64,6 +67,8 @@ function sameStem(a: string, b: string): boolean {
  * Lines of two content words repeat only when BOTH words recur (a shared single word is no repeat).
  */
 export function textOverlap(a: string, b: string, proper: readonly string[] = []): number {
+  // Numbered siblings („… apartman 1” / „… apartman 2”) are a list, not a repeat (blind sample 11-27).
+  if (a.replace(/\d+/g, "#").trim().toLowerCase() === b.replace(/\d+/g, "#").trim().toLowerCase() && /\d/.test(a)) return 0;
   const sa = stripProperNames(a, proper);
   const sb = stripProperNames(b, proper);
   if (sharedRun(sa, sb) >= RUN_WORDS) return 1;

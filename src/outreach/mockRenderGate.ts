@@ -431,7 +431,8 @@ export async function auditMockFile(
     const seen: { text: string; mod: string }[] = [];
     let reported = 0;
     for (const l of lines) {
-      const dup = seen.find((k) => repeatsText(k.text, l.text, proper));
+      // Cards of one list (room cards, POI cards) name siblings, not repeats.
+      const dup = seen.find((k) => !(k.mod === l.mod && /^(?:rooms|poi|units)$/.test(l.mod)) && repeatsText(k.text, l.text, proper));
       if (dup && reported < 3) {
         findings.push({ code: "repeat", detail: `ismétlődő szöveg: „${dup.text.slice(0, 50)}” ↔ „${l.text.slice(0, 50)}” (${dup.mod}, ${l.mod})` });
         reported++;

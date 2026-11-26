@@ -49,7 +49,10 @@ export const MOCK_MIN_GENERATED_AT = "2026-11-23T21:42:31Z";
 /** 2026-11-25 evening (the quality colleague failed all of the first ten): the band rule, the rating
  *  floor, the date-stamp filter and the desktop word-break check join the same bar — the hero-fix-only
  *  re-render (stamp „2026-11-25-herofix-live”) no longer counts; „2026-11-25-qafix” sorts after it. */
-export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T15:00:00Z"; // set after the deploy on purpose: a new-code mock made before it is simply refreshed (mockRefresh.ts)
+// 11-27 (blind sample 0/20): the qafix7 rules are applied at RENDER time, but a mock generated after the old
+// LIVE_AT counted as current and was never refreshed — the rules reached no waiting mock. LIVE_AT = the qafix7
+// deploy (prod/20261126-2318); every older file is refreshed by the pipeline.
+export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the deploy on purpose: a new-code mock made before it is simply refreshed (mockRefresh.ts)
 // 11-26 noon: qafix4 rode through three deploys (221d9a78 → 8fe218b5 → 790faa8a), so a plan rendered with the
 // first kept counting as current (BaBo: the repeat, the empty ring, the corridor card). qafix5 re-renders those —
 // but a qafix4 plan the quality colleague already PASSED stays current (its file is what was reviewed; the
