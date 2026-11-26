@@ -473,6 +473,7 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   // icon on a page with 5+ own photos, where the stock fill is off). Never the hero, a kitchen or
   // bathroom (backstage), nor a photo with a vehicle / person / animal (notCard).
   const insideLabel = /^(a living room|a hotel room interior|a bedroom with a bed)$/;
+  const placeLabel = /^(the outside of a house|a guesthouse building|a garden with a terrace|a balcony with a table and chairs|a balcony with a view|a courtyard)$/;
   // From the END of the set: the hero, the about picture (photos[1]) and the bands take the front ones —
   // the card must not repeat a picture the page already shows (Linetta fixture, wordmark-grow about).
   // …and never the same file under another size folder / URL (Linetta: „beds.jpeg” as about AND card).
@@ -482,7 +483,12 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const front = d.photos.slice(0, 2);
   const inside = [...d.photos.entries()]
     .reverse()
-    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && !!p.kindLabel && insideLabel.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1];
+    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && !!p.kindLabel && insideLabel.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1]
+    // No inside shot either: the lone card shows the PLACE itself — the house, its garden or terrace (11-26,
+    // Sirató: the card stood with no picture and a big empty band before it).
+    ?? [...d.photos.entries()]
+      .reverse()
+      .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && !!p.kindLabel && placeLabel.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1];
   // A bedroom the hero / about frame already shows goes last (Linetta: after the vehicle shots moved to
   // the end, the bedroom became photos[1] — the about frame — and the card repeated it).
   const fresh = cards.filter((c) => !front.some((q) => sameShot(q, c)));
