@@ -138,9 +138,9 @@ fizetés-sor, és a felület nem ad ki két linket ugyanarra. Ha a sor ott ragad
 rendezéshez **fejlesztői beavatkozás kell** — jelezd.
 
 **`unknown` — rendszerint lezárt piac.** A vevő országára nincs jóváhagyott jogi csomag, a
-gomb pedig látszik és hatástalan. A teendő nem a lead lapján van: az **„Országok”** lapon
-(Rendszer › Országok) kell megnyitni az adott országot — koppints az ország sorára, majd a
-**„Megnyitás”** lépésben a **„Piac megnyitása”** gombra (részletesen az Országok súgójában, „A piac
+gomb pedig látszik és hatástalan. A teendő nem a lead lapján van: az **„Országok / Árazás”** lapon
+(CRM › Országok / Árazás) kell megnyitni az adott országot — koppints az ország sorára, majd az
+**„Ország”** fül **„Indítás”** dobozában a **„Piac megnyitása”** gombra (részletesen az Országok súgójában, „A piac
 megnyitása” résznél). Utána a gomb már valódi linket ad. Ha az országot üzletileg nem akarod megnyitni, a rendelés nem
 teljesíthető: keresd meg a vevőt és mondd meg neki.
 

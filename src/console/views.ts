@@ -109,6 +109,8 @@ import {
   pricingHead,
   pricingPageData,
   regionTabs,
+  regionGapNote,
+  type PricingEmbed,
   saveBar,
   sectionNav,
   trialPackageField,
@@ -782,7 +784,15 @@ export function settingsPage(
  *  Globális=EUR); the homepage shows the visitor's region price, else 'global'.
  *  Grouped by the same prospect-facing groups as the configurator. */
 
-export function pricingPage(
+export function pricingPage(...args: Parameters<typeof pricingBody>): string {
+  const lang = consoleLang();
+  // „Országok / Árazás” (orszagok-arazas ①): the stand-alone page now serves only a region no
+  // country is priced on (the global one, a fresh region) — the menu point is the merged lap.
+  return layout(T(lang, "Árazás és értékesítés"), pricingBody(...args), { active: "/countries" });
+}
+
+/** The pricing form itself — the stand-alone page, or (embed) one country's „Árazás” tab. */
+export function pricingBody(
   snap: PricingSnapshot,
   regions: PricingSnapshot[],
   notice: { ok: boolean; text: string } | null = null,
@@ -801,6 +811,7 @@ export function pricingPage(
   coupon: { readonly cfg: CouponConfig; readonly live: number } = { cfg: COUPON_CONFIG_DEFAULT, live: 0 },
   /** ADR-0360 ①: the package composition (module → lowest tier). */
   assignment: ReadonlyMap<string, Tier> = seedAssignment(),
+  embed: PricingEmbed | null = null,
 ): string {
   const lang = consoleLang();
   // ADR-0360 ⑦ — frozen plan assets/design-refs/console/pricing-redesign/ (A): head, market
@@ -810,8 +821,9 @@ export function pricingPage(
   const body = `
     <form method="post" action="/pricing" class="pr2" id="pr2-form">
       <input type="hidden" name="region" value="${esc(snap.region)}">
-      ${pricingHead(lang, snap, notice)}
-      ${regionTabs(lang, snap, regions)}
+      ${embed ? `<input type="hidden" name="back_iso" value="${esc(embed.iso)}">` : ""}
+      ${pricingHead(lang, snap, notice, embed)}
+      ${embed ? regionGapNote(lang, snap) : regionTabs(lang, snap, regions)}
       ${overviewBlock(lang)}
       ${sectionNav(lang)}
       ${packagesPanel(lang, snap, extras)}
@@ -831,7 +843,7 @@ export function pricingPage(
       <script>${ESCALATION_MONEY_JS}\n${PRICING_ADMIN_JS}</script>
     </form>
     ${newRegionForm()}`;
-  return layout(T(lang, "Árazás és értékesítés"), body, { active: "/pricing" });
+  return body;
 }
 
 // The page script travels as a file (assets/runtime/), inlined here like cit-money.js.

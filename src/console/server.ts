@@ -378,11 +378,11 @@ import { getSetting, setSetting } from "./appSettings.js";
 import { countryReadiness } from "../countryReadiness.js";
 import { draftFromForm } from "../countryRules.js";
 import { saveCountry } from "../countryStore.js";
-import { buildEditor, countryList } from "./countryData.js";
+import { buildEditor, countriesOfRegion, countryList, countryOverview, outreachInfo } from "./countryData.js";
+import { countryTab, hubCountryPage, hubOverviewPage, outreachTab, parseHubTab } from "./countryHub.js";
 import {
   COUNTRY_STEPS,
   COUNTRY_SUBS,
-  countriesPage,
   editorFragments,
   placeOfFirstError,
   type CountryEditor,
@@ -403,7 +403,8 @@ import { curatePage, layout, leadPage, leadsPage, tenantAdminPage, scrapePage } 
 import type { PhotoGateView } from "./views.js";
 import { dashboardPage, modulePage, operatorLoginPage, operatorLoginHelpPage, settingsPage, type HubData, type ReplyNotice } from "./views.js";
 import { getTreeFreshness } from "./treeFreshness.js";
-import { pricingPage, mapPage, regionsPage } from "./views.js";
+import { pricingBody, pricingPage, mapPage, regionsPage } from "./views.js";
+import type { PricingEmbed } from "./pricingPage.js";
 import { duplicatesPage, helpPage } from "./views.js";
 import { testLogIndexPage, testLogPage } from "./testLogViews.js";
 import { approvalPage, approvalShot, decideApproval, listPendingApprovals, notSeenPage, selectedApproval, warmApprovalShots } from "./approvalQueue.js";
@@ -2378,7 +2379,7 @@ async function handle(
     const reason = (form.get("reason") ?? "").trim();
     const lang = consoleLang();
     const back = (msg: string): void =>
-      redirect(res, `/countries?${/^[A-Z]{2}$/.test(country) ? `iso=${encodeURIComponent(country)}&step=open&` : ""}mk=${encodeURIComponent(msg)}`);
+      redirect(res, `/countries?${/^[A-Z]{2}$/.test(country) ? `iso=${encodeURIComponent(country)}&` : ""}mk=${encodeURIComponent(msg)}`);
     if (reason.length < 3) return back(`hiba:${T(lang, "Az indoklás kötelező (min. 3 karakter) — nem történt változás.")}`);
     const decision = { country, actor: op.username, reason };
     if (action === "approve") {
@@ -2395,33 +2396,46 @@ async function handle(
         : `hiba:${T(lang, "{iso} — a művelet nem hajtható végre (ismeretlen ország, hiányzó indoklás, vagy a hazai piac nem zárható le).", { iso: country })}`,
     );
   }
-  // GET /countries — the „Országok” lap (ORSZÁG-RÉTEG 3/8, ADR-0460): the opening matrix,
-  // a country's editor at a step (?iso=XX&step=…), or a new country's (?new=XX).
+  // GET /countries — „Országok / Árazás” (frozen plan orszagok-arazas; ORSZÁG-RÉTEG 3/8, ADR-0460):
+  //   · no parameter → the opening table;
+  //   · ?new=XX → the table with the „Adatok” editor of a new country over it;
+  //   · ?iso=XX[&tab=country|price|out] → the country on its three tabs; &step=… opens the editor over it.
   if (method === "GET" && path === "/countries") {
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const lang = consoleLang();
-    const mk = url.searchParams.get("mk");
+    const mk = url.searchParams.get("mk") ?? url.searchParams.get("saved");
     const notice = mk ? { ok: mk.startsWith("ok:"), text: mk.replace(/^(ok|hiba):/, "") } : null;
-    const step = parseCountryStep(url.searchParams.get("step"));
+    const rawStep = url.searchParams.get("step");
+    const step = parseCountryStep(rawStep);
     const sub = parseCountrySub(url.searchParams.get("sub"));
     const rawNew = url.searchParams.get("new");
-    let editor: CountryEditor | null = null;
-    let newErr = "";
     if (rawNew !== null) {
       const cc = rawNew.trim().toUpperCase();
+      let editor: CountryEditor | null = null;
+      let newErr = "";
       if (!/^[A-Z]{2}$/.test(cc)) newErr = T(lang, "Két betű, ISO 3166-1 (pl. HR, RO, PL).");
       else if (countryConfigSync(cc)) return redirect(res, `/countries?iso=${cc}&step=data`);
       else editor = await buildEditor({ lang, iso: cc, isNew: true, step: "data", sub: "identity" });
-    } else {
-      const iso = (url.searchParams.get("iso") ?? "").trim().toUpperCase();
-      if (iso) {
-        editor = await buildEditor({ lang, iso, isNew: false, step, sub });
-        if (!editor) return redirect(res, `/countries?new=${encodeURIComponent(iso)}`);
-      }
+      return send(res, 200, hubOverviewPage({ ov: await countryOverview(lang), editor, notice, newIso: rawNew, newErr }));
     }
-    const list = await countryList(lang);
-    return send(res, 200, countriesPage({ list, editor, notice, newIso: rawNew ?? "", newErr }));
+    const iso = (url.searchParams.get("iso") ?? "").trim().toUpperCase();
+    if (!iso) return send(res, 200, hubOverviewPage({ ov: await countryOverview(lang), editor: null, notice }));
+    const editor = await buildEditor({ lang, iso, isNew: false, step, sub });
+    if (!editor) return redirect(res, `/countries?new=${encodeURIComponent(iso)}`);
+    const ov = await countryOverview(lang);
+    const row = ov.rows.find((r) => r.entry.iso === iso);
+    if (!row) return redirect(res, "/countries");
+    const tab = parseHubTab(url.searchParams.get("tab"));
+    let tabHtml: string;
+    if (tab === "price") {
+      await loadPricing(true);
+      tabHtml = pricingBody(...(await pricingArgs(row.region, notice, { iso, shared: countriesOfRegion(row.region) })));
+    } else {
+      const out = await outreachInfo(iso);
+      tabHtml = tab === "out" && out ? outreachTab(row, out) : countryTab(row, editor, out);
+    }
+    return send(res, 200, hubCountryPage({ row, tab, notice, editor, editorOpen: rawStep !== null, tabHtml }));
   }
   // POST /countries/check — the live check of the open editor: the unsaved form → field
   // errors + the re-rendered readiness fragments (JSON). Writes nothing.
@@ -2467,8 +2481,15 @@ async function handle(
       ? await buildEditor({ lang, iso: draft.iso2, isNew, draft, touched: "all", step: place?.step ?? step, sub: place?.sub ?? parseCountrySub(form.get("sub")), dirty: true })
       : null;
     const n = Object.keys(saved.errors).length;
-    const list = await countryList(lang);
-    return send(res, 422, countriesPage({ list, editor, notice: { ok: false, text: T(lang, "{n} mező javítandó — nem mentettem.", { n }) } }));
+    const failNotice = { ok: false, text: T(lang, "{n} mező javítandó — nem mentettem.", { n }) };
+    const ov = await countryOverview(lang);
+    const row = editor && !isNew ? ov.rows.find((r) => r.entry.iso === editor.iso) : undefined;
+    if (editor && row) {
+      const out = await outreachInfo(editor.iso);
+      const stored = await buildEditor({ lang, iso: editor.iso, isNew: false });
+      return send(res, 422, hubCountryPage({ row, tab: "country", notice: failNotice, editor, editorOpen: true, tabHtml: countryTab(row, stored ?? editor, out) }));
+    }
+    return send(res, 422, hubOverviewPage({ ov, editor, notice: failNotice }));
   }
   // POST /settings/alerts — AAM-cap alert recipients (ADR-0098/c). Empty field
   // clears the DB row: phone falls back to OWNER_ALERT_PHONE, email turns off.
@@ -2526,38 +2547,36 @@ async function handle(
       `/settings?pw=${encodeURIComponent(msg ? `hiba:${msg}` : "ok:Jelszó módosítva.")}`,
     );
   }
-  // GET /pricing — operator-editable pricing admin (PILOT.md §7d ②).
+  // GET /pricing — „Országok / Árazás” (frozen plan orszagok-arazas ①): the menu point is the merged
+  // lap now. A region priced by a country → that country's „Árazás” tab; the global region and a region
+  // no country uses yet → /countries/global-pricing (the stand-alone page). The ?saved= notice travels.
   if (method === "GET" && path === "/pricing") {
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     await loadPricing(true);
-    // The console opens on the home market's tab; an unknown ?region= opens it too (the tab
-    // row shows every region that exists, the new one included).
     const askedRegion = url.searchParams.get("region");
     const region = askedRegion && hasPricingRegion(askedRegion) ? askedRegion : HU_PRICING_REGION;
+    const saved = url.searchParams.get("saved");
+    const tail = saved ? `&saved=${encodeURIComponent(saved)}` : "";
+    const backIso = (url.searchParams.get("iso") ?? "").trim().toUpperCase();
+    const owners = countriesOfRegion(region);
+    const iso = owners.includes(backIso) ? backIso : owners[0];
+    if (iso) return redirect(res, `/countries?iso=${encodeURIComponent(iso)}&tab=price${tail}`);
+    return redirect(res, `/countries/global-pricing?region=${encodeURIComponent(region)}${tail}`);
+  }
+  // GET /countries/global-pricing — the stand-alone pricing page of a region no country is priced on
+  // (the logged-out homepage visitor's „Globális” sheet, a freshly created region).
+  if (method === "GET" && path === "/countries/global-pricing") {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    await loadPricing(true);
+    const askedRegion = url.searchParams.get("region") ?? "global";
+    const region = hasPricingRegion(askedRegion) ? askedRegion : HU_PRICING_REGION;
+    const owners = countriesOfRegion(region);
+    if (owners[0]) return redirect(res, `/countries?iso=${encodeURIComponent(owners[0])}&tab=price`);
     const k = url.searchParams.get("saved");
     const notice = k ? { ok: k.startsWith("ok:"), text: k.replace(/^(ok|hiba):/, "") } : null;
-    const liveRows = await db
-      .selectFrom("module_entitlement")
-      .select(["module"])
-      .where("active", "=", true)
-      .execute();
-    const liveCounts = new Map<string, number>();
-    for (const r of liveRows) liveCounts.set(r.module, (liveCounts.get(r.module) ?? 0) + 1);
-    return send(
-      res,
-      200,
-      pricingPage(pricingSnapshot(region), pricingRegions(), notice, await getDisabledModules(), liveCounts, {
-        cfg: await getEscalationConfig(),
-        live: await liveEscalationOffers(),
-      }, {
-        cfg: await getFreeTrialConfig(),
-        running: await runningFreeTrials(),
-      }, {
-        cfg: await getCouponConfig(),
-        live: await liveTenantCoupons(),
-      }, getPackageAssignment()),
-    );
+    return send(res, 200, pricingPage(...(await pricingArgs(region, notice))));
   }
   // POST /pricing/tld-measure?tld=.eu — the registrar's NET yearly price for an ending
   // (ADR-0360 ③, the „Lekérdezés” button). Read-only at the registrar (a validate call
@@ -2622,6 +2641,8 @@ async function handle(
     // which used to zero `custom_domain_monthly` and clamp `domain_max_price_eur` to 1 on
     // every save of the new /pricing page (it no longer carries those legacy fields).
     const region = form.get("region") ?? "";
+    // „Országok / Árazás”: the country tab the form came from (the redirect lands back on it).
+    const backIso = /^[A-Z]{2}$/.test(form.get("back_iso") ?? "") ? `&iso=${form.get("back_iso")}` : "";
     if (!hasPricingRegion(region)) {
       return redirect(res, `/pricing?saved=${encodeURIComponent("hiba:Nem mentettem: ismeretlen ár-régió.")}`);
     }
@@ -2667,7 +2688,7 @@ async function handle(
     if (escalation && escalationConfigErrors(escalation).length) {
       return redirect(
         res,
-        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+        `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(
           "hiba:Nem mentettem: a Lead-ajánlatok egyik mezője a megengedett tartományon kívül esik, vagy ütközik egy másikkal.",
         )}`,
       );
@@ -2677,7 +2698,7 @@ async function handle(
     if (trial && freeTrialConfigErrors(trial).length) {
       return redirect(
         res,
-        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+        `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(
           "hiba:Nem mentettem: az Ingyenes próba egyik mezője a megengedett tartományon kívül esik.",
         )}`,
       );
@@ -2689,7 +2710,7 @@ async function handle(
     if (coupon && couponConfigErrors(coupon).length) {
       return redirect(
         res,
-        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+        `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(
           "hiba:Nem mentettem: a Kupon egyik mezője a megengedett tartományon kívül esik.",
         )}`,
       );
@@ -2702,7 +2723,7 @@ async function handle(
       console.warn(`[pricing] csomag-összetétel elutasítva: ${why}`); // i18n-exempt: operátori napló
       return redirect(
         res,
-        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+        `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(
           "hiba:Nem mentettem: a csomagok összetétele érvénytelen (egy modul nem lehet alacsonyabb csomagban, mint amire épül).",
         )}`,
       );
@@ -2719,7 +2740,7 @@ async function handle(
       console.warn(`[pricing] végződés-lista elutasítva: ${tlds ? tldRowErrors(tlds).join("; ") : "olvashatatlan"}`); // i18n-exempt: operátori napló
       return redirect(
         res,
-        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent(
+        `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(
           "hiba:Nem mentettem: a végződés-tábla hibás (mért ár nélkül vagy a plafon felett nem kínálható végződés).",
         )}`,
       );
@@ -2756,7 +2777,7 @@ async function handle(
       // back showing "�raz�s mentve." The error branch below always did it right.
       return redirect(
         res,
-        `/pricing?region=${encodeURIComponent(snap.region)}&saved=${encodeURIComponent("ok:Árazás mentve.")}`,
+        `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent("ok:Árazás mentve.")}`,
       );
     } catch (err) {
       return redirect(
@@ -6302,4 +6323,27 @@ if (process.env.CIT_SHOT !== "1") {
     }
     if (!rows.length) console.log("[i18n] nincs nem-magyar nyelvterület — csomag-ellenőrzés kész");
   })().catch((e) => console.error(`[i18n] boot-ellenőrzés hiba: ${(e as Error).message}`));
+}
+
+/** The pricing form's inputs for one region — the stand-alone page and a country's „Árazás” tab. */
+async function pricingArgs(
+  region: string,
+  notice: { ok: boolean; text: string } | null,
+  embed: PricingEmbed | null = null,
+): Promise<Parameters<typeof pricingPage>> {
+  const liveRows = await db.selectFrom("module_entitlement").select(["module"]).where("active", "=", true).execute();
+  const liveCounts = new Map<string, number>();
+  for (const r of liveRows) liveCounts.set(r.module, (liveCounts.get(r.module) ?? 0) + 1);
+  return [
+    pricingSnapshot(region),
+    pricingRegions(),
+    notice,
+    await getDisabledModules(),
+    liveCounts,
+    { cfg: await getEscalationConfig(), live: await liveEscalationOffers() },
+    { cfg: await getFreeTrialConfig(), running: await runningFreeTrials() },
+    { cfg: await getCouponConfig(), live: await liveTenantCoupons() },
+    getPackageAssignment(),
+    embed,
+  ];
 }

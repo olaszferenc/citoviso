@@ -164,7 +164,7 @@ page.on("pageerror", (e) => jsErrors.push(e.message));
 const OUT = mkdtempSync(join(tmpdir(), "country-hr-e2e-"));
 try {
   await page.goto(`${BASE}/countries?iso=HR&step=open`, { waitUntil: "networkidle" });
-  check("a mátrixban ott a HR sor", (await page.locator("#mxrow-HR").count()) === 1);
+  check("a HR ország-lapja nyílt (indulás-lista)", (await page.locator("#hub-launch").count()) === 1);
   const bad = await page.locator(".cty-rd__i--bad").count();
   const r1 = await countryReadiness("HR");
   check("a teljesség minden tétele zöld (nincs piros)", bad === 0 && r1.complete, `${bad} piros · ${r1.items.filter((i) => i.state === "bad").map((i) => `${i.key}: ${i.detail}`).join(" | ")}`);
@@ -174,7 +174,8 @@ try {
   await page.waitForLoadState("networkidle");
   const g = await marketGate("HR");
   check("a piac megnyílt (jóváhagyva + teljes)", g.open && g.approved, g.reasons.join(" · "));
-  check("a mátrixban „nyitva”", /nyitva/.test((await page.locator("#mxrow-HR .cty-mx__st").textContent()) ?? ""));
+  await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
+  check("a táblázatban „Fut”", /Fut/.test((await page.locator("#ovrow-HR .hub-st").textContent()) ?? ""));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
   check("mobilon is listázza a HR-t", (await page.getByText("Horvátország").count()) > 0);

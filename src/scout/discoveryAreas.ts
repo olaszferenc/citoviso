@@ -276,7 +276,7 @@ export interface LaunchStatus {
 }
 
 // A lead's country: its own raw.country, else its scrape area's (src/country.ts countryOf, as SQL).
-const LEAD_CC = sql<string>`upper(coalesce(nullif(trim(l.raw->>'country'),''),
+export const LEAD_CC = sql<string>`upper(coalesce(nullif(trim(l.raw->>'country'),''),
   (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id where sr.id = l.scrape_run_id)))`;
 
 /** The launch status of one country (read-only). */

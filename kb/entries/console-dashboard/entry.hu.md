@@ -203,7 +203,7 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
 - **„megválaszolatlan válasz a megkeresésekre”** (piros) — hány lead válaszára nem reagáltunk
   még; a fenti blokkra ugrik;
 - **„lejárt számla”** (piros) és **„nyitott bizonylat”** (borostyán) — a nyitott tételekre visz;
-- hány modul eladó a katalógusból, ha nem mind — az Árazás és értékesítés lapra visz;
+- hány modul eladó a katalógusból, ha nem mind — a magyar ársorra visz (Országok / Árazás, Magyarország, „Árazás” fül);
 - **„kvalifikált lead”** — pontosan annyi, amennyit a Lead-sor a linkre koppintva mutat;
 - **„adatgyűjtés”**: **„fut”** vagy **„áll”** — koppintva az Adatgyűjtés indítása képernyő.
 
@@ -262,7 +262,7 @@ egy-egy sorban, a darabszámmal vagy jelvénnyel, ahogy a menüben is.
 
 - **CRM** — „Lead-től a megrendelésig”: **„Lead-sor”**, **„Jóváhagyott mockok”**,
   **„Duplikátumok”**, **„Adatgyűjtés indítása”**, **„Térkép (lefedettség)”**, **„Területek”**,
-  **„Árazás és értékesítés”**.
+  **„Országok / Árazás”**.
 - **„Pénzügy”** — bizonylatok és partnerek: **„Bizonylat keresése”**, **„Új bizonylat rögzítése”**,
   **„Nyitott tételek”**, **„Partnerek”**, **„Új partner rögzítése”**. Az árazás 2026-09-06 óta
   **nem itt** van, hanem a CRM-ben — értékesítési döntés lett belőle.

@@ -4,24 +4,27 @@ title: Árazás és értékesítés — csomagok, modulok, saját domain, ajánl
 audience: operator
 category: finance
 anchors: console.pricing
-updated: 2026-10-25
+updated: 2026-11-26
 ---
 
-Az **„Árazás és értékesítés”** képernyőn állítod be piaconként a valós árakat, a három csomag
+Az árakat az **„Országok / Árazás”** lapon (CRM › Országok / Árazás) egy ország **„Árazás”**
+fülén állítod be; a régi „Árazás és értékesítés” cím ide visz. A bejelentkezés nélküli főoldal-látogató
+**„Globális”** ársorát a lap táblázata alatti **„Globális ársor szerkesztése”** link nyitja: az a
+képernyő a piac-fülekkel együtt ugyanaz, mint az alábbi kép. Itt állítod be piaconként a valós árakat, a három csomag
 tartalmát, hogy a saját domain melyik csomagban jár díj nélkül, a lead-ajánlatokat, az ingyenes
 próbát és a kupont. Itt van az a kapcsoló is, ami nélkül a rendszer egyáltalán nem hirdethet árat.
 Ez az árazás egyetlen forrása: a konfigurátor, a megrendelés és a levelek ár-sora is innen olvas.
 
-**Hol találod:** a bal oldali menüben a **CRM** modul alatt, **„Árazás”** néven. Mellette egy jelvény
+**Hol találod:** a bal oldali menüben a **CRM** modul alatt, **„Országok / Árazás”** néven (telefonon röviden „Országok”); ott egy országra koppintva az **„Árazás”** fül. Mellette egy jelvény
 mutatja, hány modul eladható a katalógusból (például „13/14 eladó”).
 
 ![Képernyőkép: az Árazás és értékesítés képernyő telefonon, teljes hosszában](assets/hu/screen.png)
 
 ## A lap felépítése
 
-1. **Piac-fülek** a cím alatt: „Magyarország · HUF” és „Globális · EUR”. Minden piacnak saját
-   ár-sora van; amelyik piacra nincs mentett ár, az a globálisra esik vissza. A „+ Ország” fül
-   halvány: az ország szerinti bontás később jön.
+1. **Piac-fülek** a cím alatt (csak a Globális ársor képernyőjén; egy ország „Árazás” fülén helyettük
+   az ár-régió neve és pénzneme áll). Minden ár-régiónak saját ár-sora van. A „+ Új ár-régió” mezővel
+   új régiót hozhatsz létre a pénznemével.
 2. **Három összesítő kártya:** **„Csomagok”** (nagy számmal az Ajánlott csomag havidíja, alatta az
    Alap, a Teljes és az éves kedvezmény), **„Modulok”** (hány modul eladó az összesből, hány van
    csomagon kívül, hány leállítva, és hogy a saját domain csomagban jár vagy felár) és **„Ajánlatok

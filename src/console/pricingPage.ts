@@ -24,6 +24,13 @@ import { jsonForScript } from "../text/jsonForScript.js";
 
 type Lang = ReturnType<typeof consoleLang>;
 
+/** The price tab of one country on the „Országok / Árazás” page (null = the stand-alone page). */
+export interface PricingEmbed {
+  readonly iso: string;
+  /** Every country priced on this region (the tab names the others). */
+  readonly shared: readonly string[];
+}
+
 /** Everything the page needs beyond the region snapshot. */
 export interface PricingPageExtras {
   readonly assignment: ReadonlyMap<string, Tier>;
@@ -49,10 +56,30 @@ function tierLabel(lang: Lang, t: Tier): string {
 }
 
 /** Page head: title, the one-sentence purpose, the confirmation mark. */
-export function pricingHead(lang: Lang, snap: PricingSnapshot, notice: { ok: boolean; text: string } | null): string {
+export function pricingHead(
+  lang: Lang,
+  snap: PricingSnapshot,
+  notice: { ok: boolean; text: string } | null,
+  embed: PricingEmbed | null = null,
+): string {
   const conf = snap.pricingConfirmed
     ? `<span class="pill approved pr2-conf" id="pr2-conf">${T(lang, "Véglegesítve — a levelek árat hirdethetnek")}</span>`
     : `<span class="pill outdated pr2-conf" id="pr2-conf">${T(lang, "Nincs véglegesítve — a levél nem hirdet árat")}</span>`;
+  if (embed) {
+    // „Országok / Árazás” (frozen plan orszagok-arazas ⑨): the tab of ONE country — its region named,
+    // and the other countries that share the same price sheet (a change here is theirs too).
+    const others = embed.shared.filter((c) => c !== embed.iso);
+    return `
+    <div class="pr2-head">
+      <div>
+        <h2 class="pr2-title">${T(lang, "Árazás")} ${helpLink("console.pricing")}</h2>
+        <p class="pr2-lead">${esc(T(lang, "Ár-régió: {region} · {currency}. A konfigurátor, a megrendelés és a levelek ár-sora innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).", { region: snap.region, currency: snap.currency }))}</p>
+        ${others.length ? `<p class="pr2-lead"><b>${esc(T(lang, "Ezt az ársort ezek az országok is használják: {list} — a módosítás náluk is érvényes.", { list: others.join(", ") }))}</b></p>` : ""}
+      </div>
+      ${conf}
+    </div>
+    ${notice ? `<div class="pr2-notice ${notice.ok ? "is-ok" : "is-bad"}" role="status">${esc(notice.text)}</div>` : ""}`;
+  }
   return `
     <div class="pr2-head">
       <div>
@@ -96,10 +123,14 @@ export function regionTabs(lang: Lang, snap: PricingSnapshot, regions: readonly 
         <label>${T(lang, "Pénznem (ISO 4217)")} <input form="${NEW_REGION_FORM}" name="new_currency" required pattern="[A-Za-z]{3}" maxlength="3" placeholder="RON" aria-label="${esc(T(lang, "Új ár-régió pénzneme"))}"></label>
         <button form="${NEW_REGION_FORM}" class="pr2-btn" type="submit">${T(lang, "Létrehozás")}</button>
       </div></details>`;
-  const gapNote = gaps.length
+  return `<nav class="pr2-tabs" aria-label="${esc(T(lang, "Piac"))}">${tabs}${add}</nav>${regionGapNote(lang, snap, gaps)}`;
+}
+
+/** ADR-0443: the gap list of a region that cannot price yet — the SAME list the order path refuses on. */
+export function regionGapNote(lang: Lang, snap: PricingSnapshot, gaps: readonly string[] = regionPriceGaps(snap.region)): string {
+  return gaps.length
     ? `<div class="pr2-notice is-bad" role="status"><b>${T(lang, "Ez az ár-régió még nem árazható — rendelés nem jön létre rajta:")}</b> ${esc(gaps.join(" · "))}</div>`
     : "";
-  return `<nav class="pr2-tabs" aria-label="${esc(T(lang, "Piac"))}">${tabs}${add}</nav>${gapNote}`;
 }
 
 /** The overview: three summary cards + „Figyelmet kér” (both drawn by the script). */

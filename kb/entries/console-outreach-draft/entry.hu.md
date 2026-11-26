@@ -327,7 +327,7 @@ Az ilyen látogatás a Tevékenység-képernyőn megmarad, de a fejlécében ez 
 „megnyitotta", és nem kap „hányadik megnyitás" kedvezményt. ⚠️ Egy ellenőrző, amely valós ütemben és
 egyedül nyitja meg a linket, továbbra is megnyitásnak számíthat. Az eszkalációs ajánlat („hányadik megnyitásnál kapja”) is
 ebből a számból dolgozik — alapbeállításban a megnyitások NAPJAIT számolja (egy napon belül akárhány
-megnyitás egynek számít; az Árazás lapon a „Csak a különböző napokon történt megnyitások számítanak”
+megnyitás egynek számít; az Árazás fülön (Országok / Árazás) a „Csak a különböző napokon történt megnyitások számítanak”
 jelölőnégyzettel állítható) —, és egy régebben kiküldött linknél a 2026. október 1. előtt rögzített
 megnyitások (köztük a gépiek) is beleszámítanak.
 

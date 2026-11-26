@@ -2,13 +2,23 @@
 // the `country` table + every country we have MET without a row yet — ADR-0111 kept that from
 // the old markets panel), each with its readiness and market decision, and the editor state of
 // the open country. The readiness itself is src/countryReadiness.ts; nothing is computed here.
-import { allCountriesSync, countryConfig } from "../country.js";
+import { sql } from "kysely";
+import { allCountriesSync, countryConfig, pricingRegionForCountry, type CountryConfig } from "../country.js";
 import { countryReadiness } from "../countryReadiness.js";
-import { blankDraft, draftFromConfig, validateCountryDraft, type CountryDraft, type CountryErrors } from "../countryRules.js";
+import { COUNTRY_CHANNELS, blankDraft, draftFromConfig, validateCountryDraft, type CountryDraft, type CountryErrors } from "../countryRules.js";
 import { countryValidationContext } from "../countryStore.js";
 import { encounteredCountries, HOME_MARKET, listMarkets, marketLog } from "../markets.js";
 import { paymentProviderIds } from "../payment/providers.js";
 import { loadPricing, pricingRegions, regionPriceGaps } from "../pricing.js";
+import { db } from "../db/client.js";
+import { DISPATCH_HOME_COUNTRY, dispatchStatus } from "../outreach/autoDispatch.js";
+import { outreachHoursOf, outreachWindowOpenIn } from "../outreach/countryOutreach.js";
+import { escalationFollowupEnabled } from "../outreach/escalationFollowup.js";
+import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, TOWN_PHOTO_DISPATCH_KEY } from "../outreach/mockPhotoGate.js";
+import { NONOPENER_FOLLOWUP_DAYS, nonOpenerDailyCap } from "../outreach/nonOpenerFollowup.js";
+import { LEAD_CC, marketLaunchStatus, type LaunchStatus } from "../scout/discoveryAreas.js";
+import { MOCK_OUTREACH_WINDOW } from "../sms/sendWindow.js";
+import { getSetting } from "./appSettings.js";
 import type { CountryEditor, CountryListEntry, CountryMarketInfo, CountryStep, CountrySub } from "./countryViews.js";
 
 const order = (a: string, b: string): number => (a === HOME_MARKET ? -1 : b === HOME_MARKET ? 1 : a.localeCompare(b));
@@ -105,5 +115,195 @@ export async function buildEditor(opts: {
     regions: await regionChoices(),
     providers: paymentProviderIds(),
     now: opts.now ?? new Date(),
+  };
+}
+
+// ── „Országok / Árazás” (frozen plan assets/design-refs/console/orszagok-arazas/, 1. fázis) ──────────
+// The opening table and the read-only „Kiküldés” tab. Every number comes from the function the
+// runtime path itself reads: the readiness (countryReadiness), the launch chain (marketLaunchStatus),
+// the price sheet (regionPriceGaps), the dispatcher's own day counters and caps (dispatchStatus →
+// sentTodayIn / dailyCapFor) and the dispatcher's photo rule (mockPhotoGate.ts). Nothing is decided here.
+
+/** megy / áll / nem indult — the two „runs” of a country (lead collection, sending). */
+export type RunState = "run" | "stop" | "none";
+export type CountryStatusKey = "home" | "open" | "approvedIncomplete" | "ready" | "added";
+
+export interface CountryOverviewRow {
+  readonly entry: CountryListEntry;
+  readonly region: string;
+  readonly pricingGaps: readonly string[];
+  readonly status: CountryStatusKey;
+  readonly collecting: RunState;
+  readonly sending: RunState;
+  readonly leads: number;
+  readonly subsActive: number;
+  readonly subsFrozen: number;
+  readonly dailyCap: number;
+  readonly sentToday: number;
+  readonly launch: LaunchStatus;
+}
+
+export interface CountryOverview {
+  readonly rows: readonly CountryOverviewRow[];
+  /** Countries we met (area or buyer) without a row yet — listed under the table. */
+  readonly unlisted: readonly string[];
+  /** The automatic dispatch's master switch (outreach_auto.enabled). */
+  readonly dispatchOn: boolean;
+}
+
+export function statusOf(e: CountryListEntry): CountryStatusKey {
+  if (e.home && e.market.approved && e.readiness.complete) return "home";
+  if (e.market.approved) return e.readiness.complete ? "open" : "approvedIncomplete";
+  return e.readiness.complete ? "ready" : "added";
+}
+
+/** Subscriptions per pricing region: live (active / past_due) and frozen. */
+async function subsByRegion(): Promise<Map<string, { active: number; frozen: number }>> {
+  const r = await sql<{ region: string; active: string; frozen: string }>`
+    select pricing_region as region,
+           count(*) filter (where status in ('active','past_due')) as active,
+           count(*) filter (where status = 'frozen') as frozen
+      from subscription group by pricing_region`.execute(db);
+  return new Map(r.rows.map((x) => [x.region, { active: Number(x.active), frozen: Number(x.frozen) }]));
+}
+
+function runOf(launch: LaunchStatus): { collecting: RunState; sending: RunState } {
+  const walk = launch.steps.find((s) => s.key === "walk");
+  const sent = launch.steps.find((s) => s.key === "sent");
+  const tiles = walk?.total ?? 0;
+  const collecting: RunState = tiles === 0 ? "none" : launch.open && walk?.state !== "ok" ? "run" : "stop";
+  return { collecting, sending: sent && sent.done > 0 ? "stop" : "none" };
+}
+
+/** The opening table: one row per country row (the home market first). */
+export async function countryOverview(lang: string): Promise<CountryOverview> {
+  await loadPricing();
+  const list = await countryList(lang);
+  const subs = await subsByRegion();
+  const ds = await dispatchStatus();
+  const rows: CountryOverviewRow[] = [];
+  for (const e of list.filter((x) => x.hasRow)) {
+    const region = pricingRegionForCountry(e.iso);
+    const launch = await marketLaunchStatus(e.iso);
+    const day = ds.byCountry.find((b) => b.country === e.iso);
+    const run = runOf(launch);
+    const dailyCap = day?.cap ?? 0;
+    // Sending „megy” = the market gate is open, the timer is on and the country has a cap.
+    const sending: RunState = launch.open && ds.settings.enabled && dailyCap > 0 ? "run" : run.sending;
+    const s = subs.get(region) ?? { active: 0, frozen: 0 };
+    rows.push({
+      entry: e,
+      region,
+      pricingGaps: regionPriceGaps(region),
+      status: statusOf(e),
+      collecting: run.collecting,
+      sending,
+      leads: launch.steps.find((x) => x.key === "leads")?.done ?? 0,
+      subsActive: s.active,
+      subsFrozen: s.frozen,
+      dailyCap,
+      sentToday: day?.sentToday ?? 0,
+      launch,
+    });
+  }
+  return { rows, unlisted: list.filter((x) => !x.hasRow).map((x) => x.iso), dispatchOn: ds.settings.enabled };
+}
+
+/** The countries priced on one region (the home market first) — the /pricing redirect and the shared-region note. */
+export function countriesOfRegion(region: string): string[] {
+  return allCountriesSync()
+    .filter((c) => pricingRegionForCountry(c.iso2) === region)
+    .map((c) => c.iso2)
+    .sort(order);
+}
+
+// ── the „Kiküldés” tab (read-only in phase 1): today's values and WHAT decides them ──────────────
+export interface OutreachInfo {
+  readonly iso: string;
+  /** The <5-photo branch (town_photo_dispatch = 'on') → (b), else (a). */
+  readonly photoMode: "own" | "town";
+  readonly minOwn: number;
+  /** Not yet contacted, not blocked leads of the country by own-photo count. */
+  readonly eligibleOwn: number;
+  readonly eligibleFew: number;
+  /** The channels in the row's order, then the rest („nem él”). */
+  readonly channels: readonly { readonly id: string; readonly live: boolean }[];
+  readonly dispatchOn: boolean;
+  readonly dailyCap: number;
+  readonly capSource: "setting" | "override" | "row";
+  readonly ramp: { readonly capToday: number } | null;
+  readonly sentToday: number;
+  readonly hours: { readonly fromHour: number; readonly toHour: number };
+  readonly rowHours: { readonly fromHour: number; readonly toHour: number };
+  readonly codeHours: { readonly fromHour: number; readonly toHour: number };
+  readonly timeZone: string;
+  readonly holidays: number;
+  readonly windowOpenNow: boolean;
+  /** The first local day (YYYY-MM-DD) a send may start from now on. */
+  readonly firstDay: string | null;
+  readonly nonOpener: { readonly days: number; readonly dailyCap: number };
+  readonly escalationFollowup: boolean;
+}
+
+const WEEKDAY = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+
+/** The first local working day (Mon–Fri, not a row holiday) whose window is still ahead. */
+function firstSendDay(now: Date, cfg: CountryConfig, toHour: number): string | null {
+  for (let i = 0; i < 21; i++) {
+    const t = new Date(now.getTime() + i * 86_400_000);
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-GB", { timeZone: cfg.timeZone, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", hourCycle: "h23" })
+        .formatToParts(t)
+        .map((p) => [p.type, p.value]),
+    );
+    const ymd = `${parts.year}-${parts.month}-${parts.day}`;
+    if (!WEEKDAY.has(String(parts.weekday))) continue;
+    if (cfg.publicHolidays.includes(ymd) || cfg.publicHolidays.includes(ymd.slice(5))) continue;
+    if (i === 0 && Number(parts.hour) >= toHour) continue;
+    return ymd;
+  }
+  return null;
+}
+
+export async function outreachInfo(iso: string, now: Date = new Date()): Promise<OutreachInfo | null> {
+  const cfg = await countryConfig(iso);
+  if (!cfg) return null;
+  const ds = await dispatchStatus();
+  const day = ds.byCountry.find((b) => b.country === cfg.iso2);
+  const town = (await getSetting(TOWN_PHOTO_DISPATCH_KEY)) === "on";
+  const c = await sql<{ own: string; few: string }>`
+    select count(*) filter (where ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}) as own,
+           count(*) filter (where ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}) as few
+      from lead l
+     where ${LEAD_CC} = ${cfg.iso2}
+       and l.contact_block_at is null
+       and l.lifecycle_status not in ('disqualified','terminated')
+       and not exists (select 1 from prospect p where p.lead_id = l.id
+             and (p.email_sent_at is not null or p.sms_sent_at is not null or p.mms_sent_at is not null))`.execute(db);
+  const hours = outreachHoursOf(cfg);
+  const capSource: OutreachInfo["capSource"] =
+    cfg.iso2 === DISPATCH_HOME_COUNTRY ? "setting" : typeof ds.settings.countryCaps?.[cfg.iso2] === "number" ? "override" : "row";
+  const live = cfg.outreachChannels.filter((ch) => (COUNTRY_CHANNELS as readonly string[]).includes(ch));
+  return {
+    iso: cfg.iso2,
+    photoMode: town ? "town" : "own",
+    minOwn: DISPATCH_MIN_OWN_PHOTOS,
+    eligibleOwn: Number(c.rows[0]?.own ?? 0),
+    eligibleFew: Number(c.rows[0]?.few ?? 0),
+    channels: [...live.map((id) => ({ id, live: true })), ...COUNTRY_CHANNELS.filter((ch) => !live.includes(ch)).map((id) => ({ id, live: false }))],
+    dispatchOn: ds.settings.enabled,
+    dailyCap: day?.cap ?? 0,
+    capSource,
+    ramp: cfg.iso2 === DISPATCH_HOME_COUNTRY && ds.ramp ? { capToday: ds.ramp.capToday } : null,
+    sentToday: day?.sentToday ?? 0,
+    hours,
+    rowHours: { fromHour: cfg.sendWindowFrom, toHour: cfg.sendWindowTo },
+    codeHours: { fromHour: MOCK_OUTREACH_WINDOW.fromHour, toHour: MOCK_OUTREACH_WINDOW.toHour },
+    timeZone: cfg.timeZone,
+    holidays: cfg.publicHolidays.length,
+    windowOpenNow: outreachWindowOpenIn(now, cfg),
+    firstDay: hours.fromHour < hours.toHour ? firstSendDay(now, cfg, hours.toHour) : null,
+    nonOpener: { days: NONOPENER_FOLLOWUP_DAYS, dailyCap: await nonOpenerDailyCap() },
+    escalationFollowup: await escalationFollowupEnabled(),
   };
 }
