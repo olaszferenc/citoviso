@@ -1,4 +1,4 @@
-## ADR-XXXX — „Országok / Árazás” 3. fázis: az indulás-lista részletezve (Bábel négy részre, kontakt, mock, kiküldés oka)
+## ADR-0492 — „Országok / Árazás” 3. fázis: az indulás-lista részletezve (Bábel négy részre, kontakt, mock, kiküldés oka)
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva (a megvalósítási terv része; az indítása a koordinátoron, `cit9b4690e3`, át)

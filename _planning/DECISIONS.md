@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-orszagok-arazas-3-fazis-indulas-lista-reszletezve.md) — „Országok / Árazás” 3. fázis: az indulás-lista részletezve (Bábel négy részre, kontakt, mock, kiküldés oka)
+- [ADR-0492](decisions/0492-orszagok-arazas-3-fazis-az-indulas-lista.md) — „Országok / Árazás” 3. fázis: az indulás-lista részletezve (Bábel négy részre, kontakt, mock, kiküldés oka)
 - [ADR-0491](decisions/0491-orszagok-arazas-2-fazis-uj-orszag-a-vilag.md) — „Országok / Árazás” 2. fázis: új ország a világ-katalógusból; Indulás = jóváhagyás teljesség nélkül; Szünetel
 - [ADR-0490](decisions/0490-a-fooldal-ara-a-latogato-orszagabol-jon-a.md) — A főoldal ára a látogató ORSZÁGÁBÓL jön, a nyelve a böngészőből (ha nincs ársor: Globális)
 - [ADR-0489](decisions/0489-orszagok-arazas-5-fazis-utemezett-arvaltozas-b.md) — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) — emelés dátummal és értesítővel, csökkenés azonnal
