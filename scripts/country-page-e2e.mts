@@ -119,9 +119,23 @@ async function liveFill(sel: string, value: string): Promise<void> {
   if (!r.ok()) console.log(`   (élő ellenőrzés: HTTP ${r.status()} — ${(await r.text()).slice(0, 200)})`);
   await page.waitForTimeout(100);
 }
+/** Click „Mentés” and wait for the page the save answers with (a 422 page or the redirect target). */
+async function saveAndWait(): Promise<void> {
+  // Mark the current document: the answer (a 422 page or the redirect to the saved row) is a NEW one.
+  await page.evaluate(() => { (window as unknown as { __before?: boolean }).__before = true; });
+  await page.click("[data-save]");
+  await page.waitForFunction(() => !(window as unknown as { __before?: boolean }).__before && document.readyState === "complete", null, { timeout: 30_000 });
+  await page.waitForLoadState("networkidle");
+}
 const errOf = async (field: string): Promise<string> =>
   ((await page.locator(`[data-field="${field}"] .cty-f__e`).first().textContent()) ?? "").trim();
 
+// Migration 0150 seeds BG (with IT, ES, PT, FR): this walk adds BG FROM SCRATCH on the lap, so the
+// scratch DB starts without it (scratch only — never the shared dev DB).
+await db.deleteFrom("market_log").where("country", "=", "BG").execute();
+await db.deleteFrom("market").where("country", "=", "BG").execute();
+await db.deleteFrom("country").where("iso2", "=", "BG").execute();
+await refreshCountries();
 const huBefore = await huRow();
 try {
   console.log("\n⑤ HU kiinduló állapot");
@@ -132,7 +146,7 @@ try {
 
   console.log("\n① Új ország (BG) a lapon");
   await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
-  check("a mátrix listázza HU-t", (await page.locator("#mxrow-HU").count()) === 1);
+  check("a táblázat listázza HU-t", (await page.locator("#ovrow-HU").count()) === 1);
   await page.fill('.cty-new input[name="new"]', "bg");
   await page.click('.cty-new button[type="submit"]');
   await page.waitForLoadState("networkidle");
@@ -159,16 +173,16 @@ try {
   await page.press('[data-chip-in="mobilePrefixes"]', "Enter");
 
   // Save with the discovery fields still empty → refused, nothing written.
-  await page.click("[data-save]");
-  await page.waitForLoadState("networkidle");
+  await saveAndWait();
   const noRow = await db.selectFrom("country").select("iso2").where("iso2", "=", "BG").executeTakeFirst();
   check("hiányos mentés → elutasítva, sor nincs", !noRow);
-  check("…és a hibás mező helyére ugrik (Felderítés)", (await page.locator('[data-subpanel="discovery"]:not([hidden])').count()) === 1);
+  const discN = await page.locator('[data-subpanel="discovery"]:not([hidden])').count();
+  check("…és a hibás mező helyére ugrik (Felderítés)", discN === 1,
+    `${page.url()} · látható: ${(await page.locator("[data-subpanel]:not([hidden])").evaluateAll((els) => els.map((e) => e.getAttribute("data-subpanel")))).join(",")} · ${await page.locator(".cty-notice").allTextContents()}`);
   for (const [i, v] of ["41.23", "22.36", "44.22", "28.61"].entries()) await page.fill(`[name="bbox${i}"]`, v);
   await page.fill('[data-chip-in="kw.accommodation"]', "къща за гости");
   await page.press('[data-chip-in="kw.accommodation"]', "Enter");
-  await page.click("[data-save]");
-  await page.waitForLoadState("networkidle");
+  await saveAndWait();
   const bg = await db.selectFrom("country").selectAll().where("iso2", "=", "BG").executeTakeFirst();
   check("mentés → a BG sor megvan", !!bg);
   check("BG sor: EUR, bg, +359, legal_pack bg", bg?.currency === "EUR" && bg?.default_lang === "bg" && bg?.dial_code === "359" && bg?.legal_pack === "bg");
@@ -177,7 +191,8 @@ try {
   await page.goto(`${BASE}/countries?iso=BG&step=open`, { waitUntil: "networkidle" });
   const r0 = await countryReadiness("BG");
   const bad0 = r0.items.filter((i) => i.gating && i.state === "bad").map((i) => i.key);
-  check("a teljesség hiányokat mutat (ár, nyelv, ünnep)", ["prices", "babel", "holidays"].every((k) => bad0.includes(k as never)), bad0.join(","));
+  // The bg buyer pack is Bábel's committed work since 2026-11 (src/i18n/babel/packs) — the language may already be complete.
+  check("a teljesség hiányokat mutat (ár, ünnep)", ["prices", "holidays"].every((k) => bad0.includes(k as never)), bad0.join(","));
   check("a lapon a hiányok pirosak", (await page.locator(".cty-rd__i--bad").count()) >= 3);
   check("„Piac megnyitása” gomb TILTVA", await page.locator('#cty-gate button[type="submit"]').isDisabled());
   const forced = await page.request.post(`${BASE}/settings/markets`, {
@@ -212,9 +227,9 @@ try {
     await page.click("#hol-add");
   }
   await settle();
-  check("ünnepnap-szerkesztő: mindkét év lefedve", (await page.locator("#hol-years .cty-tag--ok").count()) === 2);
-  await page.click("[data-save]");
-  await page.waitForLoadState("networkidle");
+  check("ünnepnap-szerkesztő: mindkét év lefedve", (await page.locator("#hol-years .cty-tag--ok").count()) === 2,
+    `${(await page.locator("#hol-years").first().innerHTML()).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")} · #hol-years: ${await page.locator("#hol-years").count()}`);
+  await saveAndWait();
   const r1 = await countryReadiness("BG");
   check("BG teljes", r1.complete, r1.reasons.join(" · "));
   check("…de még nincs jóváhagyva → a kapu zárva", !(await isMarketApproved("BG")));
@@ -225,7 +240,7 @@ try {
   await page.waitForLoadState("networkidle");
   const g1 = await marketGate("BG");
   check("a piac megnyílt (jóváhagyva + teljes)", g1.open && g1.approved, g1.reasons.join(" · "));
-  check("a lapon „nyitva”", /nyitva/.test((await page.locator("#mxrow-BG .cty-mx__st").textContent()) ?? ""));
+  check("az ország-lapon „Fut”", /Fut/.test((await page.locator(".hub-h").textContent()) ?? ""));
   const log1 = await db.selectFrom("market_log").select(["action", "actor"]).where("country", "=", "BG").execute();
   check("a döntés naplózva, a bejelentkezett operátor nevén", log1.length === 1 && log1[0]!.actor === "country-e2e");
 
@@ -234,14 +249,35 @@ try {
   await refreshCountries();
   check("ünnepnapok nélkül a kapu ZÁRVA", !(await isMarketApproved("BG")));
   await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
-  check("a mátrixban „jóváhagyva, hiányos”", /hiányos/.test((await page.locator("#mxrow-BG .cty-mx__st").textContent()) ?? ""));
+  check("a táblázatban „Jóváhagyva, hiányos”", /hiányos/.test((await page.locator("#ovrow-BG .hub-st").textContent()) ?? ""));
 
   console.log("\n⑤ HU változatlan");
   await page.goto(`${BASE}/countries?iso=HU&step=data`, { waitUntil: "networkidle" });
-  await page.click("[data-save]");
-  await page.waitForLoadState("networkidle");
+  await saveAndWait();
   check("HU sor bitre azonos a mentés után", (await huRow()) === huBefore);
   check("HU piac-kapu nyitva", await isMarketApproved("HU"));
+
+  console.log("\n⑦ „Országok / Árazás” (orszagok-arazas 1. fázis): egy lap, három fül");
+  await page.goto(`${BASE}/countries?iso=HU`, { waitUntil: "networkidle" });
+  check("három fül: Ország, Árazás, Kiküldés", (await page.locator(".hub-tabs [data-tab]").count()) === 3);
+  check("Ország fül: alapadatok + Indítás + indulás-lista", (await page.locator(".hub-facts").count()) === 1 && (await page.locator("#hub-gate").count()) === 1 && (await page.locator("#hub-launch li").count()) >= 10);
+  await page.click('.hub-tabs [data-tab="price"]');
+  await page.waitForLoadState("networkidle");
+  check("Árazás fül: a régió árazó űrlapja", /tab=price/.test(page.url()) && (await page.locator('#pr2-form input[name="region"]').inputValue()) === "hu");
+  await page.click('.hub-tabs [data-tab="out"]');
+  await page.waitForLoadState("networkidle");
+  check("Kiküldés fül: csak olvas (a választó tiltva)", (await page.locator('input[name="out-mode"]').count()) === 2 && (await page.locator('input[name="out-mode"]:not([disabled])').count()) === 0);
+  check("Kiküldés fül: összesítő + hat szakasz", (await page.locator("#out-sum .hub-kpi").count()) === 4 && (await page.locator('[id^="out-"].hub-card').count()) === 6);
+  const rd = await page.request.get(`${BASE}/pricing`, { maxRedirects: 0 });
+  check("/pricing → a hazai ország Árazás füle", rd.status() === 303 && /\/countries\?iso=HU&tab=price/.test(rd.headers()["location"] ?? ""), rd.headers()["location"] ?? "");
+  const rg = await page.request.get(`${BASE}/pricing?region=global`, { maxRedirects: 0 });
+  check("/pricing?region=global → a globális ársor saját útja", /\/countries\/global-pricing\?region=global/.test(rg.headers()["location"] ?? ""), rg.headers()["location"] ?? "");
+  await page.goto(`${BASE}/countries/global-pricing`, { waitUntil: "networkidle" });
+  check("a globális ársor szerkeszthető", (await page.locator('#pr2-form input[name="region"]').inputValue()) === "global");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
+  check("mobilon kártyák, a táblázat rejtve", (await page.locator("#ovcard-HU").isVisible()) && !(await page.locator(".hub-tablewrap").isVisible()));
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   console.log("\n⑥ JS-hibák");
   check("0 JS-hiba", jsErrors.length === 0, jsErrors.join(" | "));

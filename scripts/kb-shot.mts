@@ -2699,7 +2699,6 @@ await shootConsole(
 // but without a row) and the BG editor at its „Megnyitás” step (the readiness list + the shut
 // approve button). Fixture readiness: the guide explains exactly these states.
 {
-  const { countriesPage } = await import("../src/console/countryViews.js");
   const { blankDraft } = await import("../src/countryRules.js");
   type RdItem = { key: string; state: "ok" | "bad" | "warn"; gating: boolean; title: string; detail: string; pct?: number };
   const rd = (items: RdItem[], approved: boolean) => {
@@ -2717,7 +2716,7 @@ await shootConsole(
   ];
   const bgItems: RdItem[] = [
     { key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" },
-    { key: "prices", state: "bad", gating: true, title: "Ársor és fizetés", detail: "ár-régió „global”: hiányzó modulár: gallery, rooms, amenities, pricing" },
+    { key: "prices", state: "bad", gating: true, title: "Ársor és fizetés", detail: "ár-régió „bg”: hiányzó modulár: gallery, rooms, amenities, pricing" },
     { key: "wallet", state: "bad", gating: true, title: "Fizetési tárca", detail: "nincs EUR pénztárca a barion fiókban — EUR fizetés addig nem fogadható; a tárca nyitása a tulaj döntése" },
     { key: "babel", state: "bad", gating: true, title: "Nyelvi csomag (Bábel)", detail: "bg: 3 978 / 4 000 vevő-oldali felirat lefordítva — Bábelre vár", pct: 99 },
     { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "mind a 227 egység bg nyelven" },
@@ -2740,15 +2739,32 @@ await shootConsole(
     { iso: "BG", name: "Bulgária", lang: "bg", currency: "EUR", timeZone: "Europe/Sofia", hasRow: true, home: false, readiness: rd(bgItems, false), market: noMarket },
     { iso: "HR", name: "", lang: "", currency: "", timeZone: "", hasRow: false, home: false, readiness: rd(hrItems, false), market: noMarket },
   ];
-  await shootConsole(countriesPage({ list, editor: null, notice: null } as never), conOut("console-countries"));
-  const bg = { ...blankDraft("BG"), name: "Bulgária", pricingRegion: "global", publicHolidays: ["01-01", "03-03", "05-01"] };
+  // „Országok / Árazás” (orszagok-arazas 1. fázis): the opening table and BG on its „Ország” tab.
+  const { hubOverviewPage, hubCountryPage, countryTab } = await import("../src/console/countryHub.js");
+  const steps = (o: Record<string, [string, number, number | null]>) =>
+    Object.entries(o).map(([key, [state, done, total]]) => ({ key, state, done, total }));
+  const huLaunch = { iso2: "HU", open: true, reasons: [], start: null, steps: steps({ open: ["ok", 1, 1], areas: ["ok", 20, 20], tiles: ["ok", 20, 20], walk: ["run", 410, 512], leads: ["run", 7379, null], contact: ["run", 5120, 7379], mock: ["run", 2210, 7379], sent: ["run", 1460, 7379] }) };
+  const bgLaunch = { iso2: "BG", open: false, reasons: [], start: null, steps: steps({ open: ["wait", 0, 1], areas: ["wait", 0, 28], tiles: ["wait", 0, 28], walk: ["wait", 0, 0], leads: ["wait", 0, null], contact: ["wait", 0, 0], mock: ["wait", 0, 0], sent: ["wait", 0, 0] }) };
+  const rows = [
+    { entry: list[0], region: "hu", pricingGaps: [], status: "home", collecting: "run", sending: "run", leads: 7379, subsActive: 10, subsFrozen: 4, dailyCap: 100, sentToday: 37, launch: huLaunch },
+    { entry: list[1], region: "bg", pricingGaps: ["hiányzó modulár: gallery, rooms"], status: "added", collecting: "none", sending: "none", leads: 0, subsActive: 0, subsFrozen: 0, dailyCap: 40, sentToday: 0, launch: bgLaunch },
+  ];
+  await shootConsole(hubOverviewPage({ ov: { rows, unlisted: ["HR"], dispatchOn: true }, editor: null, notice: null } as never), conOut("console-countries"));
+  const bg = { ...blankDraft("BG"), name: "Bulgária", pricingRegion: "bg", publicHolidays: ["01-01", "03-03", "05-01"] };
   const editor = {
     iso: "BG", isNew: false, draft: bg, errors: {}, touched: [], readiness: rd(bgItems, false), step: "open", sub: "identity",
-    dirty: false, home: false, market: noMarket, regions: [{ region: "hu", currency: "HUF", complete: true }, { region: "global", currency: "EUR", complete: false }],
+    dirty: false, home: false, market: noMarket, regions: [{ region: "hu", currency: "HUF", complete: true }, { region: "bg", currency: "EUR", complete: false }],
     providers: ["barion"], now: new Date("2026-11-19T10:00:00Z"),
   };
+  const bgOut = {
+    iso: "BG", photoMode: "own", minOwn: 5, eligibleOwn: 0, eligibleFew: 0,
+    channels: [{ id: "email", live: true }, { id: "sms", live: false }, { id: "mms", live: false }, { id: "viber", live: false }, { id: "whatsapp", live: false }],
+    dispatchOn: true, dailyCap: 40, capSource: "row", ramp: null, sentToday: 0, hours: { fromHour: 8, toHour: 17 }, rowHours: { fromHour: 8, toHour: 17 },
+    codeHours: { fromHour: 8, toHour: 17 }, timeZone: "Europe/Sofia", holidays: 3, windowOpenNow: false, firstDay: "2026-11-20",
+    nonOpener: { days: 14, dailyCap: 0 }, escalationFollowup: false,
+  };
   await shootConsole(
-    countriesPage({ list, editor, notice: null } as never),
+    hubCountryPage({ row: rows[1], tab: "country", notice: null, editor, editorOpen: false, tabHtml: countryTab(rows[1] as never, editor as never, bgOut as never) } as never),
     conOut("console-countries").replace(/screen\.png$/, "open-step.png"),
   );
 }

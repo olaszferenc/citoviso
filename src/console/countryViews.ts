@@ -119,7 +119,7 @@ export function placeOfFirstError(errors: CountryErrors): { step: CountryStep; s
 // ── icons (inline SVG, currentColor — the approved design's set) ───────────────────────────
 const SVG = (inner: string, size = 16): string =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${inner}</svg>`;
-const ICON = {
+export const ICON = {
   ok: SVG(`<circle cx="12" cy="12" r="10" fill="currentColor" opacity=".16"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`),
   bad: SVG(`<circle cx="12" cy="12" r="10" fill="currentColor" opacity=".16"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`),
   warn: SVG(`<circle cx="12" cy="12" r="10" fill="currentColor" opacity=".16"/><path d="M12 7v6.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.3" fill="currentColor"/>`),
@@ -393,7 +393,7 @@ function subBody(ed: CountryEditor, sub: CountrySub, e: CountryErrors): string {
         ${field("currency", T(lang, "Pénznem"), inp("currency", r.currency, 'maxlength="3" class="cty-mono"'), e.currency, live["help-currency"])}
         ${field("pricingRegion", T(lang, "Ár-régió"), `<select id="fld-pricingRegion" name="pricingRegion"><option value="">${esc(T(lang, "— válassz —"))}</option>${ed.regions
           .map((g) => `<option value="${esc(g.region)}"${r.pricingRegion === g.region ? " selected" : ""}>${esc(g.region)} · ${esc(g.currency)}${g.complete ? "" : ` · ${esc(T(lang, "hiányos"))}`}</option>`)
-          .join("")}</select>`, e.pricingRegion, `${esc(T(lang, "Az árakat az Árazás lapon állítod régiónként."))} <a href="/pricing">${esc(T(lang, "Árazás lap ›"))}</a>`)}
+          .join("")}</select>`, e.pricingRegion, `${esc(T(lang, "Az árakat az ország Árazás fülén állítod."))} <a href="/countries?iso=${encodeURIComponent(ed.iso)}&tab=price">${esc(T(lang, "Árazás fül ›"))}</a>`)}
         ${field("paymentProvider", T(lang, "Fizetési szolgáltató"), `<select id="fld-paymentProvider" name="paymentProvider">${ed.providers
           .map((p) => `<option value="${esc(p)}"${r.paymentProvider === p ? " selected" : ""}>${esc(p)}</option>`)
           .join("")}</select>`, e.paymentProvider)}
@@ -554,8 +554,8 @@ function stepBody(ed: CountryEditor, step: CountryStep): string {
           <dt>${esc(T(lang, "Az ország pénzneme"))}</dt><dd>${esc(r.currency || "—")}</dd>
           <dt>${esc(T(lang, "Fizetés"))}</dt><dd>${esc(r.paymentProvider)}</dd>
           <dt>${esc(T(lang, "EU-tag"))}</dt><dd>${esc(eu ? T(lang, "igen") : T(lang, "nem"))}</dd></dl>
-        <p class="cty-small cty-mut">${esc(T(lang, "Hiányos ársornál a vendég foglalási kérése is elhasal, ezért ez zárófeltétel. Az árakat az Árazás lapon töltöd ki régiónként; a régiót és a pénznemet az „Adatok” lépésben választod."))}</p>
-        <button type="button" class="cty-btn cty-btn--sm" data-goto="data" data-sub="identity">${esc(T(lang, "Ár-régió, pénznem ›"))}</button> <a class="cty-lnk" href="/pricing">${esc(T(lang, "Árazás lap ›"))}</a>`;
+        <p class="cty-small cty-mut">${esc(T(lang, "Hiányos ársornál a vendég foglalási kérése is elhasal, ezért ez zárófeltétel. Az árakat az ország Árazás fülén töltöd ki; a régiót és a pénznemet az „Adatok” lépésben választod."))}</p>
+        <button type="button" class="cty-btn cty-btn--sm" data-goto="data" data-sub="identity">${esc(T(lang, "Ár-régió, pénznem ›"))}</button> <a class="cty-lnk" href="/countries?iso=${encodeURIComponent(ed.iso)}&tab=price">${esc(T(lang, "Árazás fül ›"))}</a>`;
     }
     case "babel":
       return `${st}<p class="cty-small cty-mut">${esc(T(lang, "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.", { lang: r.defaultLang || "—" }))}</p>
@@ -570,17 +570,17 @@ function stepBody(ed: CountryEditor, step: CountryStep): string {
 }
 
 /** The editor sheet (right panel / phone full screen). */
-function editorHtml(ed: CountryEditor): string {
+function editorHtml(ed: CountryEditor, closeHref = "/countries"): string {
   const lang = consoleLang();
   const title = ed.draft.name || (ed.isNew ? T(lang, "Új ország") : ed.iso);
   const idx = COUNTRY_STEPS.indexOf(ed.step);
   const formSteps = COUNTRY_STEPS.filter((s) => s !== "open");
   return `<div class="cty-drawer" id="cty-drawer" data-iso="${esc(ed.iso)}" data-new="${ed.isNew ? "1" : "0"}">
-    <a class="cty-drawer__bg" href="/countries" data-close aria-label="${esc(T(lang, "Bezár"))}"></a>
+    <a class="cty-drawer__bg" href="${esc(closeHref)}" data-close aria-label="${esc(T(lang, "Bezár"))}"></a>
     <div class="cty-drawer__p" role="dialog" aria-modal="true" aria-labelledby="cty-title">
       <div class="cty-drawer__h"><span class="cty-iso">${esc(ed.iso)}</span><h3 id="cty-title">${esc(title)}</h3>
         <span id="cty-saved">${ed.dirty ? `<span class="cty-dirty">${esc(T(lang, "nem mentett"))}</span>` : `<span class="cty-small cty-mut">${esc(ed.isNew ? T(lang, "új") : T(lang, "mentve"))}</span>`}</span>
-        <a class="cty-drawer__x" href="/countries" data-close aria-label="${esc(T(lang, "Bezár"))}">${ICON.x}</a></div>
+        <a class="cty-drawer__x" href="${esc(closeHref)}" data-close aria-label="${esc(T(lang, "Bezár"))}">${ICON.x}</a></div>
       <nav class="cty-steps" id="cty-steps" aria-label="${esc(T(lang, "Lépések"))}">${stepNav(ed)}</nav>
       <div class="cty-drawer__b" id="cty-body">
         <form id="cform" method="post" action="/countries/save" novalidate>
@@ -653,7 +653,22 @@ export function countriesPage(opts: {
     ${editor ? editorHtml(editor) : ""}
     ${tzDatalist()}
   </div>
-  <script type="application/json" id="cty-cfg">${jsonForScript({
+  ${editorScript()}`;
+  return layout(T(lang, "Országok"), body, { active: "/countries", head: `<style>${COUNTRY_CSS}</style>` });
+}
+
+/**
+ * „Országok / Árazás” (orszagok-arazas ⑧): the „Adatok” editor opens over the merged lap — the same
+ * sheet, the same live check and save. `closeHref` = where its ✕ goes back to (the country's tab).
+ */
+export function editorOverlay(ed: CountryEditor, closeHref: string): string {
+  return `${editorHtml(ed, closeHref)}${tzDatalist()}`;
+}
+
+/** The editor's config + script (needs the `#cty` root around the page). */
+export function editorScript(): string {
+  const lang = consoleLang();
+  return `<script type="application/json" id="cty-cfg">${jsonForScript({
     confirmLeave: T(lang, "A nem mentett változások elvesznek. Továbblépsz?"),
     dirtyLabel: T(lang, "nem mentett"),
     removeLabel: T(lang, "{v} törlése"),
@@ -662,7 +677,6 @@ export function countriesPage(opts: {
     steps: COUNTRY_STEPS,
   })}</script>
   <script>${COUNTRY_JS}</script>`;
-  return layout(T(lang, "Országok"), body, { active: "/countries", head: `<style>${COUNTRY_CSS}</style>` });
 }
 
 // ── page script: navigation, chips, holidays, live check (no text of its own) ──────────────
@@ -778,7 +792,7 @@ document.addEventListener("keydown",function(ev){if(ev.key==="Escape"&&dr){var c
 })();`;
 
 // ── page style (the approved design, tokens only) ─────────────────────────────────────────
-const COUNTRY_CSS = `
+export const COUNTRY_CSS = `
 .cty{container-type:inline-size;container-name:cty}
 .cty h2{font:600 20px/1.25 var(--citui-font-display);margin:0 0 4px;display:flex;align-items:center;gap:8px}
 .cty-lead{margin:0 0 12px;color:var(--citui-muted);font-size:13px;max-width:72ch}

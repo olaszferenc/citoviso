@@ -135,7 +135,9 @@ export function navTree(lang = "hu"): readonly NavNode[] {
         { kind: "leaf", id: "scout", label: T(lang, "Felderítés"), href: "/scout" },
         { kind: "leaf", id: "map", label: T(lang, "Térkép (lefedettség)"), href: "/scrape/map" },
         { kind: "leaf", id: "regions", label: T(lang, "Területek"), href: "/scrape/regions" },
-        { kind: "leaf", id: "pricing", label: T(lang, "Árazás és értékesítés"), short: T(lang, "Árazás"), href: "/pricing" },
+        // „Országok / Árazás” (owner 2026-11-26, frozen plan orszagok-arazas ①): the old „Árazás és értékesítés”
+        // and „Országok” in ONE menu point; /pricing redirects here.
+        { kind: "leaf", id: "pricing", label: T(lang, "Országok / Árazás"), short: T(lang, "Országok"), href: "/countries", match: ["/pricing", "/countries/"] },
       ],
     },
     {
@@ -181,8 +183,6 @@ export function navTree(lang = "hu"): readonly NavNode[] {
       href: `${HUB_PREFIX}system`,
       children: [
         { kind: "leaf", id: "settings", label: T(lang, "Beállítások"), href: "/settings" },
-        // ORSZÁG-RÉTEG 3/8 (ADR-0460): country master data + opening readiness + market gate.
-        { kind: "leaf", id: "countries", label: T(lang, "Országok"), href: "/countries" },
       ],
     },
     { kind: "leaf", id: "help", label: T(lang, "Súgó"), icon: "help", href: "/help" },

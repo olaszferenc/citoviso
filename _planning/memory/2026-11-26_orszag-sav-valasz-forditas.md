@@ -16,3 +16,8 @@
 - Kísérletek: a napi keret és a futó változatok száma globális marad.
 - A dev DB-ben egy `_mkt_check XF` teszt-ország-sor látszik a sávon (dev-szemét, élesen nincs).
 - Súgó-képek a sávval még nincsenek frissítve; a súgó-szöveget Bábel fordítja.
+
+## Élesítés (2026-11-26)
+- A tulaj „menjen élesre” kérésekor az éles már `8fe218b5`-ön állt (prod/20261126-1022, a Koordinátor vitte), ami tartalmazza a `d859f385`-öt — új deploy nem kellett.
+- Olvasással igazolva: `outreach_reply_translation` tábla él (0 sor), `babel` operátor-fiók létezik, mind a 6 operátor `hu`; a válasz-gyűjtő (`citoviso-replies-email.timer`) a fő fából fut, az új kóddal.
+- Nyitott: Bábel Chrome-jának élesen be kell lépnie a `babel` fiókkal.

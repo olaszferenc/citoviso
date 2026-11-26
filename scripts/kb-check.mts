@@ -134,6 +134,8 @@ const VIEW_GROUPS = {
     // ORSZÁG-RÉTEG 3/8 (ADR-0460): the „Országok” lap (frozen plan design-refs/console/orszagok/) —
     // its labels live in its own view file, the readiness item titles in the readiness module.
     "src/console/countryViews.ts",
+    // „Országok / Árazás” (orszagok-arazas 1. fázis): the merged lap's table, tabs and Kiküldés tab.
+    "src/console/countryHub.ts",
     "src/countryReadiness.ts",
     // ADR-0336: the scout worksheet (/scout) — its labels („Felvétel”, „Csempe lezárása” …)
     // live in its own view file, so the handbook quotes THEM.

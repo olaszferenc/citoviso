@@ -19,7 +19,7 @@ konzolon, és mit kell tenned, ha a rendszer riaszt.
   fotó-nyilatkozatot. Fizetési adatot nem kérünk.
 - Az oldala azonnal **él** a citoviso.com aldomainjén — azon a címen, amit a lap előre megmutatott.
   Ha a lead a lapon csomagot vagy modulokat választott, a próba **azzal a készlettel** indul; ha nem,
-  a **beállított próba-csomag moduljai** vannak bekapcsolva (az Árazás lap **„A próbázó ezt kapja”**
+  a **beállított próba-csomag moduljai** vannak bekapcsolva (az ország Árazás fülén, **„A próbázó ezt kapja”**
   mezője; mentés előtt minden modul). Belépő-levelet is kap a kezelőfelületéhez. A próba-űrlap, a
   belépő-levél és a próbázó Modulok füle ezt a csomagot nevezi meg a benne lévő modulokkal; „minden
   funkció” csak akkor áll ott, ha a próba tényleg minden modult ad. Ha a csomagban nincs online foglalás,
@@ -30,8 +30,8 @@ konzolon, és mit kell tenned, ha a rendszer riaszt.
 - Ha a lead korábban kedvezményes ajánlatot kapott (megkeresés, eszkaláció), az a próba indulásakor
   lejár: a próba a kedvezmény HELYETT választható. Helyette a próba saját kupont ad az első fizetésre.
 
-A hosszt (alapból 14 nap) és a kupon százalékát (alapból 25%) a **„Árazás és értékesítés”** lap
-**„Ingyenes próba”** szekciójában állítod — részletesen az Árazás súgójában („Ingyenes próba — hossz
+A hosszt (alapból 14 nap) és a kupon százalékát (alapból 25%) az **„Országok / Árazás”** lapon, egy ország
+**„Árazás”** fülének **„Ingyenes próba”** szekciójában állítod (minden piacra érvényes) — részletesen az Árazás súgójában („Ingyenes próba — hossz
 és kupon”). A változás csak az ezután indított próbákra hat.
 
 ## Hol látod a próbát a konzolon
