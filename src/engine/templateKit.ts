@@ -167,7 +167,7 @@ export function contactPhotoOf(
 ): { readonly url: string; readonly alt: string } | null {
   const photos = d.photos;
   if (!photos.length) return null;
-  const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
+  const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject) && !p.notCard);
   const scene = outdoor.filter((p) => p.url !== photos[0]!.url).at(-1) ?? outdoor.at(-1);
   if (scene) return { url: scene.url, alt: sceneAlt(d) };
   const ok = (p: Photo | undefined): p is Photo => Boolean(p && !(p.subject && NEVER_SURROUNDINGS.has(p.subject)));
@@ -376,7 +376,8 @@ export function allotPhotos(
   const notBath = (p: Photo): boolean => !p.backstage && !(p.subject && NEVER_SURROUNDINGS.has(p.subject));
   // The contact's outdoor scene is chosen BEFORE the bands (contactPhotoOf's rule: the LAST outdoor
   // photo other than the hero) — a band must not take the only garden and leave the contact a room.
-  const lastOutdoor = [...pool].reverse().find(outdoor);
+  // …and never a shot with a car, a person or an animal (11-26, Jaja: a blue SUV in the contact picture).
+  const lastOutdoor = [...pool].reverse().find((p) => outdoor(p) && !p.notCard);
   const scene = lastOutdoor ? take((p) => p === lastOutdoor) : undefined;
   // The bands are full-bleed screens of their own — never a kitchen or a bathroom (an empty band drops).
   // …and never a close-up, a dark shot or a thing instead of a place (photoCurate notBand, 11-25).
@@ -404,7 +405,7 @@ export function allotPhotos(
   let contactAlt = scene ? sceneAlt(d) : d.name;
   if (!contact) {
     // The fixed slot was the LAST photo: keep that taste, a bathroom or toilet stepping aside.
-    const lastOk = [...pool].reverse().find(notBath);
+    const lastOk = [...pool].reverse().find((p) => notBath(p) && !p.notCard);
     contact = lastOk ? take((p) => p === lastOk) : undefined;
     contactAlt = d.name;
   }
@@ -479,11 +480,7 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const inside = [...d.photos.entries()]
     .reverse()
     // a detected sofa (photoCurate `lounge`) — the label alone called a corridor „a hotel room interior” (BaBo)
-    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1]
-    // …else an indoor room shot — living room, dining, kitchen (11-26, quality colleague: „bármilyen beltéri kép”)
-    ?? [...d.photos.entries()]
-      .reverse()
-      .find(([i, p]) => i > 1 && !p.notCard && !!p.kindLabel && /^(a living room|a hotel room interior|a dining table|a kitchen|a small kitchenette)$/.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1];
+    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1];
   // A bedroom the hero / about frame already shows goes last (Linetta: after the vehicle shots moved to
   // the end, the bedroom became photos[1] — the about frame — and the card repeated it).
   const fresh = cards.filter((c) => !front.some((q) => sameShot(q, c)));
@@ -534,7 +531,7 @@ export function roomsForMock(d: SiteData): readonly Room[] {
   // Bedrooms run out → the lodging's sitting room / house / garden shots, each once (11-26, quality colleague,
   // Ildikó: a real room's card stood as a grey panel with a bed icon on a page full of photos).
   const spare = d.photos.length > 2
-    ? [...d.photos.slice(2)].reverse().filter((p) => !p.notCard && !pool.includes(p) && (p.lounge === true || (!!p.kindLabel && /^(a living room|a hotel room interior|a dining table|a kitchen|a small kitchenette)$/.test(p.kindLabel))))
+    ? [...d.photos.slice(2)].reverse().filter((p) => !p.notCard && !pool.includes(p) && p.lounge === true)
     : [];
   const borrowed = (d.rooms ?? []).map((r) => {
     if (r.photo) return r;

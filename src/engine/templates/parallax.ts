@@ -326,6 +326,14 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // is no service tile. The hook keeps the highlight's real index.
   // Standard items only (owner 2026-11-26): a line that maps to no catalogue item is not a tile.
   const gridKinds = new Set(data.highlights.slice(0, plan.rows.length).map((h) => catalogueIdFor(h, data.amenityIconMap)).filter(Boolean));
+  // …nor what the headline / tagline / intro already lists (11-26, Malomvölgyi: „Parkoló, wifi, bringatároló” in
+  // the title, then the same three tiles).
+  for (const t of [copyOf(recipe, "hero").lead, data.tagline, firstSentence(data.intro)]) {
+    for (const part of (t ?? "").split(/,|\s+és\s+|\s+and\s+|\s+und\s+|\s+i\s+|·|\//)) {
+      const k = catalogueIdFor(part.trim(), data.amenityIconMap);
+      if (k) gridKinds.add(k);
+    }
+  }
   const grid = data.highlights
     .map((h, i) => ({ h, i, k: catalogueIdFor(h, data.amenityIconMap) }))
     .filter((x) => x.i >= plan.rows.length && x.k !== null && !gridKinds.has(x.k) && Boolean(gridKinds.add(x.k)))

@@ -212,7 +212,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   {
     const ph2 = (n: number, kindLabel?: string): PH => ({ url: `https://y.test/${n}.jpg`, alt: "k", provenance: "portal", ...(kindLabel ? { kindLabel } : {}) });
     const c2 = sampleRooms({ name: "S", photos: [ph2(1), ph2(2), ph2(3, "a garden with a terrace"), ph2(4, "a kitchen")], sampleRoomCount: 0 } as unknown as SD)[0];
-    check("szálláskártya: ágy/kanapé nélkül beltéri kép (konyha), a kert/ház/kapu soha (11-26 4–8. kör)", c2?.photo?.url === ph2(4).url);
+    check("szálláskártya: ágy/kanapé nélkül nincs kártyakép (konyha, kert, kapu soha) — a blokk elmarad (11-26 4–10. kör)", !c2?.photo);
   }
   {
     const r = withoutAbsentPictureClaims({ template: "parallax", skin: "", archetype: "", sections: [{ kind: "gallery", copy: { title: "Képek a házról és az alaprajzokról", eyebrow: "Galéria" } }] } as never) as { sections: { copy: { title?: string; eyebrow?: string } }[] };
@@ -282,6 +282,8 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const rs3 = roomsForMock({ name: "K", photos: [ph3(1, { bedroom: true, subject: "interior" }), ph3(2), ph3(3, { bedroom: true, subject: "interior" })], rooms: [{ name: "Kétágyas" }] } as unknown as SD);
     check("megnevezett szoba kártyája nem a nyitókép (Kálvária)", rs3[0]?.photo?.url === ph3(3).url, String(rs3[0]?.photo?.url));
   }
+  check("kapcsolat-kép: jármű/ember/állat nem; szobakártya csak ágy/kanapé (konyha, kályha nem), különben a szoba-blokk minden úton elmarad", /outdoor\(p\) && !p\.notCard/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /rs\.every\(\(r\) => !r\.photo\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  check("parallax-rács: a címben/alcímben felsorolt tétel nem jön vissza csempeként", /firstSentence\(data\.intro\)\]\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
 }
 
 if (failed) {
