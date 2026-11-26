@@ -53,6 +53,8 @@ const PARALLAX_CSS = `
      photo behind (owner 2026-11-23); reduced motion: plain scroll */
   .t-par{min-height:92svh;background-size:cover;background-position:center;background-attachment:fixed;display:flex;align-items:center;position:relative}
   .t-par--band{min-height:60svh}
+  /* a band without a photo is a quote strip, not an empty screen (11-26) */
+  .t-par--band.t-par--flat{min-height:0;padding:72px 0}
   .t-par::after{content:"";position:absolute;inset:0;background:rgba(10,12,14,.48)}
   .t-par .t-parin{position:relative;z-index:2;color:#fff;width:100%}
   .t-par--flat{background-image:linear-gradient(160deg, color-mix(in srgb, var(--cit-ink) 88%, black), color-mix(in srgb, var(--cit-accent) 45%, var(--cit-ink)))}
@@ -449,8 +451,9 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     : "";
 
   // -- image band B -----------------------------------------------------------
+  // No band-worthy photo → no band B (11-26: an empty grey-brown full screen read as a broken page).
   const bandB =
-    photos.length >= 2
+    photos.length >= 2 && bandBUrl
       ? `<section class="t-par t-par--band${bandBUrl ? "" : " t-par--flat"}"${bandBUrl ? ` style="background-image:url('${esc(bandBUrl)}')"` : ""}>
     <div class="t-wrap t-parin">${revCopy.title ? `<p class="t-quote"${copyHook("reviews.title")}>${esc(revCopy.title)}</p>` : ""}</div>
   </section>`

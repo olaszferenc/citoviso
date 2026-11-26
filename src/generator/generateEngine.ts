@@ -44,6 +44,7 @@ import { collectWriterSources, quoteCorpusOf, type WriterSourceLead } from "./wr
 import { descriptionFactIsOwn, groupAmenities, hostVenueOf, sampleFacilityItems, subordinateToCriticInputs, verifyMarketRelevance, withHostWellness, type MarketVerdict, type SalesSurface } from "./marketCheck.js";
 import { getRegionContext, resolveGatedPhotos, resolveRegion, slugify } from "./generate.js";
 import { curateMockPhotos } from "./photoCurate.js";
+import { getHeroPin } from "./heroOverride.js";
 import { GATE_OPENING, gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { townPhotosForMock } from "./townHero.js";
 import { DISPATCH_MIN_OWN_PHOTOS } from "../outreach/mockPhotoGate.js";
@@ -371,7 +372,8 @@ async function generateEngineMockInner(
   // THE BEST HERO FIRST (11-24: 9 of 18 letters opened on a bathroom, a stove or an award banner).
   // One shared step (generator/photoCurate.ts) — the rerender and the land/deploy fixture check run
   // the very same one, so what the check tests is what a lead gets.
-  const photoSet = await curateMockPhotos(gated.photos);
+  const heroPin = await getHeroPin(leadId).catch(() => null);
+  const photoSet = await curateMockPhotos(gated.photos, { pinnedUrl: heroPin?.url ?? null });
   if (photoSet.duplicates.length) {
     console.log(`  ↳ ${photoSet.duplicates.length} ismétlődő kép kiszűrve (ugyanaz a fotó más néven): ${photoSet.duplicates.join(", ")}`); // i18n-exempt: operator log
   }

@@ -146,11 +146,10 @@ check("a frissítés a 2. tervet is frissíti", /secondPlanOf\(w\.leadId, w\.mai
 check("a kolléga sora a 2. tervet is adja", /secondPlanOf\(r\.leadId, r\.artifactId\)/.test(src("scripts/qa-review.mts")));
 
 check("nyitókép: sötét (fényerő < 80) nem lehet", !isHeroWorthy(K("ok", "the outside of a house", { quality: { long: 1600, luma: 60, lap: 300 } })));
-check("nyitókép: égbolt/távoli kilátás (a hely < 0,3) nem lehet", !isHeroWorthy(K("ok", "a balcony with a view", { probs: { "a balcony with a view": 0.7, "the outside of a house": 0.1 } })));
 check("sáv: a legjobb pontszámú kép, nem a soron következő", /bestBand\(\)/.test(src("src/engine/templateKit.ts")));
 
 check("fürdő/WC sehol nincs az oldalon (galéria sem)", isOffPagePhoto(K("ok", "a bathroom with a shower", { probs: { "a bathroom with a shower": 0.5 } }), false));
-check("a kártyaképek nem fürdő/konyha", /const p = take\(notBath\);/.test(src("src/engine/templateKit.ts")));
+check("a kártyaképek nem fürdő/konyha, és nincs rajtuk jármű/ember/állat", /take\(\(x\) => notBath\(x\) && !x\.notCard\)/.test(src("src/engine/templateKit.ts")));
 
 check("kapuszárny: a legjobb széles kép, közeli/sötét csak végső esetben", /b\.p\.bandScore \?\? -1/.test(src("src/engine/templates/gateOpening.ts")));
 
@@ -159,6 +158,8 @@ check("kapuszárny: a legjobb széles kép, közeli/sötét csak végső esetben
   const want: [string, string][] = [["Kutyusokat ingyen fogadnak", "pet"], ["Légkondicionálás és padlófűtés", "ac"], ["Konyha mosogatógéppel", "kitchen"], ["Kiságy és etetőszék", "child"], ["Agyagos talaj", "dot"], ["Saját stég", "view"]];
   for (const [l, n] of want) check(`ikon: „${l}” → ${n} (egész szó, nem szótöredék)`, matchIcon(l) === n);
 }
+
+check("nyitókép: a kolléga választ (heroes/hero), a sor előbb ezt kéri", /HERO_PICK_PREFIX/.test(src("scripts/qa-review.mts")) && /pinnedUrl/.test(src("src/generator/mockRefresh.ts")));
 
 if (failed) {
   console.error(`⛔ ${failed} eset megbukott — kolléga-jóváhagyás vagy engedélylistás képszűrő nélkül menne ki levél.`);

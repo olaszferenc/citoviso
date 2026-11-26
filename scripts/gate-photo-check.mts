@@ -87,7 +87,7 @@ const refuse = engine.indexOf("Kapunyitás: nincs a nyitóképtől eltérő tém
 check(
   "bekötés: a generálás minden képet ujjlenyomatol (a másodikat is), és a kapu-kép hiányát az AI-hívás ELŐTT elutasítja",
   // 2026-11-24: one shared step (generator/photoCurate.ts) — it fingerprints every photo.
-  /curateMockPhotos\(gated\.photos\)/.test(engine) &&
+  /curateMockPhotos\(gated\.photos(, \{ pinnedUrl: heroPin\?\.url \?\? null \})?\)/.test(engine) &&
     /fingerprintAndDedupe\(input\)/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")) &&
     refuse > 0 && refuse < engine.indexOf('opts.onStage?.("copy")'),
 );

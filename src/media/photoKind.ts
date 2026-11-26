@@ -353,15 +353,12 @@ export function isHeroWorthy(v: PhotoKind): boolean {
   // 11-25 (quality colleague, evening round): a dark corridor, a dark outbuilding corner and a sky over a
   // far town were heroes — the first screen must be bright and show the PLACE itself.
   if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
-  const p = v.probs ?? {};
-  const place = (p["the outside of a house"] ?? 0) + (p["a guesthouse building"] ?? 0) + (p["a garden with a terrace"] ?? 0) + (p["a swimming pool"] ?? 0) + (p["a courtyard"] ?? 0) + (p["a living room"] ?? 0) + (p["a bedroom with a bed"] ?? 0) + (p["a hotel room interior"] ?? 0);
-  if (place < HERO_MIN_PLACE) return false;
+  // (No „the house must show” rule — owner 2026-11-25: the hero is the wow shot, a sunset over the lake
+  // included; the quality colleague picks it from a contact sheet, qa-review.mts heroes.)
   return heroScore(v) >= 0.25;
 }
 /** Mean luma below this is too dark for the first screen. */
 export const HERO_MIN_LUMA = 80;
-/** The house / its garden / its rooms must hold at least this mass (not a view, not a lake, not a sky). */
-export const HERO_MIN_PLACE = 0.3;
 
 /**
  * How good a photo is as a full-bleed band (0 = not fit): the place itself, bright, wide. The bands take

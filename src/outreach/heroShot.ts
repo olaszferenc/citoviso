@@ -126,7 +126,7 @@ async function cachedShot(artifactId: string): Promise<HeroShotResult | null> {
   // /assets/stock, so a no-photo mock's hero showed the placeholder icon.
   // v4 cache-busted v3: those shots were taken without verifying the first
   // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
-  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v6.png`);
+  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v7.png`);
   return (await fileExists(dest)) ? { path: dest } : null;
 }
 
@@ -217,7 +217,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
     const ribbonLang = await prepareMailLang(shotLang);
     const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
-    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v6.png`);
+    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v7.png`);
 
     await mkdir(SHOT_DIR, { recursive: true });
     // Declared OUTSIDE the browser block: it is the reason the operator reads on
@@ -386,7 +386,9 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
             b.textContent = ribbonText;
             b.setAttribute(
               "style",
-              "position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#0e2a47;" +
+              // At the BOTTOM edge (11-26, quality colleague): at the top it covered the fixed menu of
+              // gate-opening / wordmark-grow — „a felső menü a sáv alá csúszik, félig levágva”.
+              "position:fixed;bottom:0;left:0;right:0;z-index:2147483647;background:#0e2a47;" +
                 "color:#fff;font:600 15px/1 Arial,sans-serif;letter-spacing:.12em;" +
                 "text-align:center;padding:9px 0",
             );
