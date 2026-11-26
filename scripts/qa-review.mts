@@ -148,7 +148,7 @@ async function heroCandidates(artifactId: string): Promise<{ leadId: string; url
   for (const p of photos) {
     const v = await classifyPhotoUrl(p.url);
     if (v && !isHeroCandidate(v)) continue;
-    if (v?.quality && v.quality.long < 900) continue; // the letter's picture is 1216 px wide — a small photo blurs
+    // (size: isHeroCandidate → heroSized, 1000 × 700 px — the moving cover's floor, 11-26)
     urls.push(p.url);
   }
   return { leadId: a.lead_id, urls };

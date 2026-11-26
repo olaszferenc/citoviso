@@ -8,7 +8,7 @@
 //      the front, so a bathtub there opens the page just as a bathtub hero would (11-24);
 //      those shots also carry Photo.backstage, and the opening sequence skips them
 
-import { bandScore, classifyPhotoUrl, NOT_CARD_LABELS, NOT_CARD_MASS, photoFocusX, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
+import { bandScore, classifyPhotoUrl, heroSized, NOT_CARD_LABELS, NOT_CARD_MASS, photoFocusX, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
 import { detectPhotoObjects, showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal } from "../media/photoObjects.js";
 import { applyHeroPin } from "./heroOverride.js";
@@ -43,7 +43,10 @@ export async function curateMockPhotos<T extends { url: string }>(
   const kept = keep.map((i) => dd.photos[i]!);
   const keptKinds = keep.map((i) => kinds[i] ?? null);
   const machine = withBestHeroFirst(kept, keptKinds);
-  const heroFirst = opts.pinnedUrl ? applyHeroPin(machine, opts.pinnedUrl) : machine;
+  // The colleague's pick wins — unless the photo is too small for the moving cover (11-26, Badacsony): then the
+  // machine's best sized hero stands, and the next hero pick offers only sized photos.
+  const pinnedKind = opts.pinnedUrl ? keptKinds[kept.findIndex((p) => p.url === opts.pinnedUrl)] ?? null : null;
+  const heroFirst = opts.pinnedUrl && (!pinnedKind || heroSized(pinnedKind)) ? applyHeroPin(machine, opts.pinnedUrl) : machine;
   const kindOf = (p: T & { dhash?: string }) => keptKinds[kept.indexOf(p)] ?? null;
   const ordered = withShowcaseFirst(heroFirst, heroFirst.map(kindOf)).map((p, i) => {
     // The hero is withBestHeroFirst's choice; every other kitchen/bathroom shot is flagged, so the

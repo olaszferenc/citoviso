@@ -40,6 +40,8 @@ export interface PhotoQuality {
   readonly long: number;
   readonly luma: number;
   readonly lap: number;
+  /** Shorter edge in px (EXIF-rotated). */
+  readonly short?: number;
   /** Mean luma of the TOP fifth (the sky outdoors): a night shot has a dark sky. */
   readonly top?: number;
 }
@@ -78,7 +80,7 @@ export const PHOTO_MIN_LUMA = 50;
 /** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
 export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 8;
+const VERSION = 9;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -252,6 +254,7 @@ export async function measureQuality(buf: Buffer): Promise<PhotoQuality> {
   const meta = await sharp(buf).metadata();
   const rotated = (meta.orientation ?? 1) >= 5;
   const long = Math.max((rotated ? meta.height : meta.width) ?? 0, (rotated ? meta.width : meta.height) ?? 0);
+  const short = Math.min((rotated ? meta.height : meta.width) ?? 0, (rotated ? meta.width : meta.height) ?? 0);
   const g = await sharp(buf).rotate().greyscale().resize(512, 512, { fit: "inside" }).raw().toBuffer({ resolveWithObject: true });
   const { width: w, height: h } = g.info;
   const d = g.data;
@@ -273,7 +276,7 @@ export async function measureQuality(buf: Buffer): Promise<PhotoQuality> {
   const topRows = Math.max(1, Math.round(h * 0.2));
   let ts = 0;
   for (let i = 0; i < topRows * w; i++) ts += d[i]!;
-  return { long, luma: +(sum / Math.max(1, d.length)).toFixed(1), lap: +lap.toFixed(1), top: +(ts / (topRows * w)).toFixed(1) };
+  return { long, short, luma: +(sum / Math.max(1, d.length)).toFixed(1), lap: +lap.toFixed(1), top: +(ts / (topRows * w)).toFixed(1) };
 }
 
 /** Classify a photo URL; the verdict is cached on disk per URL (a portal photo does not change). */
@@ -398,6 +401,7 @@ export function isHeroWorthy(v: PhotoKind): boolean {
   // 11-25 (quality colleague, evening round): a dark corridor, a dark outbuilding corner and a sky over a
   // far town were heroes — the first screen must be bright and show the PLACE itself.
   if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
+  if (!heroSized(v)) return false;
   // (No „the house must show” rule — owner 2026-11-25: the hero is the wow shot, a sunset over the lake
   // included; the quality colleague picks it from a contact sheet, qa-review.mts heroes.)
   return heroScore(v) >= 0.25;
@@ -416,7 +420,20 @@ export function isHeroCandidate(v: PhotoKind): boolean {
   // a car or a dog in front of the house (11-26, Pince): the colleague skipped it — never offer it
   if (NOT_CARD_LABELS.reduce((a, l) => a + (v.probs?.[l] ?? 0), 0) >= NOT_CARD_MASS) return false;
   if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
+  if (!heroSized(v)) return false;
   return heroScore(v) >= 0.1;
+}
+/**
+ * Big enough for the MOVING cover (owner 2026-11-26, Badacsony: „MÉG A HEROJA SINCSEN ANIMÁLVA”): the depth layer
+ * skips a cover under 1000 × 700 px (media/depthMap.ts bigEnough — soft at full screen), so such a photo is no hero.
+ * No measured size (older verdict) → not judged here.
+ */
+export const HERO_MIN_LONG = 1000;
+export const HERO_MIN_SHORT = 700;
+export function heroSized(v: PhotoKind): boolean {
+  const q = v.quality;
+  if (!q || !q.long) return true;
+  return q.long >= HERO_MIN_LONG && (q.short == null || q.short >= HERO_MIN_SHORT);
 }
 /** Mean luma below this is too dark for the first screen. */
 export const HERO_MIN_LUMA = 80;

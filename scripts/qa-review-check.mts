@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { focusXOfBuffer, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import { focusXOfBuffer, heroSized, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
 import { sampleRooms, galleryOrder, roomsForMock } from "../src/engine/templateKit.js";
@@ -211,7 +211,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   {
     const ph2 = (n: number, kindLabel?: string): PH => ({ url: `https://y.test/${n}.jpg`, alt: "k", provenance: "portal", ...(kindLabel ? { kindLabel } : {}) });
     const c2 = sampleRooms({ name: "S", photos: [ph2(1), ph2(2), ph2(3, "a garden with a terrace"), ph2(4, "a kitchen")], sampleRoomCount: 0 } as unknown as SD)[0];
-    check("szálláskártya: ágy és beltéri kanapé nélkül nincs tartalékkép (a kert/ház/kapu nem szoba — 11-26 4–5. kör)", !c2?.photo);
+    check("szálláskártya: ágy/kanapé nélkül beltéri kép (konyha), a kert/ház/kapu soha (11-26 4–8. kör)", c2?.photo?.url === ph2(4).url);
   }
   {
     const r = withoutAbsentPictureClaims({ template: "parallax", skin: "", archetype: "", sections: [{ kind: "gallery", copy: { title: "Képek a házról és az alaprajzokról", eyebrow: "Galéria" } }] } as never) as { sections: { copy: { title?: string; eyebrow?: string } }[] };
@@ -265,6 +265,13 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("fotótapéta / pálmás trópusi strand lekerül az oldalról (Vandus)", isOffPagePhoto(K("ok", "a living room", { probs: { "a photo wallpaper mural on a wall": 0.25 } }), false) && isOffPagePhoto(K("ok", "a lake shore", { probs: { "palm trees on a tropical beach": 0.3 } }), true));
   check("két kolléga megosztja a sort: qa-review queue --half 0-7 | 8-f (nincs dupla renderelés)", /--half/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /inHalf\(r\.artifactId\)/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
   check("kolléga-sor: félkész ajánlat elöl (az egyik terve már átment), több kollégánál --shard k/n", /exists \(select 1 from mock_artifact m where m\.lead_id = outreach_dispatch\.lead_id/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /--shard/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
+  check("nyitókép csak mozgatható méretű kép (≥ 1000 × 700 px) — jelölt és gépi választás is", !heroSized(K("ok", "the outside of a house", { quality: { long: 960, short: 640, luma: 120, lap: 300 } })) && heroSized(K("ok", "the outside of a house", { quality: { long: 1440, short: 960, luma: 120, lap: 300 } })) && !isHeroCandidate(K("ok", "the outside of a house", { quality: { long: 960, short: 640, luma: 120, lap: 300 } })));
+  check("qafix6: az átengedett, de nem mozgó nyitóképű terv is újragenerálódik", /qafix6/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /heroDepthArm' = 'depth'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
+  {
+    const sr = roomsForMock({ name: "Z", photos: [1, 2, 3, 4, 5].map((n) => ({ url: `https://z.test/${n}.jpg`, alt: "z", provenance: "portal", kindLabel: "the outside of a house" })) } as unknown as SD);
+    check("szálláskártya: nincs szoba-kép → beltéri kép, ha az sincs, a szoba-blokk elmarad (nem szöveges kártya)", sr.every((r) => !r.photo) && /rooms\.every\(\(r\) => !r\.photo\)\) return null/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
+  }
+  check("parallax „Egy pillantásra”: nem ismétli a képes sorokat, fajtánként egy, csak ikonos tétel", /x\.i >= plan\.rows\.length && x\.k !== "dot" && !gridKinds\.has\(x\.k\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
 }
 
 if (failed) {

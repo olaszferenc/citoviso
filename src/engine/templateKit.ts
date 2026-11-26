@@ -479,7 +479,11 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const inside = [...d.photos.entries()]
     .reverse()
     // a detected sofa (photoCurate `lounge`) — the label alone called a corridor „a hotel room interior” (BaBo)
-    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1];
+    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1]
+    // …else an indoor room shot — living room, dining, kitchen (11-26, quality colleague: „bármilyen beltéri kép”)
+    ?? [...d.photos.entries()]
+      .reverse()
+      .find(([i, p]) => i > 1 && !p.notCard && !!p.kindLabel && /^(a living room|a hotel room interior|a dining table|a kitchen|a small kitchenette)$/.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1];
   // A bedroom the hero / about frame already shows goes last (Linetta: after the vehicle shots moved to
   // the end, the bedroom became photos[1] — the about frame — and the card repeated it).
   const fresh = cards.filter((c) => !front.some((q) => sameShot(q, c)));
@@ -550,7 +554,13 @@ export function roomsForMock(d: SiteData): readonly Room[] {
  * photo labelled "Minta — <room>" on the published site.
  */
 export function roomsFor(d: SiteData, phase: RenderPhase): readonly Room[] | null {
-  if (phase === "mock") return roomsForMock(d);
+  if (phase === "mock") {
+    const rooms = roomsForMock(d);
+    // A SAMPLE card (no rooms in the source) with no picture of a room on a page with 5+ own photos → no rooms
+    // block at all (11-26, quality colleague: „Szobák és apartmanok” stood as a text-only card, Jaja/Zozo/Ország).
+    if (!d.rooms?.length && d.photos.length >= 5 && rooms.length && rooms.every((r) => !r.photo)) return null;
+    return rooms;
+  }
   return d.rooms?.length ? d.rooms : null;
 }
 

@@ -49,15 +49,16 @@ export const MOCK_MIN_GENERATED_AT = "2026-11-23T21:42:31Z";
 /** 2026-11-25 evening (the quality colleague failed all of the first ten): the band rule, the rating
  *  floor, the date-stamp filter and the desktop word-break check join the same bar — the hero-fix-only
  *  re-render (stamp „2026-11-25-herofix-live”) no longer counts; „2026-11-25-qafix” sorts after it. */
-export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T12:00:00Z"; // set after the deploy on purpose: a new-code mock made before it is simply refreshed (mockRefresh.ts)
+export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T15:00:00Z"; // set after the deploy on purpose: a new-code mock made before it is simply refreshed (mockRefresh.ts)
 // 11-26 noon: qafix4 rode through three deploys (221d9a78 → 8fe218b5 → 790faa8a), so a plan rendered with the
 // first kept counting as current (BaBo: the repeat, the empty ring, the corridor card). qafix5 re-renders those —
 // but a qafix4 plan the quality colleague already PASSED stays current (its file is what was reviewed; the
 // approval chain still binds the pass to the file's mtime), so a ready offer does not drop off the owner's page.
-export const MOCK_HEROFIX_STAMP = "2026-11-26-qafix5";
+export const MOCK_HEROFIX_STAMP = "2026-11-26-qafix6";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
   and (a.generated_at >= ${MOCK_HEROFIX_LIVE_AT}::timestamptz or coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}
-       or (coalesce(a.inputs->>'terhatasAt', '') >= '2026-11-26-qafix4' and a.inputs->'qaReview'->>'verdict' = 'pass')))`;
+       or (coalesce(a.inputs->>'terhatasAt', '') >= '2026-11-26-qafix4' and a.inputs->'qaReview'->>'verdict' = 'pass'
+           and a.inputs->>'heroDepthArm' = 'depth')))`;
 
 /**
  * THE OWNER'S SWITCH for the <N-photo branch (owner rule 2026-11-25 via cit5980e14c: „amíg a képtár nincs

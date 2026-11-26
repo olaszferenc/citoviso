@@ -320,6 +320,15 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // hero → contact (an outdoor scene first) → band A → band B → gallery (min. 3) → feature rows.
   // The room cards (render.ts sampleRooms) chose before the template — their photos are not in it.
   const plan = allotPhotos(data, { minGallery: 3, maxGallery: 6, maxRows: Math.min(4, data.highlights.length) });
+  // The „Egy pillantásra” grid shows only what the photo rows above did NOT (11-26, quality colleague, Kiskúti: the
+  // same three items in „Ami nálunk vár” and here), one per facility kind (Jaja: „Játszótér” ≈ „Mászóka, csúszda,
+  // hinta”), and only facilities — a text-only tile without an icon („Borkóstolás”, „Nagyobb létszámú csoportoknak”)
+  // is no service tile. The hook keeps the highlight's real index.
+  const gridKinds = new Set(data.highlights.slice(0, plan.rows.length).map((h) => matchIcon(h)).filter((k) => k !== "dot"));
+  const grid = data.highlights
+    .map((h, i) => ({ h, i, k: matchIcon(h) }))
+    .filter((x) => x.i >= plan.rows.length && x.k !== "dot" && !gridKinds.has(x.k) && Boolean(gridKinds.add(x.k)))
+    .slice(0, 8);
   const heroPhoto = plan.hero?.url;
   const bandAUrl = plan.bandA?.url;
   const bandBUrl = plan.bandB?.url;
@@ -340,7 +349,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // corner top-bar is gone (it had no scrolled state), the masthead IS the header.
   const hasReviews = Boolean(data.reviews && data.reviews.length);
   const mastLinks: MastheadLink[] = [
-    ...(data.highlights.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-services" }] : []),
+    ...(grid.length ? [{ label: T(data, "Szolgáltatások"), href: "#t-services" }] : []),
     ...(galleryList.length ? [{ label: T(data, "Galéria"), href: "#t-gallery" }] : []),
     ...(hasReviews ? [{ label: T(data, "Vélemények"), href: "#t-reviews" }] : []),
     ...(data.contact.phone || data.contact.email || data.contact.address
@@ -410,8 +419,10 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     data.tagline && data.tagline !== h1 && data.tagline !== sub
       ? data.tagline
       : galCopy.title ?? "";
+  // A page WITH photos but no band-fit one → no band A (11-26, quality colleague, Vandus: the wall-mural band was
+  // filtered and an empty gradient strip stood in its place). The flat quote strip stays for photo-less pages.
   const bandA =
-    photos.length || bandAText
+    bandAUrl || (!photos.length && bandAText)
       ? `<section class="t-par t-par--band${bandAUrl ? "" : " t-par--flat"}"${bandAUrl ? ` style="background-image:url('${esc(bandAUrl)}')"` : ""}>
     <div class="t-wrap t-parin">${bandAText ? `<p class="t-quote"${data.tagline && bandAText === data.tagline ? copyHook("tagline") : copyHook("gallery.title")}>${esc(bandAText)}</p>` : ""}</div>
   </section>`
@@ -442,15 +453,14 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     : "";
 
   // -- amenity grid (all real highlights as a compact checklist) --------------
-  const amen = data.highlights.length
+  const amen = grid.length
     ? `<section class="t-sec" id="t-services" style="padding-top:0">
     <div class="t-wrap">
       <p class="t-eyebrow">${T(data, "Szolgáltatások")}</p>
       <h2>${T(data, "Egy pillantásra")}</h2>
       <div class="t-amen">
-        ${data.highlights
-          .slice(0, 8)
-          .map((h, i) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
+        ${grid
+          .map(({ h, i }) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
