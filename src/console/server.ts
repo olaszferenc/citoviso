@@ -415,6 +415,12 @@ import { filterKbEntries, kbAssetPath, loadKbEntries, pickKbEntry, renderKbBody 
 import { getScrapeJob, startScrapeJob } from "./scrapeJob.js";
 import { handleScoutRoute } from "./scoutRoutes.js";
 import { getFunnelReport, getScrapeRuns } from "./data.js";
+import { swr } from "./swrCache.js";
+
+/** How old the dashboard's heavy aggregates may be (swrCache.ts) — a click never waits for them. */
+const HUB_CACHE_TTL_MS = 60_000;
+/** The duplicate scan changes only when leads arrive; decisions are filtered fresh (see /duplicates). */
+const DUP_CACHE_TTL_MS = 5 * 60_000;
 import { messengerOutreachOf, mmsOutboxImage } from "./data.js";
 import { deactivateRegion, disqualifyLead, listLeadsForMap, listRegions, markPlacesSource, requalifyLead, saveRegion } from "./data.js";
 import { anyLeadFilter, mockStatusLabel } from "./leadFilters.js";
@@ -2045,32 +2051,45 @@ async function handle(
   // Both render from ONE data object, so a number on the home and on the module page
   // can never disagree.
   if (method === "GET" && (path === "/" || path.startsWith(HUB_PREFIX))) {
-    const op = await currentOperator(req);
+    // ONE ROUND TRIP, NOT TEN IN A ROW (owner 2026-11-26 „kurva lassú”): measured on the VPS the
+    // sources ran in series, 35 s for the dashboard. They are independent → in parallel; the three
+    // heavy, read-only aggregates (funnel, open-per-channel, lead stock) are served from a
+    // stale-while-revalidate cache (swrCache.ts, ≤ 60 s old). The operator's own blocks (replies,
+    // finance, freshness, module switches) stay live.
+    const stockRaw = url.searchParams.get("days");
+    const stockDays: StockPreset = isStockPreset(stockRaw) ? stockRaw : "0";
+    const stockPeriod = reportPeriod(stockDays, null, null, new Date(), "0");
+    const [op, r, fin, dis, stale, replies, noLoginTrials, messenger, openChannels, stock, outreachP] = await Promise.all([
+      currentOperator(req),
+      swr("hub.funnel", HUB_CACHE_TTL_MS, getFunnelReport),
+      getFinanceCounts(),
+      getDisabledModules(),
+      // Is this console even running today's code? (2026-09-08 silent-staleness fix)
+      getTreeFreshness(),
+      getRepliesBlock(),
+      loadNoLoginTrials(),
+      // ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates).
+      import("../mms/messenger.js").then((m) => m.messengerStats()),
+      // „Megnyitás csatornánként” (owner, 2026-11-13, plan „B”): its own Ma · 7 nap · Összes.
+      swr("hub.openChannels", HUB_CACHE_TTL_MS, () => import("./openChannels.js").then((m) => m.getOpenChannels())),
+      // Lead-állomány + the period chip (owner, 2026-11-12): default „Összes”, like the CRM card it replaces.
+      getLeadStock(stockPeriod),
+      outreachInPeriod(stockPeriod),
+    ]);
     const data: HubData = {
-      r: await getFunnelReport(),
+      r,
       scrapeRunning: getScrapeJob().running,
       operatorName: op?.displayName ?? "operátor",
-      fin: await getFinanceCounts(),
-      sales: await (async () => {
-        const dis = await getDisabledModules();
-        return { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length };
-      })(),
-      // Is this console even running today's code? (2026-09-08 silent-staleness fix)
-      stale: await getTreeFreshness(),
-      replies: await getRepliesBlock(),
-      noLoginTrials: await loadNoLoginTrials(),
-      // ADR-0430: the „Messenger-út” block (switch, brake, today's count, 7-day rates).
-      messenger: await (await import("../mms/messenger.js")).messengerStats(),
-      // „Megnyitás csatornánként” (owner, 2026-11-13, plan „B”): its own Ma · 7 nap · Összes.
-      openChannels: await (await import("./openChannels.js")).getOpenChannels(),
-      // Lead-állomány + the period chip (owner, 2026-11-12): default „Összes”, like the CRM card it replaces.
-      ...(await (async () => {
-        const raw = url.searchParams.get("days");
-        const stockDays: StockPreset = isStockPreset(raw) ? raw : "0";
-        const period = reportPeriod(stockDays, null, null, new Date(), "0");
-        const [stock, outreachP] = await Promise.all([getLeadStock(period), outreachInPeriod(period)]);
-        return { stock, stockDays, outreachP };
-      })()),
+      fin,
+      sales: { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length },
+      stale,
+      replies,
+      noLoginTrials,
+      messenger,
+      openChannels,
+      stock,
+      stockDays,
+      outreachP,
       repliesQuery: {
         filter: url.searchParams.get("replies") === "all" ? "all" : "open",
         channel: (["email", "sms", "viber", "whatsapp"] as const).find((c) => c === url.searchParams.get("ch")) ?? "all",
@@ -3227,7 +3246,20 @@ async function handle(
   // GET /scrape — launcher + live log + run history (PILOT.md §7d ①).
   // GET /duplicates — suspected-duplicate groups awaiting a ruling.
   if (method === "GET" && path === "/duplicates") {
-    const clusters = clusterCandidates(await findDuplicateCandidates(300));
+    // The candidate scan reads every live lead's whole `raw` (25 s on the VPS, 2026-11-26) → served
+    // from a stale-while-revalidate cache; what changed since is filtered FRESH on every view, so a
+    // verdict or a merge just made never shows its group again: a decided pair (lead_link) and a lead
+    // that left the live set (merged/terminated/disqualified) drop out.
+    const cands = await swr("duplicates.candidates", DUP_CACHE_TTL_MS, () => findDuplicateCandidates(300));
+    const ids = [...new Set(cands.flatMap((c) => [c.a.id, c.b.id]))];
+    const decided = new Set((await db.selectFrom("lead_link").select(["lead_a", "lead_b"]).execute()).map((l) => `${l.lead_a}|${l.lead_b}`));
+    const gone = new Set(
+      ids.length
+        ? (await db.selectFrom("lead").select("id").where("id", "in", ids).where("lifecycle_status", "in", ["terminated", "disqualified"]).execute()).map((l) => l.id)
+        : [],
+    );
+    const live = cands.filter((c) => !decided.has(`${c.a.id}|${c.b.id}`) && !decided.has(`${c.b.id}|${c.a.id}`) && !gone.has(c.a.id) && !gone.has(c.b.id));
+    const clusters = clusterCandidates(live);
     return send(res, 200, duplicatesPage(clusters));
   }
   // POST /duplicates/rule — the operator's verdict for one group. Stored per
