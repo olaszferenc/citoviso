@@ -3180,7 +3180,7 @@ if [ -f scripts/scout-close-race-check.mts ] && \
   echo "[pre-commit] scout-close-race-check (a felderítő csempe egyszer zárul)…"
   npx tsx scripts/scout-close-race-check.mts >"$GATE_LOG" || gate_failed
 fi
-# work-queue-check (ADR-XXXX, tulaj 2026-11-26 „a deploy prioritást élvez”): a hosszú munka a KÜLÖN
+# work-queue-check (`_planning/decisions/*-deploy-nem-var-kulon-dolgozo-*`, tulaj 2026-11-26 „a deploy prioritást élvez”): a hosszú munka a KÜLÖN
 # dolgozóban fut (DB-feladatsor), a konzol csak sorba tesz; a deploy nem vár rá és nem veszíti el.
 # Méri: idempotens sorba tétel, kill -9 utáni átvétel, folytatás (feladási határral), ssh-futás
 # átvétele, deploy-jelző alatt nincs indítás, a csempe-takarító nem nyitja újra az élő munkát,
