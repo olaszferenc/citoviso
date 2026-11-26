@@ -10,6 +10,7 @@
 
 import { bandScore, classifyPhotoUrl, NOT_CARD_LABELS, NOT_CARD_MASS, photoFocusX, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
+import { detectPhotoObjects, showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal } from "../media/photoObjects.js";
 import { applyHeroPin } from "./heroOverride.js";
 
 export interface CuratedPhotos<T> {
@@ -29,7 +30,16 @@ export async function curateMockPhotos<T extends { url: string }>(
 ): Promise<CuratedPhotos<T & { dhash?: string }>> {
   const dd = await fingerprintAndDedupe(input);
   const kinds = await Promise.all(dd.photos.map((p) => classifyPhotoUrl(p.url)));
-  const keep = dd.photos.map((_, i) => i).filter((i) => !isOffPagePhoto(kinds[i] ?? null, i === 0));
+  // The object detector sees the DETAILS the whole-image classifier misses (11-26): a WC, a washbasin, a person.
+  const objects = await Promise.all(dd.photos.map((p) => detectPhotoObjects(p.url).catch(() => null)));
+  const mass = (i: number, labels: readonly string[]): number => labels.reduce((a, l) => a + (kinds[i]?.probs?.[l] ?? 0), 0);
+  const detailOff = (i: number): boolean => {
+    const o = objects[i];
+    if (!o) return false;
+    return showsPerson(o) || showsBathroomFixture(o, mass(i, ["a bathroom with a shower", "a toilet"]), mass(i, ["a kitchen", "a small kitchenette"]));
+  };
+  const keep = dd.photos.map((_, i) => i).filter((i) => !isOffPagePhoto(kinds[i] ?? null, i === 0) && !detailOff(i));
+  const objOf = new Map(dd.photos.map((p, i) => [p, objects[i] ?? null] as const));
   const kept = keep.map((i) => dd.photos[i]!);
   const keptKinds = keep.map((i) => kinds[i] ?? null);
   const machine = withBestHeroFirst(kept, keptKinds);
@@ -47,11 +57,18 @@ export async function curateMockPhotos<T extends { url: string }>(
     const pr = v?.probs ?? {};
     // A real bedroom for the room cards (11-26: plan 2's „Szálláslehetőség” card showed a bed icon while the
     // gallery had the twin room): the local classifier's best label, clearly a bedroom and showcase-fit.
-    const bedroom = v != null && v.label === "a bedroom with a bed" && (pr["a bedroom with a bed"] ?? 0) >= 0.35 && isShowcase(v);
-    const notCard = v != null && NOT_CARD_LABELS.reduce((a, l) => a + (pr[l] ?? 0), 0) >= NOT_CARD_MASS;
-    const notBand = i > 0 && v != null && (!isBandWorthy(v) || !bs);
-    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, kindLabel: _oldLabel, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean; kindLabel?: string };
-    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}), ...(v ? { kindLabel: v.label } : {}) } as T & { dhash?: string };
+    const bedroomClip = v != null && v.label === "a bedroom with a bed" && (pr["a bedroom with a bed"] ?? 0) >= 0.35 && isShowcase(v);
+    const objs = objOf.get(p as never) ?? null;
+    // a car at the edge, a dog in front of the house (11-26: Jaja's SUV, Pince's dog, Zalabéri's blue car)
+    const notCard = (v != null && NOT_CARD_LABELS.reduce((a, l) => a + (pr[l] ?? 0), 0) >= NOT_CARD_MASS) || (objs != null && showsVehicleOrAnimal(objs));
+    // a sofa / armchairs (the lone card's picture when there is no bed — never a corridor, BaBo 11-26)
+    const lounge = objs != null && showsSittingArea(objs) && v != null && isShowcase(v);
+    const bedSeen = objs != null && showsBed(objs) && v != null && isShowcase(v);
+    const bedroom = bedroomClip || bedSeen;
+    // …nor a band / the gate leaf with a car, a dog or a person in it (11-26, round 4: Pince's band, Alfa's feature)
+    const notBand = i > 0 && ((v != null && (!isBandWorthy(v) || !bs)) || notCard);
+    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, kindLabel: _oldLabel, lounge: _oldLounge, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean; kindLabel?: string; lounge?: boolean };
+    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}), ...(v ? { kindLabel: v.label } : {}), ...(lounge ? { lounge: true } : {}) } as T & { dhash?: string };
   });
   // A vehicle / person / animal shot goes to the END of the set (11-26, quality colleague: Jaja's gallery
   // OPENED on the blue SUV) — it may stay in the gallery, never lead it. The hero (index 0) stays put.
@@ -67,7 +84,7 @@ export async function curateMockPhotos<T extends { url: string }>(
   return {
     photos: curated,
     duplicates: dd.dropped.map((p) => fileOf(p.url)),
-    offPage: dd.photos.filter((_, i) => !keep.includes(i)).map((p) => `${fileOf(p.url)} (${kinds[dd.photos.indexOf(p)]?.label ?? "?"})`),
+    offPage: dd.photos.filter((_, i) => !keep.includes(i)).map((p) => `${fileOf(p.url)} (${detailOff(dd.photos.indexOf(p)) ? "tárgy: ember/WC/mosdó" : (kinds[dd.photos.indexOf(p)]?.label ?? "?")})`),
     heroMoved: curated[0]?.url !== kept[0]?.url,
   };
 }

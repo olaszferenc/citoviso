@@ -638,7 +638,7 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       ${
         feat.length
           ? `<ul class="ko-items" aria-label="${esc(T(data, "Kiemelések"))}">${feat
-              .map((h, i) => `<li class="ko-item" ${mo("up", (i % 2) * 80)}><i>${amenityIconSvg(h, data.amenityIconMap)}</i><h3${highlightHook(data, i)}>${esc(h)}</h3></li>`)
+              .map((h, i) => `<li class="ko-item" ${mo("up", (i % 2) * 80)}>${((ic) => (ic ? `<i>${ic}</i>` : ""))(amenityIconSvg(h, data.amenityIconMap))}<h3${highlightHook(data, i)}>${esc(h)}</h3></li>`)
               .join("")}</ul>`
           : ""
       }

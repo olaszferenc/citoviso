@@ -13,7 +13,8 @@ import { focusXOfBuffer, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPageP
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
 import { sampleRooms, galleryOrder } from "../src/engine/templateKit.js";
-import { withoutAbsentPictureClaims } from "../src/engine/render.js";
+import { withoutAbsentPictureClaims, renderSite } from "../src/engine/render.js";
+import { showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal, type DetectedObject } from "../src/media/photoObjects.js";
 import type { SiteData as SD, Photo as PH } from "../src/engine/recipe.js";
 import { mockRatingShown } from "../src/engine/rating.js";
 import { APPROVAL_PENDING_NOTE, ownerApprovalOf, QA_HOLD_PREFIX, QA_WAIT_NOTE, QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
@@ -188,13 +189,14 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
 }
 {
   const ph = (n: number, extra: Partial<PH> = {}): PH => ({ url: `https://x.test/${n}.jpg`, alt: "k", provenance: "portal", ...extra });
-  const d = { name: "T", photos: [ph(1), ph(2), ph(3, { kindLabel: "a living room" }), ph(4, { kindLabel: "a kitchen", backstage: true })], sampleRoomCount: 0 } as unknown as SD;
+  const d = { name: "T", photos: [ph(1), ph(2), ph(3, { kindLabel: "a living room", lounge: true }), ph(4, { kindLabel: "a hotel room interior" }), ph(5, { kindLabel: "a kitchen", backstage: true })], sampleRoomCount: 0 } as unknown as SD;
   const card = sampleRooms(d)[0];
-  check("szobakártya: hálószoba-kép nélkül a szállás belső (nem konyha/fürdő) képe, nem üres ágy-ikon", card?.photo?.url === ph(3).url);
+  check("szobakártya: hálószoba-kép nélkül a felismert ülősarok (kanapé) képe — a „hotel room” címkéjű folyosó nem", card?.photo?.url === ph(3).url);
   const g = galleryOrder([ph(5, { notCard: true }), ph(6), ph(7)], "");
   check("galéria: jármű/ember/állat-kép nem nyit, a végére kerül (kevés kép mellett)", g[0]?.url === ph(6).url && g.at(-1)?.url === ph(5).url);
   const g2 = galleryOrder([ph(5, { notCard: true }), ph(6), ph(7), ph(8), ph(9), ph(10)], "");
   check("galéria: 5+ tiszta kép mellett a jármű/állat-kép kimarad", !g2.some((p) => p.url === ph(5).url) && g2.length === 5);
+  check("havas / éjszakai / karácsonyi kép lekerül az oldalról", isOffPagePhoto(K("ok", "the outside of a house", { probs: { "a house covered in snow": 0.3 } }), false) && isOffPagePhoto(K("ok", "the outside of a house", { probs: { "a building at night": 0.28 } }), true));
   check("egyedül ülő ember (stég) lekerül az oldalról", isOffPagePhoto(K("ok", "a garden with a terrace", { probs: { "a person sitting on a pier": 0.2 } }), false));
   check("nyitókép-jelölt: a terasz akkor is a kolléga elé kerül, ha a gépi pontszáma 0.25 alatt van",
     isHeroCandidate(K("ok", "a balcony with a table and chairs", { probs: { "a balcony with a view": 0.12 } })) && !isHeroWorthy(K("ok", "a balcony with a table and chairs", { probs: { "a balcony with a view": 0.12 } })));
@@ -214,6 +216,30 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   {
     const r = withoutAbsentPictureClaims({ template: "parallax", skin: "", archetype: "", sections: [{ kind: "gallery", copy: { title: "Képek a házról és az alaprajzokról", eyebrow: "Galéria" } }] } as never) as { sections: { copy: { title?: string; eyebrow?: string } }[] };
     check("galéria-cím: alaprajzot nem ígér (alaprajz sosem kerül az oldalra)", r.sections[0]!.copy.title === undefined && r.sections[0]!.copy.eyebrow === "Galéria");
+  }
+  {
+    const O = (label: string, score: number, a: number): DetectedObject => ({ label, score, x: 0, y: 0, w: Math.sqrt(a), h: Math.sqrt(a) });
+    check("tárgyfelismerő: a kép szélén álló terepjáró (8%) → nem kártya, nem galéria-nyitó, nem sáv", showsVehicleOrAnimal([O("truck", 0.7, 0.085)]));
+    check("tárgyfelismerő: kutya a ház előtt → ugyanígy", showsVehicleOrAnimal([O("dog", 0.6, 0.02)]));
+    check("tárgyfelismerő: a stégen ülő ember (0.72, 0.9%) → le az oldalról", showsPerson([O("person", 0.72, 0.009)]));
+    check("tárgyfelismerő: a távoli, bizonytalan alak (0.3) nem visz le képet", !showsPerson([O("person", 0.305, 0.003)]));
+    check("tárgyfelismerő: WC → le; a dézsa „WC”-nek nézve (0.37, a képfelismerő szerint nem fürdő) marad",
+      showsBathroomFixture([O("toilet", 0.6, 0.05)]) && !showsBathroomFixture([O("toilet", 0.368, 0.165)], 0.01, 0));
+    check("tárgyfelismerő: fürdőszobai mosdó → le; konyhai mosogató (konyha a képen) marad",
+      showsBathroomFixture([O("sink", 0.7, 0.02)], 0.2, 0) && !showsBathroomFixture([O("sink", 0.7, 0.02)], 0.02, 0.5));
+    check("tárgyfelismerő: ágy → szobakártya-kép; kanapé → a magányos kártya képe; folyosó (semmi) → egyik sem",
+      showsBed([O("bed", 0.7, 0.3)]) && showsSittingArea([O("couch", 0.8, 0.3)]) && !showsBed([]) && !showsSittingArea([]));
+    check("kiemelt sor: csak a szövegéhez illő képet kap (nincs semleges/címke nélküli tartalék)", !/NEUTRAL_ROW/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
+    check("sáv és kapuszárny: jármű/ember/állat-kép nem (notBand ⊇ notCard)", /\|\| notCard\);/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")));
+  }
+  {
+    const base = { name: "Kevi", intro: "Ház a tónál.", tagline: "Ház a tónál", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Saját parkoló", "Wifi", "Grillsütő"] } as unknown as SD;
+    const amenOf = (html: string): string => html.match(/<section[^>]*data-cit-module="amenities"[\s\S]*?<\/section>/)?.[0] ?? "";
+    const r = { template: "parallax", skin: "", archetype: "", sections: [] } as never;
+    const dup = amenOf(renderSite(r, { ...base, sampleAmenities: ["Parkoló", "Wifi", "Grill"] } as SD, { phase: "mock" }));
+    check("„Amit kínálunk”: a feljebb már látott tételek (szöveg vagy fajta) nem ismétlődnek — ha nem marad új, a blokk elmarad", dup === "", dup.slice(0, 200));
+    const extra = amenOf(renderSite(r, { ...base, sampleAmenities: ["Parkoló", "Medence"] } as SD, { phase: "mock" }));
+    check("„Amit kínálunk”: az új tétel (Medence) megmarad, a látott (Parkoló) kimarad", /Medence/.test(extra) && !/Parkol/.test(extra), extra.slice(0, 300));
   }
 }
 

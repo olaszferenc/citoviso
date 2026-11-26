@@ -41,7 +41,10 @@ export function amenityIconSvg(
   }
   const exact = byLabel.get(label.trim());
   if (exact) return catalogueSvg(exact);
-  return iconSvg(matchIcon(label));
+  // A label no rule fits (a non-amenity like „Csendes kis utcában”) gets NO icon — an empty dot read as a
+  // missing picture (quality colleague, 11-26).
+  const name = matchIcon(label);
+  return name === "dot" ? "" : iconSvg(name);
 }
 
 /** Catalogue id for a SOURCE (Hungarian) label — the bridge-builder's half:

@@ -259,7 +259,9 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // LOCAL picture — never the hero again (dev run 2026-11-25: the town hero twice failed the send gate); with
   // neither, no frame. A lead with one own photo and no town pictures keeps the old frame (its hero).
   const localPics = (data.stock?.gallery ?? []).filter((p) => !isStockPhoto(p));
-  const aboutPic = photos[1] ?? localPics[0] ?? (photos.length && !data.townPhoto ? hero : undefined);
+  // Not a photo a room card already wears (Pirkadat fixture, 11-26: numbered cards took photos[1] too).
+  const cardUrls = new Set((rooms ?? []).map((r) => r.photo?.url).filter(Boolean));
+  const aboutPic = photos.slice(1).find((p) => !cardUrls.has(p.url)) ?? photos[1] ?? localPics[0] ?? (photos.length && !data.townPhoto ? hero : undefined);
   const card = (p: { url: string; alt: string } | undefined, alt: string, delay = 0) =>
     `<div class="w-card" ${mo("rise", delay)}>${
       p ? `<img src="${esc(p.url)}" alt="${esc(p.alt || alt)}" loading="lazy">` : photoFill(alt)

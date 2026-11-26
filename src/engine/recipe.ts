@@ -126,6 +126,8 @@ export interface Photo {
   readonly bandScore?: number;
   /** A vehicle, a person or an animal in it (photoCurate): never a feature card's picture. */
   readonly notCard?: boolean;
+  /** A sofa / armchairs in it (object detector, photoCurate): the lone room card's picture when there is no bed. */
+  readonly lounge?: boolean;
   /** Portrait-crop focus (0–100, background-position x %), the hero only (photoKind.photoFocusX). */
   readonly focusX?: number;
   /** The local classifier's best label (photoCurate): feature rows match it to their text. */

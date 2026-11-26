@@ -196,14 +196,15 @@ ok(
   );
   ok(
     html.includes("kézműves lekvár a kamrából"),
-    "vendég-oldal: a szabad szöveg megjelenik (ikonnal, állítás nélkül)",
+    "vendég-oldal: a szabad szöveg megjelenik (kitalált ikon és üres karika nélkül, állítás nélkül)",
   );
   // Distinct icons per item — the old state was ONE shared check for all.
   const modsec = html.slice(html.indexOf('data-cit-module="amenities"'));
   const block = modsec.slice(0, modsec.indexOf("</section>"));
   const svgBodies = [...block.matchAll(/<svg[^>]*>([\s\S]*?)<\/svg>/g)].map((m) => m[1]);
   ok(
-    new Set(svgBodies).size >= 3,
+    // 11-26: a label no rule fits gets NO icon (an empty ring read as a missing picture) — the rest differ.
+    svgBodies.length >= 2 && new Set(svgBodies).size === svgBodies.length,
     "vendég-oldal: tételenként KÜLÖNBÖZŐ ikon (nem egy közös pipa)",
     `${svgBodies.length} svg, ${new Set(svgBodies).size} féle`,
   );

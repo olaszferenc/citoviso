@@ -72,6 +72,8 @@ export const config = {
   // toilet pictures leave the mock (src/media/photoKind.ts). Not in git: copied to models/ like the
   // depth model (sha256 583fd111…9299, Xenova/clip-vit-base-patch32 onnx/vision_model_quantized.onnx).
   photoKindModelPath: env("PHOTO_KIND_MODEL_PATH", "models/clip-vit-b32-vision-q8.onnx"),
+  // Local object detector (YOLOX-tiny COCO, Apache-2.0, sha256 427cc366…70b0f7): cars, people, toilets, beds in a photo.
+  photoObjectsModelPath: env("PHOTO_OBJECTS_MODEL_PATH", "models/yolox_tiny.onnx"),
   /**
    * ADR-0472 / ADR-0476: who gets the depth hero (the moving cover) in mock generation.
    *   "all"        — every mock of the three outreach templates (owner 2026-11-24, after the live

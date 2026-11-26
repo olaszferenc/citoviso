@@ -344,8 +344,6 @@ const ROW_LABELS: Readonly<Record<string, readonly string[]>> = {
   pet: ["a garden with a terrace", "a courtyard"],
   bike: ["the outside of a house", "a courtyard", "a garden with a terrace"],
 };
-/** A row whose category has no matching photo takes a neutral place shot — never a room. */
-const NEUTRAL_ROW: readonly string[] = ["the outside of a house", "a guesthouse building", "a garden with a terrace", "a courtyard", "a lake shore"];
 
 export function allotPhotos(
   d: SiteData,
@@ -421,10 +419,9 @@ export function allotPhotos(
     // bed highlight; else none (the row keeps its text, the template drops an image-less row's picture).
     const want = ROW_LABELS[matchIcon(d.highlights[i] ?? "")] ?? [];
     const ok = (x: Photo): boolean => notBath(x) && !x.notCard;
-    const p =
-      take((x) => ok(x) && !!x.kindLabel && want.includes(x.kindLabel)) ??
-      take((x) => ok(x) && !!x.kindLabel && NEUTRAL_ROW.includes(x.kindLabel)) ??
-      take((x) => ok(x) && !x.kindLabel);
+    // ONLY a photo whose label matches the text (11-26, round 4: „Biliárd és darts” over the front door, „Kert és
+    // terasz” over a living room — the neutral / unlabelled fallbacks put a picture that is not the text's).
+    const p = take((x) => ok(x) && !!x.kindLabel && want.includes(x.kindLabel));
     // rows[i] is paired with highlights[i] by the templates: no fitting photo → stop here (no shifting).
     if (!p) break;
     rows.push(p);
@@ -472,7 +469,6 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   // lodging shows no bedroom (quality colleague 11-26, Sirató / T-Lak: the card was an empty bed
   // icon on a page with 5+ own photos, where the stock fill is off). Never the hero, a kitchen or
   // bathroom (backstage), nor a photo with a vehicle / person / animal (notCard).
-  const insideLabel = /^(a living room|a hotel room interior|a bedroom with a bed)$/;
   const placeLabel = /^(the outside of a house|a guesthouse building|a garden with a terrace|a balcony with a table and chairs|a balcony with a view|a courtyard)$/;
   // From the END of the set: the hero, the about picture (photos[1]) and the bands take the front ones —
   // the card must not repeat a picture the page already shows (Linetta fixture, wordmark-grow about).
@@ -483,7 +479,8 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const front = d.photos.slice(0, 2);
   const inside = [...d.photos.entries()]
     .reverse()
-    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && !!p.kindLabel && insideLabel.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1]
+    // a detected sofa (photoCurate `lounge`) — the label alone called a corridor „a hotel room interior” (BaBo)
+    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1]
     // No inside shot either: the lone card shows the PLACE itself — the house, its garden or terrace (11-26,
     // Sirató: the card stood with no picture and a big empty band before it).
     ?? [...d.photos.entries()]
@@ -516,10 +513,16 @@ export function roomsForMock(d: SiteData): readonly Room[] {
   // A borrowed photo is a bedroom (with a verdict) and is borrowed ONCE; a room left without
   // one keeps its own panel rather than repeat a photo another card already wears — or, on the
   // mock with the stock fill open, a watermarked bedroom illustration (withStockCards).
-  const pool = d.photos.length ? [...roomCardPhotos(d).cards] : [];
+  const rc = d.photos.length ? roomCardPhotos(d) : { cards: [] as readonly Photo[], single: undefined };
+  const pool = [...rc.cards];
+  // Bedrooms run out → the lodging's sitting room / house / garden shots, each once (11-26, quality colleague,
+  // Ildikó: a real room's card stood as a grey panel with a bed icon on a page full of photos).
+  const spare = d.photos.length > 2
+    ? [...d.photos.slice(2)].reverse().filter((p) => !p.backstage && !p.notCard && !pool.includes(p) && (p.lounge === true || (!!p.kindLabel && /^(the outside of a house|a guesthouse building|a garden with a terrace|a balcony with a table and chairs|a balcony with a view|a courtyard)$/.test(p.kindLabel))))
+    : [];
   const borrowed = d.rooms.map((r) => {
     if (r.photo) return r;
-    const photo = pool.shift();
+    const photo = pool.shift() ?? spare.shift();
     return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;
   });
   return withStockCards(d, borrowed);
