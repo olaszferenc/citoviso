@@ -17,6 +17,7 @@ import {
   getPackageAssignment,
   loadPricing,
   pricingSnapshot,
+  GLOBAL_PRICING_REGION,
   HU_PRICING_REGION,
   pricingRegions,
   primaryTld,
@@ -24,7 +25,9 @@ import {
 } from "../pricing.js";
 import { lockup } from "../ui/brand.js";
 import { jsonForScript } from "../text/jsonForScript.js";
+import { minorDigits } from "../text/money.js";
 import { babelSeed, packForClient, selectPlural } from "../i18n/packs.js";
+import { countryConfig } from "../country.js";
 
 /** One line of a homepage package card: shown when the tier's modules carry it. */
 interface HomeFeature {
@@ -105,15 +108,22 @@ export function homepagePlansHtml(
 
 // ── The page language (owner 2026-11-23, ADR-0473; overrides ADR-0452 for the homepage) ──────
 // The homepage speaks the visitor's BROWSER language: the first Accept-Language entry the page
-// is completely translated into, else English. Hungarian = today's page (Ft, .hu); every other
-// language = the euro list (ADR-0465 layer, 7/13/18 €) and .com. No picker, no band, no URL
-// scheme, no IP guess. Translations are Bábel's committed packs (src/i18n/babel/packs), read as
-// the seed file itself, so a language is served exactly when its committed pack covers the page.
+// is completely translated into, else English. No picker, no band, no URL scheme. Translations
+// are Bábel's committed packs (src/i18n/babel/packs), read as the seed file itself, so a
+// language is served exactly when its committed pack covers the page.
+//
+// ── The price list (owner 2026-11-26, ADR-XXXX; overrides ADR-0473 ③ "euro list for every
+// other language"): the visitor's COUNTRY decides it (Cloudflare's CF-IPCountry), not the
+// language. The country row's pricing region, when its sheet is owner-confirmed and complete;
+// else the "global" sheet under the same condition; else the static "custom offer" block (no
+// number). Language and price are two separate decisions (homepageLang / homepagePriceRegion).
+// Hungarian browser + Hungarian region = today's page byte for byte.
 
-/** The euro price layer every non-Hungarian homepage shows (ADR-0465). */
-const HOME_EURO_REGION = "hr";
-/** The example night price the payback calculator starts from (euro). */
-const HOME_PAY_NIGHT = 85;
+/** The example night price the payback calculator starts from, per price currency (minor
+ *  units are not involved: this is the input box's starting value, in major units). The HUF
+ *  value is the euro example (85 €) at roughly the MNB rate, rounded to a plain Ft amount. */
+const HOME_PAY_NIGHT: Readonly<Record<string, number>> = { EUR: 85, HUF: 32000 };
+const HOME_PAY_NIGHT_DEFAULT = 85;
 
 /** og:locale per page language (ll_CC). */
 const HOME_OG_LOCALE: Readonly<Record<string, string>> = {
@@ -307,10 +317,10 @@ export function homepageLangComplete(l: string): boolean {
   return ok;
 }
 
-/** The page language for an Accept-Language header: q order, first complete one; else "en"; no header → "hu". */
-export function homepageLang(acceptLanguage: string | string[] | undefined): string {
+/** The Accept-Language entries in preference order (q order, then header order); `*` and q=0 dropped. */
+function acceptLanguageTags(acceptLanguage: string | string[] | undefined): { l: string; q: number; i: number }[] {
   const raw = Array.isArray(acceptLanguage) ? acceptLanguage.join(",") : acceptLanguage ?? "";
-  const tags = raw
+  return raw
     .split(",")
     .map((part, i) => {
       const [tag, ...params] = part.trim().split(";");
@@ -320,6 +330,11 @@ export function homepageLang(acceptLanguage: string | string[] | undefined): str
     })
     .filter((t) => t.l && t.l !== "*" && t.q > 0)
     .sort((a, b) => b.q - a.q || a.i - b.i);
+}
+
+/** The page language for an Accept-Language header: q order, first complete one; else "en"; no header → "hu". */
+export function homepageLang(acceptLanguage: string | string[] | undefined): string {
+  const tags = acceptLanguageTags(acceptLanguage);
   // No language signal at all (crawlers, bare clients): keep the Hungarian page the site has
   // always served, so the live Hungarian search presence is not switched to English.
   if (tags.length === 0) return "hu";
@@ -339,6 +354,39 @@ function translateTextNodes(html: string, dict: ReadonlyMap<string, string>): st
     .replace(/\b(content|alt|aria-label|placeholder)="([^"]*)"/g, (_m, a: string, v: string) => `${a}="${swap(v)}"`);
 }
 
+/** May the homepage show this region's prices? Owner-confirmed and no gap (ADR-0443). */
+function homeRegionShowable(region: string): boolean {
+  const known = pricingRegions().some((r) => r.region === region);
+  return known && pricingSnapshot(region).pricingConfirmed && regionPriceGaps(region).length === 0;
+}
+
+/**
+ * The price list the homepage shows (call after loadPricing). `?region=` (an existing region)
+ * is the operator preview and is shown as it is — an incomplete one as the custom-offer block.
+ * A request with no language signal at all (crawlers, bare clients) keeps the Hungarian list
+ * together with the Hungarian page (homepageLang), so the indexed Hungarian page keeps its
+ * prices. Otherwise the visitor's country (CF-IPCountry; Cloudflare's "XX"/"T1" and a missing
+ * header = unknown) → its row's pricing region when that sheet is showable → else "global".
+ * The market gate (ADR-0460 ②) is NOT applied: it guards outreach and orders, while this is
+ * the display of a confirmed, complete price sheet — the very price an order from that country
+ * would carry (orderRegion.ts), and the global list stands in whenever there is none.
+ */
+export async function homepagePriceRegion(
+  headers: http.IncomingHttpHeaders,
+  regionOverride: string | null,
+): Promise<string> {
+  if (regionOverride) {
+    const r = regionOverride.toLowerCase();
+    if (pricingRegions().some((x) => x.region === r)) return r;
+  }
+  if (acceptLanguageTags(headers["accept-language"]).length === 0) return HU_PRICING_REGION;
+  const raw = headers["cf-ipcountry"];
+  const iso = (Array.isArray(raw) ? raw[0] : raw)?.trim().toUpperCase() ?? "";
+  const row = /^[A-Z]{2}$/.test(iso) && iso !== "XX" ? await countryConfig(iso) : null;
+  if (row && homeRegionShowable(row.pricingRegion)) return row.pricingRegion;
+  return GLOBAL_PRICING_REGION;
+}
+
 /**
  * Render the marketing homepage with its prices bound to the LIVE pricing source (§C-gated),
  * in the visitor's browser language (homepageLang). public/index.html carries markers we fill
@@ -354,11 +402,11 @@ export async function renderHomepage(
 ): Promise<string> {
   await loadPricing();
   const lang = homepageLang(headers["accept-language"]);
-  const foreign = lang !== "hu";
-  const defaultRegion = foreign ? HOME_EURO_REGION : HU_PRICING_REGION;
-  const region = regionOverride && pricingRegions().some((r) => r.region === regionOverride.toLowerCase())
-    ? regionOverride.toLowerCase()
-    : defaultRegion;
+  const region = await homepagePriceRegion(headers, regionOverride);
+  // The Hungarian page (Szállás.hu, the forint commission card, the Hungary map) is the
+  // Hungarian visitor's in Hungary; everyone else gets the international page in their
+  // language — a Hungarian speaker abroad reads it in Hungarian.
+  const foreign = lang !== "hu" || region !== HU_PRICING_REGION;
   // The domain ending is the region's own (its TLD list on /pricing), not a literal.
   const tld = primaryTld(region)?.tld ?? null;
   const snap = pricingSnapshot(region);
@@ -432,17 +480,21 @@ async function foreignHomepage(
   // Legal pages in the page's language where that country pack is complete; else today's link.
   const { legalCountryForLang } = await import("../legalPack.js");
   const { countryLegalPack } = await import("../legalPackCountry.js");
-  const cc = legalCountryForLang(lang);
+  const cc = lang === "hu" ? null : legalCountryForLang(lang);
   if (cc && (await countryLegalPack(cc))) {
     out = out.replace(/href="\/(impresszum|aszf|adatvedelem|elallas)"/g, (_m, p: string) => `href="/${p}?l=${lang}"`);
   }
   // home.js reads its runtime strings and the page language from here.
+  // A Hungarian international page (a Hungarian speaker outside Hungary) is "hu-150" (Hungarian,
+  // Europe) for the client: same plurals and number format, but home.js's Hungary-only map and
+  // search (LANG === "hu") give way to the Europe view like every other international page.
+  const clientLang = lang === "hu" ? "hu-150" : lang;
   const client: Record<string, string> = {};
   const huClient = homeClientTexts("hu");
   homeClientTexts(lang).forEach((t, i) => (client[huClient[i]!] = t));
   out = out.replace(
     '<script src="/assets/home/home.js" defer></script>',
-    () => `<script>window.CIT_HOME=${jsonForScript({ lang, s: client })};</script>\n  <script src="/assets/home/home.js" defer></script>`,
+    () => `<script>window.CIT_HOME=${jsonForScript({ lang: clientLang, s: client })};</script>\n  <script src="/assets/home/home.js" defer></script>`,
   );
   return out;
 }
@@ -456,7 +508,10 @@ function paybackSection(
   currency: string,
 ): string {
   const tiers = [...offered].filter((p) => Number.isFinite(p.monthly) && p.monthly > 0).sort((x, y) => x.monthly - y.monthly);
-  const data = { months: Math.max(1, 12 - Math.max(0, freeMonths)), currency, lang, tiers: tiers.map((p) => ({ id: p.id, monthly: p.monthly })) };
+  // home.js reads every amount as hundredths of the currency (2 digits); a 0-digit currency
+  // (HUF) is scaled up here so the calculator's yearly price and per-night fee stay true.
+  const toCents = 10 ** (2 - (minorDigits(currency) ?? 2));
+  const data = { months: Math.max(1, 12 - Math.max(0, freeMonths)), currency, lang, tiers: tiers.map((p) => ({ id: p.id, monthly: p.monthly * toCents })) };
   const hot = tiers.some((p) => p.id === "ajanlott") ? "ajanlott" : tiers[tiers.length - 1]?.id;
   const seg = tiers
     .map((p) => `<button type="button" data-pk="${esc(p.id)}" aria-pressed="${p.id === hot}">${esc(T(lang, p.label))}</button>`)
@@ -465,7 +520,7 @@ function paybackSection(
     `<section class="s band" id="jutalek">\n      <div class="wrap calc">\n        <div class="rv">\n` +
     `          <span class="eyebrow">${tx.pay}</span>\n          <h2>${tx.payH2}</h2>\n          <p class="sub">${tx.paySub}</p>\n        </div>\n` +
     `        <div class="calc-card rv" id="pay" data-pay="${esc(JSON.stringify(data))}">\n` +
-    `          <div class="pay-two"><label><span>${tx.payNight}</span><input id="pay-night" inputmode="decimal" value="${HOME_PAY_NIGHT}"></label>` +
+    `          <div class="pay-two"><label><span>${tx.payNight}</span><input id="pay-night" inputmode="decimal" value="${HOME_PAY_NIGHT[currency] ?? HOME_PAY_NIGHT_DEFAULT}"></label>` +
     `<label><span>${tx.payPct}</span><input id="pay-pct" inputmode="decimal" value="15"></label></div>\n` +
     `          <div class="pay-err" id="pay-err" role="alert" hidden></div>\n` +
     (tiers.length ? `          <div class="pay-seg" id="pay-pk">${seg}</div>\n` : "") +

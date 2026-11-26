@@ -4056,6 +4056,15 @@ if [ -f scripts/country-layer-check.mts ] && \
   echo "[pre-commit] country-layer-check (ADR-0437: ország-réteg — HU-sor, zárt ismeretlen ország, nincs beégetés)…"
   npx tsx scripts/country-layer-check.mts >"$GATE_LOG" || gate_failed
 fi
+# ── homepage-price-region-check (ADR-XXXX, tulaj 2026-11-26): a főoldal ÁRA a látogató ORSZÁGÁBÓL
+#     (CF-IPCountry → ország-sor ár-régiója, ha megerősített és teljes; különben global; különben
+#     egyedi ajánlat szám nélkül), a NYELVE a böngészőből. Csak olvas (ársor + ország-tábla), ~5 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/homepage-price-region-check.mts ] && \
+   changed_files | grep -qE '^src/server/homepage\.ts$|^src/server/public\.ts$|^public/index\.html$|^public/assets/home/home\.js$|^src/(country|pricing)\.ts$|^scripts/homepage-price-region-check\.mts$'; then
+  echo "[pre-commit] homepage-price-region-check (ADR-XXXX: főoldal ára az országból, nyelve a böngészőből)…"
+  npx tsx scripts/homepage-price-region-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Every gate above was only RECORDED in parallel mode — here they run (see the header).
 gate_flush
 echo "[pre-commit] ✅ minden kapu zöld"
