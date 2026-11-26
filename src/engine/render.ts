@@ -988,6 +988,10 @@ export function renderSite(
   // A highlight is a facility or a feature, never the ADDRESS (11-26, quality colleague, Riva: „Balatonbogláron, a
   // Fiumei utcában” stood among the feature labels) — off the mock, render-time; the contact block carries it.
   if (phase === "mock" && data.highlights?.some(isAddressLabel)) data = { ...data, highlights: data.highlights.filter((h) => !isAddressLabel(h)) };
+  // A label cut mid-phrase („Napozóágyak és”, Judit 11-26) loses its dangling conjunction; nothing left → off.
+  if (phase === "mock" && data.highlights?.some((h) => DANGLING_END.test(h))) {
+    data = { ...data, highlights: data.highlights.map((h) => h.replace(DANGLING_END, "").trim()).filter((h) => h.length > 2) };
+  }
   // A star classification in the name or an alt („Panoráma Faház****”, fd50391f, 2026-10-27)
   // is no sourced fact (§B.17) — off the MOCK, render-time, so a plain rerender fixes it. The
   // live site prints the owner's own name as they set it.
@@ -1214,3 +1218,6 @@ const ADDRESS_WORDS = /(?:^|[\s,])(?:\S*\s)?(?:utc[aáá]\S*|út(?:ja|on|nál)?|
 export function isAddressLabel(label: string): boolean {
   return ADDRESS_WORDS.test(label.trim());
 }
+
+/** A label ending on a conjunction / comma (hu · en · de · hr): the generator cut it mid-phrase. */
+const DANGLING_END = /(?:[\s,;:–-]+(?:és|vagy|meg|valamint|illetve|and|or|und|oder|i|ili|te))+[\s,;:–-]*$|[\s,;:–-]+$/i;

@@ -510,6 +510,20 @@ export function hasOwnBedroomPhoto(d: SiteData): boolean {
  */
 export function roomsForMock(d: SiteData): readonly Room[] {
   if (!d.rooms?.length) return sampleRooms(d);
+  // Same-named rooms get a number (11-26, quality colleague: Anda's three „Kétszemélyes szoba” cards and price
+  // tabs, Judit's two „Apartman”) — the guest must be able to tell which one he asks about.
+  const seen = new Map<string, number>();
+  for (const r of d.rooms) seen.set(r.name.trim().toLowerCase(), (seen.get(r.name.trim().toLowerCase()) ?? 0) + 1);
+  if ([...seen.values()].some((n) => n > 1)) {
+    const k = new Map<string, number>();
+    d = { ...d, rooms: d.rooms.map((r) => {
+      const key = r.name.trim().toLowerCase();
+      if ((seen.get(key) ?? 0) < 2) return r;
+      const i = (k.get(key) ?? 0) + 1;
+      k.set(key, i);
+      return { ...r, name: `${r.name.trim()} ${i}` };
+    }) };
+  }
   // A borrowed photo is a bedroom (with a verdict) and is borrowed ONCE; a room left without
   // one keeps its own panel rather than repeat a photo another card already wears — or, on the
   // mock with the stock fill open, a watermarked bedroom illustration (withStockCards).
@@ -520,7 +534,7 @@ export function roomsForMock(d: SiteData): readonly Room[] {
   const spare = d.photos.length > 2
     ? [...d.photos.slice(2)].reverse().filter((p) => !p.backstage && !p.notCard && !pool.includes(p) && (p.lounge === true || (!!p.kindLabel && /^(the outside of a house|a guesthouse building|a garden with a terrace|a balcony with a table and chairs|a balcony with a view|a courtyard)$/.test(p.kindLabel))))
     : [];
-  const borrowed = d.rooms.map((r) => {
+  const borrowed = (d.rooms ?? []).map((r) => {
     if (r.photo) return r;
     const photo = pool.shift() ?? spare.shift();
     return photo ? { ...r, photo: { ...photo, alt: T(d, "Minta — {name}", { name: r.name }) } } : r;

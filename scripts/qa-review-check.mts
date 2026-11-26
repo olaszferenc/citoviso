@@ -12,7 +12,7 @@ import path from "node:path";
 import { focusXOfBuffer, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
-import { sampleRooms, galleryOrder } from "../src/engine/templateKit.js";
+import { sampleRooms, galleryOrder, roomsForMock } from "../src/engine/templateKit.js";
 import { withoutAbsentPictureClaims, renderSite, isAddressLabel } from "../src/engine/render.js";
 import { showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal, type DetectedObject } from "../src/media/photoObjects.js";
 import type { SiteData as SD, Photo as PH } from "../src/engine/recipe.js";
@@ -246,6 +246,14 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("kiemelés: utcacím („Balatonbogláron, a Fiumei utcában”) nem címke, a szolgáltatás marad", isAddressLabel("Balatonbogláron, a Fiumei utcában") && !isAddressLabel("Saját parkoló") && !isAddressLabel("Kilátás a Balatonra") && !isAddressLabel("Közvetlen vízpart"));
   check("nyitókép széles vágásnál a felső harmadra áll (35 %) — mindhárom sablon és a mélységhatás", ["gateOpening.ts", "wordmarkGrow.ts", "parallax.ts"].every((f) => /var\(--cit-hero-fx,50%\) 35%/.test(readFileSync(new URL(`../src/engine/templates/${f}`, import.meta.url), "utf8"))) && /\(0\.35-0\.5\)\*\(1-cy\)/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
   check("kapu-újramérés: a kiküldő ütem a régebbi kapu-verzióval mért várakozó terveket maga méri újra (a jóváhagyó lapról nem esnek ki)", /regateStaleQueue\(gateBudget\)/.test(readFileSync(new URL("./outreach-dispatch.mts", import.meta.url), "utf8")) && /renderGate\?\.version !== RENDER_GATE_VERSION/.test(readFileSync(new URL("../src/generator/mockRefresh.ts", import.meta.url), "utf8")));
+  {
+    const rs = roomsForMock({ name: "A", photos: [], rooms: [{ name: "Kétszemélyes szoba" }, { name: "Kétszemélyes szoba" }, { name: "Családi" }] } as unknown as SD);
+    check("azonos nevű szobák sorszámot kapnak (Anda: 3× „Kétszemélyes szoba”)", rs.map((r) => r.name).join("|") === "Kétszemélyes szoba 1|Kétszemélyes szoba 2|Családi", rs.map((r) => r.name).join("|"));
+    const html = renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { name: "J", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Napozóágyak és", "Wifi"] } as unknown as SD, { phase: "mock" });
+    check("csonka címke („Napozóágyak és”) a lógó kötőszó nélkül jelenik meg", />Napozóágyak</.test(html) && !/Napozóágyak és/.test(html));
+    check("parallax nyitókép-cím árnyékot kap (világos homlokzaton is olvasható kiemelés)", /\.t-hero h1\{[^}]*text-shadow/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
+    check("generátor-bélyeg qafix5; a kolléga által átengedett qafix4-es terv aktuális marad (nem esik le a tulaj lapjáról)", /qafix5/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /'2026-11-26-qafix4' and a\.inputs->'qaReview'->>'verdict' = 'pass'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
+  }
 }
 
 if (failed) {

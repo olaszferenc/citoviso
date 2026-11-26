@@ -87,7 +87,7 @@ const PARALLAX_CSS = `
   /* short desktop (a 150%-scaled laptop is ~1320×570, 2026-09-30): the centred copy outgrows the
      panel and rests on this padding, but the overlay masthead reaches 163px — clear it */
   @media(min-width:901px) and (max-height:760px){.t-hero{padding-top:190px}}
-  .t-hero h1{font-size:min(clamp(36px,5.5vw,72px),var(--cit-hero-cap,999px));color:#fff;margin-bottom:18px;max-width:var(--cit-hero-measure,16ch)}
+  .t-hero h1{font-size:min(clamp(36px,5.5vw,72px),var(--cit-hero-cap,999px));color:#fff;margin-bottom:18px;max-width:var(--cit-hero-measure,16ch);text-shadow:0 2px 14px rgba(10,12,14,.6),0 1px 3px rgba(10,12,14,.5)}
   /* landscape phone (844×390, 2026-09-27): 5 lines × 46px ended 6px above the fold on Laguna — a
      barely-passing value is a dead rule; vh-bound size after the base rule, portrait/desktop untouched */
   @media(max-height:500px) and (min-width:701px){
