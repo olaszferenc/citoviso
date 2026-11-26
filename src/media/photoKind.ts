@@ -307,6 +307,9 @@ export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   // only bikinis and groups. A single person, an angler and children count too.
   return peopleMass(v) >= PEOPLE_OFF_PAGE;
 }
+/** A vehicle, a person or an animal: never a feature card, never leads the gallery (photoCurate notCard). */
+export const NOT_CARD_LABELS = ["a car", "a parking lot", "a street with parked cars", "a group of people", "a woman in a bikini", "a person", "a person sitting on a pier", "a man fishing", "children playing", "a dog", "a cat"];
+export const NOT_CARD_MASS = 0.08;
 export const PEOPLE_LABELS = ["a woman in a bikini", "a group of people", "a person", "a person sitting on a pier", "a man fishing", "children playing"];
 export function peopleMass(v: PhotoKind): number {
   const p = v.probs ?? {};
@@ -363,6 +366,8 @@ export function isHeroCandidate(v: PhotoKind): boolean {
   if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
   if (NOT_HERO_TOP.has(v.label) || backstageMass(v) >= BACKSTAGE_MAX) return false;
   if (peopleMass(v) >= PEOPLE_OFF_PAGE) return false;
+  // a car or a dog in front of the house (11-26, Pince): the colleague skipped it — never offer it
+  if (NOT_CARD_LABELS.reduce((a, l) => a + (v.probs?.[l] ?? 0), 0) >= NOT_CARD_MASS) return false;
   if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
   return heroScore(v) >= 0.1;
 }
