@@ -62,9 +62,14 @@ async function main(): Promise<number> {
   return 1;
 }
 
+// process.exit() right after console.log cuts a piped stdout at 64 KiB (2026-11-26: the 340 tiles of HR-17,
+// „Expecting value: line 1 column 65537” in the chain) — exit only once stdout has drained.
+const drained = (): Promise<void> => new Promise((r) => process.stdout.write("", () => r()));
+
 main()
   .then(async (code) => {
     await db.destroy();
+    await drained();
     process.exit(code);
   })
   .catch(async (err) => {
