@@ -340,6 +340,7 @@ export function draftAsConfig(r: CountryDraft): CountryConfig {
     launchedAt: countryConfigSync(r.iso2)?.launchedAt ?? null,
     pausedAt: countryConfigSync(r.iso2)?.pausedAt ?? null,
     pausedBy: countryConfigSync(r.iso2)?.pausedBy ?? null,
+    holidaySource: countryConfigSync(r.iso2)?.holidaySource ?? null,
   };
 }
 

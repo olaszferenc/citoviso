@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-unnepnap-automata-forras-nager-date.md) — Ünnepnapok automatikus, ingyenes forrásból (Nager.Date), felvételkor és évente, forrás-jelöléssel
 - [ADR-0492](decisions/0492-orszagok-arazas-3-fazis-az-indulas-lista.md) — „Országok / Árazás” 3. fázis: az indulás-lista részletezve (Bábel négy részre, kontakt, mock, kiküldés oka)
 - [ADR-0491](decisions/0491-orszagok-arazas-2-fazis-uj-orszag-a-vilag.md) — „Országok / Árazás” 2. fázis: új ország a világ-katalógusból; Indulás = jóváhagyás teljesség nélkül; Szünetel
 - [ADR-0490](decisions/0490-a-fooldal-ara-a-latogato-orszagabol-jon-a.md) — A főoldal ára a látogató ORSZÁGÁBÓL jön, a nyelve a böngészőből (ha nincs ársor: Globális)

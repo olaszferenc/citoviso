@@ -2478,8 +2478,15 @@ async function handle(
     if (action === "pick") {
       if (countryConfigSync(iso)) return redirect(res, `/countries?iso=${iso}`);
       const { budapestIsoDay } = await import("../text/budapestTime.js");
-      const r = await lc.ensureCountryRegion(iso, budapestIsoDay(new Date())).catch((e) => ({ region: iso.toLowerCase(), created: false, suggested: false, note: (e as Error).message }));
-      console.log(`[console] új ország választva: ${iso} — ${op.username}; ár-régió: ${r.note}`); // i18n-exempt: operátori napló
+      const today = budapestIsoDay(new Date());
+      const r = await lc.ensureCountryRegion(iso, today).catch((e) => ({ region: iso.toLowerCase(), created: false, suggested: false, note: (e as Error).message }));
+      // The public holidays of this year and the next from the automatic source (Nager.Date) — none when it
+      // does not know the country (the readiness then stays red).
+      const hs = await import("../holidaySource.js");
+      const y = Number(today.slice(0, 4));
+      const days = await hs.holidaysFromSource(iso, [y, y + 1]);
+      hs.rememberPickedHolidays(iso, days);
+      console.log(`[console] új ország választva: ${iso} — ${op.username}; ár-régió: ${r.note}; ünnepnap: ${days ? `${days.length} nap (${hs.HOLIDAY_SOURCE})` : "a forrás nem ismeri"}`); // i18n-exempt: operátori napló
       return redirect(res, `/countries?new=${encodeURIComponent(iso)}`);
     }
     if (action === "launch") {
@@ -2588,6 +2595,11 @@ async function handle(
     const saved = /^[A-Z]{2}$/.test(draft.iso2) ? await saveCountry(draft, { isNew, lang }) : { ok: false, errors: { iso2: "—" } };
     if (saved.ok) {
       console.log(`[console] ország mentve: ${draft.iso2} (${isNew ? "új" : "módosítás"}) — ${op.username}`);
+      if (isNew) {
+        // The holidays came from the automatic source (the picker's fetch) → the row records it, the yearly top-up keeps it filled.
+        const hs = await import("../holidaySource.js");
+        await hs.markHolidaySourceIfFromSource(draft.iso2, hs.pickedHolidays(draft.iso2));
+      }
       const msg = isNew ? T(lang, "{iso} felvéve.", { iso: draft.iso2 }) : T(lang, "{iso} mentve.", { iso: draft.iso2 });
       return redirect(res, `/countries?iso=${encodeURIComponent(draft.iso2)}&step=${step}&mk=${encodeURIComponent(`ok:${msg}`)}`);
     }

@@ -281,7 +281,8 @@ export async function countryReadiness(country: string | null | undefined, opts:
               years: [!c1 ? y1 : null, !c2 ? y1 + 1 : null].filter(Boolean).join(", "),
             })
           : T(lang, "hiányzik: {years}", { years: [!c1 ? y1 : null, !c2 ? y1 + 1 : null].filter(Boolean).join(", ") })
-        : T(lang, "{n} nap, {y1} és {y2} lefedve", { n: days.length, y1, y2: y1 + 1 }),
+        : T(lang, "{n} nap, {y1} és {y2} lefedve", { n: days.length, y1, y2: y1 + 1 }) +
+          (cfg?.holidaySource ? T(lang, " · forrás: {src}, évente magától frissül", { src: cfg.holidaySource }) : ""),
   });
 
   // ── ⑤ the outreach channel (e-mail gates; a foreign mobile without a provider is TARTVA) ──

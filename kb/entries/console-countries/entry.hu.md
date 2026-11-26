@@ -141,8 +141,10 @@ gombbal kerül a beállítás az országra. Hibás mezőnél (például ha egy n
 5. Koppints az **„Ország felvétele”** gombra. Ha még van hibás mező, a lap nem ment, és a hibás mező helyére
    ugrik. Mentés után az ország **„Felvéve”** státuszú. Az **„Indulás”** külön gomb (lásd lent).
 
-Ünnepnapot a gép nem talál ki: EU-n kívüli országnál az ünnepnap-lista üresen indul, és a teljesség ezt
-pirosan jelzi, amíg valaki fel nem veszi.
+Ünnepnapot a gép nem talál ki. EU-n kívüli országnál a választáskor az idei és a jövő évi hivatalos, országos
+ünnepnapokat egy ingyenes nyilvános forrásból (Nager.Date) tölti be, és a gép évente magától hozzáteszi a
+következő évet; a teljesség sorában ilyenkor ott áll a forrás neve. Ha a forrás nem ismeri az országot, a
+lista üresen indul, és a teljesség pirosan jelzi, amíg valaki fel nem veszi.
 
 ![Képernyőkép: az „Új ország” lista — keresés, név, pénznem és Barion-jelzés soronként](assets/hu/picker.png)
 
@@ -194,8 +196,9 @@ Az ország **„Ország”** fülén az **„Adatok szerkesztése”** link nyit
 mozgó ünnepeket (húsvét, pünkösd) évenként külön kell felvenni: vedd ki a pipát, ilyenkor a
 nap csak abban az évben érvényes, és szaggatott keretet kap. A lap az aktuális és a következő
 évet nézi: ha bármelyik **„hiányzik”**, az országból nem mehet ki megkeresés. Évváltáskor a lap egy évvel előrébb
-lép, tehát a jövő évi mozgó ünnepeket még az év vége előtt vedd fel, különben a futó ország január 1-jén
-hiányossá válik, és a kiküldés leáll. Magyarországnál az üres lista csak figyelmeztetés (a hazai ütemezés eddig sem ismert ünnepnapot).
+lép. Ha a teljesség sorában „forrás: … évente magától frissül” áll, a következő évet a gép teszi hozzá, neked
+nincs teendőd; a kézzel mellé felvett nap megmarad. Ha nem áll ott forrás (kézi lista), a jövő évi mozgó
+ünnepeket még az év vége előtt vedd fel, különben a futó ország január 1-jén hiányossá válik, és a kiküldés leáll. Magyarországnál az üres lista csak figyelmeztetés (a hazai ütemezés eddig sem ismert ünnepnapot).
 
 ## Indulás, szüneteltetés, folytatás
 

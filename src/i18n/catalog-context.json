@@ -13,6 +13,7 @@
 " — saját cím nem rendelhető":"konzol",
 " · {n} órája":"konzol",
 " · a mai naptól összesen {n} foglalt napot hoztunk át":"admin",
+" · forrás: {src}, évente magától frissül":"konzol",
 " · kiküldve {date}":"konzol",
 " · saját cím benne":"konzol",
 " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)":"konzol",

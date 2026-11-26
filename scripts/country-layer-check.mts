@@ -122,6 +122,11 @@ if (hu) {
       continue;
     }
     // 0157: the lifecycle stamps are dates or null by nature (HU: launched, never paused).
+    // 0158: the automatic holiday source — HU's days are entered by hand, so it is null (or a source name).
+    if (k === "holidaySource") {
+      check("HU.holidaySource (ünnepnap-forrás: kézi = null)", v === null || typeof v === "string", JSON.stringify(v));
+      continue;
+    }
     if (k === "launchedAt" || k === "pausedAt" || k === "pausedBy") {
       check(`HU.${k} (életciklus)`, k === "launchedAt" ? v === null || v instanceof Date : v === null, JSON.stringify(v));
       continue;

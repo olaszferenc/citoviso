@@ -979,6 +979,9 @@ export interface CountryTable {
   launched_at: Generated<Date | null>;
   paused_at: Generated<Date | null>;
   paused_by: Generated<string | null>;
+  /** 0158: where the public holidays came from (e.g. Nager.Date) and when they were last fetched. */
+  holiday_source: Generated<string | null>;
+  holiday_fetched_at: Generated<Date | null>;
   updated_at: Generated<Date>;
 }
 

@@ -519,6 +519,13 @@ export async function runBillingCycle(
   if (!opts?.tenantId) {
     const applied = await applyDuePriceChanges(isoDate(now));
     if (applied) console.log(`[billing] ${applied} ütemezett árváltozás életbe lépett (${isoDate(now)})`); // i18n-exempt: operátori napló
+    // The yearly holiday top-up of the rows filled from the automatic source (holidaySource.ts) — a failure never stops billing.
+    const { topUpHolidays } = await import("../holidaySource.js");
+    const topped = await topUpHolidays(isoDate(now)).catch((e) => {
+      console.error(`[billing] ünnepnap-frissítés hiba: ${(e as Error).message}`); // i18n-exempt: operátori napló
+      return 0;
+    });
+    if (topped) console.log(`[billing] ${topped} ország ünnepnapjai kiegészítve a forrásból`); // i18n-exempt: operátori napló
   }
   const result = { renewalOrders: 0, notified: 0, frozen: 0, cancelled: 0 };
 

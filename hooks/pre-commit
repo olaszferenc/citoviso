@@ -2527,6 +2527,12 @@ if [ -f scripts/price-change-check.mts ]; then
   echo "[pre-commit] price-change-check (ütemezett árváltozás: emelés dátummal, megújítás, értesítő, alkalmazás)…"
   npx tsx scripts/price-change-check.mts
 fi
+# „Országok / Árazás” (0158): the automatic holiday source (Nager.Date, free, no key) — only stated national
+# public holidays, unknown country = empty, yearly top-up only adds. Own scratch DB, no network (injected fetch).
+if [ -f scripts/holiday-source-check.mts ]; then
+  echo "[pre-commit] holiday-source-check (ünnepnap-forrás: csak a forrás dátumai, ismeretlen ország üres)…"
+  npx tsx scripts/holiday-source-check.mts
+fi
 # „Országok / Árazás” 4. fázis (0155): the dispatch rules live on the country row — the replaced code
 # constants and global app_setting keys are read nowhere any more, the auto-approve runs in the repo. Static, fast.
 if [ -f scripts/dispatch-settings-check.mts ]; then

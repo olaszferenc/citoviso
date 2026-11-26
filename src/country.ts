@@ -65,6 +65,8 @@ export interface CountryConfig {
   readonly launchedAt: Date | null;
   readonly pausedAt: Date | null;
   readonly pausedBy: string | null;
+  // Ünnepnap-forrás (0158): the automatic source the holidays came from (null = entered by hand / none).
+  readonly holidaySource: string | null;
 }
 
 /** The dispatch rules of a country (0155). Defaults = the behaviour before the columns existed. */
@@ -195,6 +197,7 @@ function toConfig(r: Row): CountryConfig {
     launchedAt: dateOf((r as Record<string, unknown>).launched_at),
     pausedAt: dateOf((r as Record<string, unknown>).paused_at),
     pausedBy: typeof (r as Record<string, unknown>).paused_by === "string" ? ((r as Record<string, unknown>).paused_by as string) : null,
+    holidaySource: typeof (r as Record<string, unknown>).holiday_source === "string" ? ((r as Record<string, unknown>).holiday_source as string) : null,
   };
 }
 

@@ -11,6 +11,7 @@ import { encounteredCountries, HOME_MARKET, listMarkets, marketLog } from "../ma
 import { paymentProviderIds } from "../payment/providers.js";
 import { loadPricing, pricingRegions, regionPriceGaps } from "../pricing.js";
 import { db } from "../db/client.js";
+import { pickedHolidays } from "../holidaySource.js";
 import { DISPATCH_HOME_COUNTRY, dispatchStatus } from "../outreach/autoDispatch.js";
 import { countEligible, draftOfConfig, type DispatchCount, type DispatchDraft } from "../countryDispatch.js";
 import { outreachWindowOpenIn } from "../outreach/countryOutreach.js";
@@ -91,7 +92,11 @@ export async function buildEditor(opts: {
 }): Promise<CountryEditor | null> {
   const stored = opts.isNew ? null : await countryConfig(opts.iso);
   if (!opts.isNew && !stored) return null;
-  const base = stored ? draftFromConfig(stored) : blankDraft(opts.iso);
+  // A new country picked from the catalog: its public holidays from the automatic source (holidaySource.ts).
+  const blank = blankDraft(opts.iso);
+  // Only where the built-in draft has none (the EU countries already carry their list).
+  const fromSource = stored || blank.publicHolidays.length ? null : pickedHolidays(opts.iso);
+  const base = stored ? draftFromConfig(stored) : fromSource ? { ...blank, publicHolidays: fromSource } : blank;
   const draft = opts.draft ?? base;
   const ctx = await countryValidationContext(opts.isNew);
   const errors: CountryErrors = validateCountryDraft(draft, { lang: opts.lang, ...ctx });

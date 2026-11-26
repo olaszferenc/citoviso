@@ -14,6 +14,7 @@
   " — saját cím nem rendelhető",
   " · {n} órája",
   " · a mai naptól összesen {n} foglalt napot hoztunk át",
+  " · forrás: {src}, évente magától frissül",
   " · kiküldve {date}",
   " · saját cím benne",
   " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)",
