@@ -9,8 +9,9 @@ updated: 2026-11-26
 
 A **„Jóváhagyás”** lapon döntöd el, hogy egy megkeresés kimehet-e a leadnek. A listán csak az a lead
 jelenik meg, amelyiknek **mindkét terve** végigment a teljes láncon: a mostani generátorral készült
-(a folyamat a régebbieket magától újragenerálja), legalább 5 saját fotója van, a gépi ellenőrzésen
-átment, és a minőségi kolléga ezt a változatot átnézte és jónak találta. Második terv nélkül
+(a folyamat a régebbieket magától újragenerálja), legalább 5 saját fotója van, és a gépi ellenőrzésen
+(a render-kapun) átment. A minőségi kolléga jóváhagyása nem feltétel; ha viszont ő egy változatot
+rossznak ítélt, az addig nem kerül ide, amíg újra nem készül. Második terv nélkül
 megkeresés nem megy ki. Ami ezek közül bármelyiken elakadt, az nem kerül ide, és a menüben látható
 szám sem számolja. Megkeresés csak a te jóváhagyásod után megy ki. Hogy egy országban a te
 jóváhagyásod kell-e, azt országonként az **Országok / Árazás** lapon, az ország **„Kiküldés”** fülén, a

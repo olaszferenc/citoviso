@@ -50,7 +50,7 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
   sorrendben (régió-felbontás, csempék, felderítés, lead, kontakt, mock, kiküldés). A **„Nyelvi csomag
   (Bábel)”** sor alatt négy rész áll darabszámmal, százalékkal és sávval: **„Felület”**, **„Levelek”**,
   **„Jogi csomag”**, **„Súgó”**. A kontakt sor az e-mailes és a telefonos leadek számát is mutatja, a mock
-  sor azt, hány ment át a minőségi kollégán, a kiküldés sor pedig, amíg áll, hogy miért. Ami nem kész, annál
+  sor azt, hány ment át a gépi kapun, a kiküldés sor pedig, amíg áll, hogy miért. Ami nem kész, annál
   ott áll: **„Mi hiányzik, ki pótolja:”**. Ember csak két helyen kell: a kezdő ár jóváhagyásánál és a
   fizetési tárca megnyitásánál, mindkettő a tulaj döntése. A többit a gép vagy egy munkatárs (például
   Bábel, a fordító) végzi. Az **„Adatok szerkesztése”** link (a doboz jobb felső sarkában) nyitja meg az ország adatainak szerkesztőjét.
@@ -67,8 +67,8 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
 
 Felül négy szám: **„lead felel meg (holnaptól)”** (a még meg nem keresett, nem tiltott, e-mail címes
 leadek, a mostani beállítással), **„megkeresés naponta”**, **„első küldési nap”** és **„küldési nap alatt
-fogy el”**. Amit átírsz, azt a számok azonnal követik. A mock-, a render- és a minőségi kapu ezen felül
-szűr, ezért a ténylegesen kimenő szám kisebb lehet.
+fogy el”**. Amit átírsz, azt a számok azonnal követik. A mock- és a render-kapu ezen felül szűr, ezért a
+ténylegesen kimenő szám kisebb lehet.
 
 Alatta hat szakasz:
 
