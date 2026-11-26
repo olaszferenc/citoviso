@@ -323,17 +323,22 @@ console.log(
       isMobile: width === 390,
     });
     await page.goto(pathToFileURL(file).href);
-    await page.waitForTimeout(500);
 
-    // MONTH-END (measured 2026-09-27, the 27th): 3 free days left in the open month, `nth(4)`
-    // timed out. The widget has a month pager — page on when the month cannot give five days.
-    let days = page.locator(".cit-book__day:not(:disabled):visible");
-    if ((await days.count()) < 5) {
-      await page.click(".cit-book__calnav--next");
-      await page.waitForTimeout(250);
-      days = page.locator(".cit-book__day:not(:disabled):visible");
-    }
+    // MONTH-END (measured 2026-09-27, the 27th: 3 free days left; again 2026-11-26: 5 free days, so
+    // the old „< 5 → page on” guard did not page, then the arrival tap made the next day too short
+    // for the minimum stay and only 4 stayed tappable — `nth(4)` waited forever). Whether the open
+    // month can hold the stay depends on the date AND on rules applied after the first tap, so the
+    // probe does not guess: it always books in NEXT month, which is whole (no past days, ≥ 28 free).
+    // It waits for the real render (the next month's first day button), not for a fixed time.
+    const now = new Date();
+    const next = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+    const nextPrefix = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-`;
+    await page.locator(".cit-book__calnav--next").waitFor({ state: "visible" });
+    await page.click(".cit-book__calnav--next");
+    const days = page.locator(`.cit-book__day[data-day^="${nextPrefix}"]:not(:disabled):visible`);
+    await days.first().waitFor({ state: "visible" });
     await days.nth(1).click();
+    await page.locator(`.cit-book__day--sel[data-day^="${nextPrefix}"]`).waitFor();
     await days.nth(4).click();
     // Plan B (2026-09-26): on a phone the fields sit in step 2, behind „Tovább”.
     if (await page.locator(".cit-book__go").isVisible()) { await page.click(".cit-book__go"); await page.waitForTimeout(300); }

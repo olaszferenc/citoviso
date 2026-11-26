@@ -104,7 +104,12 @@ async function measureTemplate(t: string, page: Page) {
   // First paint only — deliberately NOT opening the panel or touching anything.
   await page.waitForTimeout(350);
 
-  const res = await page.evaluate(() => document.querySelectorAll("[data-cit-sample]").length);
+  // Only what the CONFIGURATOR adds counts: since 84954cc4 (2026-11-25, ADR-0479, plan kepnelkuli-hero ④)
+  // the server marks every stock picture `<img data-cit-sample="1">` for its MINTA badge — that is the
+  // page's own, marked sample photo, not an injected generic card. The injected card is the DOM's
+  // `[data-cit-sample]` beyond the ones the server-rendered page already carried.
+  const server = bare.match(/<[a-z][a-z0-9]*\b[^>]*\sdata-cit-sample="/gi)?.length ?? 0;
+  const res = (await page.evaluate(() => document.querySelectorAll("[data-cit-sample]").length)) - server;
   return { missingT, unmarkedT, injectedT: res > 0 ? `${t}(${res})` : null };
 }
 

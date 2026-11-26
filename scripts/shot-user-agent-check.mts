@@ -17,6 +17,14 @@
 // Szabály: minden `<böngésző>.newPage({…})` és `.newContext({…})` opció-objektuma tartalmazza a
 // `userAgent: PORTAL_USER_AGENT` sort; argumentum nélküli `newPage()` csak kontextuson (ami maga
 // is ezt a szabályt követi) megengedett.
+// KIVÉTEL NINCS, de a védett invariáns a KÉP-kérés (a lead fotója), nem a lap UA-ja. Ezért egy
+// bot-UA nélküli lap/kontextus akkor is megfelel, ha MINDEN képkérése a saját bot-UA-val megy, vagy
+// egyáltalán nem megy ki — a lapon (vagy a kontextusból nyitott lapon) `route("**/*", …)` áll, amely
+//   (a) a képet `"user-agent": PORTAL_USER_AGENT` fejléccel kéri le (mockRenderGate, fbd0e639,
+//       2026-11-24: a LAP a böngésző saját UA-jával renderel, mert a Google Fonts bot-UA-ra másik
+//       betűfájlt ad, és a cím-túlfolyás mérése hazudott — mérve 11-24, Crystal Apartment), vagy
+//   (b) minden képkérést eldob (a Startpage-keresés, ADR-0463, 0e47b9d5: lead-tartalmat nem kér).
+// A route-ot nem elég „valahol” a fájlban látni: a hívás eredmény-változójához kell tartoznia.
 //
 //   npx tsx scripts/shot-user-agent-check.mts              # zöld futás
 //   npx tsx scripts/shot-user-agent-check.mts --self-test  # PIROS kontroll: a régi siteShot /
@@ -58,7 +66,34 @@ const OLD: Record<string, [string, string]> = {
   ],
   "elek/bin/runner.mts": [/\s*userAgent: PORTAL_USER_AGENT,/.source, ""],
   "src/generator/qaAiriness.ts": [/,?\s*userAgent: PORTAL_USER_AGENT/.source, ""],
+  // The image route without our bot UA: the page then fetches the lead's photo as HeadlessChrome.
+  "src/outreach/mockRenderGate.ts": [/,\s*"user-agent": PORTAL_USER_AGENT/.source, ""],
+  // The search page no longer drops images: they go out under the browser UA.
+  "src/scraper/sources/webSearchBrowser.ts": [/\["image", "font", "media"\]/.source, '["font", "media"]'],
 };
+
+/** The route handlers registered on `v` (`v.route("**\/*", handler)`), as source text. */
+function routesOn(src: string, v: string): string[] {
+  const out: string[] = [];
+  for (const m of src.matchAll(new RegExp(`\\b${v}\\.route\\(`, "g"))) out.push(argOf(src, m.index! + m[0].length - 1));
+  return out;
+}
+
+/** True when every image request of the page/context bound to `v` either carries our bot UA or is
+ *  aborted: a catch-all route on `v`, or on a page opened from it (`const p = await v.newPage()`). */
+function imagesGuarded(src: string, v: string): boolean {
+  const vars = [v];
+  for (const m of src.matchAll(new RegExp(`(?:const|let)\\s+(\\w+)\\s*=\\s*await\\s+${v}\\.newPage\\(\\s*\\)`, "g"))) vars.push(m[1]!);
+  return vars.some((x) =>
+    routesOn(src, x).some(
+      (h) =>
+        /^\s*["'`]\*\*\/\*["'`]/.test(h) &&
+        (/["']user-agent["']\s*:\s*PORTAL_USER_AGENT\b/.test(h) ||
+          /\[[^\]]*["']image["'][^\]]*\]\.includes\([\w.]*?\(\)\.resourceType\(\)\)\s*\?\s*\w+\.abort\(\)/.test(h) ||
+          /resourceType\(\)\s*===\s*["']image["']\s*\?\s*\w+\.abort\(\)/.test(h)),
+    ),
+  );
+}
 
 const fails: string[] = [];
 let calls = 0;
@@ -72,7 +107,9 @@ for (const f of files) {
     // ctx.newPage() / (await contextFor(u)).newPage() — the context carries the UA.
     if (m[2] === "newPage" && arg === "" && !/^(browser|b)$/.test(m[1]!)) continue;
     calls++;
-    if (!/userAgent:\s*PORTAL_USER_AGENT\b/.test(arg)) {
+    // The variable the page/context is bound to: `const page = await browser.newPage(…)`.
+    const bound = /(?:const|let)\s+(\w+)\s*=\s*await\s+$/.exec(src.slice(Math.max(0, m.index! - 80), m.index))?.[1];
+    if (!/userAgent:\s*PORTAL_USER_AGENT\b/.test(arg) && !(bound && imagesGuarded(src, bound))) {
       fails.push(`${rel}:${line} — ${m[1]}.${m[2]}(…) a saját bot-UA nélkül (HeadlessChrome → a lake-balaton 429-et ad, a fotó törött)`);
     }
   }
@@ -99,4 +136,4 @@ if (fails.length) {
   for (const x of fails) console.error(`  · ${x}`);
   process.exit(1);
 }
-console.log(`✓ shot-user-agent-check: ${calls} Chromium lap/kontextus ${files.length} fájlban mind a saját bot-UA-val kér`);
+console.log(`✓ shot-user-agent-check: ${calls} Chromium lap/kontextus ${files.length} fájlban: a képet mind a saját bot-UA-val kéri (vagy nem kéri)`);
