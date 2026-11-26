@@ -472,7 +472,7 @@ export async function sendOutreachMail(
   const override = await loadCopyOverride(prospectId);
   const d = { ...d0, draft: withMailOverride(d0.draft, override, d0.lang) };
 
-  // ADR-0070 §3 — LANGUAGE gate, ON THE LETTER (ADR-XXXX, 2026-11-26): a half-Polish, half-Hungarian cold
+  // ADR-0070 §3 — LANGUAGE gate, ON THE LETTER (ADR-0488, 2026-11-26): a half-Polish, half-Hungarian cold
   // mail reads as a scam, so a letter whose OWN text has a Hungarian fallback is held („Bábelre vár”) — here
   // on the draft, below on the letter that actually goes out (letter.untranslated) and in the §C gate. A gap
   // elsewhere in the buyer pack (a string this letter does not use) no longer holds every letter of the
@@ -782,7 +782,7 @@ export async function sendOutreachMail(
       ...(variants.priceLine !== undefined ? { noPriceBox: true } : {}),
     },
   ));
-  // ADR-XXXX (2026-11-26): the mail FRAME's own strings too (privacy line, footer, alt text) — the whole-pack
+  // ADR-0488 (2026-11-26): the mail FRAME's own strings too (privacy line, footer, alt text) — the whole-pack
   // hold used to cover them; now one Hungarian fallback in THIS letter's frame holds THIS letter.
   if (d.lang !== DEFAULT_LANG && frameFallbacks.length) {
     return { ...base, outcome: { kind: "skipped", reason: babelHoldReason(d.lang, frameFallbacks.length) } };

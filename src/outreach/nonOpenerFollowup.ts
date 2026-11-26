@@ -392,7 +392,7 @@ export async function sendNonOpenerFollowup(c: NonOpenerCandidate, deps: NonOpen
   const built = await buildNonOpenerLetterFor(c, { dryRun: deps.dryRun, senderName });
   if ("error" in built) return { kind: "skipped", reason: built.error };
   if (built.lang !== DEFAULT_LANG) {
-    // A half-translated letter reads as a scam — THIS letter's own Hungarian fallbacks hold it (ADR-XXXX,
+    // A half-translated letter reads as a scam — THIS letter's own Hungarian fallbacks hold it (ADR-0488,
     // 2026-11-26: on the message, not on the whole pack; unmeasured = held).
     const own = (built.send as { untranslated?: readonly string[] }).untranslated;
     if (own === undefined || own.length > 0) return { kind: "skipped", reason: `NYELV: ${own?.length ?? "?"} szövegrész nincs ${built.lang} nyelven (Bábelre vár) — TARTVA, magyarul nem megy ki` }; // i18n-exempt: operátori kimenet

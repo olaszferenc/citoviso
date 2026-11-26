@@ -60,7 +60,7 @@ Lánc (uj-lanc-hr git): `felderito/{teruletek.py,osszes.sh,orzo.sh,felderito.py,
 - Előfeltétel: a repó-commit landolva + fő-fa ff.
 - A `--stop-walk` PID szerint leállítja az élő bejárást (folytatható), másol, öntesztel, majd az orzo.sh-val újraindítja.
 
-## Nyelvi csomag nem zárja a piacot — „Bábelre vár” üzenet-szinten (ADR-XXXX, koordinátor 2026-11-26 16:00)
+## Nyelvi csomag nem zárja a piacot — „Bábelre vár” üzenet-szinten (ADR-0488, koordinátor 2026-11-26 16:00)
 
 **Mérve élesen 15:50:** az éles terv nyitott piaca csak a HU volt. A HR egyetlen oka: „Nyelvi csomag (Bábel): hr: 4270 / 4293”. A lánc az audit (a) óta csak nyitott piacra dolgozik, így minden HR lead kiesett.
 

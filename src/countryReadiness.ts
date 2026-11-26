@@ -201,7 +201,7 @@ export async function countryReadiness(country: string | null | undefined, opts:
   });
 
   // ── ② the language pack, buyer-side ───────────────────────────────────────────────────────
-  // NOT GATING (ADR-XXXX, owner rule 2026-11-25 — a missing translation never blocks; Hungarian fallback, Bábel
+  // NOT GATING (ADR-0488, owner rule 2026-11-25 — a missing translation never blocks; Hungarian fallback, Bábel
   // after): a new buyer-side string landing must not shut an OPEN market for the chain, the incoming trial or
   // the payment (2026-11-26: hr 4270/4293 shut HR for the whole chain). The protection lives on the MESSAGE:
   // a letter / SMS / mock whose OWN text has an untranslated part is held („Bábelre vár”, sendBatch.ts,

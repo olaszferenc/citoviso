@@ -697,7 +697,7 @@ SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file}
     "a mobil-csatorna az ország-sorból (modem-pár kapu, a szám a lead országában)",
     /const pairBlock = modemPairBlocks\(cc\)/.test(sms) && /normalizePhoneIn\(d\.phone, cc\)/.test(sms) && /isMobileE164In\(to, cc\)/.test(sms),
   );
-  // ADR-XXXX (2026-11-26): the hold is on the MESSAGE — the letter's / SMS's own Hungarian fallbacks
+  // ADR-0488 (2026-11-26): the hold is on the MESSAGE — the letter's / SMS's own Hungarian fallbacks
   check("lefordítatlan saját szöveg = TARTVA „Bábelre vár” (levél, mobil — üzenet-szinten)",
     /const own = d\.draft\.untranslated;/.test(batch) && /babelHoldReason\(d\.lang, own\.length\)/.test(batch) &&
       /babelHoldReason\(d\.lang, letter\.untranslated\.length\)/.test(batch) &&
@@ -973,11 +973,11 @@ console.log("\n⑫ nyitás előtti teljesség (ország-réteg 3/8)");
   check("a pénz-út hiánylistáját (marketOpenGaps) csak a teljesség olvassa", moneyReaders.length === 0, moneyReaders.join(", "));
   const fullCatalogGates = grepL("missingPackStrings\\(").filter((f) => f.startsWith("src/outreach/") || f.startsWith("src/console/"));
   check("a megkeresés-kapuk a vevő-oldali mérést olvassák (nincs teljes-katalógus kapu)", fullCatalogGates.length === 0, fullCatalogGates.join(", "));
-  // ADR-XXXX (2026-11-26): the readiness MEASURES the pack (a warning), the send paths hold on the message's own text
+  // ADR-0488 (2026-11-26): the readiness MEASURES the pack (a warning), the send paths hold on the message's own text
   check("a teljesség a vevő-oldali mérést olvassa (missingBuyerPackStrings)", /missingBuyerPackStrings\(/.test(src("src/countryReadiness.ts")));
   const sendPaths = ["src/outreach/sendBatch.ts", "src/outreach/sendOutreachSms.ts", "src/outreach/nonOpenerFollowup.ts", "src/outreach/trialCampaign.ts", "src/outreach/behaviorMessage.ts"];
   const wholePack = sendPaths.filter((f) => /missingBuyerPackStrings\(/.test(src(f)));
-  check("a küldő utak nem a teljes csomagot nézik, hanem az üzenet saját szövegét (ADR-XXXX)", wholePack.length === 0, wholePack.join(", "));
+  check("a küldő utak nem a teljes csomagot nézik, hanem az üzenet saját szövegét (ADR-0488)", wholePack.length === 0, wholePack.join(", "));
   const unmeasured = sendPaths.filter((f) => !/untranslated|collectFallbacks\(/.test(src(f)));
   check("…és mind méri a saját szövegét (untranslated / collectFallbacks)", unmeasured.length === 0, unmeasured.join(", "));
   const con = src("src/console/server.ts");

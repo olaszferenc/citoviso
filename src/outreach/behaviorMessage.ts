@@ -529,7 +529,7 @@ export async function sendBehaviorMessage(c: BehaviorCandidate, deps: BehaviorDe
     if (verdict) return { kind: "skipped", reason: verdict };
     const d = await buildDraftForProspect(c.prospectId, { reserveLabel: !deps.dryRun });
     if (!d) return { kind: "skipped", reason: "a piszkozat nem állítható elő" }; // i18n-exempt: operátori kimenet
-    // ADR-XXXX (2026-11-26): no whole-pack hold — the letter's own Hungarian fallbacks hold it in the §C gate below.
+    // ADR-0488 (2026-11-26): no whole-pack hold — the letter's own Hungarian fallbacks hold it in the §C gate below.
     const trigger = c.trigger;
     const to = c.address;
     const trialHost = await trialCampaignHost(c.leadId);

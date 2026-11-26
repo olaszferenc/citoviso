@@ -622,7 +622,7 @@ export async function sendTrialCampaignMail(c: TrialCampaignCandidate, deps: Tri
   if ("error" in built) return { kind: "skipped", reason: built.error };
   const { letter, lang, market } = built;
   if (lang !== DEFAULT_LANG) {
-    // A half-translated letter reads as a scam: THIS letter's own Hungarian fallbacks hold it (ADR-XXXX,
+    // A half-translated letter reads as a scam: THIS letter's own Hungarian fallbacks hold it (ADR-0488,
     // 2026-11-26 — on the message, not on the whole pack; the mail frame is measured below as well).
     const own = letter.untranslated;
     if (own === undefined || own.length > 0) return { kind: "skipped", reason: `NYELV: ${own?.length ?? "?"} szövegrész nincs ${lang} nyelven (Bábelre vár) — TARTVA, magyarul nem megy ki` }; // i18n-exempt: operátori CLI-kimenet

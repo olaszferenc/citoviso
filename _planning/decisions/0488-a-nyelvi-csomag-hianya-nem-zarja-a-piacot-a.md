@@ -1,4 +1,4 @@
-## ADR-XXXX — A nyelvi csomag hiánya nem zárja a piacot: a „Bábelre vár” az ÜZENET szintjén él
+## ADR-0488 — A nyelvi csomag hiánya nem zárja a piacot: a „Bábelre vár” az ÜZENET szintjén él
 
 **Státusz:** ELFOGADVA (koordinátor `cit9b4690e3` 2026-11-26, a tulaj 2026-11-25-i szabálya alapján: hiányzó fordítás
 nem blokkolhat, magyar fallback, Bábel utólag) · **Módosítja:** ADR-0460 ② és ③ (a piac-kapu teljességéből a nyelvi
