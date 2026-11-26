@@ -164,7 +164,8 @@ function stepTitle(lang: string, s: CountryStep): string {
 }
 
 const STEP_KEYS: Readonly<Record<CountryStep, readonly ReadinessItem["key"][]>> = {
-  data: ["data"],
+  // Piacnyitás 2026-11-26: the chain lexicon box stands on the data step (no new column).
+  data: ["data", "lexicon"],
   // NEMZETKÖZI C: the wallet box stands on the price step beside the price sheet (no new column).
   prices: ["prices", "wallet"],
   babel: ["babel"],

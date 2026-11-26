@@ -29,6 +29,7 @@
   "chainKontaktSearchEngines": ["startpage","qwant"],
   "chainKontaktAggregatorRegex": "(^|\\.)(apartmanija\\.hr|direct-croatia\\.com|adriagate\\.com|adriatic\\.hr|smjestaj\\.com\\.hr|croatia\\.hr|booking-croatia\\.com|croatia-apartments\\.com|novasol\\.[a-z.]+|interhome\\.[a-z.]+|trip\\.com|wego\\.[a-z.]+|bedandbreakfast\\.eu|housity\\.net|buiibo\\.com|booking\\.com|airbnb\\.[a-z.]+|vrbo\\.com|hometogo\\.[a-z.]+|inn\\.fan|rentl\\.io|laganini\\.com|hrvatska\\.sk|croatia-hrvatska\\.eu)$",
   "chainKontaktFillWebsite": true,
+  "chainFelderitoStart": { "lat": 43.2969, "lon": 17.0178 },
   "chainFelderitoDiscoveryOrder": ["17", "19", "13", "15", "18", "08", "09", "21", "01", "02", "03", "04", "05", "06", "07", "10", "11", "12", "14", "16", "20"],
   "chainFelderitoParkedPhrases": ["domena na prodaju", "ova domena je na prodaju", "stranica u izradi", "stranica je u izradi", "web stranica u izradi", "domena je registrirana", "ova domena je registrirana"],
   "chainFelderitoPresenceTypeWords": ["apartman", "apartmani", "apartment", "apartments", "smjestaj", "sobe", "soba", "rooms", "kuca", "house", "vila", "villa", "pansion", "hotel", "kamp", "camping", "hostel", "guest", "guesthouse", "studio", "odmor", "holiday"],

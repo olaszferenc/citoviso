@@ -31,6 +31,7 @@ import {
 } from "./countryRules.js";
 import { draftAsConfig } from "./countryRules.js";
 import { isTaxableBuyerCountry } from "./billing/taxCounters.js";
+import { countryLexicon } from "./countryLexicon.js";
 import { db } from "./db/client.js";
 import { T } from "./i18n/mail.js";
 import { buyerCatalog, missingBuyerPackStrings } from "./i18n/packs.js";
@@ -43,7 +44,7 @@ import { loadPricing, pricingRegions, regionPriceGaps } from "./pricing.js";
 /** The home market (markets.ts HOME_MARKET — repeated: markets.ts imports this module). */
 const HOME = "HU";
 
-export type ReadinessKey = "data" | "prices" | "wallet" | "babel" | "legal" | "adr" | "holidays" | "channel";
+export type ReadinessKey = "data" | "lexicon" | "prices" | "wallet" | "babel" | "legal" | "adr" | "holidays" | "channel";
 export type ReadinessState = "ok" | "bad" | "warn";
 
 export interface ReadinessItem {
@@ -176,6 +177,27 @@ export async function countryReadiness(country: string | null | undefined, opts:
             provider: cfg.paymentProvider,
           })
         : T(lang, "{ccy} pénztárca megvan ({provider})", { ccy: cfg.currency, provider: cfg.paymentProvider }),
+  });
+
+  // ── ①c the collection chain's lexicon (piacnyitás 2026-11-26): an opened market is walked by the
+  //    chain (discovery → contact → own-site gate) with NO human step — and every one of those steps reads
+  //    the country's lexicon (src/countryLexicon/<iso>.json: its areas, its words). Without it the chain
+  //    skips the country's leads silently. Shown BEFORE the opening as a warning (not gating: the market
+  //    gate also opens inbound trials and payments, which need no lexicon — the owner decides). ──
+  const lex = countryLexicon(cc);
+  const areas = lex?.subdivisions?.length ?? 0;
+  items.push({
+    key: "lexicon",
+    gating: false,
+    title: T(lang, "Gyűjtő-lánc szótára"),
+    state: lex && areas > 0 ? "ok" : "warn",
+    detail: !lex
+      ? T(lang, "nincs országszótár ({file}) — a felderítés és a kontaktkereső nem tud ezen az országon dolgozni", {
+          file: `src/countryLexicon/${cc.toLowerCase()}.json`,
+        })
+      : areas === 0
+        ? T(lang, "a szótárban nincs terület (subdivisions) — a felderítés nem tudja, mit járjon be")
+        : T(lang, "{n} terület a felderítéshez", { n: areas }),
   });
 
   // ── ② the language pack, buyer-side (the send gates' own measure) ──────────────────────────

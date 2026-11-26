@@ -79,6 +79,7 @@ import { SEND_WINDOW } from "../src/sms/sendWindow.js";
 import { DEFAULT_DAILY_CAP } from "../src/outreach/autoDispatch.js";
 import { scoutKeywords, scoutTileLonDeg, SCOUT_TILE_LON_DEG } from "../src/scout/rules.js";
 import { osmAreaForRegion } from "../src/scraper/regions.js";
+import { discoveryAreas, discoveryRegionId, discoveryStart, orderFromStart } from "../src/scout/discoveryAreas.js";
 import { allCountryLexicons, countryLexicon } from "../src/countryLexicon.js";
 import { APP_TZ, COUNTRY_DEFAULT_TIME_ZONE, defaultTimeZoneForCountry } from "../src/text/zoneTime.js";
 import { isHuMobileE164, normalizePhone } from "../src/text/phone.js";
@@ -177,6 +178,24 @@ check("csempe-szélesség: Makarska (43,3° É) ≈ 11 km", Math.abs(scoutTileLo
 check("megye-to → HU-TO, megye-xx → nincs (a HU szótár megyéi)", osmAreaForRegion("megye-to") === "HU-TO" && osmAreaForRegion("megye-xx") === undefined);
 check("terulet-hr-17 → HR-17, terulet-hr-99 → nincs", osmAreaForRegion("terulet-hr-17") === "HR-17" && osmAreaForRegion("terulet-hr-99") === undefined);
 check("a HU szótár megyéi = a 20 ISO 3166-2 HU-kód", (countryLexicon(HOME)?.subdivisions.length ?? 0) === 20);
+// Piacnyitás 2026-11-26: the discovery areas come from the lexicon, their region ids from ONE function,
+// and every id is one osmAreaForRegion clips (the chain's Python twin is checked against `discovery-areas.mts ids`).
+{
+  const huAreas = discoveryAreas("HU");
+  const huOrder = (countryLexicon("HU")?.chainFelderitoDiscoveryOrder as string[] | undefined) ?? [];
+  check("felderítés HU: a sorrend a szótáré, a régió-azonosító a régi megye-xx",
+    huAreas.map((a) => a.code).join() === huOrder.join() && huAreas.every((a) => a.region === `megye-${a.code.toLowerCase()}`),
+    huAreas.slice(0, 3).map((a) => a.region).join());
+  check("felderítés HR: első a 17 (terulet-hr-17), a kezdőpont Makarska",
+    discoveryAreas("HR")[0]?.region === "terulet-hr-17" && Math.abs((discoveryStart("HR")?.lat ?? 0) - 43.3) < 0.1 && discoveryStart("HU") === null);
+  check("felderítés: minden szótár-terület régió-azonosítóját az osmAreaForRegion ismeri",
+    allCountryLexicons().flatMap((lx) => discoveryAreas(lx.iso2)).every((a) => osmAreaForRegion(a.region) === `${a.iso2}-${a.code}`));
+  check("felderítés: szótár nélküli ország → nincs terület (fail closed)", discoveryAreas("IT").length === 0 && discoveryRegionId("HR", "17") === "terulet-hr-17");
+  const t = (s: number, w: number) => ({ south: s, west: w, north: s + 0.1, east: w + 0.1 });
+  const ordered = orderFromStart([t(45, 15), t(43.25, 16.95), t(44, 16)], { lat: 43.3, lon: 17 });
+  check("felderítés: a csempék a kezdőponthoz legközelebbivel kezdődnek; kezdőpont nélkül a sorrend marad",
+    ordered[0]!.south === 43.25 && ordered[2]!.south === 45 && orderFromStart([t(45, 15), t(43, 16)], null)[0]!.south === 45);
+}
 // Every purpose key a collection file reads must exist in the HU lexicon (else the HU matcher
 // would silently fall back to tradeWords and stop being the old one).
 const HU_PURPOSE_KEYS = [
