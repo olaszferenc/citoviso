@@ -975,6 +975,10 @@ export interface CountryTable {
   nonopener_count: Generated<number>;
   nonopener_daily_cap: Generated<number>;
   escalation_followup: Generated<boolean>;
+  /** 0157 („Országok / Árazás” 2. fázis): the lifecycle — Indulás time, Szünetel time and who paused. */
+  launched_at: Generated<Date | null>;
+  paused_at: Generated<Date | null>;
+  paused_by: Generated<string | null>;
   updated_at: Generated<Date>;
 }
 

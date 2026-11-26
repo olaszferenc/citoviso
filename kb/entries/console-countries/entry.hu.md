@@ -26,13 +26,14 @@ A táblázat oszlopai:
 - **„Árazás”**: **„kész”**, ha az ország ársora teljes; **„hiányos”**, ha valamelyik ár hiányzik
   (asztalon az egeret fölé víve látod, melyik; telefonon a kártya **„Következő:”** sora mondja meg, ha
   ez az első hiány; az ország „Árazás” fülén mindig ott a teljes lista). Hiányos ársorral rendelés nem jön létre;
-- **„Státusz”**: **„Fut · hazai”** (Magyarország), **„Fut”** (a piacot megnyitottad, és minden
-  feltétele teljes), **„Jóváhagyva, hiányos”** (megnyitottad, de azóta hiányos lett — ilyenkor a piac
-  ZÁRVA tart, amíg a hiány meg nem lesz), **„Indítható”** (minden feltétel teljes, csak a jóváhagyásod
-  hiányzik), **„Felvéve”** (még van hiányzó feltétel);
+- **„Státusz”**: **„Felvéve”** (az ország fel van véve, de még nem indult el) → **„Indulás”** (elindítva:
+  a gép viszi a leadgyűjtést, de még van hiányzó zárófeltétel, ezért a kiküldés áll) → **„Fut”** (minden
+  feltétel teljes, a kiküldés mehet; Magyarországnál **„Fut · hazai”**). Mellette **„Szünetel”**: kézzel
+  megállítva — ilyenkor a leadgyűjtés és a kiküldés áll, a meglévő előfizetők megújulása megy tovább;
 - **„Leadgyűjtés”** és **„Kiküldés”**: **„megy”**, **„áll”** vagy **„nem indult”**. A leadgyűjtés
-  akkor megy, ha a piac nyitva van és a gép még járja a csempéit; a kiküldés akkor, ha a piac nyitva
-  van, az automata kiküldés be van kapcsolva, és az országnak van napi kerete;
+  akkor megy, ha az országot elindítottad (**„Indulás”**), nem szünetel, és a gép még járja a csempéit; a
+  kiküldés akkor, ha a piac fut (minden zárófeltétel teljes), az automata kiküldés be van kapcsolva, és az
+  országnak van napi kerete;
 - **„Lead”**, **„Előfizető”**, **„Napi keret”**, **„Ma kiküldve”** (az ország saját napján).
 
 Egy sorra kattintva megnyílik az ország. Telefonon a sorok helyett kártyák vannak, rajtuk a
@@ -44,8 +45,8 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
 ## Egy ország: három fül
 
 - **„Ország”**: az **„Alapadatok”** (státusz, pénznem, ár-régió, nyelv, időzóna, hívószám, fizetés,
-  csatorna, kiküldési ablak, napi keret, lead és előfizető), mellette az **„Indítás”** doboz (a piac
-  megnyitása vagy lezárása), alatta **„Az indulás állapota”**: minden feltétel és a lánc minden lépése
+  csatorna, kiküldési ablak, napi keret, lead és előfizető), mellette az **„Indítás”** doboz (**„Indulás”**, **„Szüneteltetés”**,
+  **„Folytatás”**), alatta **„Az indulás állapota”**: minden feltétel és a lánc minden lépése
   sorrendben (régió-felbontás, csempék, felderítés, lead, kontakt, mock, kiküldés). Ami nem kész, annál
   ott áll: **„Mi hiányzik, ki pótolja:”**. Ember csak két helyen kell: a kezdő ár jóváhagyásánál és a
   fizetési tárca megnyitásánál, mindkettő a tulaj döntése. A többit a gép vagy egy munkatárs (például
@@ -116,29 +117,44 @@ gombbal kerül a beállítás az országra. Hibás mezőnél (például ha egy n
 
 ## Új ország felvétele
 
-1. Írd be a kétbetűs ISO-kódot (például `HR`) a cím alatti mezőbe, és koppints az
-   **„Új ország”** gombra.
-2. Az EU-tagoknál a nyilvános tények már ki vannak töltve: alapnyelv, időzóna, hívószám,
-   belföldi előtag és pénznem. Az euróövezetben a pénznem **EUR** — Bulgáriában is, 2026.
-   január 1. óta (BGN-t a lap nem fogad el).
-3. Töltsd ki a hiányzó mezőket a négy fülön: **„Azonosság és pénz”**, **„Felderítés”**,
-   **„Telefonszám-szabály”**, **„Jog”**. A fülön látod, hány mező hibás; a hiba a mező alatt
-   jelenik meg, amint hozzányúltál (egy friss sor nem piros fal).
-4. Koppints az **„Ország felvétele”** gombra. Ha még van hibás mező, a lap nem ment, és a
-   hibás mező helyére ugrik.
+1. Koppints az **„Új ország”** gombra a cím alatt. Megnyílik a világ országainak listája.
+2. Keress név vagy ISO-kód szerint (**„Keresés név vagy ISO-kód szerint”**). Minden sorban látod az
+   ország nevét, a **hivatalos pénznemét**, és a Barion-jelzést:
+   - zöld **„van tárca”** — a vevő fizetni tud;
+   - sárga **„nincs tárca — felvehető, a kiküldés áll”** — a Barion kezeli a pénznemet, de a mi fiókunkban
+     még nincs hozzá pénztárca (ezt a tulaj nyitja meg);
+   - piros **„a Barion nem kezeli — fizetni nem lehet, kiküldés nem indul”**.
+
+   A már felvett ország halványan látszik (**„már felvéve”**), nem választható.
+3. Koppints a **„Felvétel”** gombra. A gép kitölti a nyilvános adatokat (alapnyelv, időzóna, hívószám,
+   belföldi előtag, pénznem, a név magyarul), és létrehozza az ország **saját ár-régióját** a hivatalos
+   pénznemével. Kezdő ársort is javasol: a globális (euró) ársort a napi MNB-árfolyammal átváltja, és
+   kerek végződésre igazítja. A javaslat **jóváhagyatlan**: amíg a tulaj az Árazás fülön jóvá nem hagyja, az
+   ország teljességében a „Ársor és fizetés” sor piros. Az euróövezetben a pénznem **EUR** — Bulgáriában is,
+   2026. január 1. óta (BGN-t a lap nem fogad el).
+4. Megnyílik az adatok szerkesztője. Töltsd ki a hiányzó mezőket a négy fülön: **„Azonosság és pénz”**,
+   **„Felderítés”**, **„Telefonszám-szabály”**, **„Jog”** (a felderítés területét és keresőszavait a nyilvános
+   adatokból nem lehet tudni). A fülön látod, hány mező hibás; a hiba a mező alatt jelenik meg.
+5. Koppints az **„Ország felvétele”** gombra. Ha még van hibás mező, a lap nem ment, és a hibás mező helyére
+   ugrik. Mentés után az ország **„Felvéve”** státuszú. Az **„Indulás”** külön gomb (lásd lent).
+
+Ünnepnapot a gép nem talál ki: EU-n kívüli országnál az ünnepnap-lista üresen indul, és a teljesség ezt
+pirosan jelzi, amíg valaki fel nem veszi.
+
+![Képernyőkép: az „Új ország” lista — keresés, név, pénznem és Barion-jelzés soronként](assets/hu/picker.png)
 
 ## Az adatok szerkesztője
 
 Az ország **„Ország”** fülén az **„Adatok szerkesztése”** link nyitja meg. A panel tetején hat lépés van: **„Adatok”** → **„Ár és fizetés”** → **„Nyelv”** → **„Jog”** →
 **„Megkeresés”** → **„Megnyitás”**. A lépés színe a lépés állapota, és írás közben frissül.
 
-- **Gyűjtő-lánc szótára** (az „Adatok” lépésben, külön sorban). A megnyitott piacon a gép ember
+- **Gyűjtő-lánc szótára** (az „Adatok” lépésben, külön sorban). Az elindított országban a gép ember
   nélkül keres szállásokat, és ehhez az ország szótára kell: a területei és a keresőszavai. Ha
   megvan, a sor zöld, és kiírja, hány területet fog bejárni (*„21 terület a felderítéshez”*). Ha
   nincs, a sor sárga: *„nincs országszótár … — a felderítés és a kontaktkereső nem tud ezen az
   országon dolgozni”*. Akkor is sárga, ha a szótár megvan, de nincs benne terület: *„a szótárban
-  nincs terület (subdivisions) — a felderítés nem tudja, mit járjon be”*. Ez nem zár: a piac a
-  szótár nélkül is megnyitható (próba és fizetés megy), csak a gép nem gyűjt ott leadet. Neked itt
+  nincs terület (subdivisions) — a felderítés nem tudja, mit járjon be”*. Ez nem zár: az ország a
+  szótár nélkül is futhat (próba és fizetés megy), csak a gép nem gyűjt ott leadet. Neked itt
   nincs teendőd: a szótárat a fejlesztés készíti el az ország felvételekor, és amint elkészül, a sor
   magától zöldre vált.
 - **Ár és fizetés.** Az ország ár-régiójának teljes ársora kell, és a fizetési szolgáltatónak
@@ -174,40 +190,37 @@ Az ország **„Ország”** fülén az **„Adatok szerkesztése”** link nyit
 **„minden évben”** pipa be van jelölve, a nap minden évben ismétlődik (például január 1.). A
 mozgó ünnepeket (húsvét, pünkösd) évenként külön kell felvenni: vedd ki a pipát, ilyenkor a
 nap csak abban az évben érvényes, és szaggatott keretet kap. A lap az aktuális és a következő
-évet nézi: ha bármelyik **„hiányzik”**, az ország nem nyitható. Évváltáskor a lap egy évvel előrébb
-lép, tehát a jövő évi mozgó ünnepeket még az év vége előtt vedd fel, különben a nyitott piac január 1-jén
-hiányossá válik. Magyarországnál az üres lista csak figyelmeztetés (a hazai ütemezés eddig sem ismert ünnepnapot).
+évet nézi: ha bármelyik **„hiányzik”**, az országból nem mehet ki megkeresés. Évváltáskor a lap egy évvel előrébb
+lép, tehát a jövő évi mozgó ünnepeket még az év vége előtt vedd fel, különben a futó ország január 1-jén
+hiányossá válik, és a kiküldés leáll. Magyarországnál az üres lista csak figyelmeztetés (a hazai ütemezés eddig sem ismert ünnepnapot).
 
-## A piac megnyitása
+## Indulás, szüneteltetés, folytatás
 
-Az ország **„Ország”** fülének **„Indítás”** dobozában (és a szerkesztő **„Megnyitás”** lépésében) nyitod meg a piacot. A **„Piac megnyitása”** gomb csak akkor
-él, ha minden zárófeltétel zöld, és az ország MENTVE van (nem mentett szerkesztésnél
-„Előbb mentsd az országot”). A szerver a gombnyomáskor újra megnézi a teljességet.
+Az ország **„Ország”** fülének **„Indítás”** dobozában (és a szerkesztő **„Megnyitás”** lépésében):
 
-A megnyitás felelősségvállalás: kijelented, hogy az ország jogi csomagja kész és felülvizsgált. Nézd meg a
-megkeresés szabályait is: több országban a hideg megkereséshez **opt-in** kell, nem elég a jogos érdek.
-Az indoklás mezőbe írd be, **mire hivatkozva** nyitod meg (például melyik csomag melyik
-verziója, ki vizsgálta felül). Az indoklás **kötelező**: nélküle nem történik semmi, és naplósor
-sem keletkezik.
+- **„Felvéve — indítható”**: az **„Indulás”** gomb elindítja az országot. Ehhez **nem kell**, hogy minden
+  zárófeltétel zöld legyen: az indulás után a gép magától viszi végig a régió → felderítés → kontakt → mock →
+  kiküldés sort, a **kiküldés** viszont csak akkor indul, ha minden zárófeltétel zöld. Ami még hiányzik, azt a
+  doboz felsorolja.
+- **„Indulás — a gép viszi”**: elindítva, de még hiányzik valami a kiküldéshez (a lista ott áll). Ha minden
+  zöld, a doboz **„Fut”**-ra vált.
+- **„Szüneteltetés”** (a doboz alján lenyitható): megállítja az országot. A leadgyűjtés és a kiküldés áll,
+  új rendelés és élesítés nem indul; a meglévő előfizetők megújulása megy tovább. A hazai piac (HU) nem
+  szüneteltethető — a szerver is elutasítja.
+- **„Szünetel”**: a **„Folytatás”** gomb újraindítja (ha minden zárófeltétel zöld, újra **„Fut”**).
 
-Zárt országnál a rendszer magától megáll: **hideg megkeresés** nem megy ki (a levél és az SMS a küldés
-előtti ellenőrzésen `PIAC:` jelöléssel bukik — ha ezt látod egy lead naplójában, az ország zárva van, és itt
-derül ki, miért), **fizetési link**
-nem adható ki, a megrendelt oldal **nem kapcsol élesre**. Szabadon mehet a lead begyűjtése, a
-mock legyártása és a mintaoldal megmutatása. Zárt piacon is működik, szándékosan, a már futó
-előfizetések megújulása és a már élő oldalak kiszolgálása.
+Az ország MENTETT sorára vonatkozik: nem mentett szerkesztésnél a doboz ezt kéri: „Előbb mentsd az országot”.
+
+Amíg egy ország nem fut (vagy szünetel), a rendszer magától megáll: **hideg megkeresés** nem megy ki (a levél
+és az SMS a küldés előtti ellenőrzésen `PIAC:` jelöléssel bukik — ha ezt látod egy lead naplójában, az ország nem
+fut, és itt derül ki, miért), **fizetési link** nem adható ki, a megrendelt oldal **nem kapcsol élesre**. A már
+futó előfizetések megújulása és a már élő oldalak kiszolgálása szándékosan megy tovább.
 
 Miért ország, és nem nyelv? Mert a jogi csomag jogrendszerhez tartozik: Ausztria és
 Németország ugyanazt a nyelvet beszéli, de más a szabályozásuk.
 
-## Lezárás és napló
+## Napló
 
-A nyitott ország **„Ország”** fülén, az **„Indítás”** dobozban:
-
-1. nyisd le a **„Piac lezárása”** sort;
-2. írd be az indoklást (kötelező, legalább 3 karakter);
-3. koppints a **„Lezárás”** gombra.
-
-A lezárás a jövőre hat: új megkeresés, új rendelés és élesítés nem indul. A hazai piac (HU) innen nem zárható le. Minden döntés megmarad a blokk alján: időpont, a bejelentkezett
-operátor neve, a művelet és az indoklás — így a „miért van ez a piac nyitva?” kérdés hónapokkal
-később is megválaszolható.
+Minden döntés megmarad a doboz alján: időpont, a bejelentkezett operátor neve és a művelet (**„elindítva /
+megnyitva”**, **„szüneteltetve”**, **„folytatva”**, **„lezárva”**) — így a „miért fut / áll ez az ország?”
+kérdés hónapokkal később is megválaszolható.

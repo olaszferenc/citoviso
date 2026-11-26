@@ -302,15 +302,23 @@ export async function countryReadiness(country: string | null | undefined, opts:
 
   const complete = items.every((i) => !i.gating || i.state !== "bad");
   const failing = items.filter((i) => i.gating && i.state === "bad").map((i) => `${i.title}: ${i.detail}`);
-  const reasons = [...(approved ? [] : [T(lang, "a piacot a tulaj még nem nyitotta meg")]), ...failing];
+  // „Országok / Árazás” 2. fázis (0157): a PAUSED country is shut whatever else holds (the home market is never
+  // paused — the server refuses it). The renewals of running subscriptions do not read this gate (ADR-0111).
+  const paused = !!cfg?.pausedAt && cc !== HOME;
+  const reasons = [
+    ...(paused ? [T(lang, "az ország szüneteltetve ({by})", { by: cfg?.pausedBy ?? "—" })] : []),
+    ...(approved ? [] : [T(lang, "a piacot a tulaj még nem nyitotta meg")]),
+    ...failing,
+  ];
+  const open = approved && complete && !paused;
   return {
     country: cc,
     hasRow: !!cfg,
     items,
     complete,
     approved,
-    open: approved && complete,
-    reasons: approved && complete ? [] : reasons,
+    open,
+    reasons: open ? [] : reasons,
     legal,
   };
 }

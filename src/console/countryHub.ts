@@ -14,6 +14,9 @@ import { formatNumber } from "../text/money.js";
 import type { CountryOverview, CountryOverviewRow, CountryStatusKey, OutreachInfo, RunState } from "./countryData.js";
 import { COUNTRY_CSS, editorOverlay, editorScript, gateBlock, ICON, type CountryEditor } from "./countryViews.js";
 import { consoleLang } from "./i18nCtx.js";
+import { catalogCountries, countryNameIn } from "../countryCatalog.js";
+import { alreadyAdded } from "../countryLifecycle.js";
+import { providerAccepts, walletGap } from "../payment/providers.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { esc, helpLink, layout } from "./views.js";
 
@@ -31,12 +34,12 @@ function statusLabel(lang: string, s: CountryStatusKey): string {
   switch (s) {
     case "home": return T(lang, "Fut · hazai");
     case "open": return T(lang, "Fut");
-    case "approvedIncomplete": return T(lang, "Jóváhagyva, hiányos");
-    case "ready": return T(lang, "Indítható");
+    case "launching": return T(lang, "Indulás");
     case "added": return T(lang, "Felvéve");
+    case "paused": return T(lang, "Szünetel");
   }
 }
-const statusTone: Readonly<Record<CountryStatusKey, string>> = { home: "ok", open: "ok", approvedIncomplete: "warn", ready: "info", added: "" };
+const statusTone: Readonly<Record<CountryStatusKey, string>> = { home: "ok", open: "ok", launching: "info", added: "", paused: "warn" };
 
 function statusTag(lang: string, s: CountryStatusKey): string {
   return `<span class="cty-tag${statusTone[s] ? ` cty-tag--${statusTone[s]}` : ""}">${esc(statusLabel(lang, s))}</span>`;
@@ -126,10 +129,8 @@ export function hubOverviewPage(opts: {
     <div class="cty-top">
       <div><h2>${esc(T(lang, "Országok / Árazás"))} ${helpLink("console.countries")}</h2>
         <p class="cty-lead">${esc(T(lang, "Egy sor egy felvett ország: az ára, az állapota, és hogy megy-e benne a leadgyűjtés és a kiküldés. Egy országra kattintva három fül nyílik: Ország, Árazás, Kiküldés."))}</p></div>
-      <form class="cty-new" method="get" action="/countries" novalidate>
-        <input name="new" maxlength="2" placeholder="${esc(T(lang, "ISO"))}" aria-label="${esc(T(lang, "Új ország ISO-kódja"))}" value="${esc(opts.newIso ?? "")}" autocomplete="off">
-        <button class="cty-btn cty-btn--sm ghost" type="submit">${ICON.plus} ${esc(T(lang, "Új ország"))}</button>
-        <p class="cty-f__e" role="alert">${esc(opts.newErr ?? "")}</p></form>
+      <div class="cty-new"><button type="button" class="cty-btn cty-btn--sm ghost" id="pick-open">${ICON.plus} ${esc(T(lang, "Új ország"))}</button>
+        <p class="cty-f__e" role="alert">${esc(opts.newErr ?? "")}</p></div>
     </div>
     ${opts.notice ? `<p class="cty-notice cty-notice--${opts.notice.ok ? "ok" : "bad"}" role="status">${esc(opts.notice.text)}</p>` : ""}
     ${summaryBar(lang, ov)}
@@ -139,9 +140,52 @@ export function hubOverviewPage(opts: {
     <p class="hub-note" id="hub-global">${esc(T(lang, "A „Globális” ársor nem ország: a bejelentkezés nélküli főoldal-látogató árkijelzése."))} <a class="cty-lnk" href="/countries/global-pricing">${esc(T(lang, "Globális ársor szerkesztése ›"))}</a></p>
     ${ov.unlisted.length ? `<p class="hub-note" id="hub-unlisted">${esc(T(lang, "Találkoztunk velük (terület vagy vevő), de még nincs soruk:"))} ${ov.unlisted.map((iso) => `<a class="cty-lnk" href="/countries?new=${encodeURIComponent(iso)}">${esc(iso)}</a>`).join(" · ")}</p>` : ""}
     ${opts.editor ? editorOverlay(opts.editor, "/countries") : ""}
-  </div>${opts.editor ? editorScript() : ""}`;
+    ${pickerDialog(lang)}
+  </div>${opts.editor ? editorScript() : ""}<script>${PICK_JS}</script>`;
   return layout(T(lang, "Országok / Árazás"), body, { active: "/countries", head: `<style>${COUNTRY_CSS}${HUB_CSS}</style>` });
 }
+
+// ── the new-country picker (2. fázis, README ⑤ ⑥): the world catalog, name in the console language, official
+// currency, the Barion signal; an already added country is greyed and not pickable. A pick posts
+// /countries/pick → its own pricing region with a suggested (unconfirmed) price sheet → the prefilled editor.
+function barionSignal(lang: string, currency: string): { tone: "ok" | "warn" | "bad"; text: string } {
+  if (!providerAccepts("barion", currency)) return { tone: "bad", text: T(lang, "a Barion nem kezeli — fizetni nem lehet, kiküldés nem indul") };
+  if (walletGap("barion", currency)) return { tone: "warn", text: T(lang, "nincs tárca — felvehető, a kiküldés áll") };
+  return { tone: "ok", text: T(lang, "van tárca") };
+}
+
+function pickerDialog(lang: string): string {
+  const added = alreadyAdded();
+  const rows = catalogCountries()
+    .map((c) => ({ c, name: countryNameIn(c.iso, lang) }))
+    .sort((a, b) => a.name.localeCompare(b.name, lang))
+    .map(({ c, name }) => {
+      const sig = barionSignal(lang, c.currency);
+      const isAdded = added.has(c.iso);
+      const key = `${name} ${c.iso}`.toLowerCase();
+      return `<li class="pick-row${isAdded ? " pick-row--off" : ""}" data-k="${esc(key)}">
+        <span class="cty-iso">${esc(c.iso)}</span><span class="pick-n"><b>${esc(name)}</b><span>${esc(c.currency)}</span></span>
+        <span class="cty-tag cty-tag--${sig.tone}">${esc(sig.text)}</span>
+        ${isAdded
+          ? `<span class="cty-tag">${esc(T(lang, "már felvéve"))}</span>`
+          : `<form method="post" action="/countries/pick"><input type="hidden" name="iso" value="${esc(c.iso)}"><button type="submit" class="cty-btn cty-btn--sm" aria-label="${esc(T(lang, "{name} felvétele", { name }))}">${esc(T(lang, "Felvétel"))}</button></form>`}
+      </li>`;
+    })
+    .join("");
+  return `<dialog class="pick-dlg" id="pick-dlg" aria-labelledby="pick-h">
+    <div class="pick-h"><h3 id="pick-h">${esc(T(lang, "Új ország"))}</h3><button type="button" class="cty-btn cty-btn--sm" id="pick-x">${esc(T(lang, "Bezár"))}</button></div>
+    <p class="cty-small cty-mut">${esc(T(lang, "Válassz a listából. A gép kitölti a nyilvános adatokat (nyelv, időzóna, hívószám, pénznem) és kezdő ársort javasol; az ország „Felvéve” státuszba kerül, az „Indulás” külön gomb."))}</p>
+    <input type="search" id="pick-q" class="pick-q" placeholder="${esc(T(lang, "Keresés név vagy ISO-kód szerint"))}" aria-label="${esc(T(lang, "Keresés név vagy ISO-kód szerint"))}" autocomplete="off">
+    <ul class="pick-list" id="pick-list">${rows}</ul>
+  </dialog>`;
+}
+
+const PICK_JS = `(function(){
+var o=document.getElementById("pick-open"),d=document.getElementById("pick-dlg"),q=document.getElementById("pick-q");if(!o||!d)return;
+o.addEventListener("click",function(){if(d.showModal)d.showModal();else d.setAttribute("open","");q.focus();});
+document.getElementById("pick-x").addEventListener("click",function(){if(d.close)d.close();else d.removeAttribute("open");});
+q.addEventListener("input",function(){var v=q.value.trim().toLowerCase();Array.prototype.forEach.call(document.querySelectorAll("#pick-list .pick-row"),function(li){li.hidden=v!==""&&li.getAttribute("data-k").indexOf(v)<0;});});
+})();`;
 
 // ── one country: the tab frame ─────────────────────────────────────────────────────────────────
 function tabLabel(lang: string, t: HubTab): string {
@@ -197,7 +241,7 @@ function whoFills(lang: string, key: ReadinessItem["key"]): string {
 
 function launchTitle(lang: string, k: LaunchStep["key"]): string {
   switch (k) {
-    case "open": return T(lang, "Piacnyitás");
+    case "open": return T(lang, "Indulás");
     case "areas": return T(lang, "Régió-felbontás (területek)");
     case "tiles": return T(lang, "Csempék");
     case "walk": return T(lang, "Felderítés (bejárt csempék)");
@@ -210,7 +254,7 @@ function launchTitle(lang: string, k: LaunchStep["key"]): string {
 
 function launchWho(lang: string, k: LaunchStep["key"]): string {
   switch (k) {
-    case "open": return T(lang, "A piac a lenti „Indítás” dobozból nyílik, ha minden zárófeltétel zöld.");
+    case "open": return T(lang, "Az „Indítás” doboz „Indulás” gombja indítja; ehhez nem kell, hogy minden zárófeltétel zöld legyen.");
     case "areas":
     case "tiles": return T(lang, "A gép a piacnyitás után magától felbontja az országot területekre és csempékre.");
     case "walk": return T(lang, "A gép a nyitott piac csempéit magától bejárja.");
@@ -244,7 +288,7 @@ function listItem(lang: string, key: string, state: keyof typeof STATE_ICON, tit
 }
 
 function stepDetail(lang: string, s: LaunchStep): string {
-  if (s.key === "open") return s.state === "ok" ? T(lang, "a piac nyitva") : T(lang, "a piac zárva");
+  if (s.key === "open") return s.state === "ok" ? T(lang, "elindítva") : T(lang, "nincs elindítva (vagy szünetel)");
   if (s.total == null) return T(lang, "{n} db", { n: n(s.done) });
   return T(lang, "{done} / {total}", { done: n(s.done), total: n(s.total) });
 }
@@ -294,7 +338,7 @@ export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: Outr
     <div class="cty-panel hub-card"><h3>${esc(T(lang, "Indítás"))}</h3><div id="hub-gate">${gateBlock(ed)}</div></div>
   </div>
   <div class="cty-panel hub-card"><h3>${esc(T(lang, "Az indulás állapota"))}</h3>
-    <p class="cty-small cty-mut">${esc(T(lang, "Sorrendben, ahogy a lánc halad. Ami nem kész, annál ott áll, mi hiányzik és ki pótolja. A piac a zárófeltételek zöldje után nyitható; a felderítés, a kontakt, a mock és a kiküldés utána magától indul."))}</p>
+    <p class="cty-small cty-mut">${esc(T(lang, "Sorrendben, ahogy a lánc halad. Ami nem kész, annál ott áll, mi hiányzik és ki pótolja. Az „Indulás” után a felderítés, a kontakt és a mock magától indul; a kiküldés csak akkor, ha minden zárófeltétel zöld."))}</p>
     <ol class="cty-rd" id="hub-launch">${list}</ol></div>`;
 }
 
@@ -560,6 +604,19 @@ const HUB_CSS = `
 .hub-big{margin:0 0 6px;font-size:13.5px} .hub-big b{font:700 18px var(--citui-font-display)}
 .cty-notice--info{background:var(--citui-accent-soft);color:var(--citui-ink);font-weight:500}
 .cty-notice--warn{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-panel));color:var(--citui-warn-ink);font-weight:500}
+.pick-dlg{max-width:min(640px,96vw);width:100%;max-height:88vh;border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:16px 18px;background:var(--citui-panel);color:var(--citui-ink)}
+.pick-dlg::backdrop{background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent)}
+.pick-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pick-h h3{margin:0;font:600 17px var(--citui-font-display)}
+.pick-q{width:100%;margin:8px 0;padding:8px 10px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);background:var(--citui-field);color:var(--citui-ink);font:inherit}
+.pick-list{list-style:none;margin:0;padding:0;max-height:58vh;overflow:auto}
+.pick-row{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--citui-line);flex-wrap:wrap}
+.pick-row form{margin-left:auto}
+.pick-n{display:flex;flex-direction:column;min-width:120px;flex:1}
+.pick-n span{font-size:12px;color:var(--citui-muted)}
+.pick-row--off{opacity:.5}
+.pick-row[hidden]{display:none}
+.pick-row .cty-tag{white-space:normal}
 .hub-inl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;margin:4px 0}
 .hub-num-in{width:72px;padding:5px 8px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);background:var(--citui-field);color:var(--citui-ink)}
 .hub-chk{display:inline-flex;gap:8px;align-items:center;font-size:13.5px;margin:3px 0}

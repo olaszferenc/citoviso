@@ -129,7 +129,8 @@ const gaps0 = await missingHrStrings();
 const { BABEL_PENDING_3J } = await import("./lib/babel-pending-3j.mts");
 const { BABEL_PENDING_NEMZB } = await import("./lib/babel-pending-nemzb.mts");
 const { BABEL_PENDING_NEMZETKOZI_C } = await import("./lib/babel-pending-nemzetkozi-c.mts");
-const pendingOk = new Set([ESCALATION_LEGAL, ...BABEL_PENDING_3J, ...BABEL_PENDING_NEMZB, ...BABEL_PENDING_NEMZETKOZI_C]);
+const { BABEL_PENDING_ARVALTOZAS } = await import("./lib/babel-pending-arvaltozas.mts");
+const pendingOk = new Set([ESCALATION_LEGAL, ...BABEL_PENDING_3J, ...BABEL_PENDING_NEMZB, ...BABEL_PENDING_NEMZETKOZI_C, ...BABEL_PENDING_ARVALTOZAS]);
 check("nyelv: legfeljebb a Bábelre váró feliratok hiányoznak (eszkalációs jogi sor + a 3/10 jegye)", gaps0.every((x) => pendingOk.has(x)) && (gaps0.length ? st0.babel === "warn" : st0.babel === "ok"), gaps0.filter((x) => !pendingOk.has(x)).join(" | "));
 // The modules off sale on production (app_setting module_sales_disabled, read 2026-11-22) — the
 // package prices the owner approved are the ones a buyer sees there.
@@ -168,9 +169,8 @@ try {
   const bad = await page.locator(".cty-rd__i--bad").count();
   const r1 = await countryReadiness("HR");
   check("a teljesség minden tétele zöld (nincs piros)", bad === 0 && r1.complete, `${bad} piros · ${r1.items.filter((i) => i.state === "bad").map((i) => `${i.key}: ${i.detail}`).join(" | ")}`);
-  check("„Piac megnyitása” gomb ÉL", await page.locator('#cty-gate button[type="submit"]').isEnabled());
-  await page.fill('#cty-gate textarea[name="reason"]', "HR nyitás — elfogadási teszt (scratch DB)");
-  await page.click('#cty-gate button[type="submit"]');
+  check("„Indulás” gomb ÉL", await page.locator('#cty-gate button[type="submit"]').isEnabled());
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click('#cty-gate button[type="submit"]')]);
   await page.waitForLoadState("networkidle");
   const g = await marketGate("HR");
   check("a piac megnyílt (jóváhagyva + teljes)", g.open && g.approved, g.reasons.join(" · "));

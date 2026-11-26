@@ -128,8 +128,12 @@ export async function discoveryCountries(): Promise<CountryVerdict[]> {
   const out: CountryVerdict[] = [];
   for (const iso2 of isos) {
     const reasons: string[] = [];
+    // „Országok / Árazás” 2. fázis (0157; README ⑧): discovery walks a LAUNCHED (approved) country that is not
+    // paused — the SEND waits for completeness (the market gate), the collection chain does not.
     const gate = await marketGate(iso2);
-    if (!gate.open) reasons.push(...(gate.reasons.length ? gate.reasons : ["a piac nincs nyitva"])); // i18n-exempt: operátori napló
+    const paused = !!(await countryConfig(iso2))?.pausedAt && iso2 !== "HU";
+    if (!gate.approved) reasons.push("a piac nincs elindítva (Indulás)"); // i18n-exempt: operátori napló
+    if (paused) reasons.push("az ország szüneteltetve"); // i18n-exempt: operátori napló
     if (!countryLexicon(iso2)) reasons.push(`nincs országszótár (src/countryLexicon/${iso2.toLowerCase()}.json)`); // i18n-exempt: operátori napló
     else if (!discoveryAreas(iso2).length) reasons.push("a szótárban nincs terület (subdivisions)"); // i18n-exempt: operátori napló
     await countryConfig(iso2); // loads the snapshot scoutKeywords reads
@@ -267,8 +271,10 @@ export interface LaunchStep {
 
 export interface LaunchStatus {
   readonly iso2: string;
-  /** The market gate (approval + readiness) — the trigger of the whole chain. */
+  /** The market gate (approval + readiness + not paused) — what the SEND waits for. */
   readonly open: boolean;
+  /** „Országok / Árazás” 2. fázis (0157): „Indulás” pressed and not paused — the collection chain walks it. */
+  readonly launched: boolean;
   /** Why discovery does not walk it (discoveryCountries' reasons; empty when walked). */
   readonly reasons: readonly string[];
   /** The lexicon's start point of the walk. */
@@ -288,6 +294,7 @@ export async function marketLaunchStatus(iso: string): Promise<LaunchStatus> {
     reasons: ["nincs ország-sor"], // i18n-exempt: operátori napló
   };
   const gate = await marketGate(iso2);
+  const launched = gate.approved && !(await countryConfig(iso2))?.pausedAt;
   const areas = discoveryAreas(iso2);
   const ids = areas.map((a) => a.region);
   const regions = ids.length
@@ -314,7 +321,7 @@ export async function marketLaunchStatus(iso: string): Promise<LaunchStatus> {
     total != null && total > 0 && done >= total ? "ok" : started ? "run" : "wait";
   const leads = Number(n.leads);
   const steps: LaunchStep[] = [
-    { key: "open", state: gate.open ? "ok" : "wait", done: gate.open ? 1 : 0, total: 1 },
+    { key: "open", state: launched ? "ok" : "wait", done: launched ? 1 : 0, total: 1 },
     { key: "areas", state: st(regions, areas.length, regions > 0), done: regions, total: areas.length },
     { key: "tiles", state: st(tiledAreas, areas.length, tiledAreas > 0), done: tiledAreas, total: areas.length },
     { key: "walk", state: st(closed, tiles.length || null, closed > 0), done: closed, total: tiles.length },
@@ -323,5 +330,5 @@ export async function marketLaunchStatus(iso: string): Promise<LaunchStatus> {
     { key: "mock", state: Number(n.mock) > 0 ? "run" : "wait", done: Number(n.mock), total: leads },
     { key: "sent", state: Number(n.sent) > 0 ? "run" : "wait", done: Number(n.sent), total: leads },
   ];
-  return { iso2, open: gate.open, reasons: verdict.reasons, start: discoveryStart(iso2), steps };
+  return { iso2, open: gate.open, launched, reasons: verdict.reasons, start: discoveryStart(iso2), steps };
 }

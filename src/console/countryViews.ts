@@ -22,6 +22,7 @@ import {
   type CountryField,
 } from "../countryRules.js";
 import { isTaxableBuyerCountry } from "../billing/taxCounters.js";
+import { countryConfigSync } from "../country.js";
 import { T } from "../i18n/mail.js";
 import { providerAccepts } from "../payment/providers.js";
 import { minorDigits } from "../text/money.js";
@@ -489,52 +490,59 @@ export function readinessList(ed: CountryEditor): string {
 function marketLogHtml(lang: string, m: CountryMarketInfo): string {
   if (!m.log.length) return "";
   return `<ul class="cty-gate__log">${m.log
-    .map((l) => `<li><span class="cty-mut cty-small">${esc(fmtAt(l.at))} · ${esc(l.actor)} · ${esc(l.action === "approve" ? T(lang, "megnyitva") : T(lang, "lezárva"))}</span> — ${esc(l.reason)}</li>`)
+    .map((l) => `<li><span class="cty-mut cty-small">${esc(fmtAt(l.at))} · ${esc(l.actor)} · ${esc(
+      l.action === "approve" ? T(lang, "elindítva / megnyitva") : l.action === "pause" ? T(lang, "szüneteltetve") : l.action === "resume" ? T(lang, "folytatva") : T(lang, "lezárva"),
+    )}</span> — ${esc(l.reason)}</li>`)
     .join("")}</ul>`;
 }
 
 /**
- * The market gate block (fragment: #cty-gate) — the old /settings „Piacok” row, merged here.
- * The forms post to /settings/markets (same endpoint, same mandatory reason, same log); the
- * approve button is live only on a COMPLETE, SAVED country, and the server re-checks both.
+ * The „Indítás” box (fragment: #cty-gate) — „Országok / Árazás” 2. fázis (0157; README ③ ⑧): the lifecycle
+ * Felvéve → Indulás → Fut, or Szünetel. „Indulás” approves the market WITHOUT completeness (ADR-0460 ②
+ * amended: the send asks for completeness — the market gate is approved && complete && not paused); the
+ * opening automaton starts from it. „Szünetel” shuts the gate (renewals go on, ADR-0111); never the home market.
+ * The forms post to /countries/launch · /countries/pause · /countries/resume; the server re-checks.
  */
 export function gateBlock(ed: CountryEditor): string {
   const lang = consoleLang();
   const m = ed.market;
   const r = ed.readiness;
-  const hidden = `<input type="hidden" name="country" value="${esc(ed.iso)}"><input type="hidden" name="back" value="countries">`;
-  if (ed.isNew) {
-    return `<div class="cty-gate cty-gate--shut"><div class="cty-gate__h">${ICON.lock}<b>${esc(T(lang, "Előbb vedd fel az országot"))}</b></div><p class="cty-small">${esc(T(lang, "A megnyitás a MENTETT sorra vonatkozik."))}</p></div>`;
+  const cfg = countryConfigSync(ed.iso);
+  const hidden = `<input type="hidden" name="country" value="${esc(ed.iso)}">`;
+  if (ed.isNew || !cfg) {
+    return `<div class="cty-gate cty-gate--shut"><div class="cty-gate__h">${ICON.lock}<b>${esc(T(lang, "Előbb vedd fel az országot"))}</b></div><p class="cty-small">${esc(T(lang, "Az indulás a MENTETT sorra vonatkozik."))}</p></div>`;
   }
   if (ed.dirty && !ed.home) {
-    return `<div class="cty-gate cty-gate--shut"><div class="cty-gate__h">${ICON.lock}<b>${esc(T(lang, "Előbb mentsd az országot"))}</b></div><p class="cty-small">${esc(T(lang, "A megnyitás a MENTETT sorra vonatkozik."))}</p></div>`;
+    return `<div class="cty-gate cty-gate--shut"><div class="cty-gate__h">${ICON.lock}<b>${esc(T(lang, "Előbb mentsd az országot"))}</b></div><p class="cty-small">${esc(T(lang, "Az indulás a MENTETT sorra vonatkozik."))}</p></div>`;
   }
+  const missing = r.items.filter((i) => i.gating && i.state === "bad");
+  const missingList = missing.length
+    ? `<ul class="cty-gate__miss">${missing.map((i) => `<li>${esc(i.title)} — ${esc(i.detail)}</li>`).join("")}</ul>`
+    : "";
   if (ed.home) {
-    return `<div class="cty-gate cty-gate--open"><div class="cty-gate__h">${r.open ? ICON.ok : ICON.warn}<b>${esc(r.open ? T(lang, "Nyitva — hazai piac") : T(lang, "Hazai piac — hiányos"))}</b></div>
-      <p class="cty-small cty-mut">${esc(T(lang, "A teljes jogi csomag erre készült; innen nem zárható le."))}${m.approvedBy ? ` ${esc(T(lang, "Megnyitotta: {who} · {when}", { who: m.approvedBy, when: fmtAt(m.approvedAt) }))}` : ""}</p>
+    return `<div class="cty-gate cty-gate--open"><div class="cty-gate__h">${r.open ? ICON.ok : ICON.warn}<b>${esc(r.open ? T(lang, "Fut — hazai piac") : T(lang, "Hazai piac — hiányos"))}</b></div>
+      <p class="cty-small cty-mut">${esc(T(lang, "A hazai piac nem szüneteltethető."))}</p>${missingList}${marketLogHtml(lang, m)}</div>`;
+  }
+  if (cfg.pausedAt) {
+    return `<div class="cty-gate cty-gate--shut"><div class="cty-gate__h">${ICON.lock}<b>${esc(T(lang, "Szünetel"))}</b></div>
+      <p class="cty-small">${esc(T(lang, "Szüneteltette: {who} · {when}. A leadgyűjtés és a kiküldés áll; a meglévő előfizetők megújulása megy tovább.", { who: cfg.pausedBy ?? "—", when: fmtAt(cfg.pausedAt) }))}</p>
+      <form method="post" action="/countries/resume" class="cty-gate__form">${hidden}<button type="submit" class="cty-btn cty-btn--primary ghost">${esc(T(lang, "Folytatás"))}</button></form>
       ${marketLogHtml(lang, m)}</div>`;
   }
-  if (m.approved) {
-    return `<div class="cty-gate cty-gate--open"><div class="cty-gate__h">${ICON.ok}<b>${esc(T(lang, "Nyitva"))}</b></div>
-      <p class="cty-small cty-mut">${esc(T(lang, "Megnyitotta: {who} · {when}", { who: m.approvedBy ?? "—", when: fmtAt(m.approvedAt) }))}${m.note ? ` — ${esc(m.note)}` : ""}</p>
-      ${r.complete ? "" : `<p class="cty-gate__warn">${ICON.warn} ${esc(T(lang, "Jóváhagyva, de közben hiányos lett — a piac-kapu ZÁRVA tart, amíg a piros pontok meg nem lesznek."))}</p>`}
-      <details class="cty-gate__act"><summary>${esc(T(lang, "Piac lezárása"))}</summary>
-        <p class="cty-small cty-mut">${esc(T(lang, "A lezárás a JÖVŐRE hat: új megkeresés, új rendelés és élesítés nem indul. A már futó előfizetések megújulását nem érinti."))}</p>
-        <form method="post" action="/settings/markets" class="cty-gate__form">${hidden}<input type="hidden" name="action" value="revoke">
-          <textarea name="reason" rows="2" required minlength="3" placeholder="${esc(T(lang, "Miért zárjuk le? (pl. „a lengyel opt-in szabályozás felülvizsgálat alatt”)"))}"></textarea>
-          <button type="submit" class="cty-btn cty-btn--danger ghost">${esc(T(lang, "Lezárás"))}</button></form>
+  if (cfg.launchedAt) {
+    return `<div class="cty-gate ${r.open ? "cty-gate--open" : "cty-gate--ready"}"><div class="cty-gate__h">${r.open ? ICON.ok : ICON.warn}<b>${esc(r.open ? T(lang, "Fut") : T(lang, "Indulás — a gép viszi"))}</b></div>
+      <p class="cty-small cty-mut">${esc(T(lang, "Elindítva: {when}. A gép magától viszi a régió → felderítés → kontakt → mock → kiküldés sort; a kiküldés csak akkor indul, ha minden zárófeltétel zöld.", { when: fmtAt(cfg.launchedAt) }))}</p>
+      ${missing.length ? `<p class="cty-small"><b>${esc(T(lang, "Még hiányzik a kiküldéshez:"))}</b></p>${missingList}` : ""}
+      <details class="cty-gate__act"><summary>${esc(T(lang, "Szüneteltetés"))}</summary>
+        <p class="cty-small cty-mut">${esc(T(lang, "A leadgyűjtés és a kiküldés áll, új rendelés és élesítés nem indul. A meglévő előfizetők megújulása megy tovább."))}</p>
+        <form method="post" action="/countries/pause" class="cty-gate__form">${hidden}<button type="submit" class="cty-btn cty-btn--danger ghost">${esc(T(lang, "Szüneteltetés"))}</button></form>
       </details>${marketLogHtml(lang, m)}</div>`;
   }
-  const ok = r.complete;
-  const { done, total } = countDone(r.items);
-  return `<div class="cty-gate ${ok ? "cty-gate--ready" : "cty-gate--shut"}">
-    <div class="cty-gate__h">${ok ? ICON.ok : ICON.lock}<b>${esc(ok ? T(lang, "Megnyitható") : T(lang, "Zárva — {done}/{total} feltétel teljes", { done, total }))}</b></div>
-    <p class="cty-small">${esc(ok
-      ? T(lang, "Minden feltétel teljes. A megnyitás felelősségvállalás: kijelented, hogy az ország jogi csomagja kész és felülvizsgált.")
-      : T(lang, "A megnyitás gombja akkor él, ha minden zárófeltétel zöld. Amíg zárva: erre az országra nem megy megkeresés, nincs fizetési link, nem élesíthető oldal."))}</p>
-    <form method="post" action="/settings/markets" class="cty-gate__form">${hidden}<input type="hidden" name="action" value="approve">
-      <textarea name="reason" rows="2" required minlength="3" ${ok ? "" : "disabled"} placeholder="${esc(T(lang, "Mire hivatkozva? (pl. „lengyel jogi csomag 1.0, ügyvédi felülvizsgálat 2026-10-01”)"))}"></textarea>
-      <button type="submit" class="cty-btn cty-btn--primary ghost" ${ok ? "" : 'disabled aria-disabled="true"'}>${esc(T(lang, "Piac megnyitása"))}</button></form>
+  return `<div class="cty-gate cty-gate--ready">
+    <div class="cty-gate__h">${ICON.plus}<b>${esc(T(lang, "Felvéve — indítható"))}</b></div>
+    <p class="cty-small">${esc(T(lang, "Az „Indulás” után a gép magától viszi végig a régió → felderítés → kontakt → mock → kiküldés sort. A kiküldés csak akkor indul, ha minden zárófeltétel zöld — ami most hiányzik, az alább látszik."))}</p>
+    ${missingList}
+    <form method="post" action="/countries/launch" class="cty-gate__form">${hidden}<button type="submit" class="cty-btn cty-btn--primary ghost">${esc(T(lang, "Indulás"))}</button></form>
     ${marketLogHtml(lang, m)}</div>`;
 }
 
@@ -921,6 +929,7 @@ body.cty-locked{overflow:hidden}
 /* market gate */
 .cty-gate{margin-top:10px;padding:12px;border-radius:var(--citui-radius);border:1px solid var(--citui-line);background:var(--citui-surface)}
 .cty-gate__h{display:flex;gap:7px;align-items:center;font-size:14px}
+.cty-gate__miss{margin:4px 0 8px;padding-left:18px;font-size:12.5px}
 .cty-gate--open .cty-gate__h{color:var(--citui-ok-ink)}
 .cty-gate--ready{border-color:var(--citui-ok);background:var(--citui-ok-soft)}
 .cty-gate--ready .cty-gate__h{color:var(--citui-ok-ink)}

@@ -2762,13 +2762,21 @@ await shootConsole(
   const { hubOverviewPage, hubCountryPage, countryTab } = await import("../src/console/countryHub.js");
   const steps = (o: Record<string, [string, number, number | null]>) =>
     Object.entries(o).map(([key, [state, done, total]]) => ({ key, state, done, total }));
-  const huLaunch = { iso2: "HU", open: true, reasons: [], start: null, steps: steps({ open: ["ok", 1, 1], areas: ["ok", 20, 20], tiles: ["ok", 20, 20], walk: ["run", 410, 512], leads: ["run", 7379, null], contact: ["run", 5120, 7379], mock: ["run", 2210, 7379], sent: ["run", 1460, 7379] }) };
-  const bgLaunch = { iso2: "BG", open: false, reasons: [], start: null, steps: steps({ open: ["wait", 0, 1], areas: ["wait", 0, 28], tiles: ["wait", 0, 28], walk: ["wait", 0, 0], leads: ["wait", 0, null], contact: ["wait", 0, 0], mock: ["wait", 0, 0], sent: ["wait", 0, 0] }) };
+  const huLaunch = { iso2: "HU", open: true, launched: true, reasons: [], start: null, steps: steps({ open: ["ok", 1, 1], areas: ["ok", 20, 20], tiles: ["ok", 20, 20], walk: ["run", 410, 512], leads: ["run", 7379, null], contact: ["run", 5120, 7379], mock: ["run", 2210, 7379], sent: ["run", 1460, 7379] }) };
+  const bgLaunch = { iso2: "BG", open: false, launched: false, reasons: [], start: null, steps: steps({ open: ["wait", 0, 1], areas: ["wait", 0, 28], tiles: ["wait", 0, 28], walk: ["wait", 0, 0], leads: ["wait", 0, null], contact: ["wait", 0, 0], mock: ["wait", 0, 0], sent: ["wait", 0, 0] }) };
   const rows = [
     { entry: list[0], region: "hu", pricingGaps: [], status: "home", collecting: "run", sending: "run", leads: 7379, subsActive: 10, subsFrozen: 4, dailyCap: 100, sentToday: 37, launch: huLaunch },
     { entry: list[1], region: "bg", pricingGaps: ["hiányzó modulár: gallery, rooms"], status: "added", collecting: "none", sending: "none", leads: 0, subsActive: 0, subsFrozen: 0, dailyCap: 40, sentToday: 0, launch: bgLaunch },
   ];
   await shootConsole(hubOverviewPage({ ov: { rows, unlisted: ["HR"], dispatchOn: true }, editor: null, notice: null } as never), conOut("console-countries"));
+  // 2. fázis (0157): the „Új ország” picker — the world catalog, opened, filtered to the „Bul…” rows.
+  await shootConsole(
+    hubOverviewPage({ ov: { rows, unlisted: [], dispatchOn: true }, editor: null, notice: null } as never)
+      .replace('<dialog class="pick-dlg" id="pick-dlg"', '<dialog open class="pick-dlg" id="pick-dlg" style="position:static;margin:12px auto"'),
+    conOut("console-countries").replace(/screen\.png$/, "picker.png"),
+    undefined,
+    "#pick-dlg",
+  );
   const bg = { ...blankDraft("BG"), name: "Bulgária", pricingRegion: "bg", publicHolidays: ["01-01", "03-03", "05-01"] };
   const editor = {
     iso: "BG", isNew: false, draft: bg, errors: {}, touched: [], readiness: rd(bgItems, false), step: "open", sub: "identity",

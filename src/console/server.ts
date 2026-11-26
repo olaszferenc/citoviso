@@ -2456,6 +2456,40 @@ async function handle(
     }
     return send(res, 200, hubCountryPage({ row, tab, notice, editor, editorOpen: rawStep !== null, tabHtml }));
   }
+  // POST /countries/pick · /countries/launch · /countries/pause · /countries/resume — „Országok / Árazás”
+  // 2. fázis (0157): the picker's machine work (own pricing region + suggested, unconfirmed sheet → the
+  // prefilled editor) and the lifecycle (Indulás = market approved without completeness; Szünetel shuts the
+  // gate; the home market cannot be paused — refused here whatever the browser sent).
+  if (method === "POST" && /^\/countries\/(pick|launch|pause|resume)$/.test(path)) {
+    const op = await currentOperator(req);
+    if (!op) return redirect(res, "/login");
+    const lang = consoleLang();
+    const form = await readBody(req);
+    const action = path.split("/")[2];
+    const iso = (form.get(action === "pick" ? "iso" : "country") ?? "").trim().toUpperCase();
+    if (!/^[A-Z]{2}$/.test(iso)) return redirect(res, "/countries");
+    const lc = await import("../countryLifecycle.js");
+    const back = (msg: string): void => redirect(res, `/countries?iso=${encodeURIComponent(iso)}&mk=${encodeURIComponent(msg)}`);
+    if (action === "pick") {
+      if (countryConfigSync(iso)) return redirect(res, `/countries?iso=${iso}`);
+      const { budapestIsoDay } = await import("../text/budapestTime.js");
+      const r = await lc.ensureCountryRegion(iso, budapestIsoDay(new Date())).catch((e) => ({ region: iso.toLowerCase(), created: false, suggested: false, note: (e as Error).message }));
+      console.log(`[console] új ország választva: ${iso} — ${op.username}; ár-régió: ${r.note}`); // i18n-exempt: operátori napló
+      return redirect(res, `/countries?new=${encodeURIComponent(iso)}`);
+    }
+    if (action === "launch") {
+      const ok = await lc.launchCountry(iso, op.username);
+      console.log(`[console] Indulás: ${iso} — ${op.username} (${ok ? "ok" : "nem sikerült"})`); // i18n-exempt: operátori napló
+      return back(ok ? `ok:${T(lang, "{iso} elindítva — a gép viszi a régió, felderítés, kontakt, mock, kiküldés sort.", { iso })}` : `hiba:${T(lang, "{iso} — az indulás nem sikerült.", { iso })}`);
+    }
+    if (action === "pause") {
+      if (iso === "HU") return back(`hiba:${T(lang, "A hazai piac nem szüneteltethető.")}`);
+      const ok = await lc.pauseCountry(iso, op.username);
+      return back(ok ? `ok:${T(lang, "{iso} szüneteltetve.", { iso })}` : `hiba:${T(lang, "{iso} — a szüneteltetés nem sikerült.", { iso })}`);
+    }
+    const ok = await lc.resumeCountry(iso, op.username);
+    return back(ok ? `ok:${T(lang, "{iso} folytatva.", { iso })}` : `hiba:${T(lang, "{iso} nem szünetelt.", { iso })}`);
+  }
   // POST /contact-checked — „Országok / Árazás” 4. fázis (0155): the contact chain marks the leads whose
   // mobile presence it checked (lead.contact_checked_at) — the same console path it writes the leads'
   // data on (operator login + the origin guard), instead of the done-files the Debian cron uploaded as

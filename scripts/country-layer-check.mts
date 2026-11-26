@@ -121,6 +121,11 @@ if (hu) {
       check(`HU.${k} lista`, Array.isArray(v), JSON.stringify(v));
       continue;
     }
+    // 0157: the lifecycle stamps are dates or null by nature (HU: launched, never paused).
+    if (k === "launchedAt" || k === "pausedAt" || k === "pausedBy") {
+      check(`HU.${k} (életciklus)`, k === "launchedAt" ? v === null || v instanceof Date : v === null, JSON.stringify(v));
+      continue;
+    }
     // 0155: the dispatch rules are one object of mixed values (numbers, booleans, lists) — read from the row.
     if (k === "dispatch") {
       const dsp = v as { minOwnPhotos?: unknown; sites?: unknown; channels?: unknown } | null;
@@ -968,7 +973,8 @@ console.log("\n⑫ nyitás előtti teljesség (ország-réteg 3/8)");
   // ── EGY teljesség-logika, minden kapu ezt olvassa ──
   const mk = src("src/markets.ts");
   check("a piac-kapu (marketGate) a teljesség-függvényből dönt", /const r = await countryReadiness\(country\);/.test(mk) && /open: r\.open,/.test(mk));
-  check("nyitva = jóváhagyva ÉS teljes", /open: approved && complete,/.test(src("src/countryReadiness.ts")));
+  // 0157 („Országok / Árazás” 2. fázis): a paused country is shut too (never the home market).
+  check("nyitva = jóváhagyva ÉS teljes ÉS nem szünetel", /const open = approved && complete && !paused;/.test(src("src/countryReadiness.ts")) && /cc !== HOME/.test(src("src/countryReadiness.ts")));
   const moneyReaders = grepL("marketOpenGaps\\(").filter((f) => !["src/countryReadiness.ts", "src/payment/providers.ts"].includes(f));
   check("a pénz-út hiánylistáját (marketOpenGaps) csak a teljesség olvassa", moneyReaders.length === 0, moneyReaders.join(", "));
   const fullCatalogGates = grepL("missingPackStrings\\(").filter((f) => f.startsWith("src/outreach/") || f.startsWith("src/console/"));

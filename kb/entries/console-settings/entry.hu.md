@@ -140,8 +140,8 @@ rendezéshez **fejlesztői beavatkozás kell** — jelezd.
 **`unknown` — rendszerint lezárt piac.** A vevő országára nincs jóváhagyott jogi csomag, a
 gomb pedig látszik és hatástalan. A teendő nem a lead lapján van: az **„Országok / Árazás”** lapon
 (CRM › Országok / Árazás) kell megnyitni az adott országot — koppints az ország sorára, majd az
-**„Ország”** fül **„Indítás”** dobozában a **„Piac megnyitása”** gombra (részletesen az Országok súgójában, „A piac
-megnyitása” résznél). Utána a gomb már valódi linket ad. Ha az országot üzletileg nem akarod megnyitni, a rendelés nem
+**„Ország”** fül **„Indítás”** dobozában az **„Indulás”** gombra (részletesen az Országok súgójában, az „Indulás,
+szüneteltetés, folytatás” résznél). Ha minden zárófeltétel zöld, utána a gomb már valódi linket ad. Ha az országot üzletileg nem akarod megnyitni, a rendelés nem
 teljesíthető: keresd meg a vevőt és mondd meg neki.
 
 **Ha a gomb nem látszik és a rendelés már ki van fizetve** — ilyenkor nincs is dolgod.

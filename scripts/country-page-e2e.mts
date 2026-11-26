@@ -147,9 +147,22 @@ try {
   console.log("\n① Új ország (BG) a lapon");
   await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
   check("a táblázat listázza HU-t", (await page.locator("#ovrow-HU").count()) === 1);
-  await page.fill('.cty-new input[name="new"]', "bg");
-  await page.click('.cty-new button[type="submit"]');
+  // 2. fázis (0157): the new country is PICKED from the world catalog (name, currency, Barion signal).
+  await page.click("#pick-open");
+  await page.fill("#pick-q", "bulg");
+  check("a választó szűr: Bulgária látszik, Horvátország nem", await page.locator('.pick-row[data-k$=" bg"]').isVisible() && !(await page.locator('.pick-row[data-k$=" hr"]').isVisible()));
+  check("a választó mutatja a pénznemet és a Barion-jelzést", /EUR/.test((await page.locator('.pick-row[data-k$=" bg"]').textContent()) ?? "") && (await page.locator('.pick-row[data-k$=" bg"] .cty-tag').count()) >= 1);
+  check("a már felvett HU halvány, nem választható", (await page.locator('.pick-row--off[data-k$=" hu"] form').count()) === 0 && (await page.locator('.pick-row--off[data-k$=" hu"]').count()) === 1);
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click('.pick-row[data-k$=" bg"] button[type="submit"]')]);
   await page.waitForLoadState("networkidle");
+  const bgRegion = await db.selectFrom("pricing_config").select(["currency"]).where("region", "=", "bg").executeTakeFirst();
+  check("választás → az ország ár-régiója a hivatalos pénznemmel (a meglévő érintetlen)", bgRegion?.currency === "EUR", JSON.stringify(bgRegion));
+  // A country without a region yet: a fresh region in its own currency, the suggestion UNCONFIRMED (the MNB call is
+  // fenced in this test — the region is created without prices, still unconfirmed).
+  const ro = await page.request.post(`${BASE}/countries/pick`, { form: { iso: "RO" }, maxRedirects: 0 });
+  const roRegion = await db.selectFrom("pricing_config").select(["currency", "pricing_confirmed"]).where("region", "=", "ro").executeTakeFirst();
+  check("új ország (RO) → új ár-régió RON-ban, jóváhagyatlan, a szerkesztőbe visz", roRegion?.currency === "RON" && roRegion.pricing_confirmed === false && /new=RO/.test(ro.headers()["location"] ?? ""), JSON.stringify(roRegion));
+  await page.goto(`${BASE}/countries?new=BG`, { waitUntil: "networkidle" });
   check("a szerkesztő megnyílt (Új ország)", (await page.locator("#cty-drawer[data-new='1']").count()) === 1);
   check("BG kezdősor: EUR", (await page.inputValue('[name="currency"]')) === "EUR");
   check("BG kezdősor: bg nyelv, Europe/Sofia, +359", (await page.inputValue('[name="defaultLang"]')) === "bg" &&
@@ -194,7 +207,7 @@ try {
   // The bg buyer pack is Bábel's committed work since 2026-11 (src/i18n/babel/packs) — the language may already be complete.
   check("a teljesség hiányokat mutat (ár, ünnep)", ["prices", "holidays"].every((k) => bad0.includes(k as never)), bad0.join(","));
   check("a lapon a hiányok pirosak", (await page.locator(".cty-rd__i--bad").count()) >= 3);
-  check("„Piac megnyitása” gomb TILTVA", await page.locator('#cty-gate button[type="submit"]').isDisabled());
+  check("„Indulás” gomb él hiányos állapotban is (a küldés kér teljességet, nem az indulás)", await page.locator('#cty-gate button[type="submit"]').isEnabled() && /Indulás/.test((await page.locator('#cty-gate button[type="submit"]').textContent()) ?? ""));
   const forced = await page.request.post(`${BASE}/settings/markets`, {
     form: { country: "BG", action: "approve", reason: "kézi próbálkozás" },
     maxRedirects: 0,
@@ -237,22 +250,35 @@ try {
   check("BG teljes", r1.complete, r1.reasons.join(" · "));
   check("…de még nincs jóváhagyva → a kapu zárva", !(await isMarketApproved("BG")));
   await page.goto(`${BASE}/countries?iso=BG&step=open`, { waitUntil: "networkidle" });
-  check("„Piac megnyitása” gomb ÉL", await page.locator('#cty-gate button[type="submit"]').isEnabled());
-  await page.fill('#cty-gate textarea[name="reason"]', "bolgár csomag — elfogadási teszt");
-  await page.click('#cty-gate button[type="submit"]');
+  check("„Indulás” gomb ÉL", await page.locator('#cty-gate button[type="submit"]').isEnabled());
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click('#cty-gate button[type="submit"]')]);
   await page.waitForLoadState("networkidle");
   const g1 = await marketGate("BG");
   check("a piac megnyílt (jóváhagyva + teljes)", g1.open && g1.approved, g1.reasons.join(" · "));
   check("az ország-lapon „Fut”", /Fut/.test((await page.locator(".hub-h").textContent()) ?? ""));
   const log1 = await db.selectFrom("market_log").select(["action", "actor"]).where("country", "=", "BG").execute();
   check("a döntés naplózva, a bejelentkezett operátor nevén", log1.length === 1 && log1[0]!.actor === "country-e2e");
+  const launched = await db.selectFrom("country").select("launched_at").where("iso2", "=", "BG").executeTakeFirstOrThrow();
+  check("Indulás → launched_at kitöltve", !!launched.launched_at);
+
+  console.log("\n③b Szünetel / Folytatás");
+  await page.goto(`${BASE}/countries?iso=BG`, { waitUntil: "networkidle" });
+  await page.click("#hub-gate details summary");
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click('#hub-gate form[action="/countries/pause"] button')]);
+  await page.waitForLoadState("networkidle");
+  check("Szünetel → a piac-kapu zárva, a lapon „Szünetel”", !(await marketGate("BG")).open && /Szünetel/.test((await page.locator(".hub-h").textContent()) ?? ""));
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click('#hub-gate form[action="/countries/resume"] button')]);
+  await page.waitForLoadState("networkidle");
+  check("Folytatás → a piac-kapu újra nyitva", (await marketGate("BG")).open);
+  const huPause = await page.request.post(`${BASE}/countries/pause`, { form: { country: "HU" }, maxRedirects: 0 });
+  check("a hazai piac szüneteltetése elutasítva (szerver)", /hazai piac nem sz/.test(decodeURIComponent(huPause.headers()["location"] ?? "")) && !(await db.selectFrom("country").select("paused_at").where("iso2", "=", "HU").executeTakeFirstOrThrow()).paused_at);
 
   console.log("\n④ Jóváhagyott, de hiányossá vált → a kapu újra zár");
   await db.updateTable("country").set({ public_holidays: JSON.stringify([]) } as never).where("iso2", "=", "BG").execute();
   await refreshCountries();
   check("ünnepnapok nélkül a kapu ZÁRVA", !(await isMarketApproved("BG")));
   await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
-  check("a táblázatban „Jóváhagyva, hiányos”", /hiányos/.test((await page.locator("#ovrow-BG .hub-st").textContent()) ?? ""));
+  check("a táblázatban „Indulás” (elindítva, de a kapu zárva)", /Indulás/.test((await page.locator("#ovrow-BG .hub-st").textContent()) ?? ""));
 
   console.log("\n⑤ HU változatlan");
   await page.goto(`${BASE}/countries?iso=HU&step=data`, { waitUntil: "networkidle" });

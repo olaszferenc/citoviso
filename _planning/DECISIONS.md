@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-orszagok-arazas-2-fazis-uj-orszag-indulas-szunetel.md) — „Országok / Árazás” 2. fázis: új ország a világ-katalógusból; Indulás = jóváhagyás teljesség nélkül; Szünetel
 - [ADR-0490](decisions/0490-a-fooldal-ara-a-latogato-orszagabol-jon-a.md) — A főoldal ára a látogató ORSZÁGÁBÓL jön, a nyelve a böngészőből (ha nincs ársor: Globális)
 - [ADR-0489](decisions/0489-orszagok-arazas-5-fazis-utemezett-arvaltozas-b.md) — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) — emelés dátummal és értesítővel, csökkenés azonnal
 - [ADR-0488](decisions/0488-a-nyelvi-csomag-hianya-nem-zarja-a-piacot-a.md) — A nyelvi csomag hiánya nem zárja a piacot: a „Bábelre vár” az ÜZENET szintjén él

@@ -3,7 +3,7 @@
 // the old markets panel), each with its readiness and market decision, and the editor state of
 // the open country. The readiness itself is src/countryReadiness.ts; nothing is computed here.
 import { sql } from "kysely";
-import { allCountriesSync, countryConfig, pricingRegionForCountry, type CountryConfig } from "../country.js";
+import { allCountriesSync, countryConfig, countryConfigSync, pricingRegionForCountry, type CountryConfig } from "../country.js";
 import { countryReadiness } from "../countryReadiness.js";
 import { COUNTRY_CHANNELS, blankDraft, draftFromConfig, validateCountryDraft, type CountryDraft, type CountryErrors } from "../countryRules.js";
 import { countryValidationContext } from "../countryStore.js";
@@ -122,7 +122,7 @@ export async function buildEditor(opts: {
 
 /** megy / áll / nem indult — the two „runs” of a country (lead collection, sending). */
 export type RunState = "run" | "stop" | "none";
-export type CountryStatusKey = "home" | "open" | "approvedIncomplete" | "ready" | "added";
+export type CountryStatusKey = "home" | "open" | "launching" | "added" | "paused";
 
 export interface CountryOverviewRow {
   readonly entry: CountryListEntry;
@@ -147,10 +147,13 @@ export interface CountryOverview {
   readonly dispatchOn: boolean;
 }
 
+/** „Országok / Árazás” 2. fázis (0157): Felvéve → Indulás → Fut, or Szünetel (computed, never a column). */
 export function statusOf(e: CountryListEntry): CountryStatusKey {
-  if (e.home && e.market.approved && e.readiness.complete) return "home";
-  if (e.market.approved) return e.readiness.complete ? "open" : "approvedIncomplete";
-  return e.readiness.complete ? "ready" : "added";
+  const cfg = countryConfigSync(e.iso);
+  if (e.home) return "home";
+  if (cfg?.pausedAt) return "paused";
+  if (!cfg?.launchedAt) return "added";
+  return e.readiness.open ? "open" : "launching";
 }
 
 /** Subscriptions per pricing region: live (active / past_due) and frozen. */
@@ -167,7 +170,8 @@ function runOf(launch: LaunchStatus): { collecting: RunState; sending: RunState 
   const walk = launch.steps.find((s) => s.key === "walk");
   const sent = launch.steps.find((s) => s.key === "sent");
   const tiles = walk?.total ?? 0;
-  const collecting: RunState = tiles === 0 ? "none" : launch.open && walk?.state !== "ok" ? "run" : "stop";
+  // 2. fázis (0157): the chain collects on a LAUNCHED, not paused country (the send waits for the full gate).
+  const collecting: RunState = tiles === 0 ? (launch.launched ? "run" : "none") : launch.launched && walk?.state !== "ok" ? "run" : "stop";
   return { collecting, sending: sent && sent.done > 0 ? "stop" : "none" };
 }
 

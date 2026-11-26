@@ -9,6 +9,7 @@
 - [2026-11-26_piacnyitas_kezi_lepes_nelkul.md](2026-11-26_piacnyitas_kezi_lepes_nelkul.md) — 2026-11-26 — Piacnyitás után nulla kézi lépés (felderítés magától)
 - [2026-11-26_orszagok_arazas_5_fazis.md](2026-11-26_orszagok_arazas_5_fazis.md) — 2026-11-26 — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) + árváltozás-értesítő (SUB cita363cd23)
 - [2026-11-26_orszagok_arazas_4_fazis.md](2026-11-26_orszagok_arazas_4_fazis.md) — 2026-11-26 — „Országok / Árazás” 4. fázis: kiküldési szabályok országonként, auto-approve a repóban (SUB cita363cd23)
+- [2026-11-26_orszagok_arazas_2_fazis.md](2026-11-26_orszagok_arazas_2_fazis.md) — 2026-11-26 — „Országok / Árazás” 2. fázis: új ország listából, Indulás / Szünetel (SUB cita363cd23)
 - [2026-11-26_orszagok_arazas_1_fazis.md](2026-11-26_orszagok_arazas_1_fazis.md) — 2026-11-26 — „Országok / Árazás” 1. fázis: egy lap, táblázat + három fül (SUB cita363cd23)
 - [2026-11-26_orszag-sav-valasz-forditas.md](2026-11-26_orszag-sav-valasz-forditas.md) — 2026-11-26 — Riport ország-sáv minden fülön + bejövő üzenet országa és fordítása (Bábel)
 - [2026-11-26_kivezetett_sablon_kapu.md](2026-11-26_kivezetett_sablon_kapu.md) — 2026-11-26 — Kivezetett sablon: kiküldési és próba-kapu (+ Freedom 50 új tervek)

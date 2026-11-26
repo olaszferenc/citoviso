@@ -61,6 +61,10 @@ export interface CountryConfig {
   readonly publicHolidays: readonly string[];
   // Kiküldés (0155, „Országok / Árazás” 4. fázis): the dispatch rules — countryDispatch.ts reads them.
   readonly dispatch: CountryDispatch;
+  // Életciklus (0157, 2. fázis): when „Indulás” was pressed, when (and by whom) the country was paused.
+  readonly launchedAt: Date | null;
+  readonly pausedAt: Date | null;
+  readonly pausedBy: string | null;
 }
 
 /** The dispatch rules of a country (0155). Defaults = the behaviour before the columns existed. */
@@ -106,6 +110,8 @@ export const DISPATCH_DEFAULTS: CountryDispatch = {
   nonOpener: { on: false, days: 14, count: 1, dailyCap: 0 },
   escalationFollowup: false,
 };
+
+const dateOf = (v: unknown): Date | null => (v instanceof Date ? v : typeof v === "string" && v ? new Date(v) : null);
 
 function dispatchOf(r: Record<string, unknown>): CountryDispatch {
   const d = DISPATCH_DEFAULTS;
@@ -186,6 +192,9 @@ function toConfig(r: Row): CountryConfig {
     touristTaxModel: r.tourist_tax_model === "hu" ? "hu" : "none",
     publicHolidays: strList(r.public_holidays).filter((d) => /^(?:\d{4}-)?\d{2}-\d{2}$/.test(d)),
     dispatch: dispatchOf(r as Record<string, unknown>),
+    launchedAt: dateOf((r as Record<string, unknown>).launched_at),
+    pausedAt: dateOf((r as Record<string, unknown>).paused_at),
+    pausedBy: typeof (r as Record<string, unknown>).paused_by === "string" ? ((r as Record<string, unknown>).paused_by as string) : null,
   };
 }
 

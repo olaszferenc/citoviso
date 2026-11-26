@@ -12,6 +12,7 @@
 import { countryConfigSync, DISPATCH_DEFAULTS, type CountryConfig } from "./country.js";
 import { T } from "./i18n/mail.js";
 import { minorDigits } from "./text/money.js";
+import { catalogCountry, countryNameIn } from "./countryCatalog.js";
 
 /** The channels a row may list (migration 0133). */
 export const COUNTRY_CHANNELS = ["email", "sms", "mms", "viber", "whatsapp"] as const;
@@ -31,38 +32,11 @@ export const EURO_AREA: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * What a NEW row of an EU country starts from — public facts (language, zone, calling code,
- * trunk prefix, currency), so the operator corrects instead of typing. Everything else starts
- * empty and the validation says what is missing. Not a fallback: a saved row is what counts.
+ * What a NEW row starts from — public facts (language, zone, calling code, trunk prefix, currency) from
+ * the world catalog („Országok / Árazás” 2. fázis, src/countryCatalog.ts — it replaced the EU-only starter of
+ * ADR-0460 ⑨), so the operator corrects instead of typing. Everything else starts empty and the validation
+ * says what is missing. Not a fallback: a saved row is what counts.
  */
-const EU_STARTERS: Readonly<Record<string, { lang: string; tz: string; dial: string; trunk: string; ccy: string }>> = {
-  AT: { lang: "de", tz: "Europe/Vienna", dial: "43", trunk: "0", ccy: "EUR" },
-  BE: { lang: "nl", tz: "Europe/Brussels", dial: "32", trunk: "0", ccy: "EUR" },
-  BG: { lang: "bg", tz: "Europe/Sofia", dial: "359", trunk: "0", ccy: "EUR" },
-  CY: { lang: "el", tz: "Asia/Nicosia", dial: "357", trunk: "", ccy: "EUR" },
-  CZ: { lang: "cs", tz: "Europe/Prague", dial: "420", trunk: "", ccy: "CZK" },
-  DE: { lang: "de", tz: "Europe/Berlin", dial: "49", trunk: "0", ccy: "EUR" },
-  DK: { lang: "da", tz: "Europe/Copenhagen", dial: "45", trunk: "", ccy: "DKK" },
-  EE: { lang: "et", tz: "Europe/Tallinn", dial: "372", trunk: "", ccy: "EUR" },
-  ES: { lang: "es", tz: "Europe/Madrid", dial: "34", trunk: "", ccy: "EUR" },
-  FI: { lang: "fi", tz: "Europe/Helsinki", dial: "358", trunk: "0", ccy: "EUR" },
-  FR: { lang: "fr", tz: "Europe/Paris", dial: "33", trunk: "0", ccy: "EUR" },
-  GR: { lang: "el", tz: "Europe/Athens", dial: "30", trunk: "", ccy: "EUR" },
-  HR: { lang: "hr", tz: "Europe/Zagreb", dial: "385", trunk: "0", ccy: "EUR" },
-  IE: { lang: "en", tz: "Europe/Dublin", dial: "353", trunk: "0", ccy: "EUR" },
-  IT: { lang: "it", tz: "Europe/Rome", dial: "39", trunk: "", ccy: "EUR" },
-  LT: { lang: "lt", tz: "Europe/Vilnius", dial: "370", trunk: "8", ccy: "EUR" },
-  LU: { lang: "fr", tz: "Europe/Luxembourg", dial: "352", trunk: "", ccy: "EUR" },
-  LV: { lang: "lv", tz: "Europe/Riga", dial: "371", trunk: "", ccy: "EUR" },
-  MT: { lang: "mt", tz: "Europe/Malta", dial: "356", trunk: "", ccy: "EUR" },
-  NL: { lang: "nl", tz: "Europe/Amsterdam", dial: "31", trunk: "0", ccy: "EUR" },
-  PL: { lang: "pl", tz: "Europe/Warsaw", dial: "48", trunk: "", ccy: "PLN" },
-  PT: { lang: "pt", tz: "Europe/Lisbon", dial: "351", trunk: "", ccy: "EUR" },
-  RO: { lang: "ro", tz: "Europe/Bucharest", dial: "40", trunk: "0", ccy: "RON" },
-  SE: { lang: "sv", tz: "Europe/Stockholm", dial: "46", trunk: "0", ccy: "SEK" },
-  SI: { lang: "sl", tz: "Europe/Ljubljana", dial: "386", trunk: "0", ccy: "EUR" },
-  SK: { lang: "sk", tz: "Europe/Bratislava", dial: "421", trunk: "0", ccy: "EUR" },
-};
 
 /** A row as the console edits it: numbers stay the typed text until validation says yes. */
 export interface CountryDraft {
@@ -147,16 +121,18 @@ export function draftFromConfig(c: CountryConfig): CountryDraft {
 /** The blank draft a new country starts from (EU starters filled in when known). */
 export function blankDraft(iso2: string): CountryDraft {
   const cc = iso2.trim().toUpperCase();
-  const s = EU_STARTERS[cc];
+  const c = catalogCountry(cc);
+  const s = c ? { lang: c.lang, tz: c.tz, dial: c.dial, trunk: c.trunk, ccy: c.currency } : null;
   const lang = s?.lang ?? "";
   return {
     iso2: cc,
-    name: "",
+    name: c ? countryNameIn(cc, "hu") : "",
     aliases: [],
     defaultLang: lang,
     timeZone: s?.tz ?? "",
     currency: s?.ccy ?? (EURO_AREA.has(cc) ? "EUR" : ""),
-    pricingRegion: "",
+    // The picker creates the country's own pricing region (its currency) before the editor opens.
+    pricingRegion: c ? cc.toLowerCase() : "",
     paymentProvider: "barion",
     touristTaxModel: "none",
     invoiceLang: lang,
@@ -361,6 +337,9 @@ export function draftAsConfig(r: CountryDraft): CountryConfig {
     publicHolidays: r.publicHolidays,
     // 0155: the „Adatok” editor does not edit the dispatch rules — the stored row's (or the defaults).
     dispatch: countryConfigSync(r.iso2)?.dispatch ?? DISPATCH_DEFAULTS,
+    launchedAt: countryConfigSync(r.iso2)?.launchedAt ?? null,
+    pausedAt: countryConfigSync(r.iso2)?.pausedAt ?? null,
+    pausedBy: countryConfigSync(r.iso2)?.pausedBy ?? null,
   };
 }
 
