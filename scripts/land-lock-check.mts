@@ -15,7 +15,7 @@
 //   ② A ZÁRTARTÓ HALÁLA: A-t `kill -9`-cel leöljük, miközben a gyereke (alvás) ÁRVÁN tovább él
 //      → B ≤ 5 s alatt továbbmegy. (Egy örökölt fd-s zár az árva gyerek életéig zárva tartana.)
 //   ③ STRUKTÚRA: a `land.sh` a zárat feltétel/kapcsoló nélkül veszi fel, a zár alatt ÚJRA fetchel a push
-//      előtt, az előkör (ADR-XXXX) kapuit CSAK a `land_pregate_valid` igenjére (a zár alatti fetch után)
+//      előtt, az előkör (ADR-0494) kapuit CSAK a `land_pregate_valid` igenjére (a zár alatti fetch után)
 //      veszi érvényesnek, és a visszaellenőrzés („IGAZOLTAN FENT”) UTÁN engedi el.
 //   ── visszarontások (mindnek PIROSNAK kell lennie, különben a zöld nem bizonyít semmit) ──
 //   ④ a zár kivéve a könyvtárból (flock nélkül) → az ① átfedést lát.
@@ -28,7 +28,7 @@
 //   ⑧ a VALÓDI scripts/land-merge.sh: a mainbe merge-el egy hotfix-ágat úgy, hogy a main FÁJA bájtra
 //      változatlan, a hotfix-commit a main őse, a merge két szülős; másodszorra „nincs teendő”.
 //   ⑨ visszarontás: a hook elutasítása kivéve (exit 0) → a ⑦ zár nélküli pusha átmegy → PIROS.
-//   ── az OPTIMISTA ELŐKÖR (ADR-XXXX): a kapuk a zár ELŐTT futnak; a zár alatt csak akkor nem futnak újra,
+//   ── az OPTIMISTA ELŐKÖR (ADR-0494): a kapuk a zár ELŐTT futnak; a zár alatt csak akkor nem futnak újra,
 //      ha a main és a HEAD pontosan az, amire futottak ──
 //   ⑩ a VALÓDI land_pregate_valid: változatlan main+HEAD → érvényes; üres arg, elmozdult HEAD, elmozdult
 //      main → érvénytelen. Visszarontás: mindig érvényes (return 0) → PIROS.
@@ -205,7 +205,7 @@ function structure(text: string): string[] {
   if (acq < 0) bad.push("③ nincs feltétel nélküli `land_lock_acquire \"$ROOT\" || fail …` sor a land.sh felső szintjén");
   if (acq >= 0 && (fetch < 0 || push < 0 || !(acq < fetch && fetch < push)))
     bad.push("③ a zár alatt nincs friss `git fetch origin` a push ELŐTT (a push nem a zár alatt látott mainre épül)");
-  // ADR-XXXX: the gates may be skipped under the lock ONLY through land_pregate_valid, after the in-lock fetch.
+  // ADR-0494: the gates may be skipped under the lock ONLY through land_pregate_valid, after the in-lock fetch.
   if (skip < 0 || skip < fetch || skip > push) bad.push("③ az előkör érvényessége nem a zár alatti fetch után, `land_pregate_valid \"$PRE_BASE\" \"$PRE_HEAD\"`-dal dől el");
   if (/PREGATE_(FORCE|SKIP|TRUST)|CIT_LAND_TRUST/.test(text)) bad.push("③ kapcsoló, ami az előkört ellenőrzés nélkül érvényesnek venné");
   if (src >= 0 && acq >= 0 && src > acq) bad.push("③ a land_lock_acquire a source előtt áll");

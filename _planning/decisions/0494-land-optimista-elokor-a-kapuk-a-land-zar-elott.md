@@ -1,4 +1,4 @@
-## ADR-XXXX — Land: optimista előkör — a kapuk a land-zár ELŐTT futnak, a zár alatt csak a push (2026-11-26)
+## ADR-0494 — Land: optimista előkör — a kapuk a land-zár ELŐTT futnak, a zár alatt csak a push (2026-11-26)
 
 - **Státusz:** elfogadva (tulaj, 2026-11-26: „mehet minden a gyorsításra”)
 - **Érinti:** `scripts/land.sh`, `scripts/land-lock.sh` (`land_pregate_valid`), `scripts/land-lock-check.mts` (③ új alak, ⑥ +2 visszarontás, ⑩), `hooks/pre-commit` (komment); módosítja: ADR-0275 (gépszintű land-sor) „a zár az ELSŐ fetch előtt” szabályát

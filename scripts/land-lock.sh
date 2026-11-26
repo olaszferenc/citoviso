@@ -67,7 +67,7 @@ land_lock_acquire() {
   echo "🔒 land-sor: zár megszerezve ($((ticks / 5)) s várakozás után) — $LAND_LOCK_FILE"
 }
 
-# land_pregate_valid <pre_base> <pre_head> — OPTIMISTIC PRE-PASS (ADR-XXXX). land.sh runs rebase + tsc + the
+# land_pregate_valid <pre_base> <pre_head> — OPTIMISTIC PRE-PASS (ADR-0494). land.sh runs rebase + tsc + the
 # gate suite BEFORE taking the lock, so a land no longer holds the queue for its 7–15 minutes of gates
 # (measured 2026-11-26: 400–900 s under the lock, every other land waiting behind it). Under the lock it
 # fetches again, and this predicate decides whether those gates still describe EXACTLY what would be
