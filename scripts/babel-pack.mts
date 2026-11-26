@@ -26,8 +26,11 @@
 //   kb-export <lang> [--all] [--out dir]
 //       the help entries to translate (default: missing or stale for <lang>): one
 //       <entry-id>.json per entry {id, source_hash, title, body, most?} into --out (default
-//       stdout as one JSON array). Rules: the **„…”** labels stay Hungarian VERBATIM, image
-//       paths unchanged, same number of "## " headings.
+//       stdout as one JSON array) + `labels`: what each Hungarian **„…”** label must read in
+//       <lang> — the admin's translated button text (packs/<lang>.json), „…in: X” = a
+//       fragment of the translation X, or the Hungarian label where the screen shows
+//       Hungarian (2026-11-26). Image paths unchanged, same number of "## " headings.
+//       Also exported: a committed seed whose labels the current gate refuses.
 //   kb-import <lang> <file.json|dir> [--seed]
 //       {id, source_hash, title, body} back (one file or a directory of them); the source
 //       hash must match the CURRENT Hungarian entry and the structure must survive
@@ -62,7 +65,16 @@ import { fileURLToPath } from "node:url";
 import { sql } from "kysely";
 
 import { glossaryFor, glossaryTerms, surfaceOf } from "../src/i18n/babel.js";
-import { kbCoverage, kbSeeds, kbSourceHash, kbTranslationValid, translatableKbEntries } from "../src/i18n/kbPacks.js";
+import {
+  kbCoverage,
+  kbLabelHints,
+  kbLabelProblems,
+  kbSeedProblem,
+  kbSeeds,
+  kbSourceHash,
+  kbTranslationValid,
+  translatableKbEntries,
+} from "../src/i18n/kbPacks.js";
 import { DEFAULT_LANG } from "../src/i18n/lang.js";
 import { babelSeed, loadCatalog, loadPack, placeholderProblem } from "../src/i18n/packs.js";
 import { db } from "../src/db/client.js";
@@ -313,17 +325,27 @@ if (cmd === "export") {
     .filter((e) => {
       if (flag("--all")) return true;
       const h = kbSourceHash(e);
-      return have.get(e.id)?.source_hash !== h && seeds[e.id]?.source_hash !== h;
+      const seed = seeds[e.id];
+      // a current seed the label gate refuses (Hungarian label where the admin is translated)
+      if (seed && seed.source_hash === h && kbSeedProblem(e, seed, lang)) return true;
+      return have.get(e.id)?.source_hash !== h && seed?.source_hash !== h;
     })
     .map((e) => {
       const cur = have.get(e.id);
-      return { id: e.id, source_hash: kbSourceHash(e), title: e.title, body: e.body, ...(cur ? { most: { title: cur.title, body: cur.body_md } } : {}) };
+      return {
+        id: e.id,
+        source_hash: kbSourceHash(e),
+        title: e.title,
+        body: e.body,
+        labels: kbLabelHints(e.body, lang),
+        ...(cur ? { most: { title: cur.title, body: cur.body_md } } : {}),
+      };
     });
   const out = opt("--out");
   if (out) {
     mkdirSync(out, { recursive: true });
     for (const r of rows) writeFileSync(path.join(out, `${r.id}.json`), JSON.stringify(r, null, 1) + "\n", "utf8");
-    console.log(`${rows.length} súgó-cikk → ${out}/ (a **„…”** feliratok magyarul, betűre maradnak)`);
+    console.log(`${rows.length} súgó-cikk → ${out}/ (a **„…”** feliratok a „labels” szerint: a ${lang} admin gombfelirata)`);
   } else process.stdout.write(JSON.stringify(rows, null, 1) + "\n");
 } else if (cmd === "kb-import") {
   const src = rest.find((a) => !a.startsWith("--"));
@@ -343,8 +365,11 @@ if (cmd === "export") {
         ? "elavult: a magyar forrás azóta változott — exportáld újra"
         : !t.title?.trim()
           ? "üres cím"
-          : !t.body || !kbTranslationValid(entry.body, t.body)
-            ? "integritás-sértés (felirat / kép-útvonal / alcím-szám)"
+          : !t.body || !kbTranslationValid(entry.body, t.body, lang)
+            ? `integritás-sértés (felirat / kép-útvonal / alcím-szám)${(() => {
+                const p = kbLabelProblems(entry.body, t.body, lang);
+                return p.length ? ` — felirat: ${p.slice(0, 5).join(" · ")}${p.length > 5 ? " …" : ""}` : "";
+              })()}`
             : null;
     if (problem) {
       refused++;

@@ -14,10 +14,19 @@
 // bizonyítja, hogy a normalizálás után is bukik a lefordított, a kihagyott és az
 // odaköltött felirat — vagyis nem a kaput nyitottuk ki, csak a sortörést engedtük el.
 //
+// ⛔ 2026-11-26 (Bábel jelezte): a felirat a CIKK NYELVÉN az, amit az admin abban a nyelvben
+// MUTAT — a magyar forrás-kulcs → `src/i18n/babel/packs/<lang>.json` értéke. Az admin ma
+// minden EU-nyelven fordított, a betűre magyar felirat egy horvát súgóban nem létező gombot
+// ígért. A ④ szakasz ezt bizonyítja a VALÓDI csomagokon: a fordított felirat átmegy, a
+// magyar (rossz nyelvű), a más nyelvű és a nem létező felirat bukik. A magyar cikk
+// (lang elhagyva = hu) változatlanul a magyar feliratot követeli (②).
+//
 //   npx tsx scripts/kb-translation-integrity-check.mts
 //   npx tsx scripts/kb-translation-integrity-check.mts --selftest   (pirosra kell mennie)
 
-import { kbTranslationValid } from "../src/i18n/kbPacks.js";
+import { readFileSync } from "node:fs";
+
+import { kbLabelHints, kbLabelProblems, kbTranslationValid } from "../src/i18n/kbPacks.js";
 import { loadKbEntries } from "../src/kb/kb.js";
 
 const SELFTEST = process.argv.includes("--selftest");
@@ -76,14 +85,14 @@ console.log("\n① A sortörés NEM tartalmi eltérés (a mért hiba):");
 
 /* ══ ② A SZIGORÚSÁG MEGMARAD — ez a fontosabb fele ═════════════════════════ */
 
-console.log("\n② ⛔ Amit ezután is EL KELL utasítani (nem kaput nyitottunk):");
+console.log("\n② ⛔ MAGYAR cikkben (lang = hu) amit ezután is EL KELL utasítani (nem kaput nyitottunk):");
 {
   const src = "## Cím\n\nA **„Beállítások mentése”** gombbal ment, a **„Mégsem”** gombbal kilép.\n";
 
   const translatedLabel =
     "## Nadpis\n\nTlačidlom **„Uložiť nastavenia”** uložíte, tlačidlom **„Mégsem”** zatvoríte.\n";
   check(
-    "⭐⭐ LEFORDÍTOTT felirat bukik (a felület magyar — a gomb nem létezne)",
+    "⭐⭐ magyar cikkben a LEFORDÍTOTT felirat bukik (a magyar felület gombja nem ez)",
     !kbTranslationValid(src, translatedLabel),
   );
 
@@ -140,12 +149,89 @@ console.log("\n③ A VALÓDI súgó-cikkeken (nem kitalált mintán):");
   );
 }
 
+/* ══ ④ A CIKK NYELVÉN: a lefordított admin felirata (2026-11-26) ══════════ */
+
+console.log("\n④ A cikk nyelvén a csomag szerinti FORDÍTOTT felirat kell (valódi packs/<lang>.json):");
+{
+  const pack = (l: string): Record<string, string> =>
+    JSON.parse(readFileSync(new URL(`../src/i18n/babel/packs/${l}.json`, import.meta.url), "utf8")) as Record<string, string>;
+  const hr = pack("hr");
+  const cs = pack("cs");
+  const save = "Beállítások mentése";
+  const cancel = "Mégsem";
+  // A teszt a VALÓDI csomagból veszi az elvárt feliratot — ha Bábel átfogalmaz, nem törik.
+  check(
+    "előfeltétel: a két felirat le van fordítva hr-re ÉS cs-re, és a kettő eltér",
+    !!hr[save] && !!hr[cancel] && !!cs[save] && hr[save] !== save && hr[save] !== cs[save],
+    `hr: ${hr[save]} · cs: ${cs[save]}`,
+  );
+  const src = `## Cím\n\nA **„${save}”** gombbal ment, a **„${cancel}”** gombbal kilép.\n`;
+  const body = (a: string, b: string): string => `## Naslov\n\nGumbom **„${a}”** spremate, gumbom **„${b}”** izlazite.\n`;
+
+  check(
+    "⭐⭐ hr cikkben a hr admin felirata ÁTMEGY",
+    SELFTEST ? false : kbTranslationValid(src, body(hr[save]!, hr[cancel]!), "hr"),
+    SELFTEST ? "ÖNTESZT: szándékosan pirosra állítva" : "",
+  );
+  check("a feliratok sorrendje a fordításban szabad", kbTranslationValid(src, body(hr[cancel]!, hr[save]!), "hr"));
+  check(
+    "⭐⭐ ROSSZ NYELVŰ: hr cikkben a MAGYAR felirat bukik (a horvát képernyőn nincs ilyen gomb)",
+    !kbTranslationValid(src, body(save, cancel), "hr"),
+  );
+  check(
+    "⭐⭐ ROSSZ NYELVŰ: hr cikkben a CSEH felirat bukik",
+    !kbTranslationValid(src, body(cs[save]!, hr[cancel]!), "hr"),
+  );
+  check(
+    "⭐⭐ NEM LÉTEZŐ felirat bukik (kitalált gomb)",
+    !kbTranslationValid(src, body("Spremi sve odmah", hr[cancel]!), "hr"),
+  );
+  check(
+    "⭐ ugyanaz a cs cikkben fordítva: a cs felirat átmegy, a hr bukik",
+    kbTranslationValid(src, body(cs[save]!, cs[cancel]!), "cs") && !kbTranslationValid(src, body(hr[save]!, hr[cancel]!), "cs"),
+  );
+  check(
+    "⭐ a kihagyott és az odaköltött felirat a nyelvi szabály mellett is bukik",
+    !kbTranslationValid(src, `## N\n\n**„${hr[save]}”**\n`, "hr") &&
+      !kbTranslationValid(src, body(hr[save]!, hr[cancel]!) + `**„${hr[save]}”**\n`, "hr"),
+  );
+  check(
+    "a hiba-riport megnevezi a rossz feliratot",
+    kbLabelProblems(src, body(save, hr[cancel]!), "hr").includes(save),
+    JSON.stringify(kbLabelProblems(src, body(save, hr[cancel]!), "hr")),
+  );
+
+  // ② RÉSZLET: a felirat egy hosszabb képernyő-szöveg eleje („Befizetem — {amount}”).
+  const fragKey = "Befizetem — {amount}";
+  if (hr[fragKey]) {
+    const fragHr = hr[fragKey]!.split(" — ")[0]!;
+    const fsrc = "## C\n\nA **„Befizetem”** gombbal fizet.\n";
+    check(
+      `⭐ RÉSZLET-felirat: a fordítás megfelelő darabja („${fragHr}”) átmegy, a magyar bukik`,
+      kbTranslationValid(fsrc, `## N\n\nGumbom **„${fragHr}”** plaćate.\n`, "hr") &&
+        !kbTranslationValid(fsrc, "## N\n\nGumbom **„Befizetem”** plaćate.\n", "hr"),
+    );
+  }
+  // ③ NEM a mi képernyőnk szövege → marad magyarul (nincs mire fordítani).
+  const ext = "## C\n\nA **„Qzx-külső felirat”** lapon.\n";
+  check(
+    "a katalógusban sehol nem szereplő felirat marad magyarul (más nyelven bukik)",
+    kbTranslationValid(ext, "## N\n\nNa **„Qzx-külső felirat”** stranici.\n", "hr") &&
+      !kbTranslationValid(ext, "## N\n\nNa **„Qzx-vanjski natpis”** stranici.\n", "hr"),
+  );
+  check(
+    "kb-export súgása: a hr cikkhez a hr gombfeliratot adja",
+    kbLabelHints(src, "hr")[save] === hr[save],
+    JSON.stringify(kbLabelHints(src, "hr")),
+  );
+}
+
 /* ══ verdikt ══════════════════════════════════════════════════════════════ */
 
 if (SELFTEST) {
-  const key = "⭐⭐ az egy sorba írt, betűre azonos felirat ÁTMEGY";
-  if (failures.includes(key) && failures.length === 1) {
-    console.log("\n✅ ÖNTESZT: a döntő állítás pirosra ment, a szigorúság-állítások zöldek maradtak.");
+  const keys = ["⭐⭐ az egy sorba írt, betűre azonos felirat ÁTMEGY", "⭐⭐ hr cikkben a hr admin felirata ÁTMEGY"];
+  if (keys.every((k) => failures.includes(k)) && failures.length === keys.length) {
+    console.log("\n✅ ÖNTESZT: a két döntő állítás pirosra ment, a szigorúság-állítások zöldek maradtak.");
     process.exit(0);
   }
   console.log(`\n⛔ ÖNTESZT BUKOTT: ${failures.length} bukás`);

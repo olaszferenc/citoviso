@@ -56,6 +56,7 @@ import {
   type MultilangAdminData,
 } from "../src/server/adminViews.js";
 import { multilangCatalogView } from "../src/tenant/multilangCard.js";
+import { babelSeed, installPack } from "../src/i18n/packs.js";
 import type { DomainAdminData } from "../src/domains/domainAdmin.js";
 import type { WalletAdminData } from "../src/tenant/wallet.js";
 import { moduleSettingsSection } from "../src/server/moduleConfigViews.js";
@@ -112,6 +113,10 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 // Language of the shot UI. Today the admin renders Hungarian; when the admin surface
 // gets language packs, this drives per-language captures of the same fixtures.
 const LANG = process.env.KB_SHOT_LANG ?? "hu";
+// 2026-11-26: the admin IS translated (ADR-0067: the site language drives the whole admin),
+// so a non-Hungarian capture needs Bábel's committed pack in the render cache — without it
+// every T() fell back to Hungarian and KB_SHOT_LANG=hr shot a Hungarian screen.
+if (LANG !== "hu") installPack(LANG, babelSeed(LANG));
 /** 0074: the pricing shot's year strip is pinned to this year (and "today" to the year before). */
 const SHOT_YEAR = 2027;
 
@@ -300,6 +305,8 @@ const content = {
   usingOwnPhotos: true,
   status: "live",
   previewPath: null,
+  // ADR-0067: the admin's language is the site's — the shot language must reach it.
+  ...(LANG !== "hu" ? { lang: LANG } : {}),
 } as unknown as Parameters<typeof adminDashboard>[1];
 
 const units = [
