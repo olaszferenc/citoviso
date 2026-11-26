@@ -4,6 +4,7 @@
 //
 //   npx tsx scripts/discovery-areas.mts plan                 # JSON: walked countries + areas in order, shut ones + why
 //   npx tsx scripts/discovery-areas.mts ensure <region> [--dry]   # region row + root tiles; JSON: tiles, nearest to start first
+//   npx tsx scripts/discovery-areas.mts status <ISO>         # JSON: the launch status (marketLaunchStatus)
 //   npx tsx scripts/discovery-areas.mts ids                  # "ISO CODE region" for every lexicon area (the Python twin's test)
 //
 // Runs against whatever DB the app is configured for (prod: /opt/citoviso/app, dev: the main tree).
@@ -16,6 +17,7 @@ import {
   discoveryCountries,
   discoveryStart,
   ensureDiscoveryArea,
+  marketLaunchStatus,
 } from "../src/scout/discoveryAreas.js";
 
 const [cmd, arg] = process.argv.slice(2);
@@ -25,6 +27,10 @@ const only = (process.env.COUNTRY ?? "").trim().toUpperCase();
 async function main(): Promise<number> {
   if (cmd === "ids") {
     for (const lx of allCountryLexicons()) for (const a of discoveryAreas(lx.iso2)) console.log(`${a.iso2} ${a.code} ${a.region}`);
+    return 0;
+  }
+  if (cmd === "status" && arg) {
+    console.log(JSON.stringify(await marketLaunchStatus(arg)));
     return 0;
   }
   if (cmd === "plan") {
@@ -52,7 +58,7 @@ async function main(): Promise<number> {
     console.log(JSON.stringify(r.tiles));
     return 0;
   }
-  console.error("usage: discovery-areas.mts plan | ensure <region> [--dry] | ids"); // i18n-exempt: operátori CLI
+  console.error("usage: discovery-areas.mts plan | ensure <region> [--dry] | status <ISO> | ids"); // i18n-exempt: operátori CLI
   return 1;
 }
 

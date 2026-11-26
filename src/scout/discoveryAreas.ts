@@ -21,6 +21,7 @@
 // ⛔ Fail closed: a country without a lexicon, keywords or an open market is not walked, and the
 //    reason is printed (plan → `shut`). An area whose boundary Overpass cannot find gets NO row (never
 //    a guessed box).
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { countryLexicon } from "../countryLexicon.js";
 import { countryConfig } from "../country.js";
@@ -245,4 +246,82 @@ export async function ensureDiscoveryArea(
   const list = before.length || opts.dry ? before : await roots();
   const tiles: RootTile[] = list.map((t) => ({ ...t, parent_id: null }));
   return { area, regionCreated, tilesCreated, tiles: orderFromStart(tiles, discoveryStart(area.iso2)) };
+}
+
+// ── THE LAUNCH STATUS of a market (koordinátor 2026-11-26: the new „Országok / Árazás” page lists it) ─────
+// One function returns every launch step's numbers for a country — the page writes them out in its own
+// words (no text here). Order = the chain's order: open → areas → tiles → walk → leads → contact → mock → send.
+
+export type LaunchStepKey = "open" | "areas" | "tiles" | "walk" | "leads" | "contact" | "mock" | "sent";
+/** ok = this step has reached its end · run = under way · wait = not started (an earlier step holds it). */
+export type LaunchStepState = "ok" | "run" | "wait";
+
+export interface LaunchStep {
+  readonly key: LaunchStepKey;
+  readonly state: LaunchStepState;
+  /** How far: done of total where it is a count (areas, tiles); else the count itself in `done`. */
+  readonly done: number;
+  readonly total: number | null;
+}
+
+export interface LaunchStatus {
+  readonly iso2: string;
+  /** The market gate (approval + readiness) — the trigger of the whole chain. */
+  readonly open: boolean;
+  /** Why discovery does not walk it (discoveryCountries' reasons; empty when walked). */
+  readonly reasons: readonly string[];
+  /** The lexicon's start point of the walk. */
+  readonly start: LatLon | null;
+  readonly steps: readonly LaunchStep[];
+}
+
+// A lead's country: its own raw.country, else its scrape area's (src/country.ts countryOf, as SQL).
+const LEAD_CC = sql<string>`upper(coalesce(nullif(trim(l.raw->>'country'),''),
+  (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id where sr.id = l.scrape_run_id)))`;
+
+/** The launch status of one country (read-only). */
+export async function marketLaunchStatus(iso: string): Promise<LaunchStatus> {
+  const iso2 = iso.trim().toUpperCase();
+  const verdict = (await discoveryCountries()).find((v) => v.iso2 === iso2) ?? {
+    iso2,
+    open: false,
+    reasons: ["nincs ország-sor"], // i18n-exempt: operátori napló
+  };
+  const gate = await marketGate(iso2);
+  const areas = discoveryAreas(iso2);
+  const ids = areas.map((a) => a.region);
+  const regions = ids.length
+    ? Number((await db.selectFrom("region").select((e) => e.fn.countAll<string>().as("n")).where("id", "in", ids).executeTakeFirst())?.n ?? 0)
+    : 0;
+  const tiles = ids.length
+    ? await db
+        .selectFrom("scout_tile")
+        .select(["region", "state"])
+        .where("region", "in", ids)
+        .where("parent_id", "is", null)
+        .execute()
+    : [];
+  const tiledAreas = new Set(tiles.map((t) => t.region)).size;
+  const closed = tiles.filter((t) => t.state === "done" || t.state === "out").length;
+  const c = await sql<{ leads: string; contact: string; mock: string; sent: string }>`
+    select count(*) as leads,
+           count(*) filter (where coalesce(l.raw->>'email','') <> '') as contact,
+           count(*) filter (where exists (select 1 from mock_artifact m where m.lead_id = l.id)) as mock,
+           count(*) filter (where exists (select 1 from prospect p where p.lead_id = l.id and p.sent_at is not null)) as sent
+      from lead l where ${LEAD_CC} = ${iso2}`.execute(db);
+  const n = c.rows[0] ?? { leads: "0", contact: "0", mock: "0", sent: "0" };
+  const st = (done: number, total: number | null, started: boolean): LaunchStepState =>
+    total != null && total > 0 && done >= total ? "ok" : started ? "run" : "wait";
+  const leads = Number(n.leads);
+  const steps: LaunchStep[] = [
+    { key: "open", state: gate.open ? "ok" : "wait", done: gate.open ? 1 : 0, total: 1 },
+    { key: "areas", state: st(regions, areas.length, regions > 0), done: regions, total: areas.length },
+    { key: "tiles", state: st(tiledAreas, areas.length, tiledAreas > 0), done: tiledAreas, total: areas.length },
+    { key: "walk", state: st(closed, tiles.length || null, closed > 0), done: closed, total: tiles.length },
+    { key: "leads", state: leads > 0 ? "run" : "wait", done: leads, total: null },
+    { key: "contact", state: Number(n.contact) > 0 ? "run" : "wait", done: Number(n.contact), total: leads },
+    { key: "mock", state: Number(n.mock) > 0 ? "run" : "wait", done: Number(n.mock), total: leads },
+    { key: "sent", state: Number(n.sent) > 0 ? "run" : "wait", done: Number(n.sent), total: leads },
+  ];
+  return { iso2, open: gate.open, reasons: verdict.reasons, start: discoveryStart(iso2), steps };
 }
