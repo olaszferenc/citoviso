@@ -11,6 +11,7 @@ import { MODULE_CATALOG } from "../modules.js";
 import { T } from "../i18n/mail.js";
 import { formatMinor } from "../text/money.js";
 import { consoleLang } from "./i18nCtx.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { esc } from "./views.js";
 
 export function priceChangeSummary(im: ChangeImpact, o: { readonly raise: boolean; readonly cut: boolean; readonly earliest: string }): string {
@@ -92,9 +93,9 @@ export function priceChangeDialog(): string {
     .pcs-t td[data-l]::before{content:attr(data-l);color:var(--citui-muted);font-weight:400}
   }
   </style>
-  <script type="application/json" id="pcs-cfg">${JSON.stringify({
+  <script type="application/json" id="pcs-cfg">${jsonForScript({
     earliest: T(lang, "Legkorábban {date} (a mentés napja + 30 nap). A levél a mentés napján megy ki."),
-  }).replace(/</g, "\\u003c")}</script>
+  })}</script>
   <script>${PRICE_CHANGE_JS}</script>`;
 }
 
