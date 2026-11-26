@@ -78,17 +78,30 @@ interface NeedsSuggestion {
   timeZone?: string | null;
 }
 
+/** Plan orszag-szuro-forditas ⑫: a conversation Bábel still owes translations for (ADR-0412). */
+interface NeedsTranslation {
+  id: string;
+  lead: string;
+  leadId: string;
+  channel: string;
+  lang: string;
+  receivedAt: string;
+  url?: string | null;
+  items: { part: "body" | "ours" | "outreach" | "suggestion"; target: string; hash: string; text: string }[];
+}
+
 interface IngestReply {
   accepted: string[];
   dropped: number;
   answered: number;
   needsSuggestion: NeedsSuggestion[];
+  needsTranslation: NeedsTranslation[];
 }
 
 async function post(body: { items: Item[]; checked: string[]; answered?: { key: string; at: string }[] }): Promise<IngestReply> {
   if (DRY) {
     console.log(JSON.stringify(body, null, 2));
-    return { accepted: body.items.map((i) => i.key), dropped: 0, answered: 0, needsSuggestion: [] };
+    return { accepted: body.items.map((i) => i.key), dropped: 0, answered: 0, needsSuggestion: [], needsTranslation: [] };
   }
   const resp = await fetch(`${BASE}/api/replies/ingest`, {
     method: "POST",
@@ -102,12 +115,13 @@ async function post(body: { items: Item[]; checked: string[]; answered?: { key: 
     dropped: Number(r.dropped ?? 0),
     answered: Number(r.answered ?? 0),
     needsSuggestion: Array.isArray(r.needsSuggestion) ? r.needsSuggestion : [],
+    needsTranslation: Array.isArray(r.needsTranslation) ? r.needsTranslation : [],
   };
 }
 
 /** Post in batches (the endpoint's body cap); `checked` rides on the last one. */
 async function postAll(items: Item[], checked: string[], answered: { key: string; at: string }[] = []): Promise<IngestReply> {
-  const out: IngestReply = { accepted: [], dropped: 0, answered: 0, needsSuggestion: [] };
+  const out: IngestReply = { accepted: [], dropped: 0, answered: 0, needsSuggestion: [], needsTranslation: [] };
   for (let i = 0; i < items.length || i === 0; i += BATCH) {
     const last = i + BATCH >= items.length;
     const r = await post({ items: items.slice(i, i + BATCH), checked: last ? checked : [], answered: last ? answered : [] });
@@ -115,8 +129,10 @@ async function postAll(items: Item[], checked: string[], answered: { key: string
     out.dropped += r.dropped;
     out.answered += r.answered;
     out.needsSuggestion = r.needsSuggestion;
+    out.needsTranslation = r.needsTranslation;
   }
   await writePoeTickets(out.needsSuggestion);
+  await writeBabelTickets(out.needsTranslation);
   return out;
 }
 
@@ -194,6 +210,59 @@ async function writePoeTickets(list: NeedsSuggestion[]): Promise<void> {
     }
   }
   if (made) console.log(`[replies-${MODE}] ${made} új Poe-jegy a ${POE_INBOX}-ban.`);
+}
+
+// ── Bábel's translation tickets (plan orszag-szuro-forditas ⑫, ADR-0412) ─────────────────
+
+const BABEL_INBOX = process.env.BABEL_INBOX_DIR || path.join(os.homedir(), "babel", "beerkezo");
+
+const PART_NAME: Record<NeedsTranslation["items"][number]["part"], string> = {
+  body: "a bejövő üzenet",
+  ours: "a kiküldött megkeresés",
+  outreach: "a kiküldött megkeresés (messenger-kísérőszöveg)",
+  suggestion: "Poe javasolt válasza",
+};
+
+/**
+ * One ticket per conversation and per SET of owed parts: the name carries a fingerprint of the
+ * (part, target, source-hash) list, so a new part (Poe's suggestion lands) or a changed source
+ * makes a new ticket, an unchanged one is never rewritten.
+ */
+function babelTicket(n: NeedsTranslation, consoleBase: string): { name: string; body: string } {
+  const fp = createHash("sha256").update(n.items.map((i) => `${i.part}:${i.target}:${i.hash}`).sort().join("|")).digest("hex").slice(0, 8);
+  const name = `${bpDay(n.receivedAt)}-forditas-${n.id.slice(0, 8)}-${fp}.md`;
+  const url = n.url || `${consoleBase}/?reply=${encodeURIComponent(n.id)}#replies`;
+  const body =
+    `# Fordítás — ${n.lead} (beszélgetés nyelve: ${n.lang})\n\n` +
+    `- Konzol: ${url}\n` +
+    `- A fordítást a konzolon, a beszélgetés alatti „Fordítás letétele (Bábel)” lenyílóban teszed le, a babel fiókkal — részenként és célnyelvenként egy űrlap.\n` +
+    `- Az operátor ezt olvassa a saját konzol-nyelvén; hűen fordíts, semmit ne tegyél hozzá és ne hagyj el (név, szám, ár, link marad, ahogy van). Az eredeti szöveg a fordítás alatt mindig látszik.\n` +
+    `- Ha az űrlap „a forrás-szöveg közben megváltozott” hibát ad: egy újabb jegy jön a friss szöveggel, azt fordítsd.\n\n` +
+    n.items
+      .map((i) => `## ${PART_NAME[i.part]} → ${i.target} (ujjlenyomat ${i.hash})\n\n` + i.text.split("\n").map((l) => `> ${l}`).join("\n"))
+      .join("\n\n") +
+    `\n`;
+  return { name, body };
+}
+
+async function writeBabelTickets(list: NeedsTranslation[]): Promise<void> {
+  if (!list.length) return;
+  if (DRY) {
+    for (const n of list) console.log(`[replies-${MODE}] (dry) Bábel-jegy: ${babelTicket(n, CONSOLE).name}`);
+    return;
+  }
+  if (!fs.existsSync(BABEL_INBOX)) return;
+  let made = 0;
+  for (const n of list) {
+    const t = babelTicket(n, CONSOLE);
+    try {
+      fs.writeFileSync(path.join(BABEL_INBOX, t.name), t.body, { flag: "wx" });
+      made++;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+  }
+  if (made) console.log(`[replies-${MODE}] ${made} új Bábel-jegy a ${BABEL_INBOX}-ban.`);
 }
 
 function loadState<T>(file: string, empty: T): T {

@@ -2280,6 +2280,20 @@ export interface ProspectQuestionTable {
 }
 
 /** 0096: one operator send of an answer (ADR-0340) — a failed one is retried as a new row. */
+/** Bábel's translation of one part of a reply conversation into one console language (0154). */
+export interface OutreachReplyTranslationTable {
+  id: Generated<string>;
+  reply_id: string;
+  /** body · ours · outreach · suggestion */
+  part: "body" | "ours" | "outreach" | "suggestion";
+  target_lang: string;
+  /** sha256(source)[0..16] — valid only while the source text is unchanged. */
+  source_hash: string;
+  text: string;
+  translated_by: string;
+  created_at: Generated<Timestamp>;
+}
+
 export interface OutreachReplySendTable {
   id: Generated<string>;
   reply_id: string;
@@ -2378,6 +2392,7 @@ export interface Database {
   prospect_question: ProspectQuestionTable;
   outreach_reply_poll: OutreachReplyPollTable;
   outreach_reply_send: OutreachReplySendTable;
+  outreach_reply_translation: OutreachReplyTranslationTable;
   partner_message: PartnerMessageTable;
   scraper_definition: ScraperDefinitionTable;
   scrape_run: ScrapeRunTable;

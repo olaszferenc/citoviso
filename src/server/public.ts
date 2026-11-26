@@ -4559,7 +4559,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // The ticket's link: this host knows its console only when CONSOLE_URL is set — else
     // the collector falls back to its own REPLIES_CONSOLE_URL.
     const needsSuggestion = (await repliesNeedingSuggestion()).map((n) => ({ ...n, url: config.consoleUrl ? replyConsoleUrl(n.id) : null }));
-    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: auto, needsSuggestion });
+    // Plan orszag-szuro-forditas ⑫ (ADR-0412): the conversation parts Bábel still owes a translation for.
+    const { repliesNeedingTranslation } = await import("../replies/translation.js");
+    const needsTranslation = (await repliesNeedingTranslation()).map((n) => ({ ...n, url: config.consoleUrl ? replyConsoleUrl(n.id) : null }));
+    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: auto, needsSuggestion, needsTranslation });
   }
 
   // ── ADR-0282 MMS-relay API: the same Debian-box modem, the same bearer secret. ──

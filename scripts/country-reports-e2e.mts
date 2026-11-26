@@ -14,7 +14,11 @@
 //      "portal" referrer; a Czech webmail is "mail";
 //   ④ the Czech tenant's monthly traffic letter: the window starts at the lodging's midnight
 //      (Prague), the period label is the Czech date form; a Lisbon zone moves the day start;
-//   ⑤ the trial report and the tenant activity count the lodging's days.
+//   ⑤ the trial report and the tenant activity count the lodging's days;
+//   ⑥ the SHARED COUNTRY STRIP (frozen plan: design-refs/console/orszag-szuro-forditas/ ①–⑥) on
+//      all 8 Riport tabs: always shown, live layer rows listed (0 = dimmed), every tab link
+//      carries the chosen `ctry`, the „Csak …” line under it; Előfizetők folds a chosen country
+//      in ITS currency (CZ → CZK, no conversion), Tenantok narrows to that country's tenants.
 //
 //   npx tsx scripts/country-reports-e2e.mts
 import pg from "pg";
@@ -95,7 +99,9 @@ async function addCountry(iso: string, name: string, lang: string, tz: string, c
              search_keywords, ${JSON.stringify(portals)}::jsonb, own_site_tlds, ${lang}, ${iso}, browser_locale, accept_language,
              dial_code, trunk_prefix, mobile_prefixes, 'generic', phone_nsn_min, phone_nsn_max,
              outreach_channels, send_window_from, send_window_to, daily_quota, ${lang}, legal_pack, 'barion'
-      from country where iso2 = 'HU'`.compile(db),
+      from country where iso2 = 'HU'
+      -- 0150 seeds a real PT row (Europe/Lisbon): keep it, the walk only needs its zone.
+      on conflict (iso2) do nothing`.compile(db),
   );
 }
 await addCountry("CZ", "Csehország (szintetikus)", "cs", "Europe/Prague", "CZK", "cz", ["e-chalupy.cz", "hotel-test.cz"]);
@@ -295,6 +301,55 @@ try {
   const sumL = summarizeVisits(vrows, [], late, "Europe/Lisbon");
   const sumB = summarizeVisits(vrows, [], late);
   check("tenant-aktivitás napi látogatói a szállás naptárában (a látogatás Lisszabonban a mai nap)", sumL.daily[sumL.daily.length - 1]?.n === 1 && sumB.daily[sumB.daily.length - 1]?.n === 1 && sumL.daily[sumL.daily.length - 1]?.day !== sumB.daily[sumB.daily.length - 1]?.day);
+
+  console.log("⑥ közös ország-sáv mind a 8 riport-fülön");
+  const { reportFunnelPage, reportMockPage, reportLeadStockPage } = await import("../src/console/reportViews.js");
+  const { getMockReport, MOCK_PAGE } = await import("../src/console/reportData.js");
+  const { getTrialReport } = await import("../src/console/trialReport.js");
+  const { reportTrialPage } = await import("../src/console/trialReportViews.js");
+  const { getTenantActivities } = await import("../src/console/tenantActivityData.js");
+  const { reportTenantsPage } = await import("../src/console/tenantActivityViews.js");
+  const { getLeadStock } = await import("../src/console/leadStock.js");
+  const { getExperimentReport } = await import("../src/console/experimentReport.js");
+  const { reportExperimentsPage } = await import("../src/console/experimentViews.js");
+  const TABS = ["/report", "/report/behaviour", "/report/mock", "/report/trial", "/report/revenue", "/report/tenants", "/report/leads", "/report/experiments"];
+  const tq = { f: "all" as const, test: true, sort: "flag" as const, desc: false };
+  const tenantsAll = await getTenantActivities();
+  const pages = async (ctry: string): Promise<[string, string][]> => {
+    const d = await getReportData(reportPeriod("7"), "segment", "all", NOW, undefined, ctry);
+    return [
+      ["Tölcsér", reportFunnelPage(d, todayIn(APP_TZ, NOW))],
+      ["Viselkedés", reportBehaviourPage(d, "inf")],
+      ["Mock", reportMockPage(await getMockReport(0, "all", {}, NOW, ctry), { tpl: null, q: "", sort: "score", n: MOCK_PAGE })],
+      ["Próba", reportTrialPage(await getTrialReport(0, "all", null, NOW, null, ctry))],
+      ["Előfizetők", reportRevenuePage(await getRevenueReport(6, false, null, null, ctry))],
+      ["Tenantok", reportTenantsPage(tenantsAll, { ...tq, ctry })],
+      ["Lead-állomány", reportLeadStockPage(await getLeadStock(reportPeriod("0", null, null, NOW, "0"), ctry), "0")],
+      ["Kísérletek", reportExperimentsPage(await getExperimentReport(NOW, ctry))],
+    ];
+  };
+  const chipsOf = (h: string): string => h.slice(h.indexOf('class="rp-cbar"'), h.indexOf('class="rp-cscope"'));
+  for (const [tab, h] of await pages("all")) {
+    const bar = chipsOf(h);
+    check(`${tab}: a sáv látszik („Mind” chip aktív), minden élő ország-sor rajta (HU, CZ, SK, PT)`,
+      h.includes('class="rp-cbar"') && /class="rp-cc[^"]* on"[^>]*>Mind/.test(bar) && ["HU", "CZ", "SK", "PT"].every((k) => bar.includes(`rp-cc__iso">${k}<`)), bar.slice(0, 300));
+  }
+  for (const [tab, h] of await pages("CZ")) {
+    const navAt = h.indexOf('class="con-tabs"');
+    const nav = h.slice(navAt, h.indexOf("</nav>", navAt));
+    const hrefs = [...nav.matchAll(/href="([^"]*)"/g)].map((m) => m[1]!.replaceAll("&amp;", "&"));
+    const tabLinks = TABS.every((t) => hrefs.some((u) => (u === t || u.startsWith(`${t}?`)) && new URLSearchParams(u.split("?")[1] ?? "").get("ctry") === "CZ"));
+    check(`${tab} ctry=CZ: a CZ chip aktív, „Csak …” sor, mind a 8 fül-link viszi a ctry=CZ-t`,
+      /class="rp-cc[^"]* on"[^>]*><span class="rp-cc__iso">CZ</.test(chipsOf(h)) && norm(h).includes("Csak Csehország (szintetikus)") && tabLinks,
+      hrefs.join(" "));
+  }
+  const czRev = await getRevenueReport(6, false, null, null, "CZ");
+  check("Előfizetők ctry=CZ: a cseh pénznemben (CZK), csak a cseh előfizető, átváltás nincs", czRev.currency === "CZK" && czRev.subs.length === 1 && czRev.subs.every((s) => s.currency === "CZK"), `${czRev.currency} ${czRev.subs.length}`);
+  check("Előfizetők: a sáv száma = előfizetés országonként (HU 1 · CZ 1 · SK 1)", ["HU", "CZ", "SK"].every((k) => czRev.countries?.find((c) => c.iso === k)?.n === 1), JSON.stringify(czRev.countries));
+  const czTen = reportTenantsPage(tenantsAll, { ...tq, ctry: "CZ" });
+  check("Tenantok ctry=CZ: csak a cseh tenant a listán", czTen.includes("Penzion U Lípy") && !czTen.includes("Minta Vendégház") && !czTen.includes("Penzión Tatry"));
+  const ptRev = reportRevenuePage(await getRevenueReport(6, false, null, null, "PT"));
+  check("0 darabos élő ország-sor halványan (Előfizetők: PT 0)", /class="rp-cc rp-cc--off[^"]*"[^>]*><span class="rp-cc__iso">PT<\/span>.*?rp-cc__n">0</.test(ptRev));
   void hu;
   void sk;
 } finally {

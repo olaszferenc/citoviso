@@ -14,7 +14,7 @@ import { consoleLang } from "./i18nCtx.js";
 import { formatMinor, minorToMajor } from "../text/money.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { reportTabs } from "./reportViews.js";
+import { reportCountryStrip, reportTabs, withCtry } from "./reportViews.js";
 import {
   REVENUE_HORIZONS,
   cardValidOn,
@@ -64,7 +64,9 @@ function href(
 ): string {
   const p = new URLSearchParams({ h: String(over.h ?? r.horizon) });
   const c = over.c ?? r.currency;
-  if (c !== homeCurrency()) p.set("c", c);
+  // A chosen country already decides the currency (its own) — `c` only travels without one.
+  const byCountry = r.country !== undefined && r.country !== "all";
+  if (!byCountry && c !== homeCurrency()) p.set("c", c);
   if (over.t ?? r.tests) p.set("t", "1");
   const m = over.m === undefined ? r.month : over.m;
   if (m) p.set("m", m);
@@ -72,7 +74,7 @@ function href(
   const sort = over.sort ?? UI.sort;
   if (st !== "all") p.set("st", st);
   if (sort !== "next") p.set("sort", sort);
-  return `/report/revenue?${p.toString()}`;
+  return withCtry(`/report/revenue?${p.toString()}`, r.country);
 }
 
 const PRESET = (lang: string): Record<string, string> => ({
@@ -461,15 +463,22 @@ export function reportRevenuePage(r: RevenueReport, ui: RevenueUi = { st: "all",
   UI = ui;
   CUR = r.currency;
   const lang = consoleLang();
-  const tabs = reportTabs("/report/revenue", "", "", lang);
+  const tabs = reportTabs("/report/revenue", "", "", lang, r.country);
+  // The shared country strip (orszag-szuro-forditas ①): subscriptions per tenant's country. A
+  // chosen country decides the currency, so the chips drop the currency choice (`c`).
+  const strip = reportCountryStrip(withCtry(href(r, { c: homeCurrency() }), undefined), r.countries ?? [], r.country, lang);
   const hz = REVENUE_HORIZONS.map(
     (h) => `<a href="${esc(href(r, { h, m: null }))}"${h === r.horizon ? ' class="on"' : ""}>${esc(T(lang, "{n} hó", { n: h }))}</a>`,
   ).join("");
   const ts =
     `<a href="${esc(href(r, { t: false }))}"${!r.tests ? ' class="on"' : ""}>${esc(T(lang, "Kizárva"))}</a>` +
     `<a href="${esc(href(r, { t: true }))}"${r.tests ? ' class="on"' : ""}>${esc(T(lang, "Beszámítva"))}</a>`;
-  const curChips =
-    r.currencies.length > 1
+  // A chosen country is shown in its own currency (orszag-szuro-forditas ⑤, no conversion): the
+  // currency is named, not chosen.
+  const byCountry = r.country !== undefined && r.country !== "all";
+  const curChips = byCountry
+    ? `<span class="rv-fl">${esc(T(lang, "Pénznem"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Pénznem"))}"><a href="${esc(href(r))}" class="on">${esc(r.currency)}</a></div>`
+    : r.currencies.length > 1
       ? `<span class="rv-fl">${esc(T(lang, "Pénznem"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Pénznem"))}">` +
         r.currencies.map((c) => `<a href="${esc(href(r, { c: c.currency, m: null }))}"${c.currency === r.currency ? ' class="on"' : ""}>${esc(c.currency)}</a>`).join("") +
         `</div>`
@@ -479,7 +488,7 @@ export function reportRevenuePage(r: RevenueReport, ui: RevenueUi = { st: "all",
     `<span class="rv-fl">${esc(T(lang, "Tesztek"))}</span><div class="rp-chips" role="group" aria-label="${esc(T(lang, "Tesztek"))}">${ts}</div>` +
     `<span class="rp-filt__n">${esc(r.tests ? T(lang, "{n} előfizetés", { n: r.subs.length }) : T(lang, "{n} előfizetés · tesztek nélkül", { n: r.subs.length }))}</span></div>`;
   const body =
-    currencyPanel(r, lang) +
+    (byCountry ? "" : currencyPanel(r, lang)) +
     kpis(r, lang) +
     forecastPanel(r, lang) +
     `<div class="rp-grid2">${factsPanel(r, lang)}${movesPanel(r, lang)}</div>` +
@@ -487,7 +496,7 @@ export function reportRevenuePage(r: RevenueReport, ui: RevenueUi = { st: "all",
     tenantsPanel(r, lang);
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_revenue")}</h1></div>${tabs}${filter}<div class="rv">${body}</div>`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_revenue")}</h1></div>${tabs}${strip}${filter}<div class="rv">${body}</div>`,
     { active: "/report/revenue" },
   );
 }

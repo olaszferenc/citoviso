@@ -8,7 +8,7 @@ import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { APP_TZ, partsIn } from "../text/zoneTime.js";
 import { REPORT_RANGES, type ReportDays } from "./reportData.js";
-import { reportTabs } from "./reportViews.js";
+import { reportCountryStrip, reportTabs, withCtry } from "./reportViews.js";
 import {
   TRIAL_DAYS,
   TRIAL_STAGES,
@@ -66,7 +66,7 @@ function href(
   if (st !== "all") p.set("st", st);
   if (stage !== null) p.set("stage", String(stage));
   if (v) p.set("v", v);
-  return `/report/trial?${p.toString()}`;
+  return withCtry(`/report/trial?${p.toString()}`, r.country);
 }
 
 const AREA_LABEL = (lang: string): Record<string, string> => ({
@@ -420,7 +420,9 @@ function measuresTable(r: TrialReport, lang: string): string {
 
 export function reportTrialPage(r: TrialReport): string {
   const lang = consoleLang();
-  const tabs = reportTabs("/report/trial", `?days=${r.days}`, `?days=${r.days}`, lang);
+  const tabs = reportTabs("/report/trial", `?days=${r.days}`, `?days=${r.days}`, lang, r.country);
+  // The shared country strip (orszag-szuro-forditas ①): trials per trial lead's country.
+  const strip = reportCountryStrip(href(r), r.countries ?? [], r.country, lang);
   const ranges = REPORT_RANGES.map(
     (d) => `<a href="${esc(href(r, { days: d, stage: null }))}"${d === r.days ? ' class="on"' : ""}>${esc(RANGE_LABEL(d, lang))}</a>`,
   ).join("");
@@ -474,7 +476,7 @@ export function reportTrialPage(r: TrialReport): string {
 
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_trial")}</h1></div>${tabs}${filter}${body}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_trial")}</h1></div>${tabs}${strip}${filter}${body}`,
     { active: "/report/trial" },
   );
 }

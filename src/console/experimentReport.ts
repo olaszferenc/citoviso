@@ -21,6 +21,8 @@ import {
 } from "../outreach/experiment.js";
 import { budapestIsoDay, budapestMidnight, budapestWeekday } from "../text/budapestTime.js";
 import type { ExperimentDimension } from "../db/schema.js";
+import { countryConfig, countryOf } from "../country.js";
+import { countCountries, inReportCountry, type CountryCount, type ReportCountry } from "./reportData.js";
 
 /** A leader needs at least this many ≥72-hour letters (README ③). */
 export const LEADER_MIN_MATURE = 30;
@@ -57,6 +59,9 @@ export interface ExperimentReport {
   readonly dims: readonly DimensionReport[];
   readonly kpi: { readonly running: number; readonly letters: number; readonly mail24: number; readonly mature24: number; readonly capToday: number | null };
   readonly weekly: WeeklyLine;
+  /** The shared country strip: the lead-country filter and the experiment letters per country. */
+  readonly country?: ReportCountry;
+  readonly countries?: readonly CountryCount[];
 }
 
 export const rate = (a: number, b: number): number => (b > 0 ? a / b : 0);
@@ -113,8 +118,26 @@ function assemble(catalog: readonly CatalogRow[], stats: readonly VariantStats[]
   });
 }
 
-export async function getExperimentReport(now = new Date()): Promise<ExperimentReport> {
-  const [catalog, stats, cfg] = await Promise.all([loadCatalog(), loadVariantStats(now), getExperimentSettings()]);
+/** Every experiment letter (one prospect = one letter) with its lead's country (countryOf). */
+async function letterCountries(): Promise<{ prospectId: string; country: string }[]> {
+  const r = await sql<{ prospect_id: string; raw_country: string | null; area_country: string | null }>`
+    select distinct sv.prospect_id, l.raw->>'country' as raw_country, sd.country as area_country
+      from outreach_send_variant sv
+      join prospect p on p.id = sv.prospect_id
+      join lead l on l.id = p.lead_id
+      left join scrape_run sr on sr.id = l.scrape_run_id
+      left join scraper_definition sd on sd.id = sr.scraper_definition_id
+  `.execute(db);
+  await countryConfig(null); // refresh the layer snapshot once; the per-row lookups are sync
+  return r.rows.map((x) => ({ prospectId: x.prospect_id, country: countryOf({ country: x.raw_country }, x.area_country) ?? "" }));
+}
+
+export async function getExperimentReport(now = new Date(), country: ReportCountry = "all"): Promise<ExperimentReport> {
+  // The shared country strip: letters per lead country; a chosen country narrows every number.
+  const letters = await letterCountries();
+  const countries = countCountries(letters, (l) => l.country);
+  const only = country === "all" ? undefined : letters.filter((l) => inReportCountry(country, l.country)).map((l) => l.prospectId);
+  const [catalog, stats, cfg] = await Promise.all([loadCatalog(), loadVariantStats(now, only), getExperimentSettings()]);
   const today = budapestIsoDay(now);
   const plan = cfg.plan?.day === today ? cfg.plan : null;
   const dims = assemble(catalog, stats, plan?.shares ?? null);
@@ -135,8 +158,9 @@ export async function getExperimentReport(now = new Date()): Promise<ExperimentR
   const wTo = budapestMidnight(wk.to);
   const ran = await sql<{ dimension: ExperimentDimension; variant_key: string }>`
     select distinct dimension, variant_key from outreach_send_variant where sent_at >= ${wFrom} and sent_at < ${wTo}
+    ${only ? sql`and prospect_id = any(${only})` : sql``}
   `.execute(db);
-  const weekStats = await loadVariantStats(new Date(wTo.getTime() - 1));
+  const weekStats = await loadVariantStats(new Date(wTo.getTime() - 1), only);
   const weekDims = assemble(catalog, weekStats, null);
   let best: WeeklyLine["best"] = null;
   for (const d of weekDims) {
@@ -169,7 +193,7 @@ export async function getExperimentReport(now = new Date()): Promise<ExperimentR
     best,
     disabled: Number(disabledInWeek?.n ?? 0),
   };
-  return { dims, kpi, weekly };
+  return { dims, kpi, weekly, country, countries };
 }
 
 export { CONTROL_KEY };

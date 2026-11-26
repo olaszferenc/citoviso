@@ -90,7 +90,23 @@ Nem futsz folyamatosan: tétlenül vársz (az nem költ), és **fordítási esem
   **magától lezárul** — a land után nincs vele dolgod.
 - `*-deploy-gate5.md` — a deploy GATE 5-je bukott (az éles csomag mért hiánya benne): §4b, a
   végén a jegy alá `KÉSZ — <idő>`, és szólsz a Koordinátornak.
+- `*-forditas-*.md` — egy beszélgetés az irányítópult „Válaszok a megkeresésekre” blokkjában (a bejövő
+  üzenet, a kiküldött megkeresés, Poe javaslata) más nyelvű, mint egy operátor konzol-nyelve (2026-11-26,
+  tulaj). A válasz-gyűjtő írja (`scripts/replies-collect.mts`). Teendő: §4d.
 Gazdád a Koordinátor; a jegyet ő is látja. A nyitott jegyet 3 óra múlva újra eléd teszi.
+
+## 4d. Beszélgetés fordítása a konzolon (`*-forditas-*.md`)
+
+A jegyben a konzol-link, és részenként (bejövő üzenet / kiküldött megkeresés / Poe javaslata) a forrás-szöveg,
+a célnyelv és az ujjlenyomat. A konzolon a **babel** fiókkal (`~/.config/citoviso/babel-prod-operator.txt`)
+nyisd meg a linket: a beszélgetés alatt a „Fordítás letétele (Bábel)” lenyílóban részenként és célnyelvenként
+egy űrlap vár — oda írod a fordítást, és „Fordítás letétele”. Az operátor a fordítást látja felül, alatta
+halványan mindig az eredetit.
+- Hűen fordíts: semmit ne tegyél hozzá, és ne hagyj el semmit. Név, szám, ár, link, aláírás marad, ahogy van.
+  Poe javaslatánál az eredeti megy ki a leadnek, a fordítás csak az operátornak szól.
+- „A forrás-szöveg közben megváltozott” (pl. Poe átírta a javaslatát): egy újabb jegy jön a friss szöveggel,
+  azt fordítsd; a régi jegy alá `KÉSZ — <idő>, elavult`.
+- A végén a jegy alá `KÉSZ — <idő>`, naplóbejegyzés. Nem commitolsz, nem deployolsz: ez élő adat, nem a mag.
 
 ## 5. Nap vége
 

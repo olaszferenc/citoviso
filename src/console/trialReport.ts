@@ -23,7 +23,8 @@ import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { APP_TZ, isoDayDiff, isoDayIn } from "../text/zoneTime.js";
 import { tenantTimeZone } from "../tenant/timeZone.js";
-import { median, type ReportDays } from "./reportData.js";
+import { countCountries, inReportCountry, median, type CountryCount, type ReportCountry, type ReportDays } from "./reportData.js";
+import { countryOfLeads } from "../country.js";
 
 export const TRIAL_DAYS = 14;
 const HOUR = 3_600_000;
@@ -129,6 +130,9 @@ export interface TrialReport {
   readonly visitors: readonly VisitorSplit[];
   /** Prospects that came back at all (the Tölcsér „Visszatér-e?" numerator) in the range. */
   readonly returned: number;
+  /** The shared country strip: the trial lead's country filter and the trials per country. */
+  readonly country?: ReportCountry;
+  readonly countries?: readonly CountryCount[];
 }
 
 // ── pure derivation ───────────────────────────────────────────────────────────
@@ -349,6 +353,7 @@ export async function getTrialReport(
   stage: number | null,
   now = new Date(),
   bucket: VerdictBucket | null = null,
+  country: ReportCountry = "all",
 ): Promise<TrialReport> {
   const since = days ? new Date(now.getTime() - days * DAY) : null;
   // The inside is measured from the moment the 0117 table existed (its migration's applied_at) —
@@ -377,7 +382,17 @@ export async function getTrialReport(
       exists(selectFrom("prospect").select("prospect.id").whereRef("prospect.lead_id", "=", "free_trial.lead_id").where("prospect.sent_at", "is not", null)),
     );
   if (since) q = q.where("free_trial.started_at", ">=", since);
-  const base = (await q.orderBy("free_trial.started_at", "desc").execute()).filter((r) => !isTest(r.name));
+  const reached = (await q.orderBy("free_trial.started_at", "desc").execute()).filter((r) => !isTest(r.name));
+  // The shared country strip (the trial lead's country): trials per country in the range +
+  // status filter, then the whole page narrowed to the chosen one.
+  const leadCountry = await countryOfLeads(reached.map((r) => r.leadId));
+  const ofLead = (id: string): string => leadCountry.get(id) ?? "";
+  const statusOf = (s: string): string => (s === "purged" ? "lapsed" : s);
+  const countries = countCountries(
+    reached.filter((r) => st === "all" || statusOf(r.status) === st),
+    (r) => ofLead(r.leadId),
+  );
+  const base = reached.filter((r) => inReportCountry(country, ofLead(r.leadId)));
 
   const tenantIds = base.map((r) => r.tenantId).filter((x): x is string => !!x);
   const leadIds = base.map((r) => r.leadId);
@@ -442,11 +457,13 @@ export async function getTrialReport(
     .selectFrom("mock_view")
     .innerJoin("prospect", "prospect.id", "mock_view.prospect_id")
     .innerJoin("lead", "lead.id", "prospect.lead_id")
-    .select(["mock_view.prospect_id as prospectId", "mock_view.device", "mock_view.os", "mock_view.browser", "lead.name as name"])
+    .select(["mock_view.prospect_id as prospectId", "mock_view.device", "mock_view.os", "mock_view.browser", "lead.name as name", "lead.id as leadId"])
     .where("prospect.sent_at", "is not", null)
     .where((eb) => eb.or([eb("mock_view.device", "is", null), eb("mock_view.device", "!=", "bot")]));
   if (since) vq = vq.where("prospect.sent_at", ">=", since);
-  const views = (await vq.execute()).filter((v) => !isTest(v.name));
+  const seen = (await vq.execute()).filter((v) => !isTest(v.name));
+  const viewCountry = country === "all" ? null : await countryOfLeads(seen.map((v) => v.leadId));
+  const views = viewCountry ? seen.filter((v) => inReportCountry(country, viewCountry.get(v.leadId))) : seen;
   const trialed = new Set(
     (
       await db
@@ -456,7 +473,7 @@ export async function getTrialReport(
         .execute()
     ).map((r) => r.prospect_id as string),
   );
-  return foldTrialReport(raws, measuredFrom, days, st, stage, now, views, trialed, bucket);
+  return { ...foldTrialReport(raws, measuredFrom, days, st, stage, now, views, trialed, bucket), country, countries };
 }
 
 /** The page's numbers from already-loaded rows — no DB (the KB screenshots fold sample rows). */

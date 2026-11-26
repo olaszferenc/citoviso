@@ -26,6 +26,7 @@ import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { isTestLeadName } from "../outreach/ownerTestPhone.js";
 import { APP_TZ, addIsoDays, isoDayIn, isValidTimeZone, todayIn } from "../text/zoneTime.js";
 import { sourceGroupOf, type SourceGroup } from "../analytics/referrerGroup.js";
+import { countryOfLeads } from "../country.js";
 
 const DAY = 86_400_000;
 /** Days of the daily visitor chart in the block. */
@@ -61,6 +62,8 @@ export interface SourceCount {
 
 export interface TenantActivity {
   readonly tenantId: string;
+  /** The tenant's lead's country (ISO-2, "" = unknown) — the report's shared country strip. */
+  readonly country?: string;
   /** The lodging's zone (tenant.time_zone): its days and times are read in it. Absent = app zone. */
   readonly timeZone?: string;
   readonly partnerId: string | null;
@@ -204,7 +207,7 @@ export async function getTenantActivities(only?: readonly string[], now = new Da
   let tq = db
     .selectFrom("tenant")
     .innerJoin("lead", "lead.id", "tenant.lead_id")
-    .select(["tenant.id as id", "tenant.display_name as name", "tenant.created_at as createdAt", "lead.name as leadName", "tenant.time_zone as timeZone"]);
+    .select(["tenant.id as id", "tenant.lead_id as leadId", "tenant.display_name as name", "tenant.created_at as createdAt", "lead.name as leadName", "tenant.time_zone as timeZone"]);
   if (only) tq = tq.where("tenant.id", "in", only);
   const tenants = await tq.execute();
   if (!tenants.length) return [];
@@ -269,6 +272,7 @@ export async function getTenantActivities(only?: readonly string[], now = new Da
   const visitsBy = group(visits, (v) => v.tenant_id);
   const enqBy = group(enquiries, (e) => e.tenantId);
   const partnerOf = new Map(partners.map((p) => [p.tenant_id, p.id]));
+  const countryOfLead = await countryOfLeads(tenants.map((t) => t.leadId));
 
   return tenants.map((t): TenantActivity => {
     const isTest = isTestTenant(t.name, t.leadName);
@@ -322,6 +326,7 @@ export async function getTenantActivities(only?: readonly string[], now = new Da
 
     return {
       tenantId: t.id,
+      country: countryOfLead.get(t.leadId) ?? "",
       timeZone: tz,
       partnerId: partnerOf.get(t.id) ?? null,
       name: t.name,

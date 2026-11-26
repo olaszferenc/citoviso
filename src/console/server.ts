@@ -193,6 +193,7 @@ import { getDisabledModules, sampleDenyKeys, setDisabledModules } from "../modul
 import { packageAssignmentErrors, parsePackageAssignment } from "../packages.js";
 import { getRegistrar } from "../domains/registrar/index.js";
 import { getRepliesBlock, getReplySuggestion, markAnswered, unmarkAnswered } from "../replies/store.js";
+import { BABEL_USERNAME, saveTranslation } from "../replies/translation.js";
 import { replyHasPendingSend, saveSuggestion, sendAnswer } from "../replies/answer.js";
 import { renderTemplatePreview, walkReadinessView } from "./tplPreview.js";
 import type { Recipe, SiteData } from "../engine/recipe.js";
@@ -911,6 +912,7 @@ function emailListFromForm(form: URLSearchParams): string[] | undefined {
 
 /** Poe's console account — the only one the suggestion form shows to (ADR-0326). */
 const POE_USERNAME = "poe";
+
 
 /** One-shot outcome of the last send / suggestion per reply — the redirect target shows it
  *  as a toast once (kept server-side so a crafted URL cannot put words on the screen). */
@@ -1974,6 +1976,25 @@ async function handle(
       return redirect(res, `/?reply=${id}${all}#replies`);
     }
   }
+  // POST /replies/<id>/translate — Bábel lays one translation down (plan orszag-szuro-forditas ⑫,
+  // ADR-0412: the code translates nothing). Only his own `babel` account: an operator's typed
+  // text is not a translation the dashboard may label „Bábel”.
+  {
+    const m = method === "POST" ? path.match(/^\/replies\/([0-9a-f-]{36})\/translate$/) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const id = m[1]!;
+      const err =
+        op.username !== BABEL_USERNAME
+          ? T(consoleLang(), "Fordítást csak Bábel tehet le (a saját fiókjával).")
+          : await saveTranslation(id, { part: form.get("part") ?? "", lang: form.get("lang") ?? "", hash: form.get("hash") ?? "", text: form.get("text") ?? "" }, op.displayName);
+      replyNotices.set(id, err ? { kind: "failed", detail: err, at: null } : { kind: "translated", detail: null, at: null });
+      const all = form.get("f") === "all" ? "&replies=all" : "";
+      return redirect(res, `/?reply=${id}${all}#replies`);
+    }
+  }
   // GET /replies/<id>/suggestion — the editor's poll while the operator writes their own
   // answer: Poe's suggestion as JSON once it lands (README ⑥ — OFFERED, never written over).
   {
@@ -2057,6 +2078,8 @@ async function handle(
         // Poe's suggestion form shows only to the copy curator's own account — the
         // operator's screen stays the approved plan (ADR-0340).
         suggestForm: op?.username === POE_USERNAME,
+        // Bábel's translation form — only on the translator's own account (ADR-0412).
+        translateForm: op?.username === BABEL_USERNAME,
       },
     };
     if (path === "/") return send(res, 200, dashboardPage(data));
@@ -3274,6 +3297,11 @@ async function handle(
   // The filters are query params (links, no JS): days ∈ {today,7,30,90,0} (default „Ma”,
   // owner 2026-11-04) or from+to (YYYY-MM-DD, a custom send-date window), dim ∈ REPORT_DIMS,
   // seg ∈ REPORT_SEGS (lead type — scopes every metric; absent = all).
+  // ctry = the shared country strip of EVERY Riport tab (frozen plan: design-refs/console/
+  // orszag-szuro-forditas/ ①–⑥): the ISO-2 of the row's country ("-" = unknown, absent = all);
+  // the tab links carry it, so the choice survives a tab switch.
+  const reportCtryRaw = (url.searchParams.get("ctry") ?? "all").toUpperCase();
+  const reportCtry = /^[A-Z]{2}$/.test(reportCtryRaw) ? reportCtryRaw : reportCtryRaw === "-" ? "" : "all";
   if (method === "GET" && (path === "/report" || path === "/report/behaviour")) {
     const days = reportPeriod(url.searchParams.get("days"), url.searchParams.get("from"), url.searchParams.get("to"));
     const dimRaw = url.searchParams.get("dim") ?? "segment";
@@ -3284,9 +3312,7 @@ async function handle(
     // only the Tölcsér page switches rounds, Viselkedés stays on the first outreach.
     const round = url.searchParams.get("kor") === "ujra" ? "re" : "first";
     // ctry = the lead's country (ISO-2, "-" = unknown; ország-réteg 3/3) — scopes every metric like seg.
-    const ctryRaw = (url.searchParams.get("ctry") ?? "all").toUpperCase();
-    const ctry = /^[A-Z]{2}$/.test(ctryRaw) ? ctryRaw : ctryRaw === "-" ? "" : "all";
-    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined, ctry);
+    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined, reportCtry);
     if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
     const rsRaw = url.searchParams.get("rs") ?? "inf";
     const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";
@@ -3308,7 +3334,7 @@ async function handle(
     const nRaw = Math.floor(Number(url.searchParams.get("n") ?? MOCK_PAGE));
     const n = Number.isFinite(nRaw) && nRaw >= MOCK_PAGE ? Math.min(nRaw, 5000) : MOCK_PAGE;
     const labels = Object.fromEntries(Object.values(TEMPLATES).map((t) => [t.id, t.label]));
-    const m = await getMockReport(days, ch, labels);
+    const m = await getMockReport(days, ch, labels, new Date(), reportCtry);
     return send(res, 200, reportMockPage(m, { tpl: url.searchParams.get("tpl") || null, q: (url.searchParams.get("q") ?? "").trim().slice(0, 80), sort, n }));
   }
   // GET /report/trial — the Próba tab (ADR-0407, frozen plan: design-refs/console/proba-riport/).
@@ -3321,7 +3347,7 @@ async function handle(
     const stageRaw = url.searchParams.get("stage");
     const stage = stageRaw !== null && /^[0-5]$/.test(stageRaw) ? Number(stageRaw) : null;
     const vRaw = url.searchParams.get("v");
-    return send(res, 200, reportTrialPage(await getTrialReport(days, st, stage, new Date(), isVerdictBucket(vRaw) ? vRaw : null)));
+    return send(res, 200, reportTrialPage(await getTrialReport(days, st, stage, new Date(), isVerdictBucket(vRaw) ? vRaw : null, reportCtry)));
   }
   // GET /report/revenue — the Előfizetők tab (frozen plan: design-refs/console/elofizetok-riport/).
   // Query: h ∈ {3,6,12} forecast months (default 6), t=1 counts the tests, m=YYYY-MM the month shown in
@@ -3338,7 +3364,7 @@ async function handle(
     // c = the currency the page is folded in (ország-réteg 3/3); absent/unknown = the home currency.
     const cRaw = (url.searchParams.get("c") ?? "").toUpperCase();
     const c = /^[A-Z]{3}$/.test(cRaw) ? cRaw : null;
-    return send(res, 200, reportRevenuePage(await getRevenueReport(h, url.searchParams.get("t") === "1", m, c), { st, sort }));
+    return send(res, 200, reportRevenuePage(await getRevenueReport(h, url.searchParams.get("t") === "1", m, c, reportCtry), { st, sort }));
   }
   // GET /report/tenants — the Tenantok tab: every tenant's owner activity + site visits in one
   // row (frozen plan: design-refs/console/tenant-aktivitas/, 2A). Query: f ∈ TENANT_FILTERS
@@ -3348,19 +3374,19 @@ async function handle(
   if (method === "GET" && path === "/report/leads") {
     const raw = url.searchParams.get("days");
     const days: StockPreset = isStockPreset(raw) ? raw : "0";
-    return send(res, 200, reportLeadStockPage(await getLeadStock(reportPeriod(days, null, null, new Date(), "0")), days));
+    return send(res, 200, reportLeadStockPage(await getLeadStock(reportPeriod(days, null, null, new Date(), "0"), reportCtry), days));
   }
   // GET /report/experiments — the Kísérletek tab: the cold letter's variants per dimension, the
   // Monday line, today's split (frozen plan: design-refs/console/kiserletek/, „C”, ADR-0462).
   if (method === "GET" && path === "/report/experiments") {
-    return send(res, 200, reportExperimentsPage(await getExperimentReport()));
+    return send(res, 200, reportExperimentsPage(await getExperimentReport(new Date(), reportCtry)));
   }
   if (method === "GET" && path === "/report/tenants") {
     const fRaw = url.searchParams.get("f") ?? "active";
     const f: TenantFilter = (TENANT_FILTERS as readonly string[]).includes(fRaw) ? (fRaw as TenantFilter) : "active";
     const sortRaw = url.searchParams.get("sort") ?? "flag";
     const sort: TenantSort = (TENANT_SORTS as readonly string[]).includes(sortRaw) ? (sortRaw as TenantSort) : "flag";
-    const q = { f, test: url.searchParams.get("test") === "1", sort, desc: url.searchParams.get("dir") === "desc" };
+    const q = { f, test: url.searchParams.get("test") === "1", sort, desc: url.searchParams.get("dir") === "desc", ctry: reportCtry };
     return send(res, 200, reportTenantsPage(await getTenantActivities(), q));
   }
   // POST /report/note — the owner's pilot-diary marker (report_note); back to the same filter.

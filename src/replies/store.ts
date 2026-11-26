@@ -22,6 +22,8 @@ import { T, langForLead } from "../i18n/mail.js";
 import { loadPack } from "../i18n/packs.js";
 import { leadEmails } from "../email/leadEmails.js";
 import { settleReplySends } from "./answer.js";
+import { countryOfLeads } from "../country.js";
+import { loadTranslations, type StoredTranslation, type TranslationPart } from "./translation.js";
 
 export type ReplyChannel = "sms" | "email" | "viber" | "whatsapp";
 export const REPLY_CHANNELS: readonly ReplyChannel[] = ["sms", "email", "viber", "whatsapp"];
@@ -297,6 +299,12 @@ export interface ReplyView {
    * image + caption at the top of the conversation, with its receipt. null otherwise.
    */
   readonly outreach?: ReplyOutreach | null;
+  /** The lead's country, ISO-2 ("" = unknown) — the chip beside the reply (plan orszag-szuro-forditas ⑦). */
+  readonly country?: string;
+  /** The conversation's language (outreach_reply.lang); null = unknown (no country row). */
+  readonly lang?: string | null;
+  /** Bábel's stored translations of the conversation parts (plan ⑧ + ⑪); absent = none. */
+  readonly translations?: Readonly<Partial<Record<TranslationPart, Readonly<Record<string, StoredTranslation>>>>>;
 }
 
 /** Our Viber / WhatsApp outreach message (mms_outbox row) as the conversation shows it. */
@@ -396,6 +404,7 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         "r.suggestion_by",
         "r.suggestion_at",
         "r.suggestion_basis",
+        "r.lang",
         "l.contact_block_at",
         "l.contact_block_reason",
         "l.contact_block_by",
@@ -426,7 +435,15 @@ export async function getRepliesBlock(limit = 200): Promise<RepliesBlock> {
         .orderBy("created_at", "desc")
         .execute()
     : [];
+  // Plan orszag-szuro-forditas ⑦⑧: the lead's country chip + Bábel's translations.
+  const [countries, translations] = await Promise.all([
+    countryOfLeads([...new Set(rows.map((r) => r.lead_id))]),
+    loadTranslations(rows.map((r) => r.id)),
+  ]);
   const replies: ReplyView[] = rows.map((r) => ({
+    country: countries.get(r.lead_id) ?? "",
+    lang: r.lang,
+    translations: translations.get(r.id) ?? {},
     id: r.id,
     channel: r.channel,
     leadId: r.lead_id,

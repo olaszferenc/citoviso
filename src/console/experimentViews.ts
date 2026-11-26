@@ -5,7 +5,7 @@
 import { esc, helpLink, layout } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
-import { reportTabs } from "./reportViews.js";
+import { reportCountryStrip, reportTabs } from "./reportViews.js";
 import { type DimensionReport, type ExperimentReport, type VariantRow, type WeeklyLine } from "./experimentReport.js";
 import type { ExperimentDimension } from "../db/schema.js";
 
@@ -132,7 +132,9 @@ export function weeklyText(w: WeeklyLine, lang: string): string {
 
 export function reportExperimentsPage(r: ExperimentReport): string {
   const lang = consoleLang();
-  const tabs = reportTabs("/report/experiments", "", "", lang);
+  const tabs = reportTabs("/report/experiments", "", "", lang, r.country);
+  // The shared country strip (orszag-szuro-forditas ①): experiment letters per lead country.
+  const strip = reportCountryStrip("/report/experiments", r.countries ?? [], r.country, lang);
   const kbox = (t: string, v: string, sub: string): string =>
     `<div class="con-kbox"><div class="con-kbox__t">${esc(t)}</div><div class="con-kbox__r"><span class="con-kbox__v">${esc(v)}</span></div><div class="con-kbox__s">${esc(sub)}</div></div>`;
   const k = r.kpi;
@@ -158,7 +160,7 @@ export function reportExperimentsPage(r: ExperimentReport): string {
     `<p class="mut small rp-note">${esc(foot)}</p></div>`;
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_experiments")}</h1></div>${tabs}${panel}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_experiments")}</h1></div>${tabs}${strip}${panel}`,
     { active: "/report/experiments" },
   );
 }

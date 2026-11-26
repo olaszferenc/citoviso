@@ -85,6 +85,27 @@ export const LANG_REGIONS: readonly {
 export const DEFAULT_LANG = "hu";
 
 /**
+ * A country's name in the READER's language: on a source-language (DEFAULT_LANG) console the layer row's own name, else
+ * the CLDR region name the runtime ships (Intl data, not a translation — ADR-0412 untouched); the
+ * ISO code when the runtime has no data for that language. Plan orszag-szuro-forditas (report strip, reply chip title).
+ */
+export function countryDisplayName(iso: string, lang: string): string {
+  if (!iso) return iso;
+  if (lang === DEFAULT_LANG) return countryConfigSync(iso)?.name ?? iso;
+  const code = iso.toUpperCase();
+  try {
+    const dn = new Intl.DisplayNames([lang], { type: "region" });
+    // A language the runtime has no data for resolves to the BOX's locale (Hungarian here): that
+    // would put a Hungarian name on a foreign console — the code is the honest fallback then.
+    if (dn.resolvedOptions().locale.split("-")[0] !== lang.split("-")[0]) return code;
+    const n = dn.of(code);
+    return n && n !== code ? n : code;
+  } catch {
+    return code;
+  }
+}
+
+/**
  * The language a country's leads are written to (ADR-0437: the country layer's
  * `default_lang`). ⛔ A country WITHOUT a row returns null — never a quiet Hungarian: the
  * caller fails closed (no mock, no letter) or says loudly what it falls back to.
