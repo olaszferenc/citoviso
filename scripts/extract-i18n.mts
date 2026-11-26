@@ -68,6 +68,9 @@ export function surfaceOf(rel: string): string {
   // The country-row rules and the readiness texts speak only on the „Országok” lap (operator).
   if (rel === "src/countryRules.ts" || rel === "src/countryReadiness.ts") return "konzol";
   if (rel.startsWith("src/console/") || rel === "src/auth/operatorAuth.ts") return "konzol";
+  // The citoviso.com homepage's client texts reach the visitor through src/server/homepage.ts
+  // (window.CIT_HOME) — the same audience as the server file that ships them.
+  if (rel === "public/assets/home/home.js") return surfaceOf("src/server/homepage.ts");
   if (/sms/i.test(base) || rel.startsWith("src/sms/")) return "sms";
   if (rel.startsWith("src/outreach/")) return "megkereses";
   if (rel.startsWith("src/email/") || /(?:Mail|Email|mail)\.ts$/.test(base) || rel === "src/i18n/mail.ts") return "level";
@@ -85,6 +88,37 @@ export function surfaceOf(rel: string): string {
   )
     return "admin";
   return "egyeb";
+}
+
+/**
+ * A file whose folder does not decide its audience ("egyeb": src/countryDispatch.ts,
+ * src/scout/rules.ts, src/text/currencyName.ts …) takes the surfaces of the files that import
+ * it directly (Bábel 2026-11-26: the 43 „Kiküldés” labels of countryDispatch.ts read as
+ * "egyeb", so the buyer-side measure counted operator text as a gap on every non-console
+ * language). A general rule instead of a file list: a new country/helper module is placed by
+ * whoever renders it. Importers that are "egyeb" themselves are skipped (one level only — a
+ * guess about a guess is not evidence); no classified importer → stays "egyeb", which the
+ * buyer-side measure COUNTS (unknown audience = assume a buyer sees it).
+ */
+async function importerSurfaces(files: readonly string[]): Promise<Map<string, string>> {
+  const importers = new Map<string, Set<string>>();
+  const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*)"(\.{1,2}\/[^"]+)\.js"/g;
+  for (const file of files) {
+    if (!file.endsWith(".ts")) continue;
+    const from = path.relative(ROOT, file);
+    const surface = surfaceOf(from);
+    if (surface === "egyeb") continue;
+    const src = await readFile(file, "utf8").catch(() => "");
+    for (const m of src.matchAll(IMPORT_RE)) {
+      const target = path.relative(ROOT, path.resolve(path.dirname(file), `${m[1]}.ts`));
+      let set = importers.get(target);
+      if (!set) importers.set(target, (set = new Set()));
+      set.add(surface);
+    }
+  }
+  const out = new Map<string, string>();
+  for (const [target, set] of importers) out.set(target, [...set].flatMap((x) => x.split("+")).filter((v, i, a) => a.indexOf(v) === i).sort().join("+"));
+  return out;
 }
 
 /** Buyer-side strings inside src/console/views.ts (Bábel ticket 37db994c, 2026-11-18). */
@@ -121,11 +155,15 @@ async function main(): Promise<void> {
   //    occurrence today; the point is that the shape was unrepresentable.
   const RE =
     /\b(?:T\(\s*[a-zA-Z_$][\w$]*(?:\.[\w$]+)*(?:\([^()]*\))?\s*,|trn?\()\s*"((?:[^"\\]|\\.)+)"/g;
+  const byImporter = await importerSurfaces(files);
   for (const file of files) {
     const src = await readFile(file, "utf8").catch(() => "");
-    const surface = surfaceOf(path.relative(ROOT, file));
+    const rel = path.relative(ROOT, file);
+    const own = surfaceOf(rel);
+    const surface = own === "egyeb" ? (byImporter.get(rel) ?? own) : own;
     for (const m of src.matchAll(RE)) {
-      note(JSON.parse(`"${m[1]}"`), surface); // unescape via JSON
+      const hu = JSON.parse(`"${m[1]}"`); // unescape via JSON
+      for (const one of surface.split("+")) note(hu, one);
     }
   }
 
