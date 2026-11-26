@@ -1,4 +1,4 @@
-## ADR-XXXX — Az amenities modul felülete a mockon a natív „Egy pillantásra” szakasz ikonos tételei
+## ADR-0486 — Az amenities modul felülete a mockon a natív „Egy pillantásra” szakasz ikonos tételei
 
 Dátum: 2026-11-26 · Döntéshozó: tulaj (a koordinátoron át, „A” változat) · Kapu: `scripts/configurator-placement-check.mts`
 
