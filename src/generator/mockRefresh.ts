@@ -28,6 +28,7 @@ import { renderSite } from "../engine/render.js";
 import { injectRuntime } from "./runtime.js";
 import { secureMockPhotos } from "./photoTransport.js";
 import { curateMockPhotos } from "./photoCurate.js";
+import { getHeroPin } from "./heroOverride.js";
 
 export interface RefreshRow {
   readonly id: string;
@@ -69,7 +70,9 @@ export async function refreshMock(row: RefreshRow, opts: { readonly backupDir?: 
   let heroMoved = false;
   // The generator's own photo step (its own photos are in the inputs only for current-generator mocks).
   if (new Date(String(row.generated_at)) >= new Date(MOCK_MIN_GENERATED_AT) && (siteData.photos?.length ?? 0) > 0) {
-    const c = await curateMockPhotos(siteData.photos as readonly Photo[]);
+    // The colleague's hero choice (lead_hero_override) wins over the machine's.
+    const pin = await getHeroPin(String(row.lead_id)).catch(() => null);
+    const c = await curateMockPhotos(siteData.photos as readonly Photo[], { pinnedUrl: pin?.url ?? null });
     duplicates = c.duplicates.length;
     offPage = c.offPage.length;
     heroMoved = c.heroMoved;

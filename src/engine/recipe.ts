@@ -124,6 +124,8 @@ export interface Photo {
   readonly notBand?: boolean;
   /** Band fitness (photoKind.bandScore, 0–1): the bands take the highest scorers. Absent = no verdict. */
   readonly bandScore?: number;
+  /** A vehicle, a person or an animal in it (photoCurate): never a feature card's picture. */
+  readonly notCard?: boolean;
   /**
    * 64-bit perceptual fingerprint (16 hex, src/generator/photoHash.ts), set at generation
    * for the hero and the outdoor photos only. Answers "is this the SAME picture under

@@ -356,7 +356,7 @@ export function allotPhotos(
   for (let i = 0; i < rowsN; i++) {
     // A feature card's picture is never a bathroom, toilet or kitchen (11-25: Afamado's „Erkély/terasz”
     // card showed a washbasin).
-    const p = take(notBath);
+    const p = take((x) => notBath(x) && !x.notCard);
     if (p) rows.push(p);
   }
   const own = pool.splice(0, opts.maxGallery);

@@ -32,6 +32,7 @@ const PATHS: Readonly<Record<string, string>> = {
   luggage: `<path d="M6 8a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -10"/><path d="M9 6v-1a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v1"/><path d="M6 10h12"/><path d="M6 16h12"/><path d="M9 20v1"/><path d="M15 20v1"/>`, // luggage
   fitness: `<path d="M2 12h1"/><path d="M6 8h-2a1 1 0 0 0 -1 1v6a1 1 0 0 0 1 1h2"/><path d="M6 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1"/><path d="M9 12h6"/><path d="M15 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1"/><path d="M18 8h2a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-2"/><path d="M22 12h-1"/>`, // barbell
   fire: `<path d="M12 10.941c2.333 -3.308 .167 -7.823 -1 -8.941c0 3.395 -2.235 5.299 -3.667 6.706c-1.43 1.408 -2.333 3.294 -2.333 5.588c0 3.704 3.134 6.706 7 6.706c3.866 0 7 -3.002 7 -6.706c0 -1.712 -1.232 -4.403 -2.333 -5.588c-2.084 3.353 -3.257 3.353 -4.667 2.235"/>`, // flame
+  boat: `<path d="M6.414 6.414a2 2 0 0 0 0 -2.828l-1.414 -1.414l-2.828 2.828l1.414 1.414a2 2 0 0 0 2.828 0" /><path d="M17.586 17.586a2 2 0 0 0 0 2.828l1.414 1.414l2.828 -2.828l-1.414 -1.414a2 2 0 0 0 -2.828 0" /><path d="M6.5 6.5l11 11" /><path d="M22 2.5c-9.983 2.601 -17.627 7.952 -20 19.5c9.983 -2.601 17.627 -7.952 20 -19.5" /><path d="M6.5 12.5l5 5" /><path d="M12.5 6.5l5 5" />`, // tabler: kayak
   grill: `<path d="M19 8h-14a6 6 0 0 0 6 6h2a6 6 0 0 0 6 -5.775l0 -.225"/><path d="M17 20a2 2 0 1 1 0 -4a2 2 0 0 1 0 4"/><path d="M15 14l1 2"/><path d="M9 14l-3 6"/><path d="M15 18h-8"/><path d="M15 5v-1"/><path d="M12 5v-1"/><path d="M9 5v-1"/>`, // grill
   sun: `<path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>`, // sun
   spa: `<path d="M3 17a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M8 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M4 22l4 -2v-3h12"/><path d="M11 20h9"/><path d="M8 14l3 -2l1 -4c3 1 3 4 3 6"/>`, // massage
@@ -51,6 +52,7 @@ const RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [W("parkol|garázs|garazs"), "parking"],
   [W("wifi|wi-fi|internet"), "wifi"],
   [W("e-?bike|e-?töltő|e-?tolto|elektromos autó|elektromosautó|töltőállomás|toltoallomas"), "ev"],
+  [W("vízibicikli|vizibicikli|csónak|csonak|kajak|kenu|hajó|hajo|vízisport|vizisport|sup-?deszka"), "boat"],
   [W("bicik|bicaj|bringa|kerékpár|kerekpar"), "bike"],
   [W("borbár|borbar|borvidék|borvidek|borkóstoló|borkostolo|szőlő|szolo|sommelier"), "wine"],
   [W("étterem|etterem|vacsora|bisztró|bisztro|gasztro|félpanzió|felpanzio"), "restaurant"],

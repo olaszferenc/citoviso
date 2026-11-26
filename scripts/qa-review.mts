@@ -5,6 +5,14 @@
 //   npx tsx scripts/qa-review.mts pass <artifactId> "<what you checked>"
 //   npx tsx scripts/qa-review.mts fail <artifactId> "<what is wrong, where>"
 //   npx tsx scripts/qa-review.mts status                  → counts
+//   npx tsx scripts/qa-review.mts heroes <artifactId>     → the hero candidates as one numbered contact sheet
+//   npx tsx scripts/qa-review.mts hero <artifactId> <n> "<why>" → YOUR hero choice: pinned to the lead, both
+//                                                            plans re-rendered by the pipeline, then review them
+//
+// THE HERO IS THE COLLEAGUE'S PICK (owner 2026-11-25: „hogy tudja megítélni … mi a legjobb wow hatású kép?”
+// → the colleague's eye, not a formula): the machine leaves out what can never open a page (kitchen,
+// bathroom, close-up, dark, blurred, small); the colleague picks the most striking of the rest — a sunset
+// over the lake is a fine hero, the house need not show. The queue asks for the pick before the review.
 //
 // `queue` lists the queued dispatch rows in send order (DISPATCH_PRIORITY) that the dispatcher would
 // claim but for the look: ≥5 own photos, current generator, no valid review yet. Before shooting it
@@ -25,6 +33,9 @@ import { secondPlanOf } from "../src/outreach/secondPlan.js";
 import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
+import { classifyPhotoUrl, isHeroWorthy } from "../src/media/photoKind.js";
+import { getHeroPin, setHeroPin } from "../src/generator/heroOverride.js";
+import { refreshMock } from "../src/generator/mockRefresh.js";
 
 const OUT = path.resolve(process.cwd(), "sites/_qa-review");
 const BY = process.env.QA_REVIEWER ?? "minőségi kolléga";
@@ -125,6 +136,65 @@ async function sheet(inputs: string[], out: string, h: number, perRow: number): 
   return out;
 }
 
+
+const HERO_PICK_PREFIX = "minőségi kolléga";
+
+/** The hero candidates of a mock, in a stable order (the pick refers to their numbers). */
+async function heroCandidates(artifactId: string): Promise<{ leadId: string; urls: string[] }> {
+  const a = await db.selectFrom("mock_artifact").select(["lead_id", "inputs"]).where("id", "=", artifactId).executeTakeFirst();
+  if (!a) throw new Error("nincs ilyen mock");
+  const photos = (((a.inputs as { siteData?: { photos?: { url: string; stock?: boolean }[] } } | null)?.siteData?.photos) ?? []).filter((p) => !p.stock);
+  const urls: string[] = [];
+  for (const p of photos) {
+    const v = await classifyPhotoUrl(p.url);
+    if (v && !isHeroWorthy(v)) continue;
+    if (v?.quality && v.quality.long < 1000) continue; // the letter's picture is 1216 px wide — a small photo blurs
+    urls.push(p.url);
+  }
+  return { leadId: a.lead_id, urls };
+}
+
+async function heroes(artifactId: string): Promise<void> {
+  const { urls } = await heroCandidates(artifactId);
+  if (!urls.length) {
+    console.log("⛔ nincs nyitóképnek alkalmas fotó (minden kép konyha/fürdő/közeli/sötét/kicsi) — ez a mock így nem mehet ki: fail");
+    return;
+  }
+  const dir = path.join(OUT, artifactId);
+  await mkdir(dir, { recursive: true });
+  const tiles: string[] = [];
+  for (const [i, u] of urls.entries()) {
+    const r = await fetch(u, { headers: { "user-agent": PORTAL_USER_AGENT } }).catch(() => null);
+    if (!r?.ok) continue;
+    const img = await sharp(Buffer.from(await r.arrayBuffer())).rotate().resize({ height: 360 }).png().toBuffer();
+    const m = await sharp(img).metadata();
+    const label = Buffer.from(`<svg width="${m.width}" height="360"><rect x="0" y="0" width="64" height="52" fill="#000" fill-opacity=".75"/><text x="32" y="38" font-size="34" font-family="sans-serif" font-weight="700" fill="#fff" text-anchor="middle">${i + 1}</text></svg>`);
+    const f = path.join(dir, `H-${String(i + 1).padStart(2, "0")}.png`);
+    await sharp(img).composite([{ input: label, left: 0, top: 0 }]).toFile(f);
+    tiles.push(f);
+    console.log(`  ${i + 1}: ${u.split(/[?#]/)[0]!.split("/").pop()}`);
+  }
+  for (let i = 0; i < tiles.length; i += 6) console.log(await sheet(tiles.slice(i, i + 6), path.join(dir, `H-nyitokep-jeloltek-${i / 6 + 1}.png`), 360, 3));
+  console.log(`\nVálaszd a legütősebbet (wow): qa-review.mts hero ${artifactId} <szám> "<miért>"`);
+}
+
+async function hero(artifactId: string, n: number, why: string): Promise<void> {
+  const { leadId, urls } = await heroCandidates(artifactId);
+  const url = urls[n - 1];
+  if (!url) throw new Error(`nincs ${n}. jelölt (1–${urls.length})`);
+  await setHeroPin(leadId, url, `${HERO_PICK_PREFIX}: ${why.trim() || "wow"}`.slice(0, 300));
+  // The pipeline re-renders BOTH plans with the pinned hero (generator/mockRefresh.ts) — the colleague then
+  // reviews the new files (the old reviews are stale by mtime).
+  const plans = [artifactId];
+  const alt = await secondPlanOf(leadId, artifactId);
+  if (alt) plans.push(alt.id);
+  for (const id of plans) {
+    const row = await db.selectFrom("mock_artifact").select(["id", "lead_id", "path", "inputs", "generated_at"]).where("id", "=", id).executeTakeFirst();
+    if (row) await refreshMock(row, { backupDir: path.resolve(process.cwd(), "sites/_mock-refresh-backup") });
+  }
+  console.log(`✅ nyitókép rögzítve (${n}. jelölt), ${plans.length} terv újrarenderelve — most nézd át őket: shots <id>`);
+}
+
 async function queue(limit: number): Promise<void> {
   const rows = await db
     .selectFrom("outreach_dispatch")
@@ -148,6 +218,14 @@ async function queue(limit: number): Promise<void> {
     if (shown >= limit) break;
     // Both plans of the offer (owner 2026-11-25: „Csak az hagyható jóvá, ahol van második terv is.”) —
     // the second plan once the folyamat refreshed it with the current generator.
+    // The hero first — the colleague's pick (owner 2026-11-25).
+    const pin = await getHeroPin(r.leadId).catch(() => null);
+    if (!pin?.actor.startsWith(HERO_PICK_PREFIX)) {
+      if (shown >= limit) break;
+      shown++;
+      console.log(`\n⭐ ${r.artifactId} · ${r.name} — előbb a nyitókép: qa-review.mts heroes ${r.artifactId}`);
+      continue;
+    }
     const alt = await secondPlanOf(r.leadId, r.artifactId);
     const plans: { id: string; label: string }[] = [{ id: r.artifactId, label: "1. terv" }];
     if (alt?.current) plans.push({ id: alt.id, label: "2. terv" });
@@ -198,10 +276,14 @@ try {
     } else {
       console.log(`✅ ${cmd === "pass" ? "jóváhagyva" : "NEM jóváhagyva"}: ${arg}${r.held ? ` · ${r.held} sor visszatartva` : ""}${r.requeued ? ` · ${r.requeued} sor a tulaj jóváhagyó lapjára került` : ""}`);
     }
+  } else if (cmd === "heroes" && arg) {
+    await heroes(arg);
+  } else if (cmd === "hero" && arg && rest[0]) {
+    await hero(arg, Number(rest[0]), rest.slice(1).join(" "));
   } else if (cmd === "status") {
     await status();
   } else {
-    console.error('Használat: qa-review.mts queue [--limit N] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status');
+    console.error('Használat: qa-review.mts queue [--limit N] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
     process.exitCode = 2;
   }
 } finally {
