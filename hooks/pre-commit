@@ -3809,6 +3809,19 @@ if [ -f scripts/nonopener-followup-check.mts ] && \
   echo "[pre-commit] nonopener-followup-check (nem-nyitó utánkövető levél: levél, célcsoport, egy lövés, ütem)…"
   EMAIL_PROVIDER=mock SMS_PROVIDER=mock npx tsx scripts/nonopener-followup-check.mts >"$GATE_LOG" || gate_failed
 fi
+# retired-template-send-check (ADR-0423, tulaj 2026-11-26): kivezetett sablonú mock nem mehet ki újra és nem
+#     épülhet belőle próba-oldal — a döntés (csak parallax · gate-opening · wordmark-grow) és a bekötés
+#     (artifactBlocks, mobileOutreachGates, autoDispatch sor + enqueue, startTrial). Statikus, DB nélkül. ~1 mp.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/retired-template-send-check.mts ] && \
+   changed_files | grep -qE '^src/outreach/(templateGate|trialCampaign|sendOutreachSms|autoDispatch|nonOpenerFollowup|behaviorMessage)\.ts$|^src/trial/start\.ts$|^src/engine/templates\.ts$|^scripts/retired-template-send-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/retired-template-send-check\.mts$'; then
+    echo "[pre-commit] retired-template-send-check --self-test (a kivezetett-sablon őr pirosra tud-e menni)…"
+    npx tsx scripts/retired-template-send-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] retired-template-send-check (kivezetett sablonú mock nem megy ki, nem lesz belőle próba)…"
+  npx tsx scripts/retired-template-send-check.mts >"$GATE_LOG" || gate_failed
+fi
 # free-trial-config-check (ADR-0342, /pricing „Ingyenes próba” szekció): határok, a POST-értelmezés
 #     (régi fül nem nulláz, kikapcsolva a tárolt szám marad), a POST minden írás ELŐTT utasít el, a lap a
 #     tárolt értéket mutatja, kikapcsolt próba → startTrial 'disabled'. Nem ír DB-sort. ~3 mp.

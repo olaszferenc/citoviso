@@ -116,7 +116,7 @@ const SITE = {
   contact: { email: "info@example.com", phone: "+36 30 123 4567", address: "8360 Keszthely, Fő utca 1." },
   geo: { lat: 46.7655, lon: 17.2418 },
 } as unknown as SiteData;
-const RECIPE = { template: "editorial", skin: "", archetype: "", sections: [] } as unknown as Recipe;
+const RECIPE = { template: "parallax", skin: "", archetype: "", sections: [] } as unknown as Recipe;
 /** A Budapest wall-clock instant (CEST in early October: UTC+2). */
 const bp = (isoDay: string, hhmm: string): Date => new Date(`${isoDay}T${hhmm}:00+02:00`);
 const TOKEN = "kYxBlzfI7pAMdg6k12u8-h3uMGumPGs5GexSxpIQ_C4"; // a real-length (43) token

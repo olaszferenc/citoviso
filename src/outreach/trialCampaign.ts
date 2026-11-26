@@ -33,6 +33,7 @@
 import { db } from "../db/client.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 import { recipientKey } from "../email/address.js";
+import { retiredTemplateReason } from "./templateGate.js";
 import {
   buildTrialCampaignEmail,
   buildTrialCampaignSmsText,
@@ -593,6 +594,9 @@ export async function artifactBlocks(artifactId: string | null): Promise<string 
   if (art?.status !== "approved") {
     return `a mock kurátori jóváhagyásra vár (artifact: '${art?.status ?? "ismeretlen"}') — küldés csak 'approved' után`; // i18n-exempt: operátori CLI-kimenet
   }
+  // ADR-0423: a mock on a retired template is never pushed again (templateGate.ts).
+  const retired = retiredTemplateReason(art.inputs);
+  if (retired) return retired;
   const blocking = blockingVerdicts(art.inputs);
   if (blocking.length && !ackCoversVerdicts(verdictAckOf(art.inputs), blocking)) {
     return `${blocking.map(verdictReasonLine).join(" · ")} — a kampány leletet nem vállal át: Vera-ítélet vagy új mock után mehet`; // i18n-exempt: operátori CLI-kimenet

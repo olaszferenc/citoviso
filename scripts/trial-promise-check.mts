@@ -76,8 +76,10 @@ const SITE = {
   contact: { email: "info@example.com", phone: "+36 30 123 4567", address: "8360 Keszthely, Fő utca 1." },
   geo: { lat: 46.7655, lon: 17.2418 },
 } as unknown as SiteData;
-const RECIPE = { template: "editorial", skin: "", archetype: "", sections: [] } as unknown as Recipe;
-const BROKEN_RECIPE = { template: "___nincs___", skin: "", archetype: "", sections: [] } as unknown as Recipe;
+const RECIPE = { template: "parallax", skin: "", archetype: "", sections: [] } as unknown as Recipe;
+// An owner template (the retired-template gate would refuse an unknown one before the claim,
+// ADR-0423) whose sections cannot render — the provision fails AFTER the claim, as measured.
+const BROKEN_RECIPE = { template: "parallax", skin: "", archetype: "", sections: "___nincs___" } as unknown as Recipe;
 
 const leads: string[] = [];
 const MOCK_REL = `sites/_trialpromise_${stamp}.html`;

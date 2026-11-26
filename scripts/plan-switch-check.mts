@@ -83,7 +83,7 @@ const site = (tag: string): Record<string, unknown> => ({
   geo: { lat: 46.7655, lon: 17.2418 },
 });
 const recipe = (template: string): Record<string, unknown> => ({ template, skin: "", archetype: "", sections: [] });
-const TEMPLATES = ["editorial", "gate-opening", "horizontal"];
+const TEMPLATES = ["wordmark-grow", "gate-opening", "parallax"];
 
 const MOCK_REL = (n: number) => `sites/_planswitch_${stamp}_${n}.html`;
 const parent = await createFixtureParent(db as never, "planswitch");

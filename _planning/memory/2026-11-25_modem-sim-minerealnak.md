@@ -16,8 +16,18 @@ Brief: `~/rc-briefs/sms-ek-inaktiv-l-sa-20261125-143241.md` · session `cit18bb6
 - `minereal_sms` collation `utf8mb4_uca1400_ai_ci`, `minereal_dev` `utf8mb4_unicode_ci` (ERROR 1267, ha nem nevezed meg).
 - Éles `mms_outbox`: 1036 `queued` (utolsó `sent` 11-13), `sms_outbox` napi 1–3 sor.
 
+## Éles és a többi SIM-használó (tulaj „mehet” 11-25, „jöjjön le az is” 11-26)
+- **Élesen 11-25 14:54:** `/opt/citoviso/app/.env` `SMS_PROVIDER=mock`, `MMS_PROVIDER=mock` (mentés
+  `.env.bak-sms-off-20261125-145402`), console → public újraindítva. A sorban állt 1036 MMS (11-09…11-20)
+  `status='failed'` + `last_error='félretéve 2026-11-25 …'`; id-lista `/opt/citoviso/backups/mms-hold-20261125-145402/queued-ids.txt`.
+  A mock élesen nem tesz sorba, de a prospectet ugyanúgy `sent`-nek bélyegzi.
+- **Helyben 11-26 07:05:** `disable --now` a `citoviso-callbot.service`, `citoviso-messenger-watch.timer`,
+  `citoviso-replies-sms.timer`. ⛔ Marad: `gammu-smsd` (drop-in → `scripts/callbot/s10_smsd.py`) és `adb` —
+  ezen megy a MineREAL SMS-e is.
+
+## Fájlok
+- `scripts/mineral-sms-hide.mts` (új), `MEMORY.md`, ez a jegyzet; repón kívül: fő fa és éles `.env`, crontab-sor,
+  systemd unitok, MR-tájékoztató `~/rc-briefs/mineral-sms-szuro-mr-tajekoztato-20261125.md`.
+
 ## Nyitott
-- Éles `SMS_PROVIDER`/`MMS_PROVIDER` még `queue` → a sor gyűlik; kikapcsolása prod-írás, tulaj-engedély kell.
-- Az 1036 sorban álló MMS sorsa (törlés / `held`), hogy egy véletlen relay-visszakapcsolás se küldje ki.
-- Hívás-bot (`citoviso-callbot`) ugyanazon a SIM-en fogad/hív — a brief nem érintette.
-- A Poe SMS-válaszai és az operátori riasztó SMS-ek megszűntek (e-mail marad).
+- A MineREAL-tájékoztatót a tulajnak kell továbbítania az MR-sessionnek (innen nem érhető el).

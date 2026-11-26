@@ -89,7 +89,7 @@ let closeConsole: (() => void) | null = null;
 async function fixture(
   tag: string,
   planCount: number,
-  opts: { rejectPlan2?: boolean } = {},
+  opts: { rejectPlan2?: boolean; plan1Template?: string } = {},
 ): Promise<{ leadId: string; token: string; arts: string[] }> {
   const lead = await db
     .insertInto("lead")
@@ -106,7 +106,7 @@ async function fixture(
         path: MOCK_REL(Math.min(i, 2)),
         // Plan 1 is the approved, sent mock; the alternatives are `generated`, as live.
         status: i === 1 ? "approved" : opts.rejectPlan2 && i === 2 ? "rejected" : "generated",
-        inputs: JSON.stringify({ engine: "composition", recipe: recipe(i === 1 ? "editorial" : "gate-opening"), siteData: site(`${tag}${i}`) }),
+        inputs: JSON.stringify({ engine: "composition", recipe: recipe(i === 1 ? opts.plan1Template ?? "wordmark-grow" : "gate-opening"), siteData: site(`${tag}${i}`) }),
       } as never)
       .returning("id")
       .executeTakeFirstOrThrow();
@@ -184,6 +184,16 @@ try {
   const rjRows = await db.selectFrom("free_trial").select("id").where("lead_id", "=", rj.leadId).execute();
   check("elutasított (de felajánlott) 2. terv → not_available, nincs tenant, nincs próba-sor", rr.json.error === "not_available" && !rjTenant && rjRows.length === 0, `${rr.status} ${JSON.stringify(rr.json)} · ${rjRows.length} sor`);
   check("…az elutasított terv elutasított marad", (await artStatus(rj.arts[1]!)) === "rejected");
+
+  console.log("④ kivezetett sablonú terv (ADR-0423): a próba a link másik, tulaj-sablonú tervéből épül; ha nincs ilyen, nem indul");
+  const h = await fixture("h", 2, { plan1Template: "horizontal" });
+  const hr = await startTrial(h.token, FORM);
+  check("horizontal 1. terv + gate-opening 2. terv → ok", hr.ok, JSON.stringify(hr));
+  check("…az oldal a 2. tervből (gate-opening) épült, nem a horizontalból", (await siteSource(h.leadId)) === h.arts[1], String(await siteSource(h.leadId)));
+  const z = await fixture("z", 1, { plan1Template: "horizontal" });
+  const zr = await startTrial(z.token, FORM);
+  const zTenant = await db.selectFrom("tenant").select("id").where("lead_id", "=", z.leadId).executeTakeFirst();
+  check("csak horizontal terv → not_available, nincs tenant", !zr.ok && zr.error === "not_available" && !zTenant, JSON.stringify(zr));
 
   console.log("② a 2. tervről indított próba a 2. terv artifactjából épül");
   const before2 = await artStatus(a.arts[1]!);

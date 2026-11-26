@@ -295,7 +295,7 @@ async function fixture(
           lead_id: lead.id,
           path: `sites/_trialcampaigncheck_${stamp}.html`,
           status: o.artifact?.status ?? "approved",
-          inputs: JSON.stringify(o.artifact?.inputs ?? {}),
+          inputs: JSON.stringify({ ...{ engine: "composition", recipe: { template: "parallax" }, siteData: {} }, ...(o.artifact?.inputs ?? {}) }),
         })
         .returning("id")
         .executeTakeFirstOrThrow()
