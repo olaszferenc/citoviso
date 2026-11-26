@@ -41,14 +41,10 @@ if [ -n "$UNTRACKED" ]; then
   echo "$UNTRACKED"
 fi
 
-# MACHINE-WIDE LAND QUEUE (scripts/land-lock.sh): everything from the fetch to the verification runs under one
-# lock shared by every worktree, so parallel lands no longer bounce each other's push and re-run
-# the whole gate suite. The fetch comes AFTER the lock: whatever landed while we waited is rebased
-# onto once. Released after the main-tree refresh (see below) or, at the latest, when this shell exits.
+# MACHINE-WIDE LAND QUEUE (scripts/land-lock.sh): the push, its verification and the main-tree refresh run
+# under one lock shared by every worktree, so parallel lands never bounce each other's push. Released after
+# the main-tree refresh (see below) or, at the latest, when this shell exits.
 . "$ROOT/scripts/land-lock.sh"
-land_lock_acquire "$ROOT" || fail "a gépszintű land-zár nem szerezhető meg"
-
-git fetch origin || fail "git fetch origin sikertelen"
 
 # TIMING (ADR: `_planning/decisions/*-land-egyszerusites-*`): every phase is measured and printed at the end, with the slowest gates, so the
 # land's cost is a number in every log instead of a feeling ("kurva lassú").
@@ -59,17 +55,11 @@ lap() { LAND_TIMES="$LAND_TIMES · $1 $(( $(date +%s) - $2 )) s"; }
 # REPLACE it. The file is tiny and removed on the success path; a failed land leaves it in $TMPDIR.
 GATE_TIMES_FILE="$(mktemp -t cit-land-times-XXXXXX)"
 
-ATTEMPT=0
-while :; do
-  ATTEMPT=$((ATTEMPT + 1))
-  [ "$ATTEMPT" -gt 3 ] && fail "3 kísérlet alatt is mozgott alólunk a main — futtasd újra"
-
-  if [ -z "$(git log origin/main..HEAD --oneline)" ]; then
-    echo "✅ LAND: nincs landolnivaló — az origin/main már tartalmazza a HEAD-et."
-    exit 0
-  fi
-
-  echo "── land #$ATTEMPT: rebase origin/main-re…"
+# land_gates <label> — rebase onto the fetched origin/main, then tsc + the full pre-commit suite on the
+# result. The SAME function runs in the optimistic pre-pass and under the lock: one gate sequence, never two.
+land_gates() {
+  local T
+  echo "── land $1: rebase origin/main-re…"
   T=$(date +%s)
   # The two planning indexes are GENERATED: a conflict confined to them is resolved by
   # regenerating (scripts/land-rebase.sh). Any other conflict still aborts loudly.
@@ -84,9 +74,8 @@ while :; do
     git rebase --abort 2>/dev/null || true
     fail "rebase-konfliktus — oldd fel kézzel (git rebase origin/main), majd land újra"
   fi
-
-  lap "#$ATTEMPT rebase" "$T"
-  echo "── kapuk: typecheck…"
+  lap "$1 rebase" "$T"
+  echo "── kapuk ($1): typecheck…"
   T=$(date +%s)
   # ⏱️ INCREMENTAL (2026-11-25, ADR-0480): tsc's own build-info cache, one per worktree (in its git dir, never
   # in the tree). It re-checks exactly the files whose content — or whose dependencies — changed, the
@@ -97,11 +86,51 @@ while :; do
   else
     npx tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile "$(git rev-parse --git-dir)/cit-tsc.tsbuildinfo" || fail "tsc piros"
   fi
-  lap "tsc" "$T"
-  echo "── kapuk: pre-commit suite a landolt diffre (LAND_RANGE=origin/main...HEAD)…"
+  lap "$1 tsc" "$T"
+  echo "── kapuk ($1): pre-commit suite a landolt diffre (LAND_RANGE=origin/main...HEAD)…"
   T=$(date +%s)
+  : >"$GATE_TIMES_FILE"
   LAND_RANGE="origin/main...HEAD" CIT_GATE_TIMES="$GATE_TIMES_FILE" bash "$ROOT/hooks/pre-commit" || fail "pre-commit kapu piros"
-  lap "kapuk" "$T"
+  lap "$1 kapuk" "$T"
+}
+
+# ⏱️ OPTIMISTIC PRE-PASS (ADR: `_planning/decisions/*-land-optimista-elokor-*`, measured 2026-11-26): rebase + tsc + gates ran UNDER the lock, 400–900 s
+# per land, and every other land queued behind it. Now they run BEFORE the lock, on the then-current
+# origin/main. Under the lock the land fetches again: if origin/main is still the very commit the pre-pass
+# rebased onto and HEAD is unchanged (land_pregate_valid), the gates already ran on exactly the tree being
+# pushed, and the lock is held only for push + verification. Otherwise rebase + tsc + gates run again UNDER
+# the lock, exactly as before — no gate is ever skipped for a tree it did not see.
+git fetch origin || fail "git fetch origin sikertelen"
+if [ -z "$(git log origin/main..HEAD --oneline)" ]; then
+  echo "✅ LAND: nincs landolnivaló — az origin/main már tartalmazza a HEAD-et."
+  exit 0
+fi
+land_gates "előkör (zár nélkül)"
+PRE_BASE="$(git rev-parse origin/main)"
+PRE_HEAD="$(git rev-parse HEAD)"
+
+land_lock_acquire "$ROOT" || fail "a gépszintű land-zár nem szerezhető meg"
+LOCK_T0=$(date +%s)
+git fetch origin || fail "git fetch origin sikertelen"
+
+ATTEMPT=0
+PREGATE_USED=0
+while :; do
+  ATTEMPT=$((ATTEMPT + 1))
+  [ "$ATTEMPT" -gt 3 ] && fail "3 kísérlet alatt is mozgott alólunk a main — futtasd újra"
+
+  if [ -z "$(git log origin/main..HEAD --oneline)" ]; then
+    echo "✅ LAND: nincs landolnivaló — az origin/main már tartalmazza a HEAD-et."
+    exit 0
+  fi
+
+  if [ "$ATTEMPT" -eq 1 ] && land_pregate_valid "$PRE_BASE" "$PRE_HEAD"; then
+    PREGATE_USED=1
+    echo "── a main az előkör óta nem mozdult ($(git rev-parse --short origin/main)) — az előkör kapui PONTOSAN erre a fára futottak, a zár alatt csak push + visszaellenőrzés"
+  else
+    [ "$ATTEMPT" -eq 1 ] && echo "── a main az előkör óta mozdult — rebase + kapuk újra, a zár alatt"
+    land_gates "#$ATTEMPT"
+  fi
 
   echo "── push origin HEAD:main…"
   if [ "${LAND_FAKE_PUSH:-}" = "1" ]; then
@@ -122,7 +151,12 @@ while :; do
   git merge-base --is-ancestor HEAD origin/main || fail "a HEAD nem őse az origin/main-nek"
   echo
   echo "✅ LAND: IGAZOLTAN FENT — origin/main=$(git rev-parse --short origin/main) tartalmazza a HEAD-et ($(git rev-parse --short HEAD))."
-  echo "⏱  land: összesen $(( $(date +%s) - LAND_T0 )) s (a zár megszerzése után)${LAND_TIMES}"
+  LOCK_S=$(( $(date +%s) - LOCK_T0 ))
+  echo "⏱  land: összesen $(( $(date +%s) - LAND_T0 )) s · a zár alatt $LOCK_S s · előkör $([ "$PREGATE_USED" = 1 ] && echo ÉRVÉNYES || echo újrafutott)${LAND_TIMES}"
+  # Persistent ledger (one line per land, shared by all worktrees) so the queue cost is measurable later.
+  printf '%s\t%s\ttotal=%s\tlocked=%s\tpregate=%s\t%s\n' "$(date '+%F %T')" "$(basename "$ROOT")" \
+    "$(( $(date +%s) - LAND_T0 ))" "$LOCK_S" "$PREGATE_USED" "${LAND_TIMES# · }" \
+    >>"$(git rev-parse --path-format=absolute --git-common-dir)/cit-land-times.log" 2>/dev/null || true
   if [ -s "$GATE_TIMES_FILE" ]; then
     echo "   a 10 leglassabb kapu (s):"
     head -10 "$GATE_TIMES_FILE" | sed 's/^/     /'

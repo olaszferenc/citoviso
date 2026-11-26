@@ -242,7 +242,7 @@ if [ -f scripts/gate-scope-check.mts ] && changed_files | grep -qE '^(src|script
   npx tsx scripts/gate-scope-check.mts >"$GATE_LOG" || gate_failed
 fi
 # A GÉPSZINTŰ LAND-SOR (scripts/land-lock.sh): eldobható repóban a valódi `land-lock.sh` — két land sorba áll,
-# a leölt zártartó elenged, a land.sh a fetch előtt zár; 3 visszarontás piros. ~20 s.
+# a leölt zártartó elenged, a land.sh a push előtt a zár alatt fetchel, az előkört csak land_pregate_valid-dal fogadja el; 7 visszarontás piros. ~25 s.
 if [ -f scripts/land-lock-check.mts ] && \
    changed_files | grep -qE '^scripts/(land\.sh|land-lock\.sh|land-lock-check\.mts|land-merge\.sh)$|^hooks/pre-push$'; then
   echo "[pre-commit] land-lock-check (a landok gépszintű sora: sorosít-e, elenged-e a halott land)…"

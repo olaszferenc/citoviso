@@ -14,12 +14,13 @@
 //      hangosan kiírja, ki tartja a zárat (A munkafája + PID-je).
 //   ② A ZÁRTARTÓ HALÁLA: A-t `kill -9`-cel leöljük, miközben a gyereke (alvás) ÁRVÁN tovább él
 //      → B ≤ 5 s alatt továbbmegy. (Egy örökölt fd-s zár az árva gyerek életéig zárva tartana.)
-//   ③ STRUKTÚRA: a `land.sh` a zárat az ELSŐ `git fetch` ELŐTT veszi fel, feltétel/kapcsoló nélkül,
-//      és a visszaellenőrzés („IGAZOLTAN FENT”) UTÁN engedi el.
+//   ③ STRUKTÚRA: a `land.sh` a zárat feltétel/kapcsoló nélkül veszi fel, a zár alatt ÚJRA fetchel a push
+//      előtt, az előkör (ADR-XXXX) kapuit CSAK a `land_pregate_valid` igenjére (a zár alatti fetch után)
+//      veszi érvényesnek, és a visszaellenőrzés („IGAZOLTAN FENT”) UTÁN engedi el.
 //   ── visszarontások (mindnek PIROSNAK kell lennie, különben a zöld nem bizonyít semmit) ──
 //   ④ a zár kivéve a könyvtárból (flock nélkül) → az ① átfedést lát.
 //   ⑤ örökölt fd-s zár (`exec 9>>…; flock 9`) → a ② nem megy tovább az árva gyerek miatt.
-//   ⑥ a `land.sh`-ból kivett `land_lock_acquire` sor → a ③ piros.
+//   ⑥ a `land.sh`-ból kivett `land_lock_acquire` sor, a zár alatti fetch, vagy a `land_pregate_valid` feltétel → a ③ piros.
 //   ── a PUSH-ŐR (hooks/pre-push, ADR-0485) és a soros hotfix-merge (scripts/land-merge.sh) ──
 //   ⑦ a VALÓDI hooks/pre-push egy eldobható origin-re: zár nélkül a mainre push ELUTASÍTVA (a main
 //      nem mozdul); akkor sem, ha épp MÁS land tartja a zárat; a zártartó (land_lock_acquire) pushát átengedi;
@@ -27,6 +28,10 @@
 //   ⑧ a VALÓDI scripts/land-merge.sh: a mainbe merge-el egy hotfix-ágat úgy, hogy a main FÁJA bájtra
 //      változatlan, a hotfix-commit a main őse, a merge két szülős; másodszorra „nincs teendő”.
 //   ⑨ visszarontás: a hook elutasítása kivéve (exit 0) → a ⑦ zár nélküli pusha átmegy → PIROS.
+//   ── az OPTIMISTA ELŐKÖR (ADR-XXXX): a kapuk a zár ELŐTT futnak; a zár alatt csak akkor nem futnak újra,
+//      ha a main és a HEAD pontosan az, amire futottak ──
+//   ⑩ a VALÓDI land_pregate_valid: változatlan main+HEAD → érvényes; üres arg, elmozdult HEAD, elmozdult
+//      main → érvénytelen. Visszarontás: mindig érvényes (return 0) → PIROS.
 //
 // ⛔ ÜRES HALMAZON MÉRNI HAMIS ZÖLD: a záró sor kiírja, hány állítás futott; nulla = bukás.
 //
@@ -191,12 +196,18 @@ function structure(text: string): string[] {
   const idx = (re: RegExp) => lines.findIndex((l) => re.test(l));
   const src = idx(/^\. "\$ROOT\/scripts\/land-lock\.sh"$/);
   const acq = idx(/^land_lock_acquire "\$ROOT" \|\| fail /);
-  const fetch = idx(/^\s*git fetch origin/);
+  const push = idx(/^\s*elif ! git push origin HEAD:main; then$/);
+  const fetch = lines.findIndex((l, i) => i > acq && /^git fetch origin \|\| fail /.test(l));
+  const skip = idx(/land_pregate_valid "\$PRE_BASE" "\$PRE_HEAD"; then$/);
   const verified = idx(/IGAZOLTAN FENT/);
   const rel = lines.findIndex((l, i) => i > verified && /^\s*land_lock_release$/.test(l));
   if (src < 0) bad.push("③ a land.sh nem source-olja a scripts/land-lock.sh-t (felső szinten, feltétel nélkül)");
   if (acq < 0) bad.push("③ nincs feltétel nélküli `land_lock_acquire \"$ROOT\" || fail …` sor a land.sh felső szintjén");
-  if (acq >= 0 && (fetch < 0 || acq > fetch)) bad.push("③ a zár NEM az első `git fetch origin` előtt szerződik");
+  if (acq >= 0 && (fetch < 0 || push < 0 || !(acq < fetch && fetch < push)))
+    bad.push("③ a zár alatt nincs friss `git fetch origin` a push ELŐTT (a push nem a zár alatt látott mainre épül)");
+  // ADR-XXXX: the gates may be skipped under the lock ONLY through land_pregate_valid, after the in-lock fetch.
+  if (skip < 0 || skip < fetch || skip > push) bad.push("③ az előkör érvényessége nem a zár alatti fetch után, `land_pregate_valid \"$PRE_BASE\" \"$PRE_HEAD\"`-dal dől el");
+  if (/PREGATE_(FORCE|SKIP|TRUST)|CIT_LAND_TRUST/.test(text)) bad.push("③ kapcsoló, ami az előkört ellenőrzés nélkül érvényesnek venné");
   if (src >= 0 && acq >= 0 && src > acq) bad.push("③ a land_lock_acquire a source előtt áll");
   if (verified < 0 || rel < 0) bad.push("③ nincs `land_lock_release` a visszaellenőrzés („IGAZOLTAN FENT”) után");
   if (/LAND_LOCK_(SKIP|OFF|DISABLE)|NO_LAND_LOCK/.test(text)) bad.push("③ kikerülő kapcsoló a land.sh-ban");
@@ -243,6 +254,33 @@ async function pushGuard(record: boolean): Promise<boolean> {
   const lr = spawnSync("bash", [locked], { cwd: WT, encoding: "utf8", env: { ...CHILD_ENV, LOCKLIB: LIB } });
   expect(lr.status === 0 && bareMain() === git(WT, "rev-parse", "HEAD").trim(), `⑦ a zártartó land pusha elutasítva (rc=${lr.status}):\n${lr.stdout}${lr.stderr}`);
   return refused;
+}
+
+// ⑩ land_pregate_valid — valid ONLY for (fetched origin/main, HEAD) exactly as the pre-pass left them.
+function pregate(lib: string, record = true): boolean {
+  git(WT, "fetch", "-q", "origin");
+  git(WT, "reset", "-q", "--hard", "origin/main");
+  commitIn(WT, `pre ${Date.now()}`);
+  const base = git(WT, "rev-parse", "origin/main").trim();
+  const head = git(WT, "rev-parse", "HEAD").trim();
+  const run = (b: string, h: string) =>
+    spawnSync("bash", ["-c", '. "$LOCKLIB"; land_pregate_valid "$B" "$H"'], { cwd: WT, env: { ...CHILD_ENV, LOCKLIB: lib, B: b, H: h } }).status === 0;
+  const cases: [string, boolean][] = [];
+  cases.push(["változatlan main + HEAD → érvényes", run(base, head) === true]);
+  cases.push(["üres argumentum → érvénytelen", run("", head) === false && run(base, "") === false]);
+  commitIn(WT, `head moved ${Date.now()}`);
+  cases.push(["a HEAD elmozdult → érvénytelen", run(base, head) === false]);
+  git(WT, "reset", "-q", "--hard", head);
+  // main moves (another land) and the worktree fetches it under the lock
+  commitIn(MAIN, `other land ${Date.now()}`);
+  const mainLock = path.join(TMP, "locked-main-pre.sh");
+  fs.writeFileSync(mainLock, `set -u\n. "$LOCKLIB"\nland_lock_acquire "$(git rev-parse --show-toplevel)" || exit 9\ngit push -q origin main\n`);
+  spawnSync("bash", [mainLock], { cwd: MAIN, encoding: "utf8", env: { ...CHILD_ENV, LOCKLIB: LIB } });
+  git(WT, "fetch", "-q", "origin");
+  cases.push(["a main elmozdult → érvénytelen", run(base, head) === false]);
+  const ok = cases.every(([, v]) => v);
+  if (record) for (const [what, v] of cases) expect(v, `⑩ ${what}: NEM így mérte`);
+  return ok;
 }
 
 // ⑧ the hotfix merge through the queue
@@ -296,6 +334,19 @@ try {
   // ⑥ acquire removed from land.sh
   const landNoAcq = fs.readFileSync(LAND, "utf8").replace(/^land_lock_acquire .*$/m, "");
   expect(structure(landNoAcq).length > 0, "⑥ VISSZARONTÁS ZÖLD: land_lock_acquire nélkül is átment a ③");
+  const landTxt = fs.readFileSync(LAND, "utf8");
+  const noLockFetch = landTxt.replace(/^(LOCK_T0=\$\(date \+%s\))\ngit fetch origin \|\| fail .*$/m, "$1");
+  expect(noLockFetch !== landTxt && structure(noLockFetch).length > 0, "⑥ VISSZARONTÁS ZÖLD: a zár alatti fetch nélkül is átment a ③");
+  const noPredicate = landTxt.replace(/land_pregate_valid "\$PRE_BASE" "\$PRE_HEAD"; then/, "true; then");
+  expect(noPredicate !== landTxt && structure(noPredicate).length > 0, "⑥ VISSZARONTÁS ZÖLD: az előkör ellenőrzés nélküli elfogadásával is átment a ③");
+
+  // ⑩ the optimistic pre-pass predicate on the REAL library, then its mutation (always valid) → red.
+  expect(pregate(LIB), "⑩ a land_pregate_valid nem pontosan a változatlan main + változatlan HEAD esetén érvényes");
+  const fnRe = /land_pregate_valid\(\) \{\n/;
+  expect(fnRe.test(libText), "⑩ a visszarontás célsora (land_pregate_valid() {) nem található");
+  const alwaysValid = path.join(TMP, "lib-pregate-always.sh");
+  fs.writeFileSync(alwaysValid, libText.replace(fnRe, "land_pregate_valid() {\n  return 0\n"));
+  expect(!pregate(alwaysValid, false), "⑩ VISSZARONTÁS ZÖLD: a mindig-érvényes előkört is elfogadta a mérés");
 
   await pushGuard(true);
   landMerge();
@@ -322,4 +373,4 @@ if (failures.length) {
   for (const f of failures) console.error(`   ✗ ${f}`);
   process.exit(1);
 }
-console.log(`✅ land-lock-check: ${asserts} állítás zöld (sorosítás · halott zártartó · land.sh-struktúra · push-őr · land-merge · 4 visszarontás piros) — ${secs} s`);
+console.log(`✅ land-lock-check: ${asserts} állítás zöld (sorosítás · halott zártartó · land.sh-struktúra · push-őr · land-merge · előkör · 7 visszarontás piros) — ${secs} s`);

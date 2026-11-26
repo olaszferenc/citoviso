@@ -66,3 +66,18 @@ land_lock_acquire() {
   printf '%s · PID %s · %s óta\n' "$root" "$$" "$(date '+%F %T')" >"$LAND_LOCK_FILE.holder"
   echo "🔒 land-sor: zár megszerezve ($((ticks / 5)) s várakozás után) — $LAND_LOCK_FILE"
 }
+
+# land_pregate_valid <pre_base> <pre_head> — OPTIMISTIC PRE-PASS (ADR-XXXX). land.sh runs rebase + tsc + the
+# gate suite BEFORE taking the lock, so a land no longer holds the queue for its 7–15 minutes of gates
+# (measured 2026-11-26: 400–900 s under the lock, every other land waiting behind it). Under the lock it
+# fetches again, and this predicate decides whether those gates still describe EXACTLY what would be
+# pushed: origin/main (just fetched) is the very commit the pre-pass rebased onto, and HEAD is the very
+# commit the gates ran on. Anything else — main moved, HEAD moved, an empty argument — returns non-zero,
+# and the land re-runs rebase + tsc + gates under the lock, exactly as before. No env/flag can force it.
+land_pregate_valid() {
+  local base="${1:-}" head="${2:-}"
+  [ -n "$base" ] && [ -n "$head" ] || return 1
+  [ "$(git rev-parse -q --verify refs/remotes/origin/main 2>/dev/null)" = "$base" ] || return 1
+  [ "$(git rev-parse -q --verify HEAD 2>/dev/null)" = "$head" ] || return 1
+  git merge-base --is-ancestor "$base" "$head" 2>/dev/null
+}
