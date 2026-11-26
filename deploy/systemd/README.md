@@ -315,3 +315,7 @@ sudo systemctl enable --now citoviso-events.timer citoviso-events-pending.timer
 ```
 
 ⚠️ Élesen a deploy GATE 6-ja telepíti (fent); a dev gépen a fenti recept.
+
+## Journal-méret (élesen kézzel, 2026-11-26)
+
+Élesen `/etc/systemd/journald.conf.d/citoviso-size.conf`: `[Journal] SystemMaxUse=500M` (előtte 3,7G, a lemez 90%-on). Nem a GATE 6 telepíti. Ellenőrzés: `journalctl --disk-usage`.
