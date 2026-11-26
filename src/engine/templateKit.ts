@@ -3,7 +3,7 @@
 // independent files and the registry (templates.ts) stays a plain import list.
 
 import { selectPlural, tSync } from "../i18n/packs.js";
-import { iconSvg, starIcon } from "./icons.js";
+import { iconSvg, matchIcon, starIcon } from "./icons.js";
 import { SAMPLE_ROOMS } from "./primitives.js";
 import type { Photo, Recipe, RenderPhase, Room, SectionCopy, SiteData } from "./recipe.js";
 import { amenityIconSvg } from "./amenityIcon.js";
@@ -326,6 +326,27 @@ export interface PhotoAllotment {
  * (`minGallery` reserved before the rows) → feature rows → the rest of the gallery.
  * A slot the pool cannot fill stays empty — the template drops or flattens it.
  */
+/** Local photo labels (media/photoKindLabels.json) that fit a feature row's icon category. */
+const ROW_LABELS: Readonly<Record<string, readonly string[]>> = {
+  pool: ["a swimming pool", "an outdoor hot tub", "a sauna or jacuzzi", "a wooden barrel sauna"],
+  view: ["a lake shore", "a balcony with a view"],
+  boat: ["a lake shore"],
+  garden: ["a garden with a terrace", "a courtyard"],
+  child: ["a garden with a terrace", "a courtyard"],
+  grill: ["a garden with a terrace", "a courtyard"],
+  fire: ["a garden with a terrace", "a living room"],
+  sun: ["a balcony with a view", "a balcony with a table and chairs", "a garden with a terrace"],
+  bed: ["a bedroom with a bed", "a hotel room interior"],
+  ac: ["a living room", "a bedroom with a bed", "a hotel room interior"],
+  parking: ["the outside of a house", "a guesthouse building", "a courtyard"],
+  key: ["the outside of a house", "a guesthouse building"],
+  location: ["the outside of a house", "a guesthouse building", "a lake shore"],
+  pet: ["a garden with a terrace", "a courtyard"],
+  bike: ["the outside of a house", "a courtyard", "a garden with a terrace"],
+};
+/** A row whose category has no matching photo takes a neutral place shot — never a room. */
+const NEUTRAL_ROW: readonly string[] = ["the outside of a house", "a guesthouse building", "a garden with a terrace", "a courtyard", "a lake shore"];
+
 export function allotPhotos(
   d: SiteData,
   opts: { readonly minGallery: number; readonly maxGallery: number; readonly maxRows: number },
@@ -395,8 +416,18 @@ export function allotPhotos(
   for (let i = 0; i < rowsN; i++) {
     // A feature card's picture is never a bathroom, toilet or kitchen (11-25: Afamado's „Erkély/terasz”
     // card showed a washbasin).
-    const p = take((x) => notBath(x) && !x.notCard);
-    if (p) rows.push(p);
+    // The row's picture fits its TEXT (11-26: „Játszótér csúszdával” showed a bed): the photo whose local
+    // label matches the highlight's icon category first; else an outdoor/house shot — a bedroom only for a
+    // bed highlight; else none (the row keeps its text, the template drops an image-less row's picture).
+    const want = ROW_LABELS[matchIcon(d.highlights[i] ?? "")] ?? [];
+    const ok = (x: Photo): boolean => notBath(x) && !x.notCard;
+    const p =
+      take((x) => ok(x) && !!x.kindLabel && want.includes(x.kindLabel)) ??
+      take((x) => ok(x) && !!x.kindLabel && NEUTRAL_ROW.includes(x.kindLabel)) ??
+      take((x) => ok(x) && !x.kindLabel);
+    // rows[i] is paired with highlights[i] by the templates: no fitting photo → stop here (no shifting).
+    if (!p) break;
+    rows.push(p);
   }
   const own = pool.splice(0, opts.maxGallery);
   // The stock fill (mock, fewer than six own photos) completes the gallery, never another slot.

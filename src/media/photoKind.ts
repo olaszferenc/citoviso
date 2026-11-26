@@ -309,10 +309,19 @@ export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   // A bathroom or a toilet is never on the page, gallery included (quality colleague, 11-25: Lili's WC
   // with the washing machine, Zalabéri's shower curtain and sink — failed every time).
   const p = v.probs ?? {};
-  return v.label === "a bathroom with a shower" || v.label === "a toilet" || (p["a bathroom with a shower"] ?? 0) + (p["a toilet"] ?? 0) >= BATHROOM_OFF_PAGE;
+  if (v.label === "a bathroom with a shower" || v.label === "a toilet" || (p["a bathroom with a shower"] ?? 0) + (p["a toilet"] ?? 0) >= BATHROOM_OFF_PAGE) return true;
+  // A WC in the BACKGROUND of a bedroom shot (11-26: Zalabéri, b5c60799) — even a little toilet is too much.
+  if ((p["a toilet"] ?? 0) >= TOILET_OFF_PAGE) return true;
+  // People on the page: a stranger in a bikini by the pool, a group of guests (quality colleague, 11-26:
+  // Meszesvölgy's highlighted pool photo and gallery opener) — off the page, hero or not.
+  return (p["a woman in a bikini"] ?? 0) + (p["a group of people"] ?? 0) >= PEOPLE_OFF_PAGE;
 }
+/** People mass from which a photo leaves the page. */
+export const PEOPLE_OFF_PAGE = 0.15;
 /** Bathroom + toilet mass from which a photo leaves the page. */
 export const BATHROOM_OFF_PAGE = 0.35;
+/** Toilet mass alone from which a photo leaves the page (a WC behind the bed). */
+export const TOILET_OFF_PAGE = 0.06;
 
 /** What a hero shows at its best: the place from outside, its garden, pool, view (full weight). */
 const HERO_OUTSIDE = ["the outside of a house", "a guesthouse building", "a garden with a terrace", "a swimming pool", "a balcony with a view", "a lake shore", "a courtyard"];
