@@ -25,7 +25,7 @@
 
 import { readFile } from "node:fs/promises";
 import { db } from "../src/db/client.js";
-import { refreshStaleQueue } from "../src/generator/mockRefresh.js";
+import { refreshStaleQueue, regateStaleQueue } from "../src/generator/mockRefresh.js";
 import {
   cancelDispatch,
   DISPATCH_HOME_COUNTRY,
@@ -55,6 +55,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAIN_BUDGET_MS = 8 * 60_000;
 /** The refresh step's share of a firing, and the unit's whole budget (TimeoutStartSec=600, with air). */
 const REFRESH_BUDGET_MS = 75_000;
+/** Re-judging plans after a render-gate rule change: ~15 s a plan, a batch per firing (mockRefresh.regateStaleQueue). */
+const REGATE_BUDGET_MS = 150_000;
 const UNIT_BUDGET_MS = 9 * 60_000;
 
 function needBy(): string {
@@ -101,6 +103,12 @@ async function main(): Promise<void> {
         if (!opt("now") && budget > 0) {
           const r = await refreshStaleQueue(budget);
           if (r.refreshed || r.failed) console.log(`mock-frissítés: ${JSON.stringify(r)}`);
+        }
+        // …and re-judges the waiting plans whose render-gate verdict is from an older rule version (11-26).
+        const gateBudget = Math.min(REGATE_BUDGET_MS, UNIT_BUDGET_MS - (Date.now() - tickStarted));
+        if (!opt("now") && gateBudget > 0) {
+          const g = await regateStaleQueue(gateBudget);
+          if (g.judged) console.log(`kapu-újramérés: ${JSON.stringify(g)}`);
         }
       }
       return;

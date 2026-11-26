@@ -23,6 +23,7 @@ import { photoKindAvailable } from "../media/photoKind.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
 import { APPROVAL_PENDING_NOTE, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
+import { RENDER_GATE_VERSION, renderGateFor } from "../outreach/mockRenderGate.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "./depthArm.js";
 import { persistMockLanguage, renderMockMeasured } from "./mockLanguage.js";
 import { secureMockPhotos } from "./photoTransport.js";
@@ -184,4 +185,49 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
     .executeTakeFirst();
   return { refreshed, failed, left: Number(leftRow?.n ?? 0) };
+}
+
+/**
+ * RE-JUDGE AFTER A RULE CHANGE (11-26): a new render-gate version makes every cached verdict stale, and the
+ * owner's page shows only plans whose verdict is current — Erzsébet's two passed plans dropped off the page
+ * after the gate went 12 → 13, and nothing re-ran the gate. Here the waiting rows' plans (main + second) with a
+ * stale or missing verdict are judged again, a batch per firing; the ones the quality colleague already passed
+ * first, so a ready offer returns to the owner's page soonest.
+ */
+export async function regateStaleQueue(budgetMs: number, limit = 40): Promise<{ judged: number; left: number }> {
+  if (!photoKindAvailable() || budgetMs <= 0) return { judged: 0, left: -1 };
+  const rows = await db
+    .selectFrom("outreach_dispatch as d")
+    .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
+    .select(["d.lead_id as leadId", "d.artifact_id as mainId", "a.inputs as inputs"])
+    .where("d.status", "in", ["queued", "held"])
+    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
+    .where(MOCK_CURRENT_GENERATOR_SQL)
+    .orderBy(sql`(coalesce(a.inputs->'qaReview'->>'verdict', '') = 'pass') desc`)
+    .orderBy("d.queued_at")
+    .limit(limit * 3)
+    .execute();
+  const stale = (inputs: unknown): boolean => (inputs as { renderGate?: { version?: number } } | null)?.renderGate?.version !== RENDER_GATE_VERSION;
+  const started = Date.now();
+  let judged = 0;
+  let left = 0;
+  for (const r of rows) {
+    const ids: string[] = [];
+    if (stale(r.inputs)) ids.push(r.mainId);
+    const alt = await secondPlanOf(r.leadId, r.mainId).catch(() => null);
+    if (alt) {
+      const ai = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", alt.id).executeTakeFirst();
+      if (stale(ai?.inputs)) ids.push(alt.id);
+    }
+    for (const id of ids) {
+      if (Date.now() - started > budgetMs || judged >= limit) {
+        left++;
+        continue;
+      }
+      await renderGateFor(id).catch(() => undefined);
+      judged++;
+    }
+  }
+  return { judged, left };
 }

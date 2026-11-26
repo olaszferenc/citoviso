@@ -245,6 +245,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("gépi kapu: a nyitóképet a kolléga-jelölt szabálya méri (isHeroCandidate), nem írja felül a választását", /!isHeroCandidate\(hv\)/.test(readFileSync(new URL("../src/outreach/mockRenderGate.ts", import.meta.url), "utf8")));
   check("kiemelés: utcacím („Balatonbogláron, a Fiumei utcában”) nem címke, a szolgáltatás marad", isAddressLabel("Balatonbogláron, a Fiumei utcában") && !isAddressLabel("Saját parkoló") && !isAddressLabel("Kilátás a Balatonra") && !isAddressLabel("Közvetlen vízpart"));
   check("nyitókép széles vágásnál a felső harmadra áll (35 %) — mindhárom sablon és a mélységhatás", ["gateOpening.ts", "wordmarkGrow.ts", "parallax.ts"].every((f) => /var\(--cit-hero-fx,50%\) 35%/.test(readFileSync(new URL(`../src/engine/templates/${f}`, import.meta.url), "utf8"))) && /\(0\.35-0\.5\)\*\(1-cy\)/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
+  check("kapu-újramérés: a kiküldő ütem a régebbi kapu-verzióval mért várakozó terveket maga méri újra (a jóváhagyó lapról nem esnek ki)", /regateStaleQueue\(gateBudget\)/.test(readFileSync(new URL("./outreach-dispatch.mts", import.meta.url), "utf8")) && /renderGate\?\.version !== RENDER_GATE_VERSION/.test(readFileSync(new URL("../src/generator/mockRefresh.ts", import.meta.url), "utf8")));
 }
 
 if (failed) {
