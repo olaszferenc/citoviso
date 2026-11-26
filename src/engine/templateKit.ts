@@ -469,7 +469,6 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   // lodging shows no bedroom (quality colleague 11-26, Sirató / T-Lak: the card was an empty bed
   // icon on a page with 5+ own photos, where the stock fill is off). Never the hero, a kitchen or
   // bathroom (backstage), nor a photo with a vehicle / person / animal (notCard).
-  const placeLabel = /^(the outside of a house|a guesthouse building|a garden with a terrace|a balcony with a table and chairs|a balcony with a view|a courtyard)$/;
   // From the END of the set: the hero, the about picture (photos[1]) and the bands take the front ones —
   // the card must not repeat a picture the page already shows (Linetta fixture, wordmark-grow about).
   // …and never the same file under another size folder / URL (Linetta: „beds.jpeg” as about AND card).
@@ -480,12 +479,7 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const inside = [...d.photos.entries()]
     .reverse()
     // a detected sofa (photoCurate `lounge`) — the label alone called a corridor „a hotel room interior” (BaBo)
-    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1]
-    // No inside shot either: the lone card shows the PLACE itself — the house, its garden or terrace (11-26,
-    // Sirató: the card stood with no picture and a big empty band before it).
-    ?? [...d.photos.entries()]
-      .reverse()
-      .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && !!p.kindLabel && placeLabel.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1];
+    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1];
   // A bedroom the hero / about frame already shows goes last (Linetta: after the vehicle shots moved to
   // the end, the bedroom became photos[1] — the about frame — and the card repeated it).
   const fresh = cards.filter((c) => !front.some((q) => sameShot(q, c)));
@@ -532,7 +526,7 @@ export function roomsForMock(d: SiteData): readonly Room[] {
   // Bedrooms run out → the lodging's sitting room / house / garden shots, each once (11-26, quality colleague,
   // Ildikó: a real room's card stood as a grey panel with a bed icon on a page full of photos).
   const spare = d.photos.length > 2
-    ? [...d.photos.slice(2)].reverse().filter((p) => !p.backstage && !p.notCard && !pool.includes(p) && (p.lounge === true || (!!p.kindLabel && /^(the outside of a house|a guesthouse building|a garden with a terrace|a balcony with a table and chairs|a balcony with a view|a courtyard)$/.test(p.kindLabel))))
+    ? [...d.photos.slice(2)].reverse().filter((p) => !p.backstage && !p.notCard && !pool.includes(p) && p.lounge === true)
     : [];
   const borrowed = (d.rooms ?? []).map((r) => {
     if (r.photo) return r;

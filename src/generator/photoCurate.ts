@@ -62,7 +62,8 @@ export async function curateMockPhotos<T extends { url: string }>(
     // a car at the edge, a dog in front of the house (11-26: Jaja's SUV, Pince's dog, Zalabéri's blue car)
     const notCard = (v != null && NOT_CARD_LABELS.reduce((a, l) => a + (pr[l] ?? 0), 0) >= NOT_CARD_MASS) || (objs != null && showsVehicleOrAnimal(objs));
     // a sofa / armchairs (the lone card's picture when there is no bed — never a corridor, BaBo 11-26)
-    const lounge = objs != null && showsSittingArea(objs) && v != null && isShowcase(v);
+    // …INDOOR only (11-26: a garden sofa and a swing passed): the classifier's best label is a room
+    const lounge = objs != null && showsSittingArea(objs) && v != null && isShowcase(v) && ["a living room", "a hotel room interior", "a bedroom with a bed"].includes(v.label);
     const bedSeen = objs != null && showsBed(objs) && v != null && isShowcase(v);
     const bedroom = bedroomClip || bedSeen;
     // …nor a band / the gate leaf with a car, a dog or a person in it (11-26, round 4: Pince's band, Alfa's feature)

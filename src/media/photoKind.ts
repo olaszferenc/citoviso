@@ -40,6 +40,8 @@ export interface PhotoQuality {
   readonly long: number;
   readonly luma: number;
   readonly lap: number;
+  /** Mean luma of the TOP fifth (the sky outdoors): a night shot has a dark sky. */
+  readonly top?: number;
 }
 
 export interface PhotoKind {
@@ -76,7 +78,7 @@ export const PHOTO_MIN_LUMA = 50;
 /** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
 export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 6;
+const VERSION = 7;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -268,7 +270,10 @@ export async function measureQuality(buf: Buffer): Promise<PhotoQuality> {
     }
   }
   const lap = n ? ls2 / n - (ls / n) ** 2 : 0;
-  return { long, luma: +(sum / Math.max(1, d.length)).toFixed(1), lap: +lap.toFixed(1) };
+  const topRows = Math.max(1, Math.round(h * 0.2));
+  let ts = 0;
+  for (let i = 0; i < topRows * w; i++) ts += d[i]!;
+  return { long, luma: +(sum / Math.max(1, d.length)).toFixed(1), lap: +lap.toFixed(1), top: +(ts / (topRows * w)).toFixed(1) };
 }
 
 /** Classify a photo URL; the verdict is cached on disk per URL (a portal photo does not change). */
@@ -316,13 +321,20 @@ export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   // Meszesvölgy's highlighted pool photo and gallery opener) — off the page, hero or not.
   // 11-26 (quality colleague, Stéghouse): ONE person sitting on the jetty slipped through — the labels named
   // only bikinis and groups. A single person, an angler and children count too.
-  if (seasonMass(v) >= SEASON_OFF_PAGE) return true;
+  if (seasonMass(v) >= SEASON_OFF_PAGE || isNightShot(v)) return true;
   return peopleMass(v) >= PEOPLE_OFF_PAGE;
 }
 /** Snow, night, Christmas: the page shows the place as a guest books it, not one evening / one winter
  *  (quality colleague, 11-25 and 11-26: Kőmosó's band snowy, a gallery photo at night). */
 export const SEASON_LABELS = ["a snowy landscape", "a house covered in snow", "a building at night", "christmas decorations"];
 export const SEASON_OFF_PAGE = 0.25;
+/** An OUTDOOR shot whose sky (top fifth) is this dark is a night shot (11-26: Borfa's lamp-lit courtyard and lit
+ *  pool, Kőmosó's night yard measured 17–41; 64 fresh daytime photos: none under 55). Indoors the top is a ceiling. */
+export const NIGHT_TOP_LUMA = 45;
+const INDOOR_LABELS = new Set(["a living room", "a hotel room interior", "a bedroom with a bed", "a kitchen", "a small kitchenette", "a bathroom with a shower", "a toilet", "a dining table", "a hallway"]);
+export function isNightShot(v: PhotoKind): boolean {
+  return v.quality?.top != null && v.quality.top < NIGHT_TOP_LUMA && !INDOOR_LABELS.has(v.label);
+}
 export function seasonMass(v: PhotoKind): number {
   const p = v.probs ?? {};
   return SEASON_LABELS.reduce((a, l) => a + (p[l] ?? 0), 0);

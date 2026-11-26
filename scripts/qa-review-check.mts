@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { focusXOfBuffer, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import { focusXOfBuffer, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
 import { sampleRooms, galleryOrder, roomsForMock } from "../src/engine/templateKit.js";
@@ -211,7 +211,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   {
     const ph2 = (n: number, kindLabel?: string): PH => ({ url: `https://y.test/${n}.jpg`, alt: "k", provenance: "portal", ...(kindLabel ? { kindLabel } : {}) });
     const c2 = sampleRooms({ name: "S", photos: [ph2(1), ph2(2), ph2(3, "a garden with a terrace"), ph2(4, "a kitchen")], sampleRoomCount: 0 } as unknown as SD)[0];
-    check("szálláskártya: belső kép sincs → a ház/kert saját képe, nem üres sáv", c2?.photo?.url === ph2(3).url);
+    check("szálláskártya: ágy és beltéri kanapé nélkül nincs tartalékkép (a kert/ház/kapu nem szoba — 11-26 4–5. kör)", !c2?.photo);
   }
   {
     const r = withoutAbsentPictureClaims({ template: "parallax", skin: "", archetype: "", sections: [{ kind: "gallery", copy: { title: "Képek a házról és az alaprajzokról", eyebrow: "Galéria" } }] } as never) as { sections: { copy: { title?: string; eyebrow?: string } }[] };
@@ -253,6 +253,14 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     check("csonka címke („Napozóágyak és”) a lógó kötőszó nélkül jelenik meg", />Napozóágyak</.test(html) && !/Napozóágyak és/.test(html));
     check("parallax nyitókép-cím árnyékot kap (világos homlokzaton is olvasható kiemelés)", /\.t-hero h1\{[^}]*text-shadow/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
     check("generátor-bélyeg qafix5; a kolléga által átengedett qafix4-es terv aktuális marad (nem esik le a tulaj lapjáról)", /qafix5/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /'2026-11-26-qafix4' and a\.inputs->'qaReview'->>'verdict' = 'pass'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
+  }
+  {
+    const base2 = { name: "L", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Légkondicionálás", "Wifi", "Grillezési lehetőség"] } as unknown as SD;
+    const amenOf2 = (html: string): string => html.match(/<section[^>]*data-cit-module="amenities"[\s\S]*?<\/section>/)?.[0] ?? "";
+    const own = amenOf2(renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { ...base2, amenities: ["Légkondicionálás", "Wifi a közösségi terekben", "Grillezési lehetőség", "Kiságy"] } as SD, { phase: "mock" }));
+    check("„Amit kínálunk” a szállás SAJÁT listáján is szűr: a látott tételek (szó szerint vagy átfogalmazva) kimaradnak, az új (Kiságy) marad", /Kiságy/.test(own) && !/Légkond|Wifi|Grill/.test(own), own.slice(0, 300));
+    check("éjszakai kültéri kép (sötét ég) le az oldalról; beltéri sötét plafon nem", isNightShot(K("ok", "a garden with a terrace", { quality: { long: 1600, luma: 80, lap: 300, top: 30 } })) && !isNightShot(K("ok", "a living room", { quality: { long: 1600, luma: 80, lap: 300, top: 30 } })) && !isNightShot(K("ok", "a garden with a terrace", { quality: { long: 1600, luma: 120, lap: 300, top: 140 } })));
+    check("szobakártya: ház/kert tartalék nincs (kapu, kerítés, farakás soha) — csak ágy vagy beltéri kanapé", !/placeLabel/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /\["a living room", "a hotel room interior", "a bedroom with a bed"\]\.includes\(v\.label\)/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")));
   }
 }
 

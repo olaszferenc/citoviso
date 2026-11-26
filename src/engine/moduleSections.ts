@@ -643,19 +643,28 @@ function pricingSampleBlock(d: SiteData): string {
  * source's own offers (ADR-0338, ADR-0404) — the section carries the "Minta" pill and says
  * the owner ticks the real ones. Never generic padding; nothing sourced → the empty frame.
  */
+/**
+ * The facility items the page does NOT already show (11-26, quality colleague, 31/31 then Laura / BaBo): not the
+ * same text, not the same facility kind (icon) as a highlight or a selling point, and not one without a facility
+ * icon (an empty ring). Used for the sourced sample AND for the lead's own amenity list on the mock.
+ */
+export function notShownYet(d: SiteData, items: readonly string[]): string[] {
+  const norm = (t: string): string => t.toLocaleLowerCase("hu").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const shown = [...(d.highlights ?? []), ...(d.usp ?? [])];
+  const shownText = shown.map(norm).filter(Boolean);
+  const shownKind = new Set(shown.map((t) => matchIcon(t)).filter((k) => k !== "dot"));
+  return items.filter((it) => {
+    const k = matchIcon(it);
+    const n = norm(it);
+    return k !== "dot" && !shownKind.has(k) && !shownText.some((x) => x === n || x.includes(n) || n.includes(x));
+  });
+}
+
 function amenitiesSampleBlock(d: SiteData): string {
   // Never an item the page already shows (11-26, quality colleague, 31/31 plans: Jázmin's highlights and
   // Kevikincses' about chips came back in „Amit kínálunk”) — the same text, or the same facility kind (icon) —
   // and never one without a facility icon (an empty ring stood beside „Horgászatot kedvelőknek”).
-  const norm = (t: string): string => t.toLocaleLowerCase("hu").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-  const shown = [...(d.highlights ?? []), ...(d.usp ?? [])];
-  const shownText = shown.map(norm);
-  const shownKind = new Set(shown.map((t) => matchIcon(t)).filter((k) => k !== "dot"));
-  const items = sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []).filter((it) => {
-    const k = matchIcon(it);
-    const n = norm(it);
-    return k !== "dot" && !shownKind.has(k) && !shownText.some((s) => s === n || s.includes(n) || n.includes(s));
-  });
+  const items = notShownYet(d, sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []));
   // No sourced facility list while the page already shows its highlights → no block at all (11-26, quality
   // colleague): the empty frame failed every review (Riva, Kiskúti), and filling it from the highlights
   // printed the same items twice („Egy pillantásra” + „Amit kínálunk”, Sirató).
@@ -1430,8 +1439,10 @@ export function moduleSectionGroups(
       d.amenities?.length
         ? // Per-item icons — the same 70-icon catalogue the admin picker uses
           // (owner order 2026-08-27); free-text falls back to the keyword matcher.
-          listBlock(d, "amenities", T(d, "Amit kínálunk"), d.amenities, (t) =>
-            amenityIconSvg(t, d.amenityIconMap),
+          // On the MOCK: only what the page does not show yet (Laura, BaBo 11-26: „Légkondicionálás”, „Grillezési
+          // lehetőség” word for word under „Egy pillantásra” and again here) — nothing new → no block.
+          ((items) => (items.length ? listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t, d.amenityIconMap)) : ""))(
+            opts.demo ? notShownYet(d, d.amenities) : [...d.amenities],
           )
         : s.has("amenities")
           ? amenitiesSampleBlock(d)
