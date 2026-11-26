@@ -3180,6 +3180,17 @@ if [ -f scripts/scout-close-race-check.mts ] && \
   echo "[pre-commit] scout-close-race-check (a felderítő csempe egyszer zárul)…"
   npx tsx scripts/scout-close-race-check.mts >"$GATE_LOG" || gate_failed
 fi
+# work-queue-check (ADR-XXXX, tulaj 2026-11-26 „a deploy prioritást élvez”): a hosszú munka a KÜLÖN
+# dolgozóban fut (DB-feladatsor), a konzol csak sorba tesz; a deploy nem vár rá és nem veszíti el.
+# Méri: idempotens sorba tétel, kill -9 utáni átvétel, folytatás (feladási határral), ssh-futás
+# átvétele, deploy-jelző alatt nincs indítás, a csempe-takarító nem nyitja újra az élő munkát,
+# bekötés. Önteszt a régi viselkedésre (in-process spawn, várakoztató GATE 4) → piros. ~5 s.
+if [ -f scripts/work-queue-check.mts ] && \
+   changed_files | grep -qE '^src/worker/|^src/console/(scrapeJob|scoutRoutes)\.ts$|^src/scraper/(run|batchedRun|jobSpec|persist)\.ts$|^src/scout/store\.ts$|^scripts/deploy-prod\.sh$|^deploy/systemd/citoviso-worker|^scripts/work-queue-check'; then
+  echo "[pre-commit] work-queue-check (a deploy nem vár, nem veszít munkát)…"
+  npx tsx scripts/work-queue-check.mts >"$GATE_LOG" || gate_failed
+  npx tsx scripts/work-queue-check.mts --self-test >"$GATE_LOG" || gate_failed
+fi
 if [ -f scripts/room-card-overflow-check.mts ] && \
    changed_files | grep -qE '^src/engine/render\.ts$|^src/engine/templates/|^assets/runtime/cit-modules\.css$|^scripts/room-card-overflow-check'; then
   echo "[pre-commit] room-card-overflow-check (a szoba-kártya képe nem takarja a szöveget)…"

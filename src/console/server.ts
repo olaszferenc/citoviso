@@ -2078,7 +2078,7 @@ async function handle(
     ]);
     const data: HubData = {
       r,
-      scrapeRunning: getScrapeJob().running,
+      scrapeRunning: (await getScrapeJob()).running,
       operatorName: op?.displayName ?? "operátor",
       fin,
       sales: { on: MODULE_CATALOG.length - dis.size, all: MODULE_CATALOG.length },
@@ -3457,16 +3457,16 @@ async function handle(
     await loadRegions(true); // operator-defined areas (0018), not just the built-ins
     const regions = Object.values(REGIONS).map((r) => ({ id: r.id, label: r.label }));
     const notice = url.searchParams.get("hiba");
-    return send(res, 200, scrapePage(getScrapeJob(), await getScrapeRuns(), regions, notice));
+    return send(res, 200, scrapePage(await getScrapeJob(), await getScrapeRuns(), regions, notice));
   }
-  // POST /scrape/start — spawn the existing CLI as a child process (one at a time).
+  // POST /scrape/start — enqueue for the separate worker (ADR-XXXX; one at a time).
   if (method === "POST" && path === "/scrape/start") {
     const form = await readBody(req);
     const regionId = form.get("region") ?? "";
     await loadRegions(true); // operator-defined areas (0018)
     if (!REGIONS[regionId]) return redirect(res, "/scrape?hiba=Ismeretlen%20régió");
     const cap = form.get("cap") ? Number(form.get("cap")) : undefined;
-    const err = startScrapeJob(regionId, cap);
+    const err = await startScrapeJob(regionId, cap);
     return redirect(res, err ? `/scrape?hiba=${encodeURIComponent(err)}` : "/scrape");
   }
   // GET /map — everything scraped so far on one map (coverage + blank spots).

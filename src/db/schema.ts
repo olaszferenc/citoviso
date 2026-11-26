@@ -44,6 +44,40 @@ export interface ScrapeRunTable {
   cost_estimate: number | null;
   error: string | null;
   created_at: Generated<Timestamp>;
+  /** The job's own description, written by run.ts at start (0159, src/scraper/jobSpec.ts) —
+   *  what the worker's resumer (src/worker/resume.ts) starts again after an interruption. NULL on older runs. */
+  job: JSONColumnType<Record<string, unknown> | null, string | null | undefined, string | null>;
+  /** When the resumer took the interrupted run in hand (0159); NULL = still waiting. */
+  resumed_at: Timestamp | null;
+}
+
+/** The separate worker's job queue (0159, src/worker/). The console only enqueues and reads. */
+export interface WorkJobTable {
+  id: Generated<string>;
+  kind: "scrape" | "scout";
+  payload: JSONColumnType<Record<string, unknown>>;
+  dedupe_key: string | null;
+  status: Generated<"queued" | "running" | "done" | "failed" | "interrupted">;
+  attempts: Generated<number>;
+  enqueued_by: string | null;
+  created_at: Generated<Timestamp>;
+  started_at: Timestamp | null;
+  finished_at: Timestamp | null;
+  heartbeat_at: Timestamp | null;
+  exit_code: number | null;
+  error: string | null;
+  log: JSONColumnType<string[], string | undefined, string>;
+}
+
+/** The worker's life sign (0159) — what the deploy's GATE 4 measures after the restart. */
+export interface WorkerStateTable {
+  name: string;
+  pid: number;
+  code_sha: string | null;
+  started_at: Timestamp;
+  beat_at: Timestamp;
+  draining: Generated<boolean>;
+  current_job: string | null;
 }
 
 export interface LeadTable {
@@ -2444,6 +2478,8 @@ export interface Database {
   partner_message: PartnerMessageTable;
   scraper_definition: ScraperDefinitionTable;
   scrape_run: ScrapeRunTable;
+  work_job: WorkJobTable;
+  worker_state: WorkerStateTable;
   lead: LeadTable;
   lead_provenance: LeadProvenanceTable;
   mock_artifact: MockArtifactTable;

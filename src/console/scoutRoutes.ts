@@ -24,7 +24,7 @@ import {
   type TileView,
 } from "../scout/store.js";
 import { consoleLang } from "./i18nCtx.js";
-import { runningScoutTile, startScoutJob } from "./scrapeJob.js";
+import { runningScoutTiles, startScoutJob } from "./scrapeJob.js";
 import { scoutPage } from "./scoutViews.js";
 
 function json(res: http.ServerResponse, status: number, body: unknown): void {
@@ -56,7 +56,7 @@ function pickTile(tiles: readonly TileView[], wanted: string | null): string | n
 }
 
 async function regionState(region: ScoutRegion, sel: string | null, lang: string) {
-  await reapStuckScoutTiles(region.id, runningScoutTile());
+  await reapStuckScoutTiles(region.id, await runningScoutTiles());
   const tiles = await listTiles(region.id, lang);
   const stats = await scoutStats(region, tiles);
   const places = sel ? await tilePlaces(sel) : [];
@@ -166,12 +166,7 @@ export async function handleScoutRoute(
         return true;
       }
       if (r.procRows > 0) {
-        const busy = startScoutJob(region.id, tile.id, (code) => {
-          if (code !== 0) {
-            console.error(`[scout] a csempe (${tile.label}) feldolgozása nem futott végig (exit ${code}) — a csempe újra nyitott.`);
-            void reopenScoutTile(tile.id).catch(() => {});
-          }
-        });
+        const busy = await startScoutJob(region.id, tile.id);
         if (busy) {
           // Undo only THIS request's close (its own rows) — never a close another request made.
           await reopenScoutTile(tile.id, r.procIds);

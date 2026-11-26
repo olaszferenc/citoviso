@@ -122,6 +122,16 @@ export interface BatchTotals {
  * batch that crosses it, actual leads go first. A throw ends the loop — every batch
  * before it is already in the DB.
  */
+/** A cooperative stop between two committed batches (deploy, worker drain) — not a failure. */
+export class StopAtBoundary extends Error {
+  constructor(
+    readonly done: number,
+    readonly total: number,
+  ) {
+    super(`megállítva az adaghatáron (${done}/${total} adag kész) — a futás innen folytatódik`);
+  }
+}
+
 export async function enrichAndSaveInBatches(
   runId: string,
   batches: QualifiedLead[][],
@@ -133,9 +143,12 @@ export async function enrichAndSaveInBatches(
     savedEarlier: number;
     /** Only with --out: the saved leads are also kept here for the JSON file. */
     collect?: QualifiedLead[];
+    /** Asked before every batch (ADR-XXXX): true = stop HERE, at a unit boundary — every batch
+     *  so far is committed, nothing is half-done; the run is continued later from the DB. */
+    shouldStop?: () => boolean;
   },
 ): Promise<BatchTotals> {
-  const { enrich, mark, cap, savedEarlier, collect } = opts;
+  const { enrich, mark, cap, savedEarlier, collect, shouldStop } = opts;
   const m: BatchTotals = {
     enriched: 0,
     inserted: 0,
@@ -150,6 +163,7 @@ export async function enrichAndSaveInBatches(
   };
   for (let i = 0; i < batches.length; i++) {
     const batch = batches[i];
+    if (shouldStop?.()) throw new StopAtBoundary(i, batches.length);
     const room = cap ? cap - savedEarlier - m.inserted : Infinity;
     if (room <= 0) {
       console.log(`\nCap elérve (${cap}) — a maradék ${batches.length - i} adag kimarad.`);

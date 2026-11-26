@@ -23,7 +23,7 @@
 //   ⑦ a friss életjelű futást a takarító NEM bántja (nem öl élőt)
 //   ⑧ a saját hibájára bukott futás „hibára futott" marad — a két történet nem
 //      mosódik össze, mert az operátor következő lépése más
-//   ⑨ a deploy-kapu (GATE 4) KÉTSZER fut, és a második a console-restart ELŐTT
+//   ⑨ a deploy-kapu (GATE 4) a kódcsere előtt JELEZ, a restart után IGAZOL (nem vár, ADR-XXXX)
 //
 // Valós DB-n, saját eldobható fixture-rel (a közös parkhoz nem nyúl), és a végén
 // mindent visszatakarít.
@@ -371,20 +371,28 @@ try {
     aliveRow.includes("életjel:"),
   );
 
-  // ⑨ a deploy-kapu ott áll, ahol az ölés történik (szerkezeti mérés a scripten)
+  // ⑨ a deploy-kapu (ADR-XXXX, tulaj 2026-11-26 „a deploy prioritást élvez”): NEM vár a futó
+  // munkára, hanem a kódcsere ELŐTT jelez, és a restart UTÁN igazolja, hogy a dolgozó él és
+  // átvette a munkát. (Szerkezeti mérés a scripten; a viselkedést a work-queue-check és a
+  // scrape-restart-probe méri.)
   const deploy = readFileSync(new URL("./deploy-prod.sh", import.meta.url), "utf8");
-  const calls = [...deploy.matchAll(/^scrape_gate /gm)].map((m) => m.index ?? -1);
-  // A VÉGREHAJTÓ sor, nem a róla szóló komment: a kapu indoklása maga is idézi a
-  // parancsot, és az idézet korábban áll — erre az őr első vágása rá is bukott.
   const restartAt = deploy.indexOf('$SSH "systemctl restart citoviso-console"');
+  const checkoutAt = deploy.indexOf("git checkout -q -f --detach $SHA");
+  const signalAt = deploy.search(/^deploy_signal$/m);
+  const verifyAt = deploy.search(/^worker_continue_check$/m);
   inv(
-    "⑨ a deploy GATE 4 kétszer fut (a deploy elején és közvetlenül a restart előtt)",
-    calls.length === 2,
-    `hívások: ${calls.length}`,
+    "⑨ a deploy a kódcsere (checkout) ELŐTT jelez a dolgozónak",
+    signalAt > 0 && checkoutAt > 0 && signalAt < checkoutAt,
+    `jelzés@${signalAt} checkout@${checkoutAt}`,
   );
   inv(
-    "⑨ a második GATE 4 hívás a console-restart ELŐTT áll",
-    calls.length === 2 && calls[1]! < restartAt && restartAt > 0,
+    "⑨ a restart UTÁN igazol (dolgozó él + átvette a munkát)",
+    verifyAt > 0 && restartAt > 0 && verifyAt > restartAt,
+    `igazolás@${verifyAt} restart@${restartAt}`,
+  );
+  inv(
+    "⑨ a GATE 4 nem várakoztat: nincs „várd meg a végét” bukás, a --ignore-scrape kivezetve",
+    !/Várd meg a végét/.test(deploy) && !/IGNORE_SCRAPE=1/.test(deploy),
   );
 
   // ⑩ PIXEL — a mondat OLVASHATÓ-e 390px-en. Külön kapcsolóra fut (böngészőt indít).

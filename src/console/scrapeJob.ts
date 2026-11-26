@@ -1,14 +1,17 @@
-// Scrape launcher for the operator console (PILOT.md §7d ① — scrape from the
-// UI, not the CLI). Runs the EXISTING CLI (src/scraper/run.ts) as a child
-// process — zero refactor of the working pipeline; the CLI already persists
-// the run + leads into the DB, so the console lead list picks them up as-is.
+// Scrape launcher for the operator console (PILOT.md §7d ① — scrape from the UI, not the CLI).
 //
-// Single job at a time (one operator, API-cost discipline): starting while a
-// job runs is refused. The log is an in-memory ring buffer for the live view;
-// the durable record is the scrape_run row the CLI itself writes.
+// ⛔ ADR-XXXX (tulaj 2026-11-26, „a deploy prioritást élvez”): the console NO LONGER runs the
+// scrape. It used to spawn src/scraper/run.ts as its own child — in the console unit's cgroup,
+// so every `systemctl restart citoviso-console` (each deploy) killed the job (measured
+// 2026-09-11 and 2026-11-26), and the deploy's GATE 4 had to wait for it. Now the console only
+// ENQUEUES (work_job, src/worker/queue.ts) and READS the state; the separate worker
+// (citoviso-worker.service, src/worker/main.ts) runs the job. A console restart touches nothing.
+//
+// One live job per region / per scout tile (the queue's unique live key). The live log is the
+// worker's copy of the child's last lines (work_job.log); the durable record stays the
+// scrape_run row the CLI itself writes.
 
-import { spawn } from "node:child_process";
-import path from "node:path";
+import { currentScrapeWork, enqueueWork, liveScoutTiles, liveWorkCount } from "../worker/queue.js";
 
 export interface ScrapeJobState {
   readonly running: boolean;
@@ -17,51 +20,35 @@ export interface ScrapeJobState {
   readonly startedAt: Date | null;
   readonly finishedAt: Date | null;
   readonly exitCode: number | null;
-  /** Last lines of combined stdout+stderr (ring buffer). */
+  /** Last lines of combined stdout+stderr (the worker's copy). */
   readonly log: readonly string[];
 }
 
-const MAX_LOG_LINES = 400;
+const IDLE: ScrapeJobState = { running: false, regionId: null, cap: null, startedAt: null, finishedAt: null, exitCode: null, log: [] };
 
-let state: {
-  running: boolean;
-  regionId: string | null;
-  cap: number | null;
-  startedAt: Date | null;
-  finishedAt: Date | null;
-  exitCode: number | null;
-  log: string[];
-} = {
-  running: false,
-  regionId: null,
-  cap: null,
-  startedAt: null,
-  finishedAt: null,
-  exitCode: null,
-  log: [],
-};
-
-function pushLines(chunk: Buffer): void {
-  for (const line of chunk.toString("utf8").split(/\r?\n/)) {
-    if (line.trim() === "") continue;
-    state.log.push(line);
-  }
-  if (state.log.length > MAX_LOG_LINES) {
-    state.log = state.log.slice(-MAX_LOG_LINES);
-  }
-}
-
-export function getScrapeJob(): ScrapeJobState {
-  return { ...state, log: [...state.log] };
+/** The job the scrape page shows: the running / queued one, else the latest. */
+export async function getScrapeJob(): Promise<ScrapeJobState> {
+  const w = await currentScrapeWork();
+  if (!w) return IDLE;
+  const live = w.status === "running" || w.status === "queued";
+  return {
+    running: live,
+    regionId: w.payload.region,
+    cap: w.payload.cap ?? null,
+    startedAt: w.startedAt ?? w.createdAt,
+    finishedAt: w.finishedAt,
+    exitCode: w.exitCode,
+    log: w.status === "queued" ? ["(sorban vár — a dolgozó hamarosan indítja)", ...w.log] : w.log,
+  };
 }
 
 /**
- * Start a scrape for a region. Returns an error string (shown to the operator)
- * or null on successful start. Fire-and-forget: the page polls getScrapeJob().
+ * Start a scrape for a region = put it in the worker's queue. Returns an error string (shown to
+ * the operator) or null. Still one scrape at a time from this page (API-cost discipline).
  */
-export function startScrapeJob(regionId: string, cap?: number): string | null {
-  if (state.running) {
-    return `Már fut egy scrape (${state.regionId}) — egyszerre egy futás engedett.`;
+export async function startScrapeJob(regionId: string, cap?: number): Promise<string | null> {
+  if ((await liveWorkCount()) > 0) {
+    return `Már fut (vagy sorban vár) egy scrape — egyszerre egy futás engedett.`;
   }
   // ADR-0036: a scrape entering a new language area pre-provisions the UI-string pack in the
   // background (generateEngineMock re-ensures it anyway before rendering). ⛔ ADR-0411: only
@@ -75,79 +62,23 @@ export function startScrapeJob(regionId: string, cap?: number): string | null {
     const lang = langForCountry(row?.country);
     if (lang && lang !== DEFAULT_LANG) requestLanguagePack(lang);
   })().catch((e) => console.error(`[i18n] scrape-időzített provisioning hiba: ${(e as Error).message}`));
-  const args = ["tsx", path.join("src", "scraper", "run.ts"), regionId];
-  if (cap && Number.isFinite(cap) && cap > 0) args.push("--cap", String(cap));
-  spawnJob(args, regionId, cap ?? null, process.env, null, null);
-  return null;
+  const c = cap && Number.isFinite(cap) && cap > 0 ? cap : null;
+  const id = await enqueueWork("scrape", { region: regionId, cap: c }, "console");
+  return id ? null : `Már sorban vár egy scrape erre a területre (${regionId}).`;
 }
 
 /**
- * Close of a scout worksheet tile (ADR-0336, `/scout`): the tile's new rows run through the
- * SAME CLI in scout mode (`run.ts <region> --scout <tileId>`), under the same one-job lock —
- * and ALWAYS with the paid APIs off, whatever the console's own environment says (the
- * child reads SCRAPE_PAID_APIS at its config import). `onExit(code)` lets the worksheet
- * reopen the tile when the processing did not finish. Returns an error string or null.
+ * Close of a scout worksheet tile (ADR-0336, `/scout`): the tile's new rows go to the worker as
+ * ONE job (`run.ts <region> --scout <tileId>`, always with the paid APIs off — the worker sets
+ * SCRAPE_PAID_APIS=off for scout jobs). Several closed tiles queue up behind each other. Returns
+ * an error string when this tile already has a live job, else null.
  */
-export function startScoutJob(
-  regionId: string,
-  tileId: string,
-  onExit: (code: number) => void,
-): string | null {
-  if (state.running) {
-    return `Már fut egy scrape (${state.regionId}) — egyszerre egy futás engedett.`;
-  }
-  const args = ["tsx", path.join("src", "scraper", "run.ts"), regionId, "--scout", tileId];
-  spawnJob(args, regionId, null, { ...process.env, SCRAPE_PAID_APIS: "off" }, tileId, onExit);
-  return null;
+export async function startScoutJob(regionId: string, tileId: string): Promise<string | null> {
+  const id = await enqueueWork("scout", { region: regionId, scout: tileId }, "console");
+  return id ? null : `Ennek a csempének már fut (vagy sorban vár) a feldolgozása.`;
 }
 
-/** The tile a running scout job is processing (null: none, or a regular scrape runs). */
-export function runningScoutTile(): string | null {
-  return state.running ? scoutTile : null;
-}
-
-let scoutTile: string | null = null;
-
-function spawnJob(
-  args: string[],
-  regionId: string,
-  cap: number | null,
-  env: NodeJS.ProcessEnv,
-  tileId: string | null,
-  onExit: ((code: number) => void) | null,
-): void {
-  scoutTile = tileId;
-  state = {
-    running: true,
-    regionId,
-    cap,
-    startedAt: new Date(),
-    finishedAt: null,
-    exitCode: null,
-    log: [`$ npx ${args.join(" ")}`],
-  };
-
-  const child = spawn("npx", args, {
-    cwd: process.cwd(),
-    env,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  child.stdout.on("data", pushLines);
-  child.stderr.on("data", pushLines);
-  child.on("error", (err) => {
-    state.log.push(`[indítási hiba] ${err.message}`);
-    state.running = false;
-    state.finishedAt = new Date();
-    state.exitCode = -1;
-    scoutTile = null;
-    onExit?.(-1);
-  });
-  child.on("close", (code) => {
-    state.running = false;
-    state.finishedAt = new Date();
-    state.exitCode = code ?? -1;
-    state.log.push(`[kilépés] exit code ${code}`);
-    scoutTile = null;
-    onExit?.(code ?? -1);
-  });
+/** Tiles a queued / running scout job owns (the stuck-tile reaper leaves them alone). */
+export async function runningScoutTiles(): Promise<string[]> {
+  return liveScoutTiles();
 }

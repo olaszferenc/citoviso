@@ -188,8 +188,9 @@ try {
   {
     const read = (rel: string): string => readFileSync(path.join(ROOT, rel), "utf8");
     const scrape = read("src/console/scrapeJob.ts");
-    const fn = scrape.slice(scrape.indexOf("export function startScrapeJob("), scrape.indexOf("export function startScoutJob("));
-    expect(fn.indexOf("state.running") >= 0 && fn.indexOf("state.running") < fn.indexOf("requestLanguagePack"), "scrape: a csomag-kérés a „már fut” kapu MÖGÖTT");
+    // ADR-XXXX: the console enqueues for the worker; the one-job gate is the live-queue count.
+    const fn = scrape.slice(scrape.indexOf("export async function startScrapeJob("), scrape.indexOf("export async function startScoutJob("));
+    expect(fn.indexOf("liveWorkCount()") >= 0 && fn.indexOf("liveWorkCount()") < fn.indexOf("requestLanguagePack"), "scrape: a csomag-kérés a „már fut” kapu MÖGÖTT");
     expect(!/ensureLanguagePack/.test(fn), "scrape: nem vár (requestLanguagePack)");
     const auth = read("src/auth/operatorAuth.ts");
     expect(!/prepareMailLang|ensureLanguagePack/.test(auth) && /prepareRenderLang/.test(auth), "konzol-oldalrender: csak melegít (prepareRenderLang), nem vár");

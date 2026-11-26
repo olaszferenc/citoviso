@@ -7,7 +7,8 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { countryConfigSync, type CountryConfig } from "../country.js";
 import { isSamePlayer } from "../scraper/dedupe.js";
-import { storedLeadIdentitiesWithId } from "../scraper/persist.js";
+import { SCRAPE_STALE_AFTER_MS, storedLeadIdentitiesWithId } from "../scraper/persist.js";
+import { MAX_RESUME_ATTEMPTS, RESUME_WINDOW_MS } from "../scraper/jobSpec.js";
 import {
   boxContains,
   canClose,
@@ -693,8 +694,12 @@ export async function reopenScoutTile(tileId: string, onlyPlaceIds?: readonly st
 }
 
 /** Done tiles whose rows are still `proc` long after the close, with no job running for
- *  them (the console restarted mid-run): reopen, so they never hang in „feldolgozás…". */
-export async function reapStuckScoutTiles(regionId: string, jobTileId: string | null): Promise<void> {
+ *  them and none waiting to be continued: reopen, so they never hang in „feldolgozás…".
+ *  ⛔ A tile is NOT stuck while a run of it (job.scout, 0159) is alive — a job the console did
+ *  not start (an ssh script) included — or was interrupted and waits for the worker's resumer
+ *  (src/worker/resume.ts): reopening it would hand its rows back to `new`, and the resumed job would
+ *  find nothing to do (ADR-XXXX). */
+export async function reapStuckScoutTiles(regionId: string, jobTileIds: readonly string[]): Promise<void> {
   const stuck = await db
     .selectFrom("scout_tile as t")
     .innerJoin("scout_place as p", "p.tile_id", "t.id")
@@ -704,8 +709,29 @@ export async function reapStuckScoutTiles(regionId: string, jobTileId: string | 
     .where("t.state", "=", "done")
     .where("p.status", "=", "proc")
     .where("t.closed_at", "<", new Date(Date.now() - 10 * 60_000))
+    .where(({ not, exists, selectFrom }) =>
+      not(
+        exists(
+          selectFrom("scrape_run as r")
+            .select("r.id")
+            .where(sql<boolean>`r.job->>'scout' = t.id::text`)
+            .where((eb) =>
+              eb.or([
+                eb.and([eb("r.status", "=", "running"), eb("r.heartbeat_at", ">", new Date(Date.now() - SCRAPE_STALE_AFTER_MS))]),
+                eb.and([
+                  eb("r.status", "=", "failed"),
+                  eb("r.resumed_at", "is", null),
+                  eb("r.finished_at", ">", new Date(Date.now() - RESUME_WINDOW_MS)),
+                  sql<boolean>`r.stats->>'interrupted' = 'true'`,
+                  sql<boolean>`coalesce((r.job->>'attempt')::int, 1) < ${MAX_RESUME_ATTEMPTS}`,
+                ]),
+              ]),
+            ),
+        ),
+      ),
+    )
     .execute();
-  for (const s of stuck) if (s.id !== jobTileId) await reopenScoutTile(s.id);
+  for (const s of stuck) if (!jobTileIds.includes(s.id)) await reopenScoutTile(s.id);
 }
 
 /** Is any row in the region still processing? (the page polls while it is) */

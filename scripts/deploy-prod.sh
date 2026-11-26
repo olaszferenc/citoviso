@@ -5,15 +5,16 @@
 #   … --full-kb-shots                                # GATE 1c/kép: every guide image re-captured (no pass cache)
 #   bash scripts/deploy-prod.sh --mock-render-gate <commit-ish>   # GATE 1d alone: 18 mocks, 3 templates
 #   bash scripts/deploy-prod.sh <commit-ish> --go   # deploy (owner's scoped permission!)
-#   … --go --ignore-scrape                          # deploy THOUGH a scrape is running
-#                                                     (it will be killed — see GATE 4)
 #
 # Doctrine (CLAUDE.md §0): a deploy needs the owner's explicit, current-turn permission
 # for THIS one operation. The script enforces the rest mechanically:
 #   GATE 1  only a commit already ON origin/main may deploy (land first);
 #   GATE 2  diff-before-deploy: the exact prod-version → target diff is printed;
 #   GATE 3  pending migrations trigger a pg_dump before applying;
-#   GATE 4  a RUNNING scrape blocks the deploy — the restart would kill it (measured);
+#   GATE 4  a deploy NEVER waits for running work and NEVER loses it (ADR-XXXX, tulaj 2026-11-26):
+#           long jobs run in the separate worker (citoviso-worker); the deploy only SIGNALS
+#           (marker before the code swap), and AFTER the restart it VERIFIES that the worker is
+#           alive and the interrupted work was taken over (or still finishing its step) — else red;
 #   GATE 6  systemd-időzítők: a cél-commit deploy/systemd/targets.json-jának MINDEN prod
 #           időzítője telepítve (éles alakra renderelve), engedélyezve ÉS futva — visszamérve;
 #           élesen futó, nem-deklarált időzítő is bukás. Nincs kapcsoló, ami átugorja.
@@ -320,11 +321,10 @@ fi
 TARGET_REF="$1"
 shift
 GO=""
-IGNORE_SCRAPE=0
 for arg in "$@"; do
   case "$arg" in
     --go) GO="--go" ;;
-    --ignore-scrape) IGNORE_SCRAPE=1 ;;
+    --ignore-scrape) fail "--ignore-scrape KIVEZETVE (ADR-XXXX): a deploy már nem vár futó munkára és nem öli meg — nincs mit átlépni" ;;
     --full-kb-shots) FULL_KB_SHOTS=1 ;;
     *) fail "ismeretlen kapcsoló: $arg" ;;
   esac
@@ -377,43 +377,72 @@ fi
 
 echo "── cél: $SHA ($(git log -1 --format=%s "$SHA"))"
 
-# ── GATE 4 — a deploy nem gázolja le a futó scrape-et ─────────────────────────
-# Mérve 2026-09-11: a 06:49:59-kor indított Balaton-Kelet scrape-et a 06:52:53-as
-# deploy ölte meg. A scrape a konzol GYEREKFOLYAMATA, a unit pedig
-# KillMode=control-group — a `systemctl restart citoviso-console` a teljes cgroupot
-# viszi. A futás 0 leaddel, örökre 'running' státuszban maradt. Egyetlen predikátum,
-# két hívási hely (a deploy elején és közvetlenül a restart előtt): a scrape a
-# kettő KÖZÖTT is elindulhat.
-SCRAPE_FRESH_SQL=""   # a futás-frissesség szabálya (a séma dönti el, melyik)
-scrape_where() {
-  if [ -z "$SCRAPE_FRESH_SQL" ]; then
-    local hasbeat
-    hasbeat="$($SSH "sudo -u citoviso psql -d citoviso -t -A -c \"select count(*) from information_schema.columns where table_name='scrape_run' and column_name='heartbeat_at'\"" </dev/null || echo 0)"
-    if [ "$hasbeat" = "1" ]; then
-      SCRAPE_FRESH_SQL="coalesce(r.heartbeat_at, r.started_at) > now() - interval '4 minutes'"
-    else
-      # Életjel-oszlop nélkül (0066 előtti éles séma) a frissességet nem tudjuk mérni,
-      # csak becsülni: a 2 óránál régebbi 'running' sor bizonyosan tetszhalott — épp az
-      # ilyen sor NE blokkolja azt a deployt, ami a javítást kiviszi.
-      SCRAPE_FRESH_SQL="r.started_at > now() - interval '2 hours'"
-    fi
-  fi
-  echo "$SCRAPE_FRESH_SQL"
-}
-scrape_gate() { # $1 = hol tartunk (a kiírásban)
+# ── GATE 4 — a deploy nem vár futó munkára, és nem veszít munkát (ADR-XXXX) ──────
+# Mérve 2026-09-11 és 2026-11-26: a scrape a konzol GYEREKFOLYAMATA volt, a restart
+# (KillMode=control-group) megölte, a csempe sorai `proc`-ban ragadtak, és senki nem
+# folytatta. Ezért ez a kapu korábban MEGÁLLÍTOTTA a deployt, amíg scrape futott
+# („mindig várni kell valamire”). Tulaj 2026-11-26: „a deploy prioritást élvez”.
+# Most: a hosszú munka a KÜLÖN dolgozóban fut (citoviso-worker, DB-feladatsor), a
+# konzol-restart nem éri el. A deploy csak JELEZ: a kódcsere ELŐTT kiteszi a jelzőt
+# ($DEPLOY_MARKER) — új darab nem indul, a futó a következő adaghatáron megáll, minden
+# kész adag mentve. A restart UTÁN MÉR: a dolgozó él, az új kódra állt (vagy a folyó
+# lépés végén áll át), és minden megszakadt munkát átvett. Ha nem: PIROS. Az
+# invariáns („a deploy nem veszít munkát”) marad, csak nem várakozással, hanem utólagos
+# igazolással.
+DEPLOY_MARKER=/opt/citoviso/DEPLOYING
+MARKER_SET=""
+SIGNAL_AT=""
+scrape_gate() { # $1 = hol tartunk — TÁJÉKOZTAT, nem blokkol
   local live
-  live="$($SSH "sudo -u citoviso psql -d citoviso -t -A -F'|' -c \"SELECT d.label, to_char(r.started_at,'YYYY-MM-DD HH24:MI'), coalesce(r.stats->>'phase','—') FROM scrape_run r JOIN scraper_definition d ON d.id = r.scraper_definition_id WHERE r.status='running' AND $(scrape_where)\"" </dev/null || true)"
+  live="$($SSH "sudo -u citoviso psql -d citoviso -t -A -F'|' -c \"SELECT d.label, to_char(r.started_at,'YYYY-MM-DD HH24:MI'), coalesce(r.stats->>'phase','—') FROM scrape_run r JOIN scraper_definition d ON d.id = r.scraper_definition_id WHERE r.status='running' AND coalesce(r.heartbeat_at, r.started_at) > now() - interval '4 minutes'\"" </dev/null || true)"
   if [ -z "$live" ]; then
-    echo "── GATE 4 ($1) — nem fut éles scrape ✓"
+    echo "── GATE 4 ($1) — nem fut éles scrape"
     return 0
   fi
-  echo "── GATE 4 ($1) — ÉLES SCRAPE FUT:"
+  echo "── GATE 4 ($1) — éles munka fut (a deploy NEM vár rá; a kódcsere előtt jelez, a futó darab az adaghatáron megáll, a restart után a dolgozó folytatja):"
   echo "$live" | sed 's/^/     · /'
-  if [ "$IGNORE_SCRAPE" = "1" ]; then
-    echo "     ⚠️  --ignore-scrape: tudatosan továbbmegyek — a restart MEGÖLI a fenti futást."
-    return 0
-  fi
-  fail "éles scrape fut (fent) — a console restart megölné (KillMode=control-group, mérve 2026-09-11). Várd meg a végét, vagy tudatosan: --ignore-scrape"
+}
+# A jelzés: a kódcsere (checkout, npm install, migráció) ELŐTT. Nem vár semmire.
+deploy_signal() {
+  [ -n "$MARKER_SET" ] && return 0
+  SIGNAL_AT="$($SSH "sudo -u citoviso psql -d citoviso -t -A -c 'select now()'" </dev/null)" || fail "GATE 4: az éles DB ideje nem olvasható"
+  $SSH "date -u +%FT%TZ > $DEPLOY_MARKER && chmod 644 $DEPLOY_MARKER" </dev/null || fail "GATE 4: a deploy-jelző nem írható ($DEPLOY_MARKER)"
+  MARKER_SET=1
+  echo "── GATE 4 — deploy-jelző kint ($DEPLOY_MARKER): új munka nem indul, a futó darab a következő adaghatáron megáll (a deploy NEM vár)"
+}
+deploy_signal_clear() {
+  [ -n "$MARKER_SET" ] || return 0
+  $SSH "rm -f $DEPLOY_MARKER" </dev/null || echo "⚠️  a deploy-jelző nem törölhető ($DEPLOY_MARKER) — 60 perc után magától érvényét veszti" >&2
+  MARKER_SET=""
+}
+# Egy elbukott deploy se hagyja kint a jelzőt (a dolgozó addig nem indítana munkát).
+trap 'deploy_signal_clear' EXIT
+# A restart UTÁN: él-e a dolgozó, átállt-e, és átvette-e a megszakadt munkát.
+worker_continue_check() {
+  local wait="${DEPLOY_WORKER_WAIT:-180}" i st sha draining cur pending lost legacy
+  deploy_signal_clear
+  $SSH "systemctl enable --now citoviso-worker" </dev/null >/dev/null 2>&1 || fail "GATE 4: a citoviso-worker nem indítható"
+  echo "── GATE 4 — visszaigazolás a restart után (dolgozó él + átállt + a munka folytatódott; max ${wait}s)…"
+  for i in $(seq 1 $(( (wait + 4) / 5 ))); do
+    st="$($SSH "sudo -u citoviso psql -d citoviso -t -A -F'|' -c \"SELECT coalesce(code_sha,''), draining, coalesce(current_job::text,'') FROM worker_state WHERE name='main' AND beat_at > now() - interval '30 seconds'\"" </dev/null || true)"
+    pending="$($SSH "sudo -u citoviso psql -d citoviso -t -A -c \"SELECT count(*) FROM scrape_run WHERE job IS NOT NULL AND status='failed' AND stats->>'interrupted'='true' AND resumed_at IS NULL AND finished_at >= '$SIGNAL_AT'::timestamptz\"" </dev/null || echo '?')"
+    IFS='|' read -r sha draining cur <<<"$st"
+    if [ -n "$st" ] && [ "$sha" = "$SHA" ] && [ "$pending" = "0" ]; then
+      echo "     ✓ a dolgozó él, az új kódon fut ($SHA), minden megszakadt munkát átvett (${i}×5s)"
+      break
+    fi
+    if [ -n "$st" ] && [ "$draining" = "t" ] && [ -n "$cur" ]; then
+      echo "     ✓ a dolgozó él, és a folyó lépését fejezi be a régi kódon (job $cur) — a lépés végén magától átáll; a deploy nem vár"
+      break
+    fi
+    st=""
+    sleep 5
+  done
+  [ -n "$st" ] || fail "GATE 4: a dolgozó ${wait}s alatt sem igazolta, hogy él és átvette a munkát (worker_state 'main' / várakozó megszakadt futás: $pending) — journalctl -u citoviso-worker"
+  lost="$($SSH "sudo -u citoviso psql -d citoviso -t -A -c \"SELECT count(*) FROM scrape_run WHERE job IS NOT NULL AND status='failed' AND stats->>'interrupted'='true' AND finished_at >= '$SIGNAL_AT'::timestamptz AND job->>'resumeOutcome' IN ('gave-up','not-resumable')\"" </dev/null || echo 0)"
+  [ "$lost" = "0" ] || fail "GATE 4: $lost megszakadt futást a dolgozó NEM indított újra (gave-up / not-resumable) — nézd meg: scrape_run.job->>'resumeOutcome'"
+  legacy="$($SSH "sudo -u citoviso psql -d citoviso -t -A -c \"SELECT count(*) FROM scrape_run WHERE job IS NULL AND status='failed' AND stats->>'interrupted'='true' AND finished_at >= '$SIGNAL_AT'::timestamptz\"" </dev/null || echo 0)"
+  [ "$legacy" = "0" ] || echo "     ⚠️  $legacy RÉGI KÓDÚ (job-leírás nélküli) futás szakadt meg — azt csak az átállás előtti kód indította; a csempe 10 perc múlva újra nyílik"
 }
 scrape_gate "deploy eleje"
 
@@ -542,6 +571,10 @@ $SSH "test -d $BARE || (git init --bare -q $BARE && chown -R citoviso:citoviso $
 GIT_SSH_COMMAND="ssh -i $KEY" git push -q -f "root@$HOST:$BARE" "$SHA:refs/heads/deploy" || fail "push a szerverre sikertelen"
 $SSH "chown -R citoviso:citoviso $BARE" </dev/null
 
+# GATE 4 — a jelzés a kódcsere ELŐTT (checkout, npm install, migráció): a futó darab a régi
+# kódon a következő adaghatárig ér, új darab a félig cserélt fán nem indul.
+deploy_signal
+
 if [ -n "$PENDING" ]; then
   echo "── GATE 3 — pg_dump a migrációk előtt…"
   TS="$(date +%Y%m%d-%H%M%S)"
@@ -646,7 +679,7 @@ fi
 # GATE 6 — az időzítők a restart ELŐTT állnak fel: ha nem, a servicek nem indulnak újra.
 timers_install_and_verify
 
-# A scrape a deploy ELEJE óta is elindulhatott — a kapu ott áll, ahol az ölés történik.
+# Tájékoztatás a restart előtt: mi fut most (a konzol-restart ezt NEM éri el — a dolgozóban fut).
 scrape_gate "közvetlenül a restart előtt"
 
 echo "── restart: console (belső kanári) → verify → public…"
@@ -659,6 +692,7 @@ wait_port() { # $1=port $2=path $3=expected-prefix
 }
 $SSH "systemctl restart citoviso-console" </dev/null || fail "console restart parancs hibázott"
 wait_port 4600 /leads 3 || fail "console nem jött vissza — public NEM lett bántva"
+worker_continue_check
 $SSH "systemctl restart citoviso-public" </dev/null || fail "public restart parancs hibázott"
 wait_port 4800 / 200 || fail "public nem jött vissza"
 $SSH "journalctl -u citoviso-console -u citoviso-public --since '-2 min' -p err --no-pager -q" </dev/null

@@ -24,6 +24,7 @@ import {
   failScrapeRun,
   findResumableRun,
   interruptScrapeRun,
+  recordScrapeJob,
   reopenScrapeRun,
   savedRunStats,
   startScrapeRun,
@@ -31,12 +32,13 @@ import {
 } from "./persist.js";
 import { dedupeAndQualify, partitionNewLeads } from "./dedupe.js";
 import { enrichLeads } from "./enrichChain.js";
-import { enrichAndSaveInBatches, geoBatches, runSourcePhase, SCRAPE_BATCH_SIZE } from "./batchedRun.js";
+import { enrichAndSaveInBatches, geoBatches, runSourcePhase, SCRAPE_BATCH_SIZE, StopAtBoundary } from "./batchedRun.js";
 import { distanceKm, ensureCountryRegion, getRegion, loadRegions } from "./regions.js";
 import { GoogleMapsSource } from "./sources/googleMaps.js";
 import { OsmSource } from "./sources/osm.js";
 import { applyScoutExtras, MagellanSource } from "./sources/magellan.js";
 import { finishScoutTile } from "../scout/finish.js";
+import { DEPLOY_REFUSED_EXIT, deployInProgress, jobSpecOf } from "./jobSpec.js";
 import type { LeadSource } from "./sources/LeadSource.js";
 import type { Industry, QualifiedLead, Region, ScrapeQuery } from "./types.js";
 
@@ -228,6 +230,20 @@ async function main(): Promise<void> {
     console.log(`  scrape_run ${runId} (running)`);
   }
   liveRunId = runId;
+  // The job's own description on its row (ADR-XXXX): whoever started it (console, ssh script),
+  // an interruption can be continued from the DB by the worker's resumer (src/worker/resume.ts).
+  const job = { ...jobSpecOf({ regionId: region.id, scout, cap }), ...(country ? { country } : {}) };
+  await recordScrapeJob(runId, job);
+  console.log(`  job: ${JSON.stringify(job)}`);
+  // A deploy is swapping the code under us (deploy-prod.sh holds the marker between its clean
+  // stop and the console restart): this start may have loaded half-old, half-new modules.
+  // Record the run as interrupted — the resumer starts it again on the NEW code — and leave.
+  if (deployInProgress()) {
+    await interruptScrapeRun(runId, "deploy fut (a kód épp cserélődik) — a futás a deploy után magától folytatódik.", "indulás");
+    console.log(`  deploy fut — a futás megszakítva, a deploy után a konzol folytatja (exit ${DEPLOY_REFUSED_EXIT}).`);
+    await db.destroy();
+    process.exit(DEPLOY_REFUSED_EXIT);
+  }
 
   // A long step (Places lookup over hundreds of leads) must not look like death,
   // so the heart beats on a timer too, not only at phase boundaries. unref(): the
@@ -242,14 +258,19 @@ async function main(): Promise<void> {
   // SIGTERMed the whole cgroup, this child included. Two seconds of work here is
   // the difference between "failed: a deploy stopped it" and a row that claims to
   // be running two days later.
+  // ⛔ `on` + a guard, not `once`: a signal often arrives TWICE (systemd signals the whole
+  // cgroup and the tsx wrapper relays its own copy) — with `once` the second copy hit the
+  // default handler and killed the process before the row was closed.
+  let stopping = false;
   for (const sig of ["SIGTERM", "SIGINT"] as const) {
-    process.once(sig, () => {
+    process.on(sig, () => {
+      if (stopping) return;
+      stopping = true;
       void (async () => {
         await interruptScrapeRun(
           runId,
-          `a futást kívülről állították le (${sig}). Ez a konzol újraindításakor is ` +
-            `bekövetkezik (deploy, összeomlás, szerver-újraindítás), mert a scrape a konzol ` +
-            `gyerekfolyamata.`,
+          `a futást kívülről állították le (${sig}): deploy, konzol-újraindítás vagy kézi leállítás. ` +
+            `A konzol a megszakadt futást magától folytatja (ugyanonnan, a már mentett sorokat nem ismétli).`,
           livePhase,
         ).catch(() => {});
         process.exit(sig === "SIGTERM" ? 143 : 130);
@@ -315,6 +336,9 @@ async function main(): Promise<void> {
       cap,
       savedEarlier,
       collect: out ? collected : undefined,
+      // A deploy is under way (its marker): stop at the next batch boundary — the new code
+      // continues from the DB (the worker's resumer). The deploy never waits for us.
+      shouldStop: () => deployInProgress(),
     });
 
     // The run's outcome, counted from what is SAVED under it (earlier attempt included).
@@ -375,6 +399,14 @@ async function main(): Promise<void> {
         (m.deduped ? ` · ${m.deduped} duplikátum kihagyva (átfedő régió / újra-scrape)` : ""),
     );
   } catch (err) {
+    if (err instanceof StopAtBoundary) {
+      // Not a failure: every batch so far is committed; the resumer continues from here.
+      await interruptScrapeRun(runId, `deploy: ${err.message}.`, livePhase);
+      liveRunId = null;
+      console.log(`  ${err.message} (exit ${DEPLOY_REFUSED_EXIT}).`);
+      process.exitCode = DEPLOY_REFUSED_EXIT;
+      return;
+    }
     // The checkpoint stays: the next start on this definition resumes from it.
     await failScrapeRun(runId, (err as Error).message);
     liveRunId = null;

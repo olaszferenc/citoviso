@@ -1,0 +1,25 @@
+[Unit]
+# A hosszú munkák KÜLÖN dolgozója (ADR-XXXX, tulaj 2026-11-26: „a deploy prioritást élvez”).
+# A konzol csak feladatot tesz a sorba (work_job), ez a folyamat futtatja (ma: felderítés / scrape).
+# A konzol újraindítása (deploy) nem érinti. A deploy csak jelez (/opt/citoviso/DEPLOYING): a futó
+# darab a következő adaghatáron megáll, a dolgozó a jelzés végén kilép (exit 0), a systemd az ÚJ
+# kóddal indítja újra, és az folytatja a DB-ből. A deploy ezt nem várja meg.
+Description=Citoviso dolgozó — hosszú munkák a DB-feladatsorból (felderítés, scrape)
+After=network-online.target postgresql.service
+Wants=network-online.target
+OnFailure=citoviso-alert@%n.service
+
+[Service]
+Type=simple
+User=citoviso
+WorkingDirectory=/home/citoviso/citoviso
+ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx src/worker/main.ts
+Restart=always
+RestartSec=2
+# SIGTERM: a futó gyerek a saját során megszakítottnak jelöli magát (run.ts), a következő dolgozó folytatja.
+TimeoutStopSec=40
+StandardOutput=journal
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

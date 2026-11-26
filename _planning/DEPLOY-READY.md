@@ -21,7 +21,7 @@ A fő fából futtasd (`/home/citoviso/citoviso`), a cél-commit legyen `origin/
 | # | Lépés | Blokkol? | Megjegyzés |
 |---|---|---|---|
 | 1 | **GATE 1** — a cél-commit őse az `origin/main`-nek | ⛔ igen | előbb land |
-| 2 | **GATE 4** — fut-e éles scrape (deploy eleje) | ⛔ igen | `--ignore-scrape` tudatosan átviszi — a restart MEGÖLI a futást |
+| 2 | **GATE 4** — fut-e éles munka (deploy eleje) | tájékoztat | ADR-XXXX: a deploy NEM vár; a munka a külön dolgozóban fut (`citoviso-worker`), a `--ignore-scrape` kivezetve |
 | 3 | **GATE 2** — `git diff --stat <éles>..<cél>` | tájékoztat | a HEAD-egyezés + tiszta fa = checkout kimarad |
 | 4 | **GATE 1b** — `legal-check.mts` + az éles `.env` 5 `LEGAL_ENTITY_*` kulcsa | ⛔ igen | csak ezt az 5 kulcsot nézi — a domain-kulcsokat NEM (lásd §2) |
 | 5 | **GATE 1c/kép** — a cél-commit worktree-jében `kb-shot --check-committed`, pixel-összevetés (ADR-0220) | ⛔ igen | kihagyás CSAK `KB_SHOT_GATE_WAIVE="<≥20 kar. indoklás>"`, a `DEPLOYED`-naplóba íródik |
@@ -30,6 +30,7 @@ A fő fából futtasd (`/home/citoviso/citoviso`), a cél-commit legyen `origin/
 | 8 | **GATE 6** terv — az időzítők renderelése (`systemd-units.mts render-prod`), új/módosul/egyezik | ⛔ igen | élesen engedélyezett, de a cél-commitban nem prod-ként deklarált időzítő = bukás |
 | — | *száraz futás itt véget ér* | | |
 | 9 | push a szerver bare repójába (`/opt/citoviso/repo.git`, `refs/heads/deploy`) | ⛔ | |
+| 9b | **GATE 4** — deploy-jelző (`/opt/citoviso/DEPLOYING`) a kódcsere ELŐTT | ⛔ igen | új darab nem indul, a futó a következő adaghatáron megáll; a deploy nem vár |
 | 10 | **GATE 3** — `pg_dump` → `/opt/citoviso/backups/db-pre-<ts>.sql.gz` | ⛔ igen | ⚠️ CSAK ha van függő migráció |
 | 11 | checkout a megnevezett commitra + „tiszta-e a fa” visszamérés | ⛔ igen | ⚠️ innentől az ÚJ kód van a lemezen (lásd §3.3) |
 | 12 | maradvány-ellenőrzés (untracked fájl a kód-fában) | ⚠️ csak figyelmeztet | szándékosan nem blokkol |
@@ -37,8 +38,9 @@ A fő fából futtasd (`/home/citoviso/citoviso`), a cél-commit legyen `origin/
 | 14 | `npm run db:migrate` | ⛔ igen | bukásnál a servicek NEM indulnak újra |
 | 15 | **GATE 5 / 5b** — `i18n-pack-status --ensure` az ÉLES DB-n, majd `kb-translation-coverage-check` (ADR-0207) | ⛔ igen | csak ha a tartomány érinti a `kb/entries/`-t vagy a `src/i18n/catalog.json`-t — ma érinti; AI-költség + idő |
 | 16 | **GATE 6 / 6b** — időzítők telepítése, `enable --now`, visszamérés (fájl-hash + enabled + active) | ⛔ igen | ma: +2 új (`events` 05:30, `events-pending` 5 percenként) |
-| 17 | **GATE 4** újra — közvetlenül a restart előtt | ⛔ igen | |
+| 17 | **GATE 4** — mi fut most (közvetlenül a restart előtt) | tájékoztat | a konzol-restart a dolgozót nem éri el |
 | 18 | restart: `citoviso-console` (:4600, kanári, `/leads` → 3xx) → `citoviso-public` (:4800, `/` → 200) | ⛔ igen | a public csak a zöld kanári után |
+| 18b | **GATE 4** — visszaigazolás: jelző le, `citoviso-worker` engedélyezve + fut, életjel friss, új kódon (vagy a folyó lépés végén áll át), minden megszakadt futást átvett (max 180 s) | ⛔ igen | piros, ha a dolgozó nem él vagy munka maradt gazdátlanul |
 | 19 | `journalctl -p err` az utolsó 2 percből | ⚠️ csak kiírja | NÉZD MEG — nem bukik rá |
 | 20 | `/opt/citoviso/DEPLOYED` sor + `prod/<ts>` tag push | ⚠️ tag-hiba csak figyelmeztet | |
 
@@ -94,7 +96,7 @@ Az éles állapot kérdése egy parancs: `$SSH 'git -C /opt/citoviso/app rev-par
       ugyanúgy a deploy restartja ELŐTT kerüljön a `.env`-be, mint a fenti kulcsok (előtte `.env`-mentés).
       Ellenőrzés a restart után: a `citoviso-console`/`citoviso-public` naplóban „boot-fordítás KIKAPCSOLVA”;
       a fordítás költsége a `translation_spend` táblában (`trigger`: deploy/cli/on-demand).
-- [ ] **Nincs futó éles scrape** (GATE 4 úgyis megállít) — a scrape vonal a tulaj külön szála.
+- [x] ~~Nincs futó éles scrape~~ — 2026-11-26 óta (ADR-XXXX) NEM feltétel: a deploy nem vár, a dolgozó folytat.
 - [ ] Legyen idő a teljes §4 füst-próbára (~30–40 perc) közvetlenül utána; a deploy és a füst-próba között ne
       menjen kiküldés (outreach).
 

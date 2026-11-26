@@ -8,6 +8,7 @@ import { resolveCountryCode } from "../country.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { partitionNewLeads, type LeadIdentity } from "./dedupe.js";
+import type { ScrapeJobSpec } from "./jobSpec.js";
 import { osmObjectUrl } from "./sources/osm.js";
 import type { QualifiedLead, RawLead, Region } from "./types.js";
 
@@ -130,6 +131,19 @@ export const SCRAPE_LEGACY_STALE_AFTER_MS = 2 * 60 * 60_000;
  * must still be able to say how far it got (the in-memory log does not survive a
  * console restart; this row does).
  */
+/**
+ * The job's own description on its run row (0159, jobSpec.ts) — written by run.ts at every start
+ * (first start, checkpoint reopen, resumed start). `resumed_at` goes back to NULL: this row is a
+ * live attempt again, and a later interruption must be resumable once more.
+ */
+export async function recordScrapeJob(runId: string, job: ScrapeJobSpec): Promise<void> {
+  await db
+    .updateTable("scrape_run")
+    .set({ job: JSON.stringify(job), resumed_at: null })
+    .where("id", "=", runId)
+    .execute();
+}
+
 export async function beatScrapeRun(
   runId: string,
   phase: string,
