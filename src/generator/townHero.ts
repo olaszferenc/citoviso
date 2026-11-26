@@ -6,12 +6,12 @@
 //     the local classifier sees the lodging from OUTSIDE or its view and it is ≥ 1200 px — else the
 //     town's hero opens the page. The local pictures join the gallery either way;
 //   · ≥ 5 own photos → nothing (the caller does not ask).
-// ⛔ The gathering runs only for a lead with an e-mail address (owner 2026-11-25); a lead without one
-// uses a CURRENT set its town already has, or gets none (the typographic hero).
+// ⛔ No gathering here: the chain picks the town (scripts/town-photo-gather.mts), only for e-mail leads; the
+// generator reads the finished set (coordinator 2026-11-26).
 
 import type { TownPhoto } from "../engine/recipe.js";
 import { classifyPhotoUrl, outsideScore } from "../media/photoKind.js";
-import { ensureTownPhotoSet, isCurrentPick, leadSlotInTown, readTownPhotoSet, shareTownSet } from "../media/townPhotoSet.js";
+import { isCurrentPick, leadSlotInTown, readTownPhotoSet, shareTownSet } from "../media/townPhotoSet.js";
 import type { TownStyle } from "../media/townPick.js";
 
 /** An own first photo opens the page only with this much „outside / view” mass… */
@@ -41,14 +41,18 @@ export async function townPhotosForMock(input: {
   const hasEmail = Boolean((input.email ?? "").trim());
   const lat = Number(input.lat);
   const lon = Number(input.lon);
+  // READ ONLY (coordinator 2026-11-26, decision „a”): the town's pictures are picked by the chain on the box that has
+  // the subscription judge (scripts/town-photo-gather.mts, after the contact finder, before the main plan) and written
+  // to town_photo_set; the generator only reads a finished, current set. None yet → no town pictures: the lead waits
+  // for the chain (the send gates hold a page without a judged hero), the generation never fails on it.
+  void hasEmail;
+  void lat;
+  void lon;
   let set = null;
   try {
-    set =
-      hasEmail && Number.isFinite(lat) && Number.isFinite(lon)
-        ? await ensureTownPhotoSet({ city, country, lat, lon }, "generate")
-        : await readTownPhotoSet(country, city);
+    set = await readTownPhotoSet(country, city);
   } catch (e) {
-    console.warn(`  ↳ településkép nem gyűjthető (${city}): ${(e as Error).message}`); // i18n-exempt: operator log
+    console.warn(`  ↳ a település képtára nem olvasható (${city}): ${(e as Error).message}`); // i18n-exempt: operator log
     return null;
   }
   if (!set || !isCurrentPick(set) || (!set.heroes.length && !set.gallery.length)) return null;
