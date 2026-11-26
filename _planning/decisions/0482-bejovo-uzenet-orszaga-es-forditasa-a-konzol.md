@@ -1,4 +1,4 @@
-## ADR-XXXX — Bejövő üzenet országa és fordítása a konzol-nyelvre (Bábel a konzolon); közös ország-sáv minden riport-fülön
+## ADR-0482 — Bejövő üzenet országa és fordítása a konzol-nyelvre (Bábel a konzolon); közös ország-sáv minden riport-fülön
 
 **Dátum:** 2026-11-26 · **Státusz:** elfogadva (lokál, nem élesítve) · Kiegészíti: ADR-0412 (fordítás csak Bábel), ADR-0340 (válaszolás az irányítópultról), ADR-0437 / ADR-0455 (ország-réteg) · Terv: `assets/design-refs/console/orszag-szuro-forditas/`
 

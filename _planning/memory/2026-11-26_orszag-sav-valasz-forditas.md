@@ -1,6 +1,6 @@
 # 2026-11-26 — Riport ország-sáv minden fülön + bejövő üzenet országa és fordítása (Bábel)
 
-**Brief:** `~/rc-briefs/report-20261126-070656.md` · **Fa:** `cit14106f0b` · **Döntés:** ADR-XXXX · **Terv:** `assets/design-refs/console/orszag-szuro-forditas/` (tulaj: 1.B · 2.B · 3 igen)
+**Brief:** `~/rc-briefs/report-20261126-070656.md` · **Fa:** `cit14106f0b` · **Döntés:** ADR-0482 · **Terv:** `assets/design-refs/console/orszag-szuro-forditas/` (tulaj: 1.B · 2.B · 3 igen)
 
 ## Elvégezve
 - Terv-kör (§2b): egy fájl, A/B változatok, mobil/asztali; tulaj-döntés 1.B (közös sáv), 2.B (fordítás + eredeti együtt), 3 igen (megkeresés + Poe javaslat is).
