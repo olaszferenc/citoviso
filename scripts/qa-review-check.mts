@@ -196,7 +196,12 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("nyitókép mobilon: a kivágás a kép részletgazdag oldalára áll", fx != null && fx >= 80, `fx=${fx}`);
   check("parallax: a nyitókép a fókuszpont szerint vág (--cit-hero-fx), a mélységhatás vászna is", /--cit-hero-fx/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /uniform vec2 off,cover,sh/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
   check("parallax mobil: a rögzített réteg is a fókuszpont szerint vág (nem kényszerített center)", /cs\.backgroundPosition\|\|'center'/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
-  check("„Amit kínálunk”: forrás-lista nélkül az oldal saját, szolgáltatást nevező kiemelései töltik (nem üres keret)", /sampleAmenityItems\(\(d\.highlights \?\? \[\]\)\.filter\(\(h\) => matchIcon\(h\) !== "dot"\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  check("„Amit kínálunk”: forrás-lista nélkül nem üres keret és nem a kiemelések duplája — kimarad", /if \(!items\.length && \(d\.highlights \?\? \[\]\)\.some\(\(h\) => matchIcon\(h\) !== "dot"\)\) return "";/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  {
+    const ph2 = (n: number, kindLabel?: string): PH => ({ url: `https://y.test/${n}.jpg`, alt: "k", provenance: "portal", ...(kindLabel ? { kindLabel } : {}) });
+    const c2 = sampleRooms({ name: "S", photos: [ph2(1), ph2(2), ph2(3, "a garden with a terrace"), ph2(4, "a kitchen")], sampleRoomCount: 0 } as unknown as SD)[0];
+    check("szálláskártya: belső kép sincs → a ház/kert saját képe, nem üres sáv", c2?.photo?.url === ph2(3).url);
+  }
   {
     const r = withoutAbsentPictureClaims({ template: "parallax", skin: "", archetype: "", sections: [{ kind: "gallery", copy: { title: "Képek a házról és az alaprajzokról", eyebrow: "Galéria" } }] } as never) as { sections: { copy: { title?: string; eyebrow?: string } }[] };
     check("galéria-cím: alaprajzot nem ígér (alaprajz sosem kerül az oldalra)", r.sections[0]!.copy.title === undefined && r.sections[0]!.copy.eyebrow === "Galéria");

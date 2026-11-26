@@ -616,13 +616,11 @@ function pricingSampleBlock(d: SiteData): string {
  * the owner ticks the real ones. Never generic padding; nothing sourced → the empty frame.
  */
 function amenitiesSampleBlock(d: SiteData): string {
-  const sourced = sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []);
-  // No sourced facility list → the page's OWN highlights that name a facility (a known icon), through the same
-  // deny/negation filter (11-26, quality colleague, Riva: the block stood empty under its „Minta” note). They
-  // are claims the page already makes from the source — nothing new is stated (§B.17).
-  const items = sourced.length
-    ? sourced
-    : sampleAmenityItems((d.highlights ?? []).filter((h) => matchIcon(h) !== "dot"), d.sampleAmenityDeny ?? []);
+  const items = sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []);
+  // No sourced facility list while the page already shows its highlights → no block at all (11-26, quality
+  // colleague): the empty frame failed every review (Riva, Kiskúti), and filling it from the highlights
+  // printed the same items twice („Egy pillantásra” + „Amit kínálunk”, Sirató).
+  if (!items.length && (d.highlights ?? []).some((h) => matchIcon(h) !== "dot")) return "";
   // Nothing sourced: the module still SHOWS (ADR-0061 all-in — a module the lead buys may
   // not be silent), as its frame with no item in it, and the note says so — the pricing
   // sample's pattern („ezen az előnézeten szándékosan nincs egyetlen ár sem”).
