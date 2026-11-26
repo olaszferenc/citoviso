@@ -649,7 +649,8 @@ console.log("⑰ kártyakép: nappali és étkező soha, a háló-részletkép i
   // Rubin: 3 apartments stated, 2 bedroom photos → one card with the first bedroom (not 22, 16).
   const P = (file: string, bedroom: boolean) => ({ url: `https://x.hu/${file}`, alt: "", bedroom });
   const rubin = sampleRooms({ ...base, sampleRoomCount: 3, sampleUnitKind: "apartments", photos: [P("zalakaros-20.jpg", false), P("zalakaros-17.jpg", true), P("zalakaros-22.jpg", false), P("zalakaros-16.jpg", false), P("zalakaros-23.jpg", true)] } as never);
-  check("Rubin: 3 kimondott egység, 2 hálókép → egy kártya a 17-essel, nappali/étkező sehol", rubin.length === 1 && rubin[0]!.photo?.url.endsWith("zalakaros-17.jpg") === true, rubin.map((r) => r.photo?.url));
+  // 11-26: the 17 is photos[1] — the about frame — so the card takes the OTHER bedroom (no repeated picture).
+  check("Rubin: 3 kimondott egység, 2 hálókép → egy kártya hálóképpel (a Rólunk-kép, a 17-es nem ismétlődik), nappali/étkező sehol", rubin.length === 1 && rubin[0]!.photo?.url.endsWith("zalakaros-23.jpg") === true, rubin.map((r) => r.photo?.url));
   // After `--resample` the photos carry the bedroom flag WITHOUT a subject — still a verdict.
   const resampled = sampleRooms({ ...base, photos: [P("ametiszt-hotel-utcafront.avif", false), P("franciaagyas-szoba.avif", false), P("szallas-harkany.avif", true)] } as never);
   check("resample-alak (csak hálójel, tárgy nélkül): az ítélet dönt, nem a fájlnév", resampled[0]?.photo?.url.endsWith("szallas-harkany.avif") === true, resampled.map((r) => r.photo?.url));

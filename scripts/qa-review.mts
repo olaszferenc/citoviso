@@ -33,7 +33,7 @@ import { secondPlanOf } from "../src/outreach/secondPlan.js";
 import { APPROVAL_PENDING_NOTE, QA_REVIEW_KEY, QA_WAIT_NOTE, qaReviewState, recordQaReview } from "../src/outreach/mockQaReview.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
-import { classifyPhotoUrl, isHeroWorthy } from "../src/media/photoKind.js";
+import { classifyPhotoUrl, isHeroCandidate } from "../src/media/photoKind.js";
 import { getHeroPin, setHeroPin } from "../src/generator/heroOverride.js";
 import { refreshMock } from "../src/generator/mockRefresh.js";
 
@@ -147,8 +147,8 @@ async function heroCandidates(artifactId: string): Promise<{ leadId: string; url
   const urls: string[] = [];
   for (const p of photos) {
     const v = await classifyPhotoUrl(p.url);
-    if (v && !isHeroWorthy(v)) continue;
-    if (v?.quality && v.quality.long < 1000) continue; // the letter's picture is 1216 px wide — a small photo blurs
+    if (v && !isHeroCandidate(v)) continue;
+    if (v?.quality && v.quality.long < 900) continue; // the letter's picture is 1216 px wide — a small photo blurs
     urls.push(p.url);
   }
   return { leadId: a.lead_id, urls };

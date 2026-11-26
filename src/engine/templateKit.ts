@@ -390,6 +390,8 @@ export function allotPhotos(
     if (!p) break;
     rows.push(p);
   }
+  // A vehicle / person / animal shot never leads the gallery (11-26, Jaja: the strip opened on an SUV).
+  pool.sort((a, b) => Number(!!a.notCard) - Number(!!b.notCard));
   const own = pool.splice(0, opts.maxGallery);
   // The stock fill (mock, fewer than six own photos) completes the gallery, never another slot.
   const extra = d.stock?.gallery ?? [];
@@ -425,7 +427,26 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const cards = judged
     ? d.photos.filter((p) => p.bedroom)
     : d.photos.filter((p) => NAMED_BEDROOM.test(photoWords(p)) && !NAMED_NOT_ROOM.test(photoWords(p)));
-  return { cards, single: cards[0] };
+  // One card stands for the whole place or a kind — any showcase INSIDE photo fits it when the
+  // lodging shows no bedroom (quality colleague 11-26, Sirató / T-Lak: the card was an empty bed
+  // icon on a page with 5+ own photos, where the stock fill is off). Never the hero, a kitchen or
+  // bathroom (backstage), nor a photo with a vehicle / person / animal (notCard).
+  const insideLabel = /^(a living room|a hotel room interior|a bedroom with a bed)$/;
+  // From the END of the set: the hero, the about picture (photos[1]) and the bands take the front ones —
+  // the card must not repeat a picture the page already shows (Linetta fixture, wordmark-grow about).
+  // …and never the same file under another size folder / URL (Linetta: „beds.jpeg” as about AND card).
+  const fileKey = (u: string): string => (u.split(/[?#]/)[0] ?? u).split("/").pop()?.toLowerCase() ?? u;
+  const sameShot = (a: Photo, b: Photo): boolean =>
+    a.url === b.url || fileKey(a.url) === fileKey(b.url) || (/^https?:/i.test(a.url) && sizelessPhotoKey(a.url) === sizelessPhotoKey(b.url)) || isSamePicture(a.dhash, b.dhash);
+  const front = d.photos.slice(0, 2);
+  const inside = [...d.photos.entries()]
+    .reverse()
+    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && !!p.kindLabel && insideLabel.test(p.kindLabel) && !front.some((q) => sameShot(q, p)))?.[1];
+  // A bedroom the hero / about frame already shows goes last (Linetta: after the vehicle shots moved to
+  // the end, the bedroom became photos[1] — the about frame — and the card repeated it).
+  const fresh = cards.filter((c) => !front.some((q) => sameShot(q, c)));
+  const ordered = [...fresh, ...cards.filter((c) => !fresh.includes(c))];
+  return { cards: ordered, single: fresh[0] ?? inside ?? ordered[0] };
 }
 
 /** Does the lodging show a bedroom photo of its own (the room cards' photo rule)? */
@@ -609,7 +630,8 @@ export function galleryOrder(photos: readonly Photo[], elsewhere: string): Photo
   const stock = photos.filter((p) => isStockPhoto(p));
   const shownOwn = own.filter(shown);
   const unseen = own.filter((p) => !shown(p) && !shownOwn.some((q) => isSamePicture(q.dhash, p.dhash)));
-  return [...unseen, ...stock];
+  // A vehicle / person / animal shot never leads the gallery (11-26, Jaja: the strip opened on an SUV).
+  return [...unseen.filter((p) => !p.notCard), ...unseen.filter((p) => p.notCard), ...stock];
 }
 
 const GPAGER_PREV = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;

@@ -6,7 +6,14 @@
 //    (src/media/photoKind.ts): a picture that is not surely the lodging, or too small / dark / blurred,
 //    is "junk" and stays off the page, out of the hero and out of the opening. Hermetic: no DB, no model.
 import { readFileSync } from "node:fs";
-import { isBandWorthy, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import os from "node:os";
+import path from "node:path";
+import { focusXOfBuffer, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import sharpLib from "sharp";
+import { withRibbonStrip } from "../src/outreach/heroShot.js";
+import { sampleRooms, galleryOrder } from "../src/engine/templateKit.js";
+import { withoutAbsentPictureClaims } from "../src/engine/render.js";
+import type { SiteData as SD, Photo as PH } from "../src/engine/recipe.js";
 import { mockRatingShown } from "../src/engine/rating.js";
 import { APPROVAL_PENDING_NOTE, ownerApprovalOf, QA_HOLD_PREFIX, QA_WAIT_NOTE, QA_STALE_NOTE, qaBlockReason, qaReviewOf, type QaReview } from "../src/outreach/mockQaReview.js";
 
@@ -157,6 +164,41 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
 {
   const { matchIcon: mi } = await import("../src/engine/icons.js");
   check("ikon: Infraszauna → pool, Tárcsán sütés → grill", mi("Infraszauna") === "pool" && mi("Tárcsán sütés-főzés") === "grill");
+}
+
+
+// ── 11-26 colleague rounds after dbd49b42 ──
+{
+  // the plan-framing ribbon is a strip BELOW the page, never over a floating CTA
+  const page = await sharpLib({ create: { width: 608, height: 363, channels: 3, background: "#ff8800" } }).png().toBuffer();
+  const out = path.join(os.tmpdir(), `qa-ribbon-${process.pid}.png`);
+  await withRibbonStrip(page, "ELŐZETES LÁTVÁNYTERV — CITOVISO", out);
+  const meta = await sharpLib(out).metadata();
+  const corner = await sharpLib(out).extract({ left: 600, top: 355, width: 4, height: 4 }).raw().toBuffer();
+  check("levélkép: a sáv a kép ALATT, külön csíkban — a jobb alsó gomb nem kerül alá", meta.height === 363 + 17 && corner[0]! > 200 && corner[2]! < 60);
+}
+{
+  const ph = (n: number, extra: Partial<PH> = {}): PH => ({ url: `https://x.test/${n}.jpg`, alt: "k", provenance: "portal", ...extra });
+  const d = { name: "T", photos: [ph(1), ph(2), ph(3, { kindLabel: "a living room" }), ph(4, { kindLabel: "a kitchen", backstage: true })], sampleRoomCount: 0 } as unknown as SD;
+  const card = sampleRooms(d)[0];
+  check("szobakártya: hálószoba-kép nélkül a szállás belső (nem konyha/fürdő) képe, nem üres ágy-ikon", card?.photo?.url === ph(3).url);
+  const g = galleryOrder([ph(5, { notCard: true }), ph(6), ph(7)], "");
+  check("galéria: jármű/ember/állat-kép nem nyit, a végére kerül", g[0]?.url === ph(6).url && g.at(-1)?.url === ph(5).url);
+  check("egyedül ülő ember (stég) lekerül az oldalról", isOffPagePhoto(K("ok", "a garden with a terrace", { probs: { "a person sitting on a pier": 0.2 } }), false));
+  check("nyitókép-jelölt: a terasz akkor is a kolléga elé kerül, ha a gépi pontszáma 0.25 alatt van",
+    isHeroCandidate(K("ok", "a balcony with a table and chairs", { probs: { "a balcony with a view": 0.12 } })) && !isHeroWorthy(K("ok", "a balcony with a table and chairs", { probs: { "a balcony with a view": 0.12 } })));
+  const stripes = await sharpLib({ create: { width: 400, height: 200, channels: 3, background: "#808080" } })
+    .composite([{ input: await sharpLib({ create: { width: 60, height: 200, channels: 3, background: "#000" } }).png().toBuffer(), left: 320, top: 0 },
+      { input: await sharpLib({ create: { width: 20, height: 200, channels: 3, background: "#fff" } }).png().toBuffer(), left: 340, top: 0 }]).png().toBuffer();
+  const fx = await focusXOfBuffer(stripes);
+  check("nyitókép mobilon: a kivágás a kép részletgazdag oldalára áll", fx != null && fx >= 80, `fx=${fx}`);
+  check("parallax: a nyitókép a fókuszpont szerint vág (--cit-hero-fx), a mélységhatás vászna is", /--cit-hero-fx/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /uniform vec2 off,cover,sh/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
+  check("parallax mobil: a rögzített réteg is a fókuszpont szerint vág (nem kényszerített center)", /cs\.backgroundPosition\|\|'center'/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
+  check("„Amit kínálunk”: forrás-lista nélkül az oldal saját, szolgáltatást nevező kiemelései töltik (nem üres keret)", /sampleAmenityItems\(\(d\.highlights \?\? \[\]\)\.filter\(\(h\) => matchIcon\(h\) !== "dot"\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  {
+    const r = withoutAbsentPictureClaims({ template: "parallax", skin: "", archetype: "", sections: [{ kind: "gallery", copy: { title: "Képek a házról és az alaprajzokról", eyebrow: "Galéria" } }] } as never) as { sections: { copy: { title?: string; eyebrow?: string } }[] };
+    check("galéria-cím: alaprajzot nem ígér (alaprajz sosem kerül az oldalra)", r.sections[0]!.copy.title === undefined && r.sections[0]!.copy.eyebrow === "Galéria");
+  }
 }
 
 if (failed) {

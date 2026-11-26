@@ -20,6 +20,7 @@
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
 import { amenityIconSvg } from "./amenityIcon.js";
+import { matchIcon } from "./icons.js";
 import { sampleAmenityItems } from "./sampleFromSource.js";
 import { mapEmbed } from "./primitives.js";
 import { formatMoney } from "../text/money.js";
@@ -615,7 +616,13 @@ function pricingSampleBlock(d: SiteData): string {
  * the owner ticks the real ones. Never generic padding; nothing sourced → the empty frame.
  */
 function amenitiesSampleBlock(d: SiteData): string {
-  const items = sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []);
+  const sourced = sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []);
+  // No sourced facility list → the page's OWN highlights that name a facility (a known icon), through the same
+  // deny/negation filter (11-26, quality colleague, Riva: the block stood empty under its „Minta” note). They
+  // are claims the page already makes from the source — nothing new is stated (§B.17).
+  const items = sourced.length
+    ? sourced
+    : sampleAmenityItems((d.highlights ?? []).filter((h) => matchIcon(h) !== "dot"), d.sampleAmenityDeny ?? []);
   // Nothing sourced: the module still SHOWS (ADR-0061 all-in — a module the lead buys may
   // not be silent), as its frame with no item in it, and the note says so — the pricing
   // sample's pattern („ezen az előnézeten szándékosan nincs egyetlen ár sem”).

@@ -77,10 +77,12 @@ const PARALLAX_CSS = `
   body.cit-tpl-parallax .cit-mast-links{max-width:720px}
 
   /* HERO — masthead contract: copy sits low so the top of the photo belongs to the name */
-  .t-par--hero{align-items:flex-end}
+  .t-par--hero{align-items:flex-end;background-position:var(--cit-hero-fx,50%) center}
   /* lower band strengthened for legible accent headline on a BRIGHT photo
      (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check) */
-  .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.55) 0%,rgba(10,12,14,.3) 30%,rgba(10,12,14,.6) 64%,rgba(10,12,14,.92) 100%)}
+  /* lighter upper half (11-26, quality colleague: the chosen wow photo was „erősen sötétítve”) — the copy
+     is bottom-anchored, so the dark end stays where the text is */
+  .t-par--hero::after{background:linear-gradient(180deg,rgba(10,12,14,.42) 0%,rgba(10,12,14,.12) 26%,rgba(10,12,14,.52) 52%,rgba(10,12,14,.9) 100%)}
   .t-hero{padding-top:140px;padding-bottom:88px}
   /* short desktop (a 150%-scaled laptop is ~1320×570, 2026-09-30): the centred copy outgrows the
      panel and rests on this padding, but the overlay masthead reaches 163px — clear it */
@@ -249,7 +251,8 @@ const PARALLAX_PIN_JS = `
       var cs=getComputedStyle(p),bg=cs.backgroundImage;
       if(cs.backgroundAttachment==='fixed'||!bg||bg.indexOf('url(')<0)return;
       var l=document.createElement('div');l.setAttribute('aria-hidden','true');
-      l.style.cssText='position:absolute;left:0;top:0;width:100%;z-index:-1;background:'+bg+' center/cover no-repeat;will-change:transform;pointer-events:none';
+      // the panel's own position (the hero's focus point, --cit-hero-fx), not a forced centre
+      l.style.cssText='position:absolute;left:0;top:0;width:100%;z-index:-1;background:'+bg+' '+(cs.backgroundPosition||'center')+'/cover no-repeat;will-change:transform;pointer-events:none';
       p.style.isolation='isolate';p.style.overflow='hidden';p.style.backgroundImage='none';
       p.insertBefore(l,p.firstChild);items.push({p:p,l:l});
     });
@@ -348,8 +351,12 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const mast = mastheadHtml(data, { links: mastLinks, place: heroCopy.eyebrow, phoneBar: true });
 
   // -- hero panel (photo → fixed bg; none → token gradient) -------------------
+  // The portrait crop sits on the photo's focus point (photoKind.photoFocusX, set at curation; 11-26:
+  // a centred phone crop cut the chosen wow photo to a shed wall).
+  const fx = data.photos.find((p) => p.url === heroPhoto)?.focusX;
+  const heroFx = typeof fx === "number" && fx >= 0 && fx <= 100 ? `;--cit-hero-fx:${Math.round(fx)}%` : "";
   const heroPanelOpen = heroPhoto
-    ? `<header class="t-par t-par--hero" id="top"${depthHeroAttr(data, heroPhoto)} style="background-image:url('${esc(heroPhoto)}')">`
+    ? `<header class="t-par t-par--hero" id="top"${depthHeroAttr(data, heroPhoto)} style="background-image:url('${esc(heroPhoto)}')${heroFx}">`
     : `<header class="t-par t-par--hero t-par--flat" id="top">`;
   const hero = `${heroPanelOpen}
     ${mast}
