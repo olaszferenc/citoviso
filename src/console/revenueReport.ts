@@ -34,7 +34,8 @@ import { domainFeeForRenewal, renewableModuleIds } from "../payment/billing.js";
 import { addMonths } from "../payment/subscription.js";
 import { isHouseDomain, wantAutoRenew } from "../domains/domainRenewal.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
-import { countryConfig, countryOfLead } from "../country.js";
+import { countryConfig, countryOfLead, countryOfLeads } from "../country.js";
+import { countCountries, inReportCountry, type CountryCount, type ReportCountry } from "./reportData.js";
 
 export const REVENUE_HORIZONS = [3, 6, 12] as const;
 export type RevenueHorizon = (typeof REVENUE_HORIZONS)[number];
@@ -147,6 +148,9 @@ export interface CurrencyLine {
 }
 
 export interface RevenueReport {
+  /** The shared country strip: the tenant's country filter and the subscriptions per country. */
+  readonly country?: ReportCountry;
+  readonly countries?: readonly CountryCount[];
   readonly horizon: RevenueHorizon;
   /** The currency every amount below is in (minor unit). */
   readonly currency: string;
@@ -379,12 +383,18 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: RawFact
     : [];
 
   const testOfTenant = new Map(rows.map((r) => [r.tenantId, isTest(r.name) || isTest(r.leadName)]));
+  const leadOfTenant = new Map(rows.map((r) => [r.tenantId, r.leadId]));
   // A failed RENEWAL charge (token auto-charge or a manual retryCharge) — a declined card at the
   // conversion checkout is a lost sale, not a subscriber's failed payment.
   const renewalOrders = new Set(orders.filter((o) => o.kind === "renewal").map((o) => o.id));
   const failedPayments = payments
     .filter((p) => p.status === "failed" && renewalOrders.has(p.orderId))
-    .map((p) => ({ at: toDate(p.createdAt), currency: p.currency, test: testOfTenant.get(orderTenant.get(p.orderId) ?? "") ?? false }));
+    .map((p) => ({
+      at: toDate(p.createdAt),
+      currency: p.currency,
+      test: testOfTenant.get(orderTenant.get(p.orderId) ?? "") ?? false,
+      leadId: leadOfTenant.get(orderTenant.get(p.orderId) ?? "") ?? null,
+    }));
 
   const now = new Date();
   const subs: RevenueSub[] = [];
@@ -476,10 +486,11 @@ async function loadSubs(): Promise<{ subs: RevenueSub[]; failedPayments: RawFact
 }
 
 export interface RawFacts {
-  /** `currency` = payment.currency; the amount is in its minor unit. */
-  readonly paid: readonly { readonly amount: number; readonly currency: string; readonly at: Date; readonly test: boolean }[];
-  readonly invoices: readonly { readonly status: string; readonly currency: string; readonly at: Date; readonly test: boolean }[];
-  readonly failedCharges: readonly { readonly at: Date; readonly currency: string; readonly test: boolean }[];
+  /** `currency` = payment.currency; the amount is in its minor unit. `leadId` = the payer's lead
+   *  (the country strip narrows by its country); absent/null = unknown. */
+  readonly paid: readonly { readonly amount: number; readonly currency: string; readonly at: Date; readonly test: boolean; readonly leadId?: string | null }[];
+  readonly invoices: readonly { readonly status: string; readonly currency: string; readonly at: Date; readonly test: boolean; readonly leadId?: string | null }[];
+  readonly failedCharges: readonly { readonly at: Date; readonly currency: string; readonly test: boolean; readonly leadId?: string | null }[];
 }
 
 /** Paid payments and issued / failed invoices — every kind of order counts. */
@@ -489,7 +500,8 @@ async function loadFacts(failedCharges: RawFacts["failedCharges"]): Promise<RawF
     .innerJoin("order_intent as oi", "oi.id", "pay.order_intent_id")
     .leftJoin("prospect as p", "p.id", "oi.prospect_id")
     .leftJoin("lead as l", "l.id", "p.lead_id")
-    .select(["pay.amount as amount", "pay.currency as currency", "pay.paid_at as paidAt", "l.name as leadName"])
+    .leftJoin("tenant as t", "t.id", "oi.tenant_id")
+    .select(["pay.amount as amount", "pay.currency as currency", "pay.paid_at as paidAt", "l.name as leadName", "p.lead_id as prospectLead", "t.lead_id as tenantLead"])
     .where("pay.status", "=", "paid")
     .where("pay.paid_at", "is not", null)
     .execute();
@@ -499,11 +511,12 @@ async function loadFacts(failedCharges: RawFacts["failedCharges"]): Promise<RawF
     .innerJoin("order_intent as oi", "oi.id", "pay.order_intent_id")
     .leftJoin("prospect as p", "p.id", "oi.prospect_id")
     .leftJoin("lead as l", "l.id", "p.lead_id")
-    .select(["i.status as status", "i.currency as currency", "i.issued_at as issuedAt", "l.name as leadName"])
+    .leftJoin("tenant as t", "t.id", "oi.tenant_id")
+    .select(["i.status as status", "i.currency as currency", "i.issued_at as issuedAt", "l.name as leadName", "p.lead_id as prospectLead", "t.lead_id as tenantLead"])
     .execute();
   return {
-    paid: paid.map((p) => ({ amount: p.amount, currency: p.currency, at: toDate(p.paidAt), test: isTest(p.leadName) })),
-    invoices: inv.map((i) => ({ status: i.status, currency: i.currency, at: toDate(i.issuedAt), test: isTest(i.leadName) })),
+    paid: paid.map((p) => ({ amount: p.amount, currency: p.currency, at: toDate(p.paidAt), test: isTest(p.leadName), leadId: p.prospectLead ?? p.tenantLead ?? null })),
+    invoices: inv.map((i) => ({ status: i.status, currency: i.currency, at: toDate(i.issuedAt), test: isTest(i.leadName), leadId: i.prospectLead ?? i.tenantLead ?? null })),
     failedCharges,
   };
 }
@@ -645,9 +658,24 @@ export async function getRevenueReport(
   includeTests: boolean,
   month: string | null,
   currency: string | null = null,
+  country: ReportCountry = "all",
 ): Promise<RevenueReport> {
-  const { subs, failedPayments } = await loadSubs();
-  const facts = await loadFacts(failedPayments);
+  const loaded = await loadSubs();
+  const loadedFacts = await loadFacts(loaded.failedPayments);
+  // The shared country strip (the tenant's lead's country): subscriptions per country, then —
+  // with a country chosen — only its subscribers and money, in ITS currency (no conversion).
+  const subCountry = await countryOfLeads(loaded.subs.map((s) => s.leadId));
+  const countries = countCountries(
+    loaded.subs.filter((s) => includeTests || !s.test),
+    (s) => subCountry.get(s.leadId),
+  );
+  const factLeads = [...loadedFacts.paid, ...loadedFacts.invoices, ...loadedFacts.failedCharges].map((f) => f.leadId).filter((x): x is string => !!x);
+  const factCountry = country === "all" ? null : await countryOfLeads(factLeads);
+  const inC = <F extends { readonly leadId?: string | null }>(f: F): boolean => !factCountry || inReportCountry(country, f.leadId ? factCountry.get(f.leadId) : null);
+  const subs = country === "all" ? loaded.subs : loaded.subs.filter((s) => inReportCountry(country, subCountry.get(s.leadId)));
+  const facts: RawFacts = country === "all"
+    ? loadedFacts
+    : { paid: loadedFacts.paid.filter(inC), invoices: loadedFacts.invoices.filter(inC), failedCharges: loadedFacts.failedCharges.filter(inC) };
   const trialRows = await db
     .selectFrom("free_trial as ft")
     .innerJoin("lead as l", "l.id", "ft.lead_id")
@@ -657,11 +685,15 @@ export async function getRevenueReport(
     .execute();
   const trials: RawTrial[] = [];
   for (const t of trialRows) {
-    const c = await countryConfig(await countryOfLead(t.leadId));
+    const iso = await countryOfLead(t.leadId);
+    if (!inReportCountry(country, iso)) continue;
+    const c = await countryConfig(iso);
     trials.push({ name: t.name, until: toDate(t.until), currency: c?.currency ?? null });
   }
-  // A currency nobody pays in (a stale link) falls back to the home view, never an empty guess.
+  // A chosen country is shown in its own currency; otherwise a currency nobody pays in (a stale
+  // link) falls back to the home view, never an empty guess.
+  const ownCurrency = country === "all" ? null : ((await countryConfig(country))?.currency ?? null);
   const lines = buildCurrencyLines(includeTests ? subs : subs.filter((s) => !s.test), facts, includeTests);
-  const cur = currency && lines.some((l) => l.currency === currency) ? currency : homeCurrency();
-  return foldRevenueReport(subs, facts, trials, horizon, includeTests, month, new Date(), cur);
+  const cur = ownCurrency ?? (currency && lines.some((l) => l.currency === currency) ? currency : homeCurrency());
+  return { ...foldRevenueReport(subs, facts, trials, horizon, includeTests, month, new Date(), cur), country, countries };
 }

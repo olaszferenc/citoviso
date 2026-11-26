@@ -75,6 +75,17 @@ sem, amit te írsz be, amikor a lead lapjáról a saját előnézetedben nézed 
   karika = megválaszolt, a lead neve, a csatorna (SMS, E-mail, Viber vagy WhatsApp), az időpont és a válasz eleje. Jobb oldalt
   a kiválasztott beszélgetés: felül a MI kiküldött üzenetünk (melyik csatornán, mikor, levélnél a
   tárgy), alatta a válasz teljes szövege.
+- **Melyik országból jött:** a lead neve előtt kis keretben az országa kétbetűs kódja (pl. **HR**,
+  **SI**); a megnyitott beszélgetés fejlécében mellette az ország teljes neve is.
+- **Fordítás a saját nyelvedre:** ha az üzenet nem a te konzol-nyelveden íródott (a jobb felső
+  nyelvválasztó), a buborékban felül „Fordítás (horvát) · Bábel” felirattal a fordítás áll, alatta
+  szaggatott vonal után halványan az „Eredeti · horvát” szöveg — mindig mindkettő. Ugyanígy
+  fordul a kiküldött megkeresésünk és Poe javaslata is; a javaslatnál az eredeti mellett ott áll:
+  **„ez megy ki”** — az „Elküldöm” a lead nyelvén küldi, nem a fordítást. A listában a válasz eleje
+  is a fordításból látszik, alatta „fordítva: horvát”.
+- A fordítást Bábel, a fordító munkatárs készíti (a gép maga nem fordít). Amíg nincs kész, a buborékban
+  „Bábel fordítja (magyar)… addig az eredeti (horvát)” áll, a listában **„fordítás készül”**;
+  általában néhány percen belül megérkezik, frissítsd a lapot.
 - **Telefonon** csak a lista látszik; egy sorra koppintva a beszélgetés nyílik meg helyette, a
   **„Vissza”** gomb hozza vissza a listát.
 - Ha válaszoltál a leadnek (telefonon, SMS-ben, levélben), koppints a **„Megválaszoltam”**

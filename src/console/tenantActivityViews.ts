@@ -11,7 +11,8 @@ import { esc, helpLink, layout } from "./views.js";
 import { T } from "../i18n/mail.js";
 import { consoleLang } from "./i18nCtx.js";
 import { APP_TZ, partsIn } from "../text/zoneTime.js";
-import { reportTabs } from "./reportViews.js";
+import { reportCountryStrip, reportTabs, withCtry } from "./reportViews.js";
+import { countCountries, inReportCountry, type ReportCountry } from "./reportData.js";
 import type { SourceGroup } from "../analytics/referrerGroup.js";
 import type { OwnerEvent, TenantActivity, TenantVerdict } from "./tenantActivityData.js";
 
@@ -244,6 +245,8 @@ export interface TenantReportQuery {
   readonly test: boolean;
   readonly sort: TenantSort;
   readonly desc: boolean;
+  /** The shared country strip's filter (the tenant's lead's country); absent = every country. */
+  readonly ctry?: ReportCountry;
 }
 
 const FLAG_ORDER: Record<TenantVerdict, number> = { sleeping: 0, not_logged_in: 1, new: 2, active: 3, ended: 4, test: 5 };
@@ -290,7 +293,7 @@ function reportHref(q: TenantReportQuery, over: Partial<TenantReportQuery> = {})
   if (n.sort !== "flag") p.set("sort", n.sort);
   if (n.desc) p.set("dir", "desc");
   const s = p.toString();
-  return `/report/tenants${s ? `?${s}` : ""}`;
+  return withCtry(`/report/tenants${s ? `?${s}` : ""}`, n.ctry);
 }
 
 function spark(days: readonly { n: number }[]): string {
@@ -308,10 +311,15 @@ function spark(days: readonly { n: number }[]): string {
   );
 }
 
-export function reportTenantsPage(all: readonly TenantActivity[], q: TenantReportQuery, now = new Date()): string {
+export function reportTenantsPage(every: readonly TenantActivity[], q: TenantReportQuery, now = new Date()): string {
   const lang = consoleLang();
+  const ctry = q.ctry ?? "all";
+  // The shared country strip (orszag-szuro-forditas ①): the listed tenants (state + test filter)
+  // per tenant's country; then the whole page — KPIs included — narrowed to the chosen one.
+  const strip = reportCountryStrip(reportHref(q), countCountries(selectTenantRows(every, q), (a) => a.country), ctry, lang);
+  const all = every.filter((a) => inReportCountry(ctry, a.country));
   const rows = selectTenantRows(all, q);
-  const tabs = reportTabs("/report/tenants", "", "", lang);
+  const tabs = reportTabs("/report/tenants", "", "", lang, ctry);
   const FL: Record<TenantFilter, string> = {
     active: T(lang, "Aktív"),
     paying: T(lang, "Fizető"),
@@ -407,7 +415,7 @@ export function reportTenantsPage(all: readonly TenantActivity[], q: TenantRepor
     `r.addEventListener("click",function(e){if(e.target.closest("a"))return;t();});r.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();t();}});});</script>`;
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_tenants")}</h1></div>${tabs}${filter}${kpis}${panel}${js}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_tenants")}</h1></div>${tabs}${strip}${filter}${kpis}${panel}${js}`,
     { active: "/report/tenants" },
   );
 }

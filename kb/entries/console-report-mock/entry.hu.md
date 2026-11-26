@@ -4,12 +4,14 @@ title: Riport — Mock: melyik mock mennyire vonzó
 audience: operator
 category: measure
 anchors: console.report_mock
-updated: 2026-10-08
+updated: 2026-11-26
 ---
 
 ## Hol találod
 
 A bal menüben **„Riport”** → **„Mock”**, vagy a Riport bármelyik lapján a fülsor **„Mock”** füle.
+
+**„Ország” sáv:** a fülsor alatt — mint minden riport-fülön — a lead országa szerint számolja a mockokat. A választás mind a 8 riport-fülön megmarad, amíg vissza nem állítod „Mind”-re (részletek: a Riport tölcsér-lapjának súgójában).
 
 ## Mit mutat
 

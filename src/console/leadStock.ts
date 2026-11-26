@@ -29,7 +29,8 @@ import { isHuMobileE164, normalizePhone } from "../text/phone.js";
 import { MOCK_QA_PASSED_SQL } from "../outreach/mockQaReview.js";
 import { MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 import { pickShownMock } from "./leadFilters.js";
-import { reportPeriod, type ReportPeriod } from "./reportData.js";
+import { countCountries, inReportCountry, reportPeriod, type CountryCount, type ReportCountry, type ReportPeriod } from "./reportData.js";
+import { countryConfig, countryOf } from "../country.js";
 
 export type StockCat = "own" | "town" | "none";
 export const STOCK_CATS: readonly StockCat[] = ["own", "town", "none"];
@@ -62,6 +63,9 @@ export interface LeadStock {
   readonly notQualified: number;
   readonly rows: Readonly<Record<StockCat, StockCounts>>;
   readonly sum: StockCounts;
+  /** The shared country strip: the lead-country filter and the qualified leads per country. */
+  readonly country?: ReportCountry;
+  readonly countries?: readonly CountryCount[];
 }
 
 interface Classified {
@@ -69,6 +73,8 @@ interface Classified {
   readonly at: number;
   readonly cat: StockCat;
   readonly cols: ReadonlySet<StockCol>;
+  /** The lead's country (countryOf: raw.country, else the scrape area's; "" = unknown). */
+  readonly country: string;
 }
 
 const zero = (): StockCounts => Object.fromEntries(STOCK_COLS.map((c) => [c, 0])) as StockCounts;
@@ -79,7 +85,7 @@ const mobileOf = (raw: string | null): string | null => {
 };
 
 /** All qualified leads, classified — `null` cat rows are the not-qualified ones (counted only). */
-async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: number }[] }> {
+async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: number; country: string }[] }> {
   const leads = await sql<{
     id: string;
     at: Date;
@@ -87,6 +93,8 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
     own: number;
     email: string | null;
     phone: string | null;
+    raw_country: string | null;
+    area_country: string | null;
   }>`
     select l.id, l.created_at as at,
            (l.lifecycle_status is distinct from 'disqualified'
@@ -95,8 +103,14 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
            (case when jsonb_typeof(l.raw->'material'->'placesPhotos') = 'number' then (l.raw->'material'->>'placesPhotos')::int else 0 end
           + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end
           + case when jsonb_typeof(l.raw->'material'->'websiteImages') = 'number' then (l.raw->'material'->>'websiteImages')::int else 0 end) as own,
-           nullif(trim(l.raw->>'email'), '') as email, l.raw->>'phone' as phone
-      from lead l`.execute(db);
+           nullif(trim(l.raw->>'email'), '') as email, l.raw->>'phone' as phone,
+           l.raw->>'country' as raw_country, sd.country as area_country
+      from lead l
+      left join scrape_run sr on sr.id = l.scrape_run_id
+      left join scraper_definition sd on sd.id = sr.scraper_definition_id`.execute(db);
+  await countryConfig(null); // refresh the layer snapshot once; the per-row lookups are sync
+  const countryOfRow = (l: { raw_country: string | null; area_country: string | null }): string =>
+    countryOf({ country: l.raw_country }, l.area_country) ?? "";
 
   const mocks = await sql<{ lead_id: string; status: string; pass: boolean; flag: boolean; town: boolean; generated_at: Date }>`
     select a.lead_id, a.status,
@@ -161,9 +175,9 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
         }
       }
     }
-    qualified.push({ id: l.id, at: new Date(l.at).getTime(), cat, cols });
+    qualified.push({ id: l.id, at: new Date(l.at).getTime(), cat, cols, country: countryOfRow(l) });
   }
-  return { qualified, all: leads.rows.map((l) => ({ at: new Date(l.at).getTime() })) };
+  return { qualified, all: leads.rows.map((l) => ({ at: new Date(l.at).getTime(), country: countryOfRow(l) })) };
 }
 
 // The classification is the same for every period (state now) — one 60 s cache serves the
@@ -183,21 +197,23 @@ function classified(): Promise<Awaited<ReturnType<typeof classifyAll>>> {
 
 const inPeriod = (at: number, p: ReportPeriod): boolean => at >= p.fromMs && at <= p.toMs;
 
-export async function getLeadStock(period: ReportPeriod): Promise<LeadStock> {
+export async function getLeadStock(period: ReportPeriod, country: ReportCountry = "all"): Promise<LeadStock> {
   const { qualified, all } = await classified();
   const rows = { own: zero(), town: zero(), none: zero() } as Record<StockCat, StockCounts>;
   const sum = zero();
   let q = 0;
+  // The shared country strip: the period's qualified leads per country (the page's big number).
+  const countries = countCountries(qualified.filter((l) => inPeriod(l.at, period)), (l) => l.country);
   for (const l of qualified) {
-    if (!inPeriod(l.at, period)) continue;
+    if (!inPeriod(l.at, period) || !inReportCountry(country, l.country)) continue;
     q++;
     for (const c of l.cols) {
       rows[l.cat][c]++;
       sum[c]++;
     }
   }
-  const total = all.filter((l) => inPeriod(l.at, period)).length;
-  return { period, total, notQualified: total - q, rows, sum };
+  const total = all.filter((l) => inPeriod(l.at, period) && inReportCountry(country, l.country)).length;
+  return { period, total, notQualified: total - q, rows, sum, country, countries };
 }
 
 /** The `?stock=<cat>.<col>` list filter: `cat` may be "all" (every photo kind). */

@@ -64,6 +64,27 @@ export type ReportDim = "segment" | "channel" | "device" | "style" | "hour" | "c
 export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device", "style", "hour", "country"];
 /** Country filter: "all", or the lead's ISO-2 ("" = no known country). Scopes EVERY metric, like `seg`. */
 export type ReportCountry = string;
+/** One chip of the shared country strip: a country (ISO-2, "" = unknown) and the tab's rows in it. */
+export interface CountryCount {
+  readonly iso: string;
+  readonly n: number;
+}
+/** The `ctry` query param → ReportCountry: an ISO-2 code, "" for "-" (unknown), else "all". */
+export function parseReportCountry(raw: string | null | undefined): ReportCountry {
+  const up = (raw ?? "all").trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(up) ? up : up === "-" ? "" : "all";
+}
+/** True when a row of country `iso` (null/undefined = unknown) is inside the filter. */
+export const inReportCountry = (filter: ReportCountry, iso: string | null | undefined): boolean => filter === "all" || (iso ?? "") === filter;
+/** Rows per country, most first (the strip's chip numbers). */
+export function countCountries<T>(rows: readonly T[], countryOfRow: (r: T) => string | null | undefined): CountryCount[] {
+  const by = new Map<string, number>();
+  for (const r of rows) {
+    const k = countryOfRow(r) ?? "";
+    by.set(k, (by.get(k) ?? 0) + 1);
+  }
+  return [...by.entries()].map(([iso, n]) => ({ iso, n })).sort((a, b) => b.n - a.n || a.iso.localeCompare(b.iso));
+}
 /** Lead-type filter (prospect.segment; NULL folds to "ismeretlen"): scopes EVERY metric on the page. */
 export const REPORT_SEGS = ["nincs_honlap", "0_labnyom", "van_labnyom", "elavult", "ismeretlen"] as const;
 export type ReportSeg = (typeof REPORT_SEGS)[number] | "all";
@@ -1648,6 +1669,9 @@ export interface MockReport {
   /** One card per template, most sends first. */
   readonly cards: readonly MockCard[];
   readonly verdict: MockVerdict;
+  /** The shared country strip's filter ("all" = every country) and its per-country mock counts. */
+  readonly country?: ReportCountry;
+  readonly countries?: readonly CountryCount[];
 }
 
 /** README ⑦: 0–100; an unsubscribe zeroes it. */
@@ -1777,10 +1801,14 @@ export function foldMockReport(
   days: ReportDays,
   ch: MockChannelFilter,
   now: Date,
+  country: ReportCountry = "all",
 ): MockReport {
   const from = days ? now.getTime() - days * DAY : -Infinity;
+  const inWindow = all.filter((p) => p.sentAt.getTime() >= from && inMockChannel(p.channel, ch));
+  // The shared country strip: mocks per lead country in the range + channel, before the country filter.
+  const countries = countCountries(inWindow, (p) => p.country);
   const rows = sortMockRows(
-    all.filter((p) => p.sentAt.getTime() >= from && inMockChannel(p.channel, ch)).map((p) => mockRowOf(p, labels)),
+    inWindow.filter((p) => inReportCountry(country, p.country)).map((p) => mockRowOf(p, labels)),
     "score",
   );
   const allCard = mockCard("", "", rows, NaN, true);
@@ -1790,9 +1818,15 @@ export function foldMockReport(
   const cards = [...groups.entries()]
     .map(([k, rs]) => mockCard(k, rs[0]!.templateLabel, rs, avgOpen, false))
     .sort((a, b) => b.sent - a.sent || a.label.localeCompare(b.label, "hu"));
-  return { days, ch, rows, all: allCard, cards, verdict: mockVerdict(cards, avgOpen) };
+  return { days, ch, rows, all: allCard, cards, verdict: mockVerdict(cards, avgOpen), country, countries };
 }
 
-export async function getMockReport(days: ReportDays, ch: MockChannelFilter, labels: Readonly<Record<string, string>>, now = new Date()): Promise<MockReport> {
-  return foldMockReport(await loadProspectFacts(), labels, days, ch, now);
+export async function getMockReport(
+  days: ReportDays,
+  ch: MockChannelFilter,
+  labels: Readonly<Record<string, string>>,
+  now = new Date(),
+  country: ReportCountry = "all",
+): Promise<MockReport> {
+  return foldMockReport(await loadProspectFacts(), labels, days, ch, now, country);
 }

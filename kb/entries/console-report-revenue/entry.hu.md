@@ -4,7 +4,7 @@ title: Riport — Előfizetők: bevétel és előrejelzés
 audience: operator
 category: measure
 anchors: console.report_revenue
-updated: 2026-11-16
+updated: 2026-11-26
 ---
 
 Az Előfizetők fül arra felel, kik fizetnek elő, mennyi pénz jön be havonta, és mennyi jön a
@@ -15,6 +15,8 @@ megújításkor ténylegesen terhelni fog.
 
 A bal menüben **„Riport”** → **„Előfizetők”**, vagy a Riport bármelyik lapján a fülsor
 **„Előfizetők”** füle.
+
+**„Ország” sáv:** a fülsor alatt — mint minden riport-fülön — a tenant (leadje) országa szerint számolja az előfizetéseket; egy ország választásakor minden összeg annak a pénznemében látszik, átváltás nincs, és a pénznem-választó helyén ez a pénznem áll. A választás mind a 8 riport-fülön megmarad, amíg vissza nem állítod „Mind”-re (részletek: a Riport tölcsér-lapjának súgójában).
 
 ## Mit mutat
 

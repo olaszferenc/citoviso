@@ -966,6 +966,14 @@ if [ -f scripts/client-visibility-check.mts ] && \
   echo "[pre-commit] client-visibility-check (próba + foglalás a konzolon, értesítés egyszer)…"
   npx tsx scripts/client-visibility-check.mts >"$GATE_LOG" || gate_failed
 fi
+# VÁLASZOK A KONZOL-NYELVEN (scripts/reply-translation-check.mts — terv assets/design-refs/console/orszag-szuro-forditas/):
+# a lead országa ISO-chipként, a beszélgetés Bábel fordításával (felül) és a halvány eredetivel; a fordítás a forrás
+# ujjlenyomatához köt, Bábel jegy-forrása csak a hiányzó részeket adja, a letétel elavult forrásra elutasít (ADR-0412).
+if [ -f scripts/reply-translation-check.mts ] && \
+   changed_files | grep -qE '^src/replies/(translation|store)\.ts$|^src/console/views\.ts$|^src/i18n/lang\.ts$|^scripts/(replies-collect|reply-translation-check)\.mts$|^migrations/0154_'; then
+  echo "[pre-commit] reply-translation-check (válaszok országa és fordítása a konzol-nyelvre)…"
+  npx tsx scripts/reply-translation-check.mts >"$GATE_LOG" || gate_failed
+fi
 # A PRÓBA BELSEJE (scripts/trial-report-check.mts — terv assets/design-refs/console/proba-riport/):
 # minden admin-mentés útvonala fülhöz tartozik, a valódi admin HTTP-n naplóz (megnyitás egyszer, mentés füllel,
 # saját oldal), a próba-történetek (csend, elakadás, fizetett, nem mért) és a Riport „Próba” fül egy szabályból.

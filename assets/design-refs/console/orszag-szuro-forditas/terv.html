@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terv — Ország-szűrő a riportokban + bejövő üzenet országa és fordítása</title>
+<style>
+:root{
+  --citui-navy-950:#0a1f36;--citui-navy-900:#0e2a47;--citui-navy-800:#16283f;--citui-navy-700:#203a59;
+  --citui-cyan-500:#1fb6d6;--citui-cyan-300:#6fd8eb;--citui-white:#ffffff;
+  --citui-ink:#10243a;--citui-muted:#5a6d82;--citui-surface:#f6fbfd;--citui-surface-2:#eef7fa;
+  --citui-line:rgba(14,42,71,.12);--citui-line-strong:rgba(14,42,71,.22);
+  --citui-ok:#2fa96b;--citui-ok-soft:#e7f8ef;--citui-warn:#d29922;--citui-bad:#e5484d;
+  --citui-ok-ink:#19733f;--citui-bad-ink:#b3262b;--citui-warn-ink:#7d5a12;--citui-link-ink:#10697a;
+  --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+  --citui-radius-sm:14px;--citui-radius:22px;--citui-radius-pill:999px;
+  --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--citui-font-text);color:var(--citui-ink);background:var(--citui-surface-2);font-size:14px}
+button,select{font:inherit;color:inherit}
+/* ── mock control bar (NOT part of the design) ── */
+.mk{position:sticky;top:0;z-index:50;background:var(--citui-navy-900);color:var(--citui-white);padding:8px 12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12.5px}
+.mk b{font-weight:700;opacity:.8;margin-right:4px}
+.mk .seg{display:inline-flex;border:1px solid color-mix(in srgb,var(--citui-white) 30%,transparent);border-radius:var(--citui-radius-pill);overflow:hidden}
+.mk .seg button{background:none;border:0;color:var(--citui-white);padding:4px 10px;cursor:pointer}
+.mk .seg button[aria-pressed="true"]{background:var(--citui-cyan-500);color:var(--citui-navy-950);font-weight:700}
+.note{max-width:1180px;margin:12px auto 0;padding:12px 16px;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);font-size:13px;line-height:1.5}
+.note h3{margin:0 0 4px;font-family:var(--citui-font-display);font-size:15px}
+.note p{margin:4px 0}
+/* ── stage ── */
+.stage-wrap{display:flex;justify-content:center;padding:14px 8px 40px}
+.stage{container-type:inline-size;width:100%;max-width:1280px;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:12px;overflow:hidden;transition:max-width .2s}
+.stage.is-m{max-width:390px}
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:640px}
+.side{background:var(--citui-surface);border-right:1px solid var(--citui-line);padding:14px 10px}
+.side .logo{font-family:var(--citui-font-display);font-weight:700;font-size:17px;margin:0 6px 16px}
+.side a{display:block;padding:8px 10px;border-radius:8px;color:var(--citui-ink);text-decoration:none;font-weight:600;cursor:pointer}
+.side a.on{background:color-mix(in srgb,var(--citui-cyan-500) 14%,transparent)}
+.side a.sub{font-weight:400;padding-left:22px;font-size:13px}
+.main{padding:18px 22px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.crumb{color:var(--citui-muted);font-size:13px}
+.lang{border:1px solid var(--citui-line-strong);border-radius:8px;padding:4px 8px;background:var(--citui-white);font-weight:700;font-size:13px}
+h1{font-family:var(--citui-font-display);font-size:24px;margin:4px 0 10px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);overflow-x:auto;scrollbar-width:none}
+.tabs button{background:none;border:0;padding:9px 12px;font-weight:600;color:var(--citui-muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--citui-ink);border-color:var(--citui-navy-900)}
+/* country strip — variant B */
+.cbar{display:flex;align-items:center;gap:8px;padding:10px 0 4px;flex-wrap:wrap}
+.cbar__l{font-size:12.5px;font-weight:700;color:var(--citui-muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:var(--citui-radius-pill);padding:5px 11px;font-size:13px;font-weight:600;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-white)}
+.chip .n{font-weight:400;opacity:.75}
+.chip.is-off{opacity:.45}
+.iso{display:inline-block;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;border:1px solid var(--citui-line-strong);border-radius:5px;padding:3px 5px;color:var(--citui-navy-700);background:var(--citui-surface)}
+.chip[aria-pressed="true"] .iso{color:var(--citui-white);background:transparent;border-color:color-mix(in srgb,var(--citui-white) 50%,transparent)}
+.scope{font-size:12.5px;color:var(--citui-muted);margin:2px 0 10px}
+.scope b{color:var(--citui-ink)}
+/* filter row (per-tab) */
+.filt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.filt select{border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);padding:6px 12px;background:var(--citui-white);font-weight:600;font-size:13px}
+.filt select.on{border-color:var(--citui-navy-900);box-shadow:inset 0 0 0 1px var(--citui-navy-900)}
+.pchips{display:inline-flex;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-pill);overflow:hidden}
+.pchips span{padding:6px 11px;font-size:13px;font-weight:600}
+.pchips span.on{background:var(--citui-navy-900);color:var(--citui-white)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.card{border:1px solid var(--citui-line);border-radius:12px;padding:12px 14px}
+.card h4{margin:0;font-family:var(--citui-font-display);font-size:15px}
+.card .q{font-size:12px;color:var(--citui-muted)}
+.card .v{font-family:var(--citui-font-display);font-size:26px;font-weight:700;margin-top:6px}
+.card .s{font-size:12px;color:var(--citui-muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--citui-line)}
+th{font-size:12px;color:var(--citui-muted);font-weight:600}
+td.num,th.num{text-align:right}
+.tblwrap{border:1px solid var(--citui-line);border-radius:12px;padding:4px 10px;overflow-x:auto;margin-top:10px}
+.empty{padding:18px;text-align:center;color:var(--citui-muted)}
+.hint{font-size:12px;color:var(--citui-muted);margin-top:8px}
+/* replies */
+.rep{border:1px solid var(--citui-line);border-radius:12px;overflow:hidden}
+.rep__h{padding:12px 14px;border-bottom:1px solid var(--citui-line);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rep__t{font-weight:700;font-size:15px;margin-right:6px}
+.badge{background:var(--citui-bad-ink);color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:3px 9px;font-size:12px;font-weight:700}
+.rep__b{display:grid;grid-template-columns:330px 1fr;min-height:430px}
+.rep__list{border-right:1px solid var(--citui-line);min-width:0}
+.it{display:block;padding:11px 14px;border-bottom:1px solid var(--citui-line);cursor:pointer}
+.it[aria-current="true"]{background:color-mix(in srgb,var(--citui-cyan-500) 12%,transparent)}
+.it__r1{display:flex;align-items:center;gap:7px}
+.it__nm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it__w{font-size:12px;color:var(--citui-muted);white-space:nowrap}
+.it__ex{font-size:13px;color:var(--citui-muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it__tag{display:inline-block;margin-top:5px;font-size:11.5px;font-weight:700;border-radius:var(--citui-radius-pill);padding:2px 8px;background:color-mix(in srgb,var(--citui-warn) 18%,transparent);color:var(--citui-warn-ink)}
+.it__tr{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--citui-link-ink);font-weight:600;margin-top:5px;margin-left:6px}
+.det{padding:14px 16px;min-width:0}
+.det__h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:10px}
+.det__nm{font-weight:700;font-size:17px}
+.det__meta{font-size:13px;color:var(--citui-muted)}
+.det__back{display:none;border:0;background:none;color:var(--citui-link-ink);font-weight:700;padding:0 0 8px;cursor:pointer}
+.bub{border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;line-height:1.5;max-width:560px}
+.bub--out{background:var(--citui-surface-2)}
+.bub--in{border:1px solid var(--citui-line-strong);margin-left:28px}
+.bub__h{font-size:12px;font-weight:700;color:var(--citui-muted);margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.trh{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--citui-link-ink);margin-bottom:4px}
+.trbtn{border:0;background:none;color:var(--citui-link-ink);font-weight:700;font-size:12.5px;padding:0;cursor:pointer;text-decoration:underline;margin-top:6px}
+.orig{margin-top:10px;padding-top:8px;border-top:1px dashed var(--citui-line-strong);color:var(--citui-muted);font-size:13px}
+.orig__l{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+.pend{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 12%,transparent);border-radius:8px;padding:6px 9px;margin-bottom:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--citui-warn);animation:pl 1.2s infinite}
+@keyframes pl{50%{opacity:.3}}
+.sim{border:1px dashed var(--citui-line-strong);background:var(--citui-white);border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;margin-left:auto}
+.btn{border:1px solid var(--citui-line-strong);background:var(--citui-white);border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;margin-right:6px}
+pre{white-space:pre-wrap;font:inherit;margin:0}
+/* ── mobile (container) ── */
+@container (max-width:700px){
+  .shell{grid-template-columns:1fr}
+  .side{display:none}
+  .main{padding:12px}
+  h1{font-size:20px}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .rep__b{grid-template-columns:minmax(0,1fr)}
+  .rep__b[data-open="true"] .rep__list{display:none}
+  .rep__b[data-open="false"] .det{display:none}
+  .rep__list{border-right:0}
+  .det__back{display:block}
+  .bub--in{margin-left:0}
+  .cbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .cbar .chip{flex:none}
+  .hide-m{display:none}
+}
+</style>
+</head>
+<body>
+<div class="mk" role="toolbar" aria-label="Terv-vezérlő">
+  <span><b>Felület</b><span class="seg" data-k="page"><button data-v="report" aria-pressed="true">Riport</button><button data-v="dash" aria-pressed="false">Irányítópult</button></span></span>
+  <span><b>Méret</b><span class="seg" data-k="size"><button data-v="m" aria-pressed="false">Mobil 390px</button><button data-v="d" aria-pressed="true">Asztali</button></span></span>
+  <span data-show="report"><b>Ország-szűrő</b><span class="seg" data-k="rv"><button data-v="A" aria-pressed="false">A — fülenként</button><button data-v="B" aria-pressed="true">B — közös sáv</button></span></span>
+  <span data-show="dash"><b>Fordítás</b><span class="seg" data-k="tv"><button data-v="A" aria-pressed="true">A — fordítás, eredeti kattintásra</button><button data-v="B" aria-pressed="false">B — fordítás + eredeti együtt</button></span></span>
+</div>
+
+<div class="note" id="note-report">
+  <h3>Riport — ország-szűrő minden fülön</h3>
+  <p><b>A — fülenként:</b> minden fül saját szűrősorában egy „Ország” legördülő (ma így működik a Tölcsér, de csak ha több ország van). Fülváltáskor a választás <b>nem</b> megy át.</p>
+  <p><b>B — közös sáv (javaslat):</b> a fülsor alatt egy ország-sáv, ami <b>mind a 8 fülre</b> hat és fülváltáskor megmarad. A szám a chipen: az adott fül sorai abban az országban. Ország választásakor a lap tetején kiírja, mire szűr („Csak Horvátország”).</p>
+  <p>Mindkettőben mindig látszik, akkor is, ha ma csak egy ország van. Mit jelent az ország fülenként: Tölcsér/Viselkedés/Mock/Kísérletek/Lead-állomány = a lead országa; Próba = a próbázó leadjének országa; Tenantok/Előfizetők = a tenant országa (az Előfizetők ország választásakor annak pénznemében mutat, átváltás nincs).</p>
+</div>
+<div class="note" id="note-dash" hidden>
+  <h3>Irányítópult — bejövő üzenet országa és fordítása</h3>
+  <p>Minden üzenet mellett a lead országának ISO-kódja (HR, SI, AT…). Ha az üzenet nyelve nem a <b>te konzol-nyelved</b> (jobb felső „HU” választó — próbáld átállítani EN-re vagy DE-re), automatikusan lefordítva látod, a listában is.</p>
+  <p><b>Ki fordít:</b> Bábel, a fordító munkatárs (ADR-0412: fordításra API-hívás tilos). Minden új válaszról jegyet kap, mint ma Poe, és a konzolon teszi le a fordítást. Amíg nincs kész: az eredeti szöveg látszik „Bábel fordítja…” jelzéssel (a szlovén üzenetnél kipróbálható a „Bábel kész” gombbal). Fordítási API-költség: 0.</p>
+  <p><b>A:</b> a buborékban a fordítás, az eredeti egy kattintással. <b>B:</b> a fordítás alatt halványan az eredeti is, mindig.</p>
+</div>
+
+<div class="stage-wrap"><div class="stage" id="stage">
+  <div class="shell">
+    <nav class="side">
+      <div class="logo">citoviso</div>
+      <a data-nav="dash">Irányítópult</a>
+      <a>CRM</a><a>Pénzügy</a>
+      <a data-nav="report">Riport</a>
+      <a>Rendszer</a>
+    </nav>
+    <main class="main">
+      <div class="top"><span class="crumb" id="crumb">Konzol › Riport</span>
+        <select class="lang" id="oplang" aria-label="Konzol nyelve"><option value="hu">HU</option><option value="en">EN</option><option value="de">DE</option></select>
+      </div>
+      <section id="pg-report"></section>
+      <section id="pg-dash" hidden></section>
+    </main>
+  </div>
+</div></div>
+
+<script>
+(function(){
+"use strict";
+var S={page:"report",size:"d",rv:"B",tv:"A",tab:"funnel",ctryB:"all",ctryA:{},oplang:"hu",sel:"r1",open:false,showOrig:{},babelDone:{}};
+if(window.matchMedia&&window.matchMedia("(max-width:700px)").matches)S.size="m";
+
+var C={HU:"Magyarország",HR:"Horvátország",SI:"Szlovénia",AT:"Ausztria"};
+var CUR={HU:"Ft",HR:"€",SI:"€",AT:"€"};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function iso(c){return '<span class="iso" title="'+esc(C[c]||c)+'">'+esc(c)+'</span>';}
+
+/* ── sample data (realistic shapes, per-country) ── */
+var funnel={HU:{sent:412,open:171,ret:58,deep:39,trial:21,order:6},HR:{sent:96,open:31,ret:9,deep:5,trial:3,order:1},SI:{sent:40,open:15,ret:4,deep:2,trial:1,order:0},AT:{sent:0,open:0,ret:0,deep:0,trial:0,order:0}};
+var device={HU:{m:118,d:53},HR:{m:24,d:7},SI:{m:9,d:6},AT:{m:0,d:0}};
+var mocks=[["Villa Eszter","HU","Parallax",4,71],["Apartmani Marija","HR","Galéria",3,64],["Kuća Ana","HR","Parallax",2,58],["Krisztina Panzió","HU","Klasszikus",2,52],["Apartma Bled Lake","SI","Galéria",1,49],["Melinda Apartman","HU","Parallax",1,41],["Vila Mare","HR","Klasszikus",0,22]];
+var trials=[["Balaton Vendégház","HU","3. nap","Galéria feltöltve"],["Apartmani Petra","HR","5. nap","Foglalás-modul bekapcsolva"],["Hegyi Panzió","HU","9. nap","Nem lépett be 4 napja"],["Turistična kmetija Kos","SI","1. nap","Első belépés"]];
+var tenants=[["Napfény Apartman","HU",14,320],["Szőlőhegy Vendégház","HU",3,88],["Apartmani Luka","HR",6,140],["Apartma Soča","SI",1,12]];
+var subs={HU:{n:9,mrr:"53 910 Ft",paid:"161 730 Ft"},HR:{n:2,mrr:"34 €",paid:"68 €"},SI:{n:1,mrr:"17 €",paid:"17 €"},AT:{n:0,mrr:"0 €",paid:"0 €"}};
+var stock={HU:{all:23711,nosite:9840,out:6120},HR:{all:133,nosite:61,out:40},SI:{all:58,nosite:22,out:19},AT:{all:0,nosite:0,out:0}};
+var exps=[["Tárgy: kérdés vs. állítás","HU",210,"38% / 31%"],["Tárgy: kérdés vs. állítás","HR",48,"29% / 33%"],["Nyitó mondat: név vs. település","HU",202,"35% / 36%"],["Nyitó mondat: név vs. település","SI",40,"40% / 35%"]];
+
+var TABS=[["funnel","Tölcsér"],["behaviour","Viselkedés"],["mock","Mock"],["trial","Próba"],["revenue","Előfizetők"],["tenants","Tenantok"],["leads","Lead-állomány"],["exp","Kísérletek"]];
+function countsFor(tab){
+  var out={HU:0,HR:0,SI:0,AT:0};
+  Object.keys(out).forEach(function(c){
+    if(tab==="funnel")out[c]=funnel[c].sent;
+    else if(tab==="behaviour")out[c]=device[c].m+device[c].d;
+    else if(tab==="mock")out[c]=mocks.filter(function(r){return r[1]===c;}).length;
+    else if(tab==="trial")out[c]=trials.filter(function(r){return r[1]===c;}).length;
+    else if(tab==="revenue")out[c]=subs[c].n;
+    else if(tab==="tenants")out[c]=tenants.filter(function(r){return r[1]===c;}).length;
+    else if(tab==="leads")out[c]=stock[c].all;
+    else if(tab==="exp")out[c]=exps.filter(function(r){return r[1]===c;}).reduce(function(a,r){return a+r[2];},0);
+  });
+  return out;
+}
+function curCtry(){return S.rv==="B"?S.ctryB:(S.ctryA[S.tab]||"all");}
+function sumBy(obj,keys,ctry){var t={};keys.forEach(function(k){t[k]=0;});Object.keys(obj).forEach(function(c){if(ctry!=="all"&&c!==ctry)return;keys.forEach(function(k){t[k]+=obj[c][k];});});return t;}
+function pct(a,b){return b?Math.round(a/b*100)+"%":"—";}
+function nf(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ");}
+
+function countryChooserA(){
+  var c=curCtry(),cnt=countsFor(S.tab);
+  return '<select data-ctry-a aria-label="Ország"'+(c==="all"?"":' class="on"')+'><option value="all">Ország: mind</option>'+
+    Object.keys(C).map(function(k){return '<option value="'+k+'"'+(c===k?" selected":"")+'>Ország: '+C[k]+' ('+nf(cnt[k])+')</option>';}).join("")+'</select>';
+}
+function filterRow(extra){
+  return '<div class="filt"><span class="pchips"><span>Ma</span><span>7 nap</span><span class="on">30 nap</span><span class="hide-m">90 nap</span><span class="hide-m">Összes</span></span>'+(extra||"")+(S.rv==="A"?countryChooserA():"")+'</div>';
+}
+function rowsTable(head,rows,emptyTxt){
+  if(!rows.length)return '<div class="tblwrap"><div class="empty">'+esc(emptyTxt)+'</div></div>';
+  return '<div class="tblwrap"><table><thead><tr>'+head.map(function(h){return '<th'+(h[1]?' class="num"':'')+'>'+esc(h[0])+'</th>';}).join("")+'</tr></thead><tbody>'+rows.join("")+'</tbody></table></div>';
+}
+function tabBody(){
+  var c=curCtry(),f=function(r){return c==="all"||r[1]===c;},noTxt="Ebben az országban az időszakban nincs adat.";
+  if(S.tab==="funnel"){
+    var t=sumBy(funnel,["sent","open","ret","deep","trial","order"],c);
+    var card=function(h,q,a,b){return '<div class="card"><h4>'+h+'</h4><div class="q">'+q+'</div><div class="v">'+pct(a,b)+'</div><div class="s">'+nf(a)+' / '+nf(b)+'</div></div>';};
+    return filterRow('<select><option>Lead típus: mind</option></select><select class="hide-m"><option>Bontás: szegmens</option></select>')+
+      '<div class="cards">'+card("Megfogja-e a levél?","megnyitás / kiküldött",t.open,t.sent)+card("Visszatér-e?","visszatérő / megnyitó",t.ret,t.open)+card("Belenyúl-e?","elmélyülő / megnyitó",t.deep,t.open)+card("Kipróbálja-e?","próba / kiküldött",t.trial,t.sent)+'</div>'+
+      '<div class="hint">'+nf(t.sent)+' követett link az időszakban'+(c==="all"?"":" · csak "+esc(C[c]))+'</div>';
+  }
+  if(S.tab==="behaviour"){
+    var d=sumBy(device,["m","d"],c),tot=d.m+d.d;
+    return filterRow()+rowsTable([["Eszköz"],["Megnyitó",1],["Arány",1]],tot?['<tr><td>Mobil</td><td class="num">'+d.m+'</td><td class="num">'+pct(d.m,tot)+'</td></tr>','<tr><td>Asztali</td><td class="num">'+d.d+'</td><td class="num">'+pct(d.d,tot)+'</td></tr>']:[],noTxt);
+  }
+  if(S.tab==="mock")return filterRow('<select><option>Csatorna: mind</option></select>')+rowsTable([["Lead"],["Ország"],["Sablon"],["Megnyitás",1],["Pont",1]],mocks.filter(f).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td>'+iso(r[1])+'</td><td>'+esc(r[2])+'</td><td class="num">'+r[3]+'</td><td class="num">'+r[4]+'</td></tr>';}),noTxt);
+  if(S.tab==="trial")return filterRow('<select><option>Státusz: mind</option></select>')+rowsTable([["Próbázó"],["Ország"],["Hol tart"],["Utolsó lépés"]],trials.filter(f).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td>'+iso(r[1])+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td></tr>';}),noTxt);
+  if(S.tab==="revenue"){
+    var rows=Object.keys(subs).filter(function(k){return (c==="all"||k===c)&&(subs[k].n||c===k);}).map(function(k){return '<tr><td>'+iso(k)+' '+esc(C[k])+'</td><td>'+CUR[k]+'</td><td class="num">'+subs[k].n+'</td><td class="num">'+esc(subs[k].mrr)+'</td><td class="num">'+esc(subs[k].paid)+'</td></tr>';});
+    return filterRow('<select class="hide-m"><option>Előrejelzés: 6 hónap</option></select>')+rowsTable([["Ország"],["Pénznem"],["Aktív",1],["MRR",1],["Beérkezett",1]],rows,noTxt)+
+      '<div class="hint">'+(c==="all"?"Minden ország a saját pénznemében, összeadás és átváltás nincs.":"Csak "+esc(C[c])+", "+CUR[c]+"-ban.")+'</div>';
+  }
+  if(S.tab==="tenants")return filterRow('<select><option>Aktív</option></select>')+rowsTable([["Tenant"],["Ország"],["Belépés 30 nap",1],["Látogató 30 nap",1]],tenants.filter(f).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td>'+iso(r[1])+'</td><td class="num">'+r[2]+'</td><td class="num">'+r[3]+'</td></tr>';}),noTxt);
+  if(S.tab==="leads"){var s=sumBy(stock,["all","nosite","out"],c);return filterRow()+'<div class="cards"><div class="card"><h4>Összes lead</h4><div class="v">'+nf(s.all)+'</div></div><div class="card"><h4>Nincs honlapja</h4><div class="v">'+nf(s.nosite)+'</div></div><div class="card"><h4>Elavult honlap</h4><div class="v">'+nf(s.out)+'</div></div></div>';}
+  if(S.tab==="exp")return filterRow()+rowsTable([["Kísérlet"],["Ország"],["Kiküldve",1],["Nyitás A / B",1]],exps.filter(f).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td>'+iso(r[1])+'</td><td class="num">'+r[2]+'</td><td class="num">'+r[3]+'</td></tr>';}),noTxt);
+  return "";
+}
+function renderReport(){
+  var c=curCtry(),cnt=countsFor(S.tab),h='<h1>Megkeresés-riport</h1><div class="tabs" role="tablist">'+
+    TABS.map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'">'+t[1]+'</button>';}).join("")+'</div>';
+  if(S.rv==="B"){
+    var total=Object.keys(cnt).reduce(function(a,k){return a+cnt[k];},0);
+    h+='<div class="cbar" role="group" aria-label="Ország"><span class="cbar__l">Ország</span>'+
+      '<button class="chip" data-ctry-b="all" aria-pressed="'+(c==="all")+'">Mind <span class="n">'+nf(total)+'</span></button>'+
+      Object.keys(C).map(function(k){return '<button class="chip'+(cnt[k]?"":" is-off")+'" data-ctry-b="'+k+'" aria-pressed="'+(c===k)+'" title="'+esc(C[k])+'">'+iso(k)+'<span class="hide-m">'+esc(C[k])+'</span> <span class="n">'+nf(cnt[k])+'</span></button>';}).join("")+'</div>'+
+      '<div class="scope">'+(c==="all"?"Minden ország együtt. A választás minden riport-fülre érvényes.":"<b>Csak "+esc(C[c])+"</b> — minden riport-fülön, amíg vissza nem állítod „Mind”-re.")+'</div>';
+  }
+  document.getElementById("pg-report").innerHTML=h+tabBody();
+}
+
+/* ── replies ── */
+var LN={hu:"magyar",en:"angol",de:"német",hr:"horvát",sl:"szlovén"};
+var LNfrom={hu:"magyarból",en:"angolból",de:"németből",hr:"horvátból",sl:"szlovénból"};
+var R=[
+ {id:"r1",name:"Apartmani Marija",ctry:"HR",lang:"hr",ch:"E-mail",when:"10:42",town:"Makarska",tag:"Javaslatra vár",
+  out:"Poštovana gospođo Marija, pregledali smo javno dostupne podatke o Vašem smještaju i izradili prijedlog web stranice…",
+  body:"Poštovani,\n\nhvala na prijedlogu, stranica izgleda lijepo. Zanima me koliko košta godišnje i mogu li sama mijenjati slike i cijene?\n\nLijep pozdrav,\nMarija",
+  tr:{hu:"Tisztelt Címzett!\n\nKöszönöm az ajánlatot, az oldal szépen néz ki. Érdekelne, mennyibe kerül évente, és a képeket és az árakat magam is módosíthatom-e?\n\nÜdvözlettel:\nMarija",
+      en:"Dear Sir or Madam,\n\nthank you for the proposal, the site looks nice. I'd like to know how much it costs per year and whether I can change the photos and prices myself?\n\nKind regards,\nMarija",
+      de:"Sehr geehrte Damen und Herren,\n\ndanke für den Vorschlag, die Seite sieht schön aus. Mich interessiert, was sie pro Jahr kostet und ob ich Bilder und Preise selbst ändern kann?\n\nMit freundlichen Grüßen\nMarija"}},
+ {id:"r2",name:"Apartma Bled Lake",ctry:"SI",lang:"sl",ch:"SMS",when:"09:15",town:"Bled",tag:"Javaslatra vár",pending:true,
+  out:"Pozdravljeni! Za Vaš apartma smo pripravili predlog spletne strani: https://apartma-bled-lake.citoviso.com",
+  body:"Pozdravljeni, ali je to brezplačno? Imamo že profil na Bookingu.",
+  tr:{hu:"Üdvözlöm! Ez ingyenes? Már van Booking-profilunk.",en:"Hello, is this free? We already have a Booking profile.",de:"Hallo, ist das kostenlos? Wir haben schon ein Booking-Profil."}},
+ {id:"r3",name:"Haus Seeblick",ctry:"AT",lang:"de",ch:"E-mail",when:"tegnap",town:"Podersdorf am See",tag:"Javaslatra vár",
+  out:"Sehr geehrte Familie Huber, wir haben für Ihre Unterkunft einen Website-Entwurf erstellt…",
+  body:"Guten Tag,\n\nbitte nehmen Sie uns aus Ihrem Verteiler. Wir brauchen keine Website.\n\nFamilie Huber",
+  tr:{hu:"Jó napot!\n\nKérjük, vegyenek ki minket a listájukról. Nincs szükségünk honlapra.\n\nHuber család",en:"Good day,\n\nplease remove us from your mailing list. We don't need a website.\n\nThe Huber family"}},
+ {id:"r4",name:"Villa Eszter",ctry:"HU",lang:"hu",ch:"E-mail",when:"tegnap",town:"Balatonkeresztúr",tag:"Javaslatra vár",
+  out:"Tisztelt Villa Eszter! Átnéztük a nyilvánosan elérhető adatait. Saját honlapot viszont nem találtunk…",
+  body:"Tisztelt Ferenc!\n\nKöszönjük a megkeresést. Érdekel, de előbb szeretném tudni, a meglévő domainünket meg tudjuk-e tartani.\n\nÜdv.",
+  tr:{en:"Dear Ferenc,\n\nthank you for reaching out. I'm interested, but first I'd like to know whether we can keep our existing domain.\n\nRegards",de:"Sehr geehrter Ferenc,\n\ndanke für die Kontaktaufnahme. Ich bin interessiert, möchte aber zuerst wissen, ob wir unsere bestehende Domain behalten können.\n\nGrüße"}}
+];
+function needsTr(r){return r.lang!==S.oplang;}
+function hasTr(r){return needsTr(r)&&!(r.pending&&!S.babelDone[r.id])&&r.tr[S.oplang];}
+function excerpt(r){var t=hasTr(r)?r.tr[S.oplang]:r.body;return t.replace(/\s+/g," ").slice(0,90);}
+function inBubble(r){
+  var head='<div class="bub__h">'+esc(r.ch)+' · '+esc(r.when)+' '+iso(r.ctry)+'</div>';
+  if(!needsTr(r))return '<div class="bub bub--in">'+head+'<pre>'+esc(r.body)+'</pre></div>';
+  if(!hasTr(r))return '<div class="bub bub--in">'+head+
+    '<div class="pend"><span class="dot"></span>Bábel fordítja '+LN[S.oplang]+' nyelvre… addig az eredeti ('+LN[r.lang]+')'+
+    (r.pending?'<button class="sim" data-babel="'+r.id+'">szimuláció: Bábel kész</button>':'')+'</div><pre>'+esc(r.body)+'</pre></div>';
+  var trh='<div class="trh">Fordítás '+LNfrom[r.lang]+' · Bábel</div>';
+  if(S.tv==="A"){
+    var o=!!S.showOrig[r.id];
+    return '<div class="bub bub--in">'+head+(o?'<div class="trh">Eredeti ('+LN[r.lang]+')</div><pre>'+esc(r.body)+'</pre>':trh+'<pre>'+esc(r.tr[S.oplang])+'</pre>')+
+      '<button class="trbtn" data-orig="'+r.id+'">'+(o?"Fordítás mutatása":"Eredeti megjelenítése ("+LN[r.lang]+")")+'</button></div>';
+  }
+  return '<div class="bub bub--in">'+head+trh+'<pre>'+esc(r.tr[S.oplang])+'</pre><div class="orig"><div class="orig__l">Eredeti · '+LN[r.lang]+'</div><pre>'+esc(r.body)+'</pre></div></div>';
+}
+function renderDash(){
+  var sel=R.find(function(r){return r.id===S.sel;})||R[0];
+  var list=R.map(function(r){
+    return '<div class="it" data-rep="'+r.id+'"'+(r.id===sel.id?' aria-current="true"':'')+'><div class="it__r1">'+iso(r.ctry)+'<span class="it__nm">'+esc(r.name)+'</span><span class="it__w">'+esc(r.ch)+' · '+esc(r.when)+'</span></div>'+
+      '<div class="it__ex">'+esc(excerpt(r))+'</div><span class="it__tag">'+esc(r.tag)+'</span>'+
+      (needsTr(r)?'<span class="it__tr">'+(hasTr(r)?"fordítva "+LNfrom[r.lang]:"fordítás készül")+'</span>':'')+'</div>';
+  }).join("");
+  var det='<button class="det__back" data-back>‹ Vissza a listához</button><div class="det__h"><span class="det__nm">'+esc(sel.name)+'</span>'+iso(sel.ctry)+'<span class="det__meta">'+esc(C[sel.ctry])+' · '+esc(sel.town)+'</span></div>'+
+    '<div class="bub bub--out"><div class="bub__h">Kiküldött megkeresés · '+LN[sel.lang]+'</div>'+esc(sel.out)+'</div>'+inBubble(sel)+
+    '<div style="margin-top:12px"><button class="btn">Megválaszoltam</button><button class="btn">Lead lapja ›</button></div>';
+  document.getElementById("pg-dash").innerHTML='<h1>Irányítópult</h1><div class="rep"><div class="rep__h"><span class="rep__t">Válaszok a megkeresésekre</span><span class="badge">4 megválaszolatlan</span></div>'+
+    '<div class="rep__b" data-open="'+S.open+'"><div class="rep__list">'+list+'</div><div class="det">'+det+'</div></div></div>'+
+    '<div class="hint">Konzol-nyelv: '+LN[S.oplang]+' — a fordítás mindig erre a nyelvre készül (jobb felső választó). Saját nyelvű üzenetnél nincs fordítás.</div>';
+}
+
+function render(){
+  document.getElementById("stage").classList.toggle("is-m",S.size==="m");
+  document.getElementById("pg-report").hidden=S.page!=="report";
+  document.getElementById("pg-dash").hidden=S.page!=="dash";
+  document.getElementById("note-report").hidden=S.page!=="report";
+  document.getElementById("note-dash").hidden=S.page!=="dash";
+  document.getElementById("crumb").textContent=S.page==="report"?"Konzol › Riport":"Irányítópult";
+  document.querySelectorAll("[data-show]").forEach(function(el){el.hidden=el.getAttribute("data-show")!==S.page;});
+  document.querySelectorAll(".mk .seg").forEach(function(g){var k=g.getAttribute("data-k");g.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(S[k]===b.getAttribute("data-v")));});});
+  document.querySelectorAll("[data-nav]").forEach(function(a){a.classList.toggle("on",a.getAttribute("data-nav")===S.page);});
+  if(S.page==="report")renderReport();else renderDash();
+}
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button,[data-rep],[data-nav]");if(!t)return;
+  var seg=t.closest(".mk .seg");
+  if(seg){S[seg.getAttribute("data-k")]=t.getAttribute("data-v");return render();}
+  if(t.hasAttribute("data-nav")){S.page=t.getAttribute("data-nav");return render();}
+  if(t.hasAttribute("data-tab")){S.tab=t.getAttribute("data-tab");return render();}
+  if(t.hasAttribute("data-ctry-b")){S.ctryB=t.getAttribute("data-ctry-b");return render();}
+  if(t.hasAttribute("data-rep")){S.sel=t.getAttribute("data-rep");S.open=true;return render();}
+  if(t.hasAttribute("data-back")){S.open=false;return render();}
+  if(t.hasAttribute("data-orig")){var id=t.getAttribute("data-orig");S.showOrig[id]=!S.showOrig[id];return render();}
+  if(t.hasAttribute("data-babel")){S.babelDone[t.getAttribute("data-babel")]=true;return render();}
+});
+document.addEventListener("change",function(e){
+  if(e.target.id==="oplang"){S.oplang=e.target.value;return render();}
+  if(e.target.hasAttribute("data-ctry-a")){S.ctryA[S.tab]=e.target.value;return render();}
+});
+var q=new URLSearchParams(location.search);["page","size","rv","tv","tab","oplang"].forEach(function(k){if(q.get(k))S[k]=q.get(k);});
+if(q.get("ctry"))S.ctryB=q.get("ctry");
+if(q.get("open"))S.open=true;
+if(q.get("sel"))S.sel=q.get("sel");
+document.getElementById("oplang").value=S.oplang;
+render();
+})();
+</script>
+</body>
+</html>

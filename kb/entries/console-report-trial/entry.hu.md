@@ -4,7 +4,7 @@ title: Riport — Próba: mit csinálnak a próba alatt
 audience: operator
 category: measure
 anchors: console.report_trial
-updated: 2026-11-05
+updated: 2026-11-26
 ---
 
 A Próba fül arra felel, hol bukik el, vagy hol sikerül egy rendelés a 14 napos ingyenes próba
@@ -14,6 +14,8 @@ alatt: hányszor lépnek be, mentenek-e valamit, megnézik-e a saját oldalukat,
 ## Hol találod
 
 A bal menüben **„Riport”** → **„Próba”**, vagy a Riport bármelyik lapján a fülsor **„Próba”** füle.
+
+**„Ország” sáv:** a fülsor alatt — mint minden riport-fülön — a próbázó leadjének országa szerint számolja a próbákat. A választás mind a 8 riport-fülön megmarad, amíg vissza nem állítod „Mind”-re (részletek: a Riport tölcsér-lapjának súgójában).
 
 ## Mit mutat
 

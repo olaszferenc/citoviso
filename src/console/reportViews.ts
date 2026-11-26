@@ -15,7 +15,8 @@ import type { LeadStock } from "./leadStock.js";
 import { leadStockReportBody, stockChips, type StockPreset } from "./leadStockViews.js";
 import { consoleLang } from "./i18nCtx.js";
 import { SKINS } from "../engine/skins.js";
-import { countryConfigSync } from "../country.js";
+import { allCountriesSync, countryConfigSync } from "../country.js";
+import { countryDisplayName } from "../i18n/lang.js";
 import { EXIT_REASONS, EXPECTED_STATED, STATED_REASONS, type ExitReason, type StatedReason } from "../analytics/exitReason.js";
 import {
   MOCK_CHANNELS,
@@ -55,6 +56,8 @@ import {
   type ReportPresetKey,
   type StageCounts,
   type OpenSource,
+  type CountryCount,
+  type ReportCountry,
 } from "./reportData.js";
 
 export type ReasonMode = "inf" | "said" | "both";
@@ -119,7 +122,7 @@ export const DIM_LABEL = (lang: string): Readonly<Record<ReportDim, string>> => 
 /** A country key as the operator reads it: the layer row's name, else the code; "" = unknown. */
 function countryLabel(iso: string, lang: string): string {
   if (!iso) return T(lang, "Ismeretlen");
-  return countryConfigSync(iso)?.name ?? iso;
+  return countryDisplayName(iso, lang);
 }
 export const REASON_LABEL = (lang: string): Readonly<Record<ExitReason, string>> => ({
   no_hook: T(lang, "Nem fogta meg"),
@@ -183,11 +186,30 @@ const ctryHidden = (d: ReportData): string =>
 const periodHidden = (p: ReportPeriod): string =>
   Object.entries(periodParams(p)).map(([k, v]) => `<input type="hidden" name="${k}" value="${esc(v)}">`).join("");
 
-type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants" | "/report/leads" | "/report/experiments";
+export type ReportTab = "/report" | "/report/behaviour" | "/report/mock" | "/report/trial" | "/report/revenue" | "/report/tenants" | "/report/leads" | "/report/experiments";
+
+/**
+ * `href` with the shared country filter set (or removed for "all") — every tab link and every
+ * in-page filter link carries it, so the choice survives a tab switch (orszag-szuro-forditas ③).
+ */
+export function withCtry(href: string, ctry: ReportCountry | undefined): string {
+  const i = href.indexOf("?");
+  const path = i < 0 ? href : href.slice(0, i);
+  const p = new URLSearchParams(i < 0 ? "" : href.slice(i + 1));
+  if (ctry === undefined || ctry === "all") p.delete("ctry");
+  else p.set("ctry", ctryValue(ctry));
+  const q = p.toString();
+  return q ? `${path}?${q}` : path;
+}
+/** The country filter as a hidden input of an in-page GET form ("" for every country). */
+export function ctryHiddenInput(ctry: ReportCountry | undefined): string {
+  return ctry !== undefined && ctry !== "all" ? `<input type="hidden" name="ctry" value="${esc(ctryValue(ctry))}">` : "";
+}
 
 /** The Riport tab row — Tölcsér · Viselkedés · Mock (mock-tab README ①) · the coming rounds. */
-export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string): string {
-  const a = (href: ReportTab, q: string, label: string): string => `<a href="${href}${q}"${active === href ? ' class="active"' : ""}>${esc(label)}</a>`;
+export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, lang: string, ctry: ReportCountry = "all"): string {
+  const a = (href: ReportTab, q: string, label: string): string =>
+    `<a href="${esc(withCtry(`${href}${q}`, ctry))}"${active === href ? ' class="active"' : ""}>${esc(label)}</a>`;
   return (
     `<nav class="con-tabs">` +
     a("/report", funnelQs, T(lang, "Tölcsér")) +
@@ -207,11 +229,59 @@ export function reportTabs(active: ReportTab, funnelQs: string, mockQs: string, 
   );
 }
 
+/**
+ * THE shared country strip of the Riport (frozen plan: design-refs/console/orszag-szuro-forditas/,
+ * „Riport — közös ország-sáv” ①–⑥) — one renderer for all 8 tabs, under the tab row. `counts` =
+ * the tab's own rows per country before the country filter (Tölcsér: sent links, Mock: mocks, …);
+ * `here` = the tab's current URL (its own filters), each chip only swaps `ctry` on it. Listed: the
+ * countries in the data + every live country-layer row (0 = dimmed); unknown only when it has rows.
+ * Always shown, even with one country. Links, no JS.
+ */
+export function reportCountryStrip(here: string, counts: readonly CountryCount[], ctry: ReportCountry | undefined, lang: string): string {
+  const sel = ctry ?? "all";
+  const by = new Map<string, number>();
+  for (const c of counts) by.set(c.iso, (by.get(c.iso) ?? 0) + c.n);
+  for (const row of allCountriesSync()) if (!by.has(row.iso2)) by.set(row.iso2, 0);
+  if (sel !== "all" && !by.has(sel)) by.set(sel, 0);
+  const total = counts.reduce((s, c) => s + c.n, 0);
+  // The chosen country stands right after „Mind” — on a phone a 0-count choice would otherwise
+  // sit at the far end of the scrolling strip, out of sight.
+  const list = [...by.entries()].sort(
+    (a, b) => Number(b[0] === sel) - Number(a[0] === sel) || b[1] - a[1] || (a[0] === "" ? 1 : b[0] === "" ? -1 : a[0].localeCompare(b[0])),
+  );
+  const chip = (key: ReportCountry, inner: string, n: number, title: string): string => {
+    const on = key === sel;
+    // Dimmed = a country with no rows here; „Mind” never dims.
+    return (
+      `<a class="rp-cc${n || key === "all" ? "" : " rp-cc--off"}${on ? " on" : ""}" href="${esc(withCtry(here, key))}"${on ? ' aria-current="true"' : ""}${title ? ` title="${esc(title)}"` : ""}>` +
+      `${inner} <span class="rp-cc__n">${n}</span></a>`
+    );
+  };
+  const chips =
+    chip("all", esc(T(lang, "Mind")), total, "") +
+    list
+      .map(([iso, n]) => {
+        const name = countryLabel(iso, lang);
+        return chip(iso, `<span class="rp-cc__iso">${esc(iso || "?")}</span><span class="rp-cc__nm">${esc(name)}</span>`, n, name);
+      })
+      .join("");
+  const scope =
+    sel === "all"
+      ? esc(T(lang, "Minden ország együtt. A választás minden riport-fülre érvényes."))
+      : `<b>${esc(T(lang, "Csak {c}", { c: countryLabel(sel, lang) }))}</b> — ${esc(T(lang, "minden riport-fülön, amíg vissza nem állítod „Mind”-re."))}`;
+  return (
+    `<div class="rp-cbar" role="group" aria-label="${esc(T(lang, "Ország"))}"><span class="rp-cbar__l">${esc(T(lang, "Ország"))}</span>${chips}</div>` +
+    `<p class="rp-cscope">${scope}</p>`
+  );
+}
+
 function shell(d: ReportData, active: "/report" | "/report/behaviour", body: string, lang: string): string {
   // The Mock/Próba tabs know only the rolling presets: hand them over when one is on.
   const mockQs = ["7", "30", "90", "0"].includes(d.period.key) ? `?days=${d.period.key}` : "";
-  const tabs = reportTabs(active, qs(d), mockQs, lang);
+  const tabs = reportTabs(active, qs(d), mockQs, lang, d.country);
   const base = active;
+  // The shared country strip (orszag-szuro-forditas ①): sent links per lead country in the window.
+  const strip = reportCountryStrip(`${base}${qs(d)}`, (d.countries ?? []).map((c) => ({ iso: c.iso, n: c.sent })), d.country, lang);
   const ranges = REPORT_PRESETS.map(
     (r) => `<a href="${base}${qs(d, { days: r })}"${r === d.period.key ? ' class="on"' : ""}>${esc(PRESET_LABEL(r, lang))}</a>`,
   ).join("");
@@ -234,25 +304,12 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
   const segs =
     segOpt("all", T(lang, "Lead típus: mind")) +
     REPORT_SEGS.map((k) => segOpt(k, T(lang, "Lead típus: {s}", { s: SEG_LABEL(lang)[k]!.toLowerCase() }))).join("");
-  // Country chooser (ország-réteg 3/3): only once the window holds more than one country, or a
-  // country is already chosen — a one-country page keeps the row it always had.
-  const ctry = d.country ?? "all";
-  const ctryList = d.countries ?? [];
-  const ctryOpt = (k: string, label: string): string => `<option value="${esc(k === "all" ? k : ctryValue(k))}"${k === ctry ? " selected" : ""}>${esc(label)}</option>`;
-  const ctrySelect =
-    ctryList.length > 1 || ctry !== "all"
-      ? `<select name="ctry" aria-label="${esc(T(lang, "Ország"))}" onchange="this.form.submit()"${ctry === "all" ? "" : ' class="on"'}>` +
-        ctryOpt("all", T(lang, "Ország: mind")) +
-        (ctry !== "all" && !ctryList.some((c) => c.iso === ctry) ? ctryOpt(ctry, T(lang, "Ország: {c}", { c: countryLabel(ctry, lang) })) : "") +
-        ctryList.map((c) => ctryOpt(c.iso, T(lang, "Ország: {c}", { c: countryLabel(c.iso, lang) }) + ` (${c.sent})`)).join("") +
-        `</select>`
-      : "";
+  // The country rides along as a hidden input (the shared strip above sets it).
   const filter =
     `<form class="rp-filt" method="get" action="${base}">` +
-    periodHidden(d.period) + korHidden +
+    periodHidden(d.period) + korHidden + ctryHidden(d) +
     `<div class="rp-chips" role="group" aria-label="${esc(T(lang, "Időszak"))}">${ranges}</div>` +
     `<select name="seg" aria-label="${esc(T(lang, "Lead típus"))}" onchange="this.form.submit()"${d.seg === "all" ? "" : ' class="on"'}>${segs}</select>` +
-    ctrySelect +
     `<select name="dim" aria-label="${esc(T(lang, "Bontás"))}" onchange="this.form.submit()">${dims}</select>` +
     `<noscript><button type="submit" class="citui-btn citui-btn--ghost">${esc(T(lang, "Alkalmaz"))}</button></noscript>` +
     (re
@@ -290,7 +347,7 @@ function shell(d: ReportData, active: "/report" | "/report/behaviour", body: str
       : "";
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${korSwitch}${filter}<div class="rp-filt rp-filt--dates">${dates}${periodNote ? `<span class="rp-filt__n">${esc(periodNote)}</span>` : ""}</div>${body}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${strip}${korSwitch}${filter}<div class="rp-filt rp-filt--dates">${dates}${periodNote ? `<span class="rp-filt__n">${esc(periodNote)}</span>` : ""}</div>${body}`,
     { active },
   );
 }
@@ -977,7 +1034,8 @@ const bpLabel = (d: Date): string => {
 
 function mockQs(m: MockReport, st: MockPageState, extra: Record<string, string | null> = {}): string {
   const p = new URLSearchParams();
-  const v: Record<string, string | null> = { days: String(m.days), ch: m.ch, tpl: st.tpl, q: st.q || null, sort: st.sort === "score" ? null : st.sort, ...extra };
+  const ctry = m.country !== undefined && m.country !== "all" ? ctryValue(m.country) : null;
+  const v: Record<string, string | null> = { days: String(m.days), ch: m.ch, tpl: st.tpl, q: st.q || null, sort: st.sort === "score" ? null : st.sort, ctry, ...extra };
   for (const [k, x] of Object.entries(v)) if (x) p.set(k, x);
   return `?${p.toString()}`;
 }
@@ -1097,7 +1155,9 @@ more.addEventListener("click",function(e){e.preventDefault();st.n+=PAGE;apply();
 
 export function reportMockPage(m: MockReport, st: MockPageState): string {
   const lang = consoleLang();
-  const tabs = reportTabs("/report/mock", `?days=${m.days}`, mockQs(m, { ...st, tpl: null, q: "", sort: "score" }), lang);
+  const tabs = reportTabs("/report/mock", `?days=${m.days}`, mockQs(m, { ...st, tpl: null, q: "", sort: "score" }), lang, m.country);
+  // The shared country strip (orszag-szuro-forditas ①): mocks per lead country in the range + channel.
+  const strip = reportCountryStrip(`/report/mock${mockQs(m, { ...st, n: MOCK_PAGE })}`, m.countries ?? [], m.country, lang);
   const chip = (on: boolean, href: string, label: string, extra = ""): string => `<a href="${esc(href)}"${on ? ' class="on"' : ""}${extra}>${esc(label)}</a>`;
   const ranges = REPORT_RANGES.map((r) => chip(r === m.days, `/report/mock${mockQs(m, st, { days: String(r) })}`, RANGE_LABEL(r, lang))).join("");
   const chans = MOCK_CHANNELS.map((c) => chip(c === m.ch, `/report/mock${mockQs(m, st, { ch: c === "all" ? null : c })}`, MOCK_CH_LABEL(lang)[c])).join("");
@@ -1135,7 +1195,7 @@ export function reportMockPage(m: MockReport, st: MockPageState): string {
   const list =
     `<div class="panel" id="rpm-list"><h2>${esc(T(lang, "Mockok"))} <span class="rp-q"><span id="rpm-count">${k}</span> ${esc(T(lang, "db"))}</span></h2>` +
     `<div class="rpm-selnote" id="rpm-sel"${s.tpl ? "" : " hidden"}>${esc(T(lang, "Szűrve:"))} <b>${esc(selLabel)}</b> · <a href="/report/mock${esc(mockQs(m, s, { tpl: null }))}">${esc(T(lang, "Minden sablon"))}</a></div>` +
-    `<form class="rpm-toolbar" id="rpm-form" method="get" action="/report/mock">${hidden("days", String(m.days))}${m.ch === "all" ? "" : hidden("ch", m.ch)}${hidden("tpl", s.tpl ?? "")}${hidden("sort", s.sort)}` +
+    `<form class="rpm-toolbar" id="rpm-form" method="get" action="/report/mock">${hidden("days", String(m.days))}${m.ch === "all" ? "" : hidden("ch", m.ch)}${hidden("tpl", s.tpl ?? "")}${hidden("sort", s.sort)}${ctryHiddenInput(m.country)}` +
     `<input id="rpm-q" type="search" name="q" value="${esc(s.q)}" placeholder="${esc(T(lang, "Szállás neve…"))}" aria-label="${esc(T(lang, "Keresés a szállás nevére"))}">` +
     `<span class="rp-chips" id="rpm-sort" role="group" aria-label="${esc(T(lang, "Rendezés"))}">${sorts}</span></form>` +
     `<div class="rpm-head" aria-hidden="true"><span>${esc(T(lang, "Pont"))}</span><span>${esc(T(lang, "Szállás · sablon"))}</span><span>${esc(T(lang, "Jelek"))}</span><span>${esc(T(lang, "Megnyitás"))}</span><span>${esc(T(lang, "Idő"))}</span><span>${esc(T(lang, "Görgetés"))}</span></div>` +
@@ -1146,19 +1206,21 @@ export function reportMockPage(m: MockReport, st: MockPageState): string {
   const body =
     `<div class="rpm" id="rpm" data-tpl="${esc(s.tpl ?? "")}" data-sort="${s.sort}" data-n="${s.n}">${filters}${fact}${mockVerdictHtml(m, lang)}${cards}${formula}${list}</div>` +
     `<script>${MOCK_JS}</script>`;
-  return layout(T(lang, "Megkeresés-riport"), `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_mock")}</h1></div>${tabs}${body}`, { active: "/report/mock" });
+  return layout(T(lang, "Megkeresés-riport"), `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report_mock")}</h1></div>${tabs}${strip}${body}`, { active: "/report/mock" });
 }
 
 // ── Lead-állomány tab (frozen plan: assets/design-refs/console/lead-allomany/, 2026-11-12) ──
 export function reportLeadStockPage(s: LeadStock, days: StockPreset): string {
   const lang = consoleLang();
-  const tabs = reportTabs("/report/leads", "", "", lang);
+  const tabs = reportTabs("/report/leads", "", "", lang, s.country);
+  // The shared country strip (orszag-szuro-forditas ①): the period's qualified leads per lead country.
+  const strip = reportCountryStrip(`/report/leads?days=${days}`, s.countries ?? [], s.country, lang);
   const filter =
-    `<div class="rp-filt">${stockChips(days, (k) => `/report/leads?days=${k}`, lang)}` +
+    `<div class="rp-filt">${stockChips(days, (k) => withCtry(`/report/leads?days=${k}`, s.country), lang)}` +
     `<span class="rp-filt__n">${esc(T(lang, "Kvalifikált leadek képtípus, állapot és csatorna szerint · az időszakban felmért leadek, a mai állapotukban"))}</span></div>`;
   return layout(
     T(lang, "Megkeresés-riport"),
-    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${filter}${leadStockReportBody(s, days, lang)}`,
+    `<div class="con-ph"><h1>${esc(T(lang, "Megkeresés-riport"))} ${helpLink("console.report")}</h1></div>${tabs}${strip}${filter}${leadStockReportBody(s, days, lang)}`,
     { active: "/report" },
   );
 }

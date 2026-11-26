@@ -339,8 +339,9 @@ export interface VariantStats {
   readonly complaints: number;
 }
 
-/** Per variant, every number the allocation, the guard and the report use. One query. */
-export async function loadVariantStats(now = new Date()): Promise<VariantStats[]> {
+/** Per variant, every number the allocation, the guard and the report use. One query.
+ *  `onlyProspects` narrows to those letters (the report's country strip); absent = every letter. */
+export async function loadVariantStats(now = new Date(), onlyProspects?: readonly string[]): Promise<VariantStats[]> {
   const today = budapestMidnight(budapestIsoDay(now));
   const r = await sql<{
     dimension: ExperimentDimension;
@@ -388,6 +389,7 @@ export async function loadVariantStats(now = new Date()): Promise<VariantStats[]
     ) f
     -- As of the given now (the weekly line reads the stats as they stood at the week's end).
     where sv.sent_at <= ${now}
+    ${onlyProspects ? sql`and sv.prospect_id = any(${[...onlyProspects]})` : sql``}
     group by sv.dimension, sv.variant_key
   `.execute(db);
   return r.rows.map((x) => ({

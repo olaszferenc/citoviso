@@ -4,7 +4,7 @@ title: Riport — Kísérletek: melyik levél-változat hoz több nyitást
 audience: operator
 category: measure
 anchors: console.report_experiments
-updated: 2026-11-22
+updated: 2026-11-26
 ---
 
 A Kísérletek fül a hideg megkereső levél változatait mutatja: melyik tárgy, első sor, feladó,
@@ -19,6 +19,8 @@ Riport bármelyik lapján a fülsor **„Kísérletek”** füle (a sor végén,
 
 Telefonon az alsó sávban koppints a **„Riport”** gombra, majd a lap tetején lévő fülsort húzd
 balra, amíg a **„Kísérletek”** fül előjön — a fülsor oldalra görgethető, a végén van.
+
+**„Ország” sáv:** a fülsor alatt — mint minden riport-fülön — a lead országa szerint számolja a kísérleti leveleket, és minden változat-szám arra az országra szűkül. A választás mind a 8 riport-fülön megmarad, amíg vissza nem állítod „Mind”-re (részletek: a Riport tölcsér-lapjának súgójában).
 
 ## Mit mutat
 

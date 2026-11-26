@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-bejovo-uzenet-forditasa-babel-konzolon-orszag-szuro-riportokban.md) — Bejövő üzenet országa és fordítása a konzol-nyelvre (Bábel a konzolon); közös ország-sáv minden riport-fülön
 - [ADR-0481](decisions/0481-kivezetett-sablonu-mock-nem-megy-ki-ujra-es-nem.md) — Kivezetett sablonú mock nem megy ki újra, és nem épül belőle próba-oldal
 - [ADR-0480](decisions/0480-commit-es-land-gyorsitasa-inkrementalis.md) — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra
 - [ADR-0479](decisions/0479-kep-nelkuli-es-keves-kepes-lead-automata.md) — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár

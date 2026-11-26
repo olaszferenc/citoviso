@@ -4,7 +4,7 @@ title: Riport — Tenantok: ki dolgozik az oldalán, és kit néznek
 audience: operator
 category: measure
 anchors: console.report_tenants
-updated: 2026-11-04
+updated: 2026-11-26
 ---
 
 A Tenantok fül minden élő vagy próbás oldalt egy táblában mutat: belép-e a tulaj, ment-e valamit,
@@ -14,6 +14,8 @@ hányan nézik az oldalát, honnan jönnek, és ki „alszik” — akire rá ke
 
 A bal menüben **„Riport”** → **„Tenantok — ki dolgozik, kit néznek”**, vagy a Riport bármelyik
 lapján a fülsor **„Tenantok”** füle.
+
+**„Ország” sáv:** a fülsor alatt — mint minden riport-fülön — a tenant (leadje) országa szerint számolja a listázott tenantokat, és a felső dobozok is arra az országra szűkülnek. A választás mind a 8 riport-fülön megmarad, amíg vissza nem állítod „Mind”-re (részletek: a Riport tölcsér-lapjának súgójában).
 
 ## Mit mutat
 

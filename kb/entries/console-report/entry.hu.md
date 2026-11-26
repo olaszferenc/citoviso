@@ -4,7 +4,7 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-11-16
+updated: 2026-11-26
 ---
 
 A Riport négy lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
@@ -27,10 +27,12 @@ A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselk
 Egy sorban: az **időszak** chipjei (**„Ma”** · 7 · 30 · 90 nap vagy **„Összes”**; a lap a
 **„Ma”**-val nyílik), a **„Lead típus”**
 legördülő (**„mind”** · nincs honlap · 0 lábnyom · van lábnyom · elavult honlap · ismeretlen) és a
-**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra · ország). Ha az
-időszakban több ország leadjei is szerepelnek, megjelenik az **„Ország”** legördülő is (**„mind”**,
-vagy egy ország a kiküldések számával): ugyanúgy szűkít, mint a „Lead típus”, minden panelre és a
-Viselkedés lapra is. A lead országa a szállás helyéből jön. A „Lead típus”
+**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra · ország). A fülsor
+alatt minden riport-fülön ott az **„Ország”** sáv: **„Mind”** és országonként a kód, a név (telefonon
+csak a kód) és a fül sorainak száma abban az országban (itt: kiküldött linkek; a halvány 0-s ország
+be van állítva, de nincs sora). Egy országra koppintva minden panel arra szűkül, és a választás
+mind a 8 fülön megmarad, amíg vissza nem állítod „Mind”-re; a sáv alatt ki is írja: „Csak <ország>”.
+A lead országa a szállás helyéből jön. A „Lead típus”
 csak az adott típusú leadeket hagyja meg: így egyetlen csoport tölcsérét látod önmagában, míg a
 szegmens szerinti bontás egymás mellé teszi a típusokat. Ha nem „mind” van kiválasztva, a doboz
 kiemelt, és a választás a Viselkedés lapon is érvényes marad. Minden panel a kiválasztott

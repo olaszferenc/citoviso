@@ -2985,6 +2985,26 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
 .rp-filt select { min-height: 32px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-pill); padding: 0 12px; font: 600 12px var(--citui-font-text); background: var(--citui-panel); color: var(--citui-ink); margin: 0; width: auto; }
 .rp-filt select.on { border-color: var(--citui-navy-900); box-shadow: inset 0 0 0 1px var(--citui-navy-900); }
 .rp-filt__n { font-size: 12px; color: var(--citui-muted); margin-left: auto; }
+/* Shared country strip of every Riport tab (frozen plan: design-refs/console/orszag-szuro-forditas/
+   ①–⑥): Mind + ISO · name · count chips under the tab row. Phone: one scrollable line, the name
+   hidden (ISO + count stay); wide column: wraps, name shown. 0-count layer rows are dimmed. */
+.rp-cbar { display: flex; align-items: center; gap: 8px; padding: 2px 0 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.rp-cbar::-webkit-scrollbar { display: none; }
+.rp-cbar__l { flex: none; font: 700 12.5px/1 var(--citui-font-text); color: var(--citui-muted); }
+a.rp-cc { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 11px; border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-pill); background: var(--citui-panel); color: var(--citui-ink); font: 600 13px/1 var(--citui-font-text); text-decoration: none; white-space: nowrap; }
+a.rp-cc:hover { color: var(--citui-ink-brand); text-decoration: none; }
+a.rp-cc.on { background: var(--citui-navy-900); border-color: var(--citui-navy-900); color: var(--citui-ink-inverse); }
+.rp-cc--off:not(.on) { opacity: .45; }
+.rp-cc__n { font-weight: 400; opacity: .75; }
+.rp-cc__iso { display: inline-block; padding: 3px 5px; border: 1px solid var(--citui-line-strong); border-radius: 5px; background: var(--citui-surface); color: var(--citui-ink-brand-2); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+.rp-cc.on .rp-cc__iso { background: transparent; color: var(--citui-ink-inverse); border-color: color-mix(in srgb, var(--citui-ink-inverse) 50%, transparent); }
+.rp-cc__nm { display: none; }
+.rp-cscope { margin: 2px 0 10px; font-size: 12.5px; color: var(--citui-muted); }
+.rp-cscope b { color: var(--citui-ink); }
+@container (min-width: 720px) {
+  .rp-cbar { flex-wrap: wrap; overflow-x: visible; }
+  .rp-cc__nm { display: inline; }
+}
 /* Custom send-date window (owner, 2026-11-04): from – to + Szűrés, own GET form. */
 .rp-filt--dates { margin-top: -4px; }
 .rp-dates { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-pill); background: var(--citui-panel); }
@@ -4275,3 +4295,13 @@ summary.con-kb-ghead .tag { white-space: nowrap; }
   .xp-tbl td[data-l] { display: flex; justify-content: space-between; gap: 12px; }
   .xp-tbl td[data-l]::before { content: attr(data-l); color: var(--citui-muted); }
 }
+/* Plan orszag-szuro-forditas ⑦–⑫ (2026-11-26): the lead's country chip beside a reply, and the
+   conversation in the console language — Bábel's translation on top, the original dimmed under it. */
+.con-rep__iso { display: inline-block; vertical-align: 1px; margin-right: 6px; font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; border: 1px solid var(--citui-line-strong); border-radius: 5px; padding: 2px 4px; color: var(--citui-navy-700); background: var(--citui-surface); }
+.con-rep__dh .con-rep__iso { margin-right: 0; }
+.con-rep__trh { display: block; font-size: 12px; font-weight: 700; color: var(--citui-link-ink); margin: 2px 0; }
+.con-rep__trt { display: block; }
+.con-rep__orig { display: block; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--citui-line-strong); color: var(--citui-muted); font-size: 13px; }
+.con-rep__origl { display: block; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; margin-bottom: 2px; }
+.con-rep__trw { display: block; font-size: 12px; font-weight: 600; color: var(--citui-warn-ink); background: color-mix(in srgb, var(--citui-warn) 12%, transparent); border-radius: 6px; padding: 4px 8px; margin: 2px 0 6px; }
+.con-rep__trtag { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; color: var(--citui-link-ink); white-space: nowrap; }

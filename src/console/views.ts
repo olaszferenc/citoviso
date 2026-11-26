@@ -152,6 +152,7 @@ import { activeTrail, findGroup, navCountsOf, navGroups, navLeaves, navTree, typ
 // non-Hungarian colleague. `lang` comes from the request context (i18nCtx).
 import { T } from "../i18n/mail.js";
 import type { RepliesBlock, ReplyChannel, ReplyOutreach, ReplySendView, ReplyView } from "../replies/store.js";
+import { needsTranslation, sourceHash, translationOf, type TranslationPart } from "../replies/translation.js";
 import { SMS_MAX_PARTS, smsParts } from "../replies/answerRules.js";
 import { displayPhone } from "../tenant/contact.js";
 import { copyEditPill, mockCopyEditBlock, mockCopyEditScript } from "./copyEditViews.js";
@@ -161,7 +162,7 @@ import { isNeverShownSubject } from "../generator/heroPick.js";
 import type { GenStageKey } from "../generator/generateEngine.js";
 import { proxiedPhotoUrl } from "./photoProxy.js";
 import { config } from "../config.js";
-import { langName, uiLangs, dateLocale } from "../i18n/lang.js";
+import { countryDisplayName, langName, uiLangs, dateLocale } from "../i18n/lang.js";
 import { packGapSync } from "../i18n/packs.js";
 import { consoleAi, consoleLang, consoleNav } from "./i18nCtx.js";
 import {
@@ -9569,11 +9570,13 @@ export interface RepliesQuery {
   readonly notice?: ReplyNotice | null;
   /** Poe's suggestion form — only on the copy curator's own account (ADR-0340). */
   readonly suggestForm?: boolean;
+  /** Bábel's translation form — only on the translator's own account (ADR-0412, plan orszag-szuro-forditas ⑫). */
+  readonly translateForm?: boolean;
 }
 
 /** What the redirect after a send / suggestion tells the operator (ADR-0340). */
 export interface ReplyNotice {
-  readonly kind: "scheduled" | "queued" | "sent" | "failed" | "suggested" | "blocked" | "unblocked";
+  readonly kind: "scheduled" | "queued" | "sent" | "failed" | "suggested" | "translated" | "blocked" | "unblocked";
   readonly detail: string | null;
   readonly at: Date | null;
 }
@@ -9610,13 +9613,13 @@ function messengerThread(r: ReplyView, thread: readonly ReplyView[], lang: strin
         `<div class="con-rep__bub is-out con-rep__bub--msg"><span class="con-rep__lbl">${esc(T(lang, "Kiküldött megkeresés"))} · ${esc(repChName(o.channel, lang))}` +
         `${o.sentAt ? ` · ${esc(whenShort(o.sentAt.toISOString(), lang))}` : ""}</span>` +
         `<img class="con-rep__img" src="/messenger/kep/${esc(o.outboxId)}" alt="${esc(T(lang, "a kiküldött kép"))}" loading="lazy">` +
-        `${esc(o.text ?? "")}<span class="con-rep__rcpt${o.receipt === "read" ? " is-read" : ""}">${esc(outreachReceipt(o, lang))}</span></div>`,
+        `${trText(r, "outreach", o.text ?? "", lang)}<span class="con-rep__rcpt${o.receipt === "read" ? " is-read" : ""}">${esc(outreachReceipt(o, lang))}</span></div>`,
     });
   }
   for (const x of thread) {
     items.push({
       at: x.receivedAt.getTime(),
-      html: `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(x.channel, lang))} · ${esc(whenShort(x.receivedAt.toISOString(), lang))}</span>${esc(x.body)}</div>`,
+      html: `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(x.channel, lang))} · ${esc(whenShort(x.receivedAt.toISOString(), lang))}</span>${trText(x, "body", x.body, lang)}</div>`,
     });
     for (const sd of x.sends.filter((y) => y.status === "sent")) {
       items.push({
@@ -9629,6 +9632,97 @@ function messengerThread(r: ReplyView, thread: readonly ReplyView[], lang: strin
     .sort((a, b) => a.at - b.at)
     .map((i) => i.html)
     .join("");
+}
+
+// ── Plan orszag-szuro-forditas ⑦–⑫ (owner 2026-11-26, „2.B · 3 igen”): the lead's country chip and
+// the conversation in the operator's console language — Bábel's translation on top, the original
+// always under it, dimmed. The code translates nothing (ADR-0412); a missing translation says so.
+
+/** A language code as the operator reads it, in the console language („horvát”); the code when unknown. */
+function repLangName(code: string, lang: string): string {
+  try {
+    return new Intl.DisplayNames([lang], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** The lead's country as a small ISO chip (title: the country's name); "" when unknown. */
+function repIso(r: ReplyView, lang: string): string {
+  const c = r.country ?? "";
+  if (!c) return "";
+  const name = countryDisplayName(c, lang);
+  return `<span class="con-rep__iso" title="${esc(name)}">${esc(c)}</span>`;
+}
+
+/**
+ * One conversation text in the operator's language (README ⑧⑨⑪): translated → „Fordítás (horvát) ·
+ * Bábel” + the translation, then the original dimmed; not yet → „Bábel fordítja…” + the original;
+ * same language / unknown language → the text alone. `sendsOriginal` marks the original as what
+ * goes out (Poe's draft: „Elküldöm” sends the lead-language text, never the translation).
+ */
+function trText(
+  r: ReplyView,
+  part: TranslationPart,
+  source: string,
+  lang: string,
+  opts: { cut?: (s: string) => string; sendsOriginal?: boolean } = {},
+): string {
+  const cut = opts.cut ?? ((x: string) => x);
+  const from = r.lang ?? null;
+  if (!needsTranslation(source, from, lang)) return esc(cut(source));
+  const fromName = repLangName(from!, lang);
+  const t = translationOf(r.translations?.[part], source, from, lang);
+  if (!t)
+    return (
+      `<span class="con-rep__trw">${esc(T(lang, "Bábel fordítja ({to})… addig az eredeti ({from})", { to: repLangName(lang, lang), from: fromName }))}</span>` +
+      esc(cut(source))
+    );
+  const origLabel = opts.sendsOriginal ? T(lang, "Eredeti · {from} — ez megy ki", { from: fromName }) : T(lang, "Eredeti · {from}", { from: fromName });
+  return (
+    `<span class="con-rep__trh">${esc(T(lang, "Fordítás ({from}) · {by}", { from: fromName, by: t.by }))}</span>` +
+    `<span class="con-rep__trt">${esc(cut(t.text))}</span>` +
+    `<span class="con-rep__orig"><span class="con-rep__origl">${esc(origLabel)}</span>${esc(cut(source))}</span>`
+  );
+}
+
+/** The parts of a conversation still waiting for Bábel in `target` — his form lists them. */
+function repMissingTr(r: ReplyView, target: string): { part: TranslationPart; text: string }[] {
+  const out: { part: TranslationPart; text: string }[] = [];
+  const parts: [TranslationPart, string | null | undefined][] = [
+    ["body", r.body],
+    ["ours", r.outreach || r.pageQuestion ? null : r.oursText],
+    ["outreach", r.outreach?.text],
+    ["suggestion", r.suggestion?.text],
+  ];
+  for (const [part, text] of parts)
+    if (text && needsTranslation(text, r.lang ?? null, target) && !translationOf(r.translations?.[part], text, r.lang ?? null, target)) out.push({ part, text });
+  return out;
+}
+
+/** Bábel's translation form — a plain POST per part with his own account (the Poe-form pattern). */
+function repBabelForm(r: ReplyView, hidden: string, lang: string): string {
+  const missing = repMissingTr(r, lang);
+  if (!missing.length) return "";
+  const partName: Record<TranslationPart, string> = {
+    body: T(lang, "a bejövő üzenet"),
+    ours: T(lang, "a kiküldött megkeresés"),
+    outreach: T(lang, "a kiküldött megkeresés"),
+    suggestion: T(lang, "Poe javaslata"),
+  };
+  return (
+    `<details class="con-rep__poe"><summary>${esc(T(lang, "Fordítás letétele (Bábel)"))}</summary>` +
+    missing
+      .map(
+        (m) =>
+          `<form method="post" action="/replies/${esc(r.id)}/translate">${hidden}` +
+          `<input type="hidden" name="part" value="${m.part}"><input type="hidden" name="lang" value="${esc(lang)}"><input type="hidden" name="hash" value="${esc(sourceHash(m.text))}">` +
+          `<label>${esc(partName[m.part])} → ${esc(repLangName(lang, lang))}<textarea name="text" class="con-rep__ta" required></textarea></label>` +
+          `<button type="submit" class="con-btn">${esc(T(lang, "Fordítás letétele"))}</button></form>`,
+      )
+      .join("") +
+    `</details>`
+  );
 }
 
 /** „Kiküldött levél · ma 9:27 · „tárgy"" — what the bubble above the reply says about OUR message. */
@@ -9777,7 +9871,7 @@ function replyAnswer(r: ReplyView, q: RepliesQuery, hidden: string, lang: string
   const subjIn = subj !== null ? `<input type="hidden" name="subject" value="${esc(subj)}">` : "";
   const head = sug ? repSugHead(r, lang) : `<div class="con-rep__sh"><b>${esc(T(lang, "Saját válasz"))}</b></div>`;
   const view = base
-    ? `<div class="con-rep__sug" data-rep-view="${esc(r.id)}">${head}${repAddr(r, base, subj, lang)}<p class="con-rep__txt">${esc(base)}</p>` +
+    ? `<div class="con-rep__sug" data-rep-view="${esc(r.id)}">${head}${repAddr(r, base, subj, lang)}<p class="con-rep__txt">${!failed && sug ? trText(r, "suggestion", base, lang, { sendsOriginal: true }) : esc(base)}</p>` +
       `<div class="con-rep__row"><form method="post" action="/replies/${esc(r.id)}/send">${hidden}<input type="hidden" name="text" value="${esc(base)}">${subjIn}` +
       `<button type="submit" class="con-rep__send">${icf("send", 13)}${esc(T(lang, "Elküldöm"))}</button></form>` +
       `<button type="button" class="con-btn" data-rep-edit="${esc(r.id)}">${icf("pen", 13)}${esc(T(lang, "Szerkesztem"))}</button>` +
@@ -9836,6 +9930,8 @@ function replyToast(r: ReplyView | null, n: ReplyNotice | null | undefined, lang
           ? T(lang, "Sorba állítva — {when} megy ki · {lead}", { when: n.at ? whenAhead(n.at, lang) : "—", lead: r.leadName })
           : n.kind === "suggested"
             ? T(lang, "Javaslat letéve — {lead}", { lead: r.leadName })
+            : n.kind === "translated"
+              ? T(lang, "Fordítás letéve — {lead}", { lead: r.leadName })
             : n.kind === "blocked"
               ? T(lang, "Elutasítónak jelölve — {lead} többé semmilyen üzenetet nem kap", { lead: r.leadName })
               : n.kind === "unblocked"
@@ -9857,15 +9953,16 @@ function replyPanel(r: ReplyView, q: RepliesQuery, selected: boolean, lang: stri
   return (
     `<div class="con-rep__p" data-rep-p="${esc(r.id)}"${selected ? "" : " hidden"}>` +
     `<div class="con-rep__dh"><a class="con-btn con-btn--sm con-rep__back" href="${esc(repliesHref({ filter: q.filter }))}" data-rep-back>${icf("back", 13)}${esc(T(lang, "Vissza"))}</a>` +
-    `<span class="con-rep__pn">${esc(r.leadName)}</span>` +
-    `<span class="con-rep__who">${esc([r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
+    `<span class="con-rep__pn">${esc(r.leadName)}</span>${repIso(r, lang)}` +
+    `<span class="con-rep__who">${esc([r.country ? countryDisplayName(r.country, lang) : null, r.place, replySender(r)].filter(Boolean).join(" · "))}</span>${pill}</div>` +
     (r.outreach
       ? messengerThread(r, thread, lang)
       : r.pageQuestion
-        ? `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(T(lang, "Kérdés a terv lapjáról"))} · ${esc(T(lang, "válasz: {ch}", { ch: repChName(r.channel, lang) }))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>`
-        : `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${esc((r.oursText ?? "").length > OURS_MAX ? replyExcerpt(r.oursText ?? "", OURS_MAX) : (r.oursText ?? ""))}</div>` +
-        `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${esc(r.body)}</div>`) +
+        ? `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(T(lang, "Kérdés a terv lapjáról"))} · ${esc(T(lang, "válasz: {ch}", { ch: repChName(r.channel, lang) }))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${trText(r, "body", r.body, lang)}</div>`
+        : `<div class="con-rep__bub is-out"><span class="con-rep__lbl">${esc(oursLabel(r, lang))}</span>${trText(r, "ours", r.oursText ?? "", lang, { cut: (x) => (x.length > OURS_MAX ? replyExcerpt(x, OURS_MAX) : x) })}</div>` +
+        `<div class="con-rep__bub is-in"><span class="con-rep__lbl">${esc(repChName(r.channel, lang))} · ${esc(whenShort(r.receivedAt.toISOString(), lang))}</span>${trText(r, "body", r.body, lang)}</div>`) +
     (r.block ? "" : replyAnswer(r, q, hidden, lang)) +
+    (q.translateForm ? repBabelForm(r, hidden, lang) : "") +
     `<div class="con-rep__acts">${acts}<a class="con-btn" href="/lead/${esc(r.leadId)}">${esc(T(lang, "Lead lapja"))}${icf("fwd", 13)}</a></div>` +
     replyBlock(r, hidden, lang) +
     `</div>`
@@ -9894,13 +9991,13 @@ function replyBlock(r: ReplyView, hidden: string, lang: string): string {
 }
 
 /** README ⑨: „Javaslat kész” / „Javaslatra vár” on the open rows, „Válasz elküldve” on the sent ones. */
-function replyListTag(r: ReplyView, lang: string): string {
+function replyListTag(r: ReplyView, lang: string, extra = ""): string {
   if (r.sends.some((x) => x.status === "sent") && (r.answeredAt || !r.suggestion))
-    return `<span class="con-rep__tags"><span class="con-rep__tag is-sent">${icf("check", 11)}${esc(T(lang, "Válasz elküldve"))}</span></span>`;
-  if (r.answeredAt) return "";
+    return `<span class="con-rep__tags"><span class="con-rep__tag is-sent">${icf("check", 11)}${esc(T(lang, "Válasz elküldve"))}</span>${extra}</span>`;
+  if (r.answeredAt) return extra ? `<span class="con-rep__tags">${extra}</span>` : "";
   return r.suggestion
-    ? `<span class="con-rep__tags"><span class="con-rep__tag is-sug">${icf("pen", 11)}${esc(T(lang, "Javaslat kész"))}</span></span>`
-    : `<span class="con-rep__tags"><span class="con-rep__tag is-wait">${esc(T(lang, "Javaslatra vár"))}</span></span>`;
+    ? `<span class="con-rep__tags"><span class="con-rep__tag is-sug">${icf("pen", 11)}${esc(T(lang, "Javaslat kész"))}</span>${extra}</span>`
+    : `<span class="con-rep__tags"><span class="con-rep__tag is-wait">${esc(T(lang, "Javaslatra vár"))}</span>${extra}</span>`;
 }
 
 /** The „Válaszok a megkeresésekre" block at the top of the home (README ①–⑧). */
@@ -9930,13 +10027,18 @@ export function repliesBlockHtml(b: RepliesBlock, q: RepliesQuery, lang: string,
     chChip("whatsapp", "WhatsApp");
   const items = all
     .map((r) => {
-      const first = (r.pageQuestion ? `${T(lang, "Kérdés a terv lapjáról")}: ` : "") + replyExcerpt(r.body, 160);
+      // Plan orszag-szuro-forditas ⑧⑨: the excerpt from Bábel's translation once it is there.
+      const tr = translationOf(r.translations?.body, r.body, r.lang ?? null, lang);
+      const first = (r.pageQuestion ? `${T(lang, "Kérdés a terv lapjáról")}: ` : "") + replyExcerpt(tr ? tr.text : r.body, 160);
+      const trTag = needsTranslation(r.body, r.lang ?? null, lang)
+        ? `<span class="con-rep__trtag">${esc(tr ? T(lang, "fordítva: {from}", { from: repLangName(r.lang!, lang) }) : T(lang, "fordítás készül"))}</span>`
+        : "";
       return (
         `<a class="con-rep__it${r.answeredAt ? " is-done" : ""}" href="${esc(repliesHref({ filter: q.filter, reply: r.id, channel: ch }))}" data-rep-id="${esc(r.id)}" data-done="${r.answeredAt ? 1 : 0}" data-ch="${r.channel}"` +
         `${sel?.id === r.id ? ' aria-current="true"' : ""}${visible(r) ? "" : " hidden"}>` +
-        `<span class="con-rep__d"></span><span class="con-rep__nm">${esc(r.leadName)}</span>` +
+        `<span class="con-rep__d"></span><span class="con-rep__nm">${repIso(r, lang)}${esc(r.leadName)}</span>` +
         `<span class="con-rep__when"><span class="con-rep__ch">${ic(r.channel === "email" ? "mail" : "sms", 13)}${esc(repChName(r.channel, lang))}</span>${esc(whenShort(r.receivedAt.toISOString(), lang, now))}</span>` +
-        `<span class="con-rep__ex">${esc(first)}</span>${replyListTag(r, lang)}</a>`
+        `<span class="con-rep__ex">${esc(first)}</span>${replyListTag(r, lang, trTag)}</a>`
       );
     })
     .join("");
