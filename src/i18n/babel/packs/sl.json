@@ -5508,6 +5508,7 @@
  "Megkeresés-riport": "Poročilo o povpraševanjih",
  "Megkeresés-tölcsér": "Lijak povpraševanj",
  "Megkeresés-tölcsér — hol akadnak el": "Lijak povpraševanj — kje obtičijo",
+ "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.": "Ponudba, mock in stran za goste gredo ven samo v osnovnem jeziku države ({lang}). Če v lastnem besedilu e-pošte ali mocka manjka prevod, je ZADRŽANO samo to eno sporočilo („čaka na Bábel”) — trg ostane odprt. Prevod opravi Bábel — tukaj vidite samo popolnost.",
  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.": "Hladni stik, vzorčna stran in stran za goste gredo samo v osnovnem jeziku države ({lang}). Če manjka že eno besedilo za stranke, je hladni stik ZADRŽAN (»čaka na Bábel«). Prevod opravi Bábel — tukaj vidiš samo popolnost.",
  "Megkeresések": "Povpraševanja",
  "Megkereső link megnyitása (nem számít kattintásnak)": "Odpri povezavo nagovora (ne šteje kot klik)",

@@ -5543,6 +5543,7 @@
  "Megkeresés-riport": "Izvještaj o kontaktiranju",
  "Megkeresés-tölcsér": "Lijevak kontaktiranja",
  "Megkeresés-tölcsér — hol akadnak el": "Lijevak kontaktiranja — gdje zapinju",
+ "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.": "Poruka za akviziciju, mock i stranica za goste idu samo na osnovnom jeziku zemlje ({lang}). Ako u vlastitom tekstu e-pošte ili mocka nedostaje prijevod, ZADRŽANA je samo ta jedna poruka („čeka Bábel”) — tržište ostaje otvoreno. Prijevod radi Bábel — ovdje vidiš samo potpunost.",
  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.": "Kontaktiranje, mock i stranica za goste idu samo na osnovnom jeziku zemlje ({lang}). Ako nedostaje i jedan tekst za kupca, kontaktiranje je ZADRŽANO („čeka Bábel”). Prijevod radi Bábel — ovdje vidiš samo potpunost.",
  "Megkeresések": "Kontaktiranja",
  "Megkereső link megnyitása (nem számít kattintásnak)": "Otvori poveznicu kontaktiranja (ne broji se kao klik)",

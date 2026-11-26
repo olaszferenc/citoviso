@@ -5505,6 +5505,7 @@
  "Megkeresés-riport": "Outreach report",
  "Megkeresés-tölcsér": "Inquiry funnel",
  "Megkeresés-tölcsér — hol akadnak el": "Outreach funnel — where they drop off",
+ "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.": "Outreach, mock and guest page go out only in the country's base language ({lang}). If a translation is missing from an email's or mock's own text, only that one message is ON HOLD (“waiting for Bábel”) — the market stays open. Bábel does the translation — here you only see the completeness.",
  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.": "Outreach, mock and guest page go out only in the country's base language ({lang}). If even one customer-facing text is missing, the outreach is ON HOLD (“waiting for Bábel”). Bábel does the translation — here you only see how complete it is.",
  "Megkeresések": "Inquiries",
  "Megkereső link megnyitása (nem számít kattintásnak)": "Open the outreach link (does not count as a click)",

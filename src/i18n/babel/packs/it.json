@@ -5543,6 +5543,7 @@
  "Megkeresés-riport": "Report delle proposte",
  "Megkeresés-tölcsér": "Funnel delle proposte",
  "Megkeresés-tölcsér — hol akadnak el": "Funnel delle proposte — dove si bloccano",
+ "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.": "Proposta, mock e pagina ospiti escono solo nella lingua di base del paese ({lang}). Se nel testo di un'e-mail o di un mock manca una traduzione, resta IN ATTESA solo quel messaggio («in attesa di Bábel») — il mercato resta aperto. La traduzione la fa Bábel — qui vedi solo la completezza.",
  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.": "Proposta, mock e pagina per gli ospiti partono solo nella lingua principale del paese ({lang}). Se manca anche un solo testo lato cliente, la proposta resta IN ATTESA («In attesa di Bábel»). La traduzione la fa Bábel — qui vedi solo la completezza.",
  "Megkeresések": "Proposte",
  "Megkereső link megnyitása (nem számít kattintásnak)": "Apri il link della proposta (non conta come clic)",

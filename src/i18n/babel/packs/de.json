@@ -5543,6 +5543,7 @@
  "Megkeresés-riport": "Ansprache-Bericht",
  "Megkeresés-tölcsér": "Ansprache-Trichter",
  "Megkeresés-tölcsér — hol akadnak el": "Ansprache-Trichter — wo sie hängen bleiben",
+ "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.": "Akquise-Nachricht, Mock und Gästeseite gehen nur in der Landessprache ({lang}) hinaus. Fehlt in den eigenen Texten einer E-Mail oder eines Mocks eine Übersetzung, bleibt nur diese eine Nachricht ZURÜCKGEHALTEN („wartet auf Bábel“) — der Markt bleibt offen. Die Übersetzung macht Bábel — hier siehst du nur die Vollständigkeit.",
  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.": "Ansprache, Mock und Gästeseite gehen nur in der Grundsprache des Landes ({lang}). Fehlt auch nur ein kundenseitiger Text, wird die Ansprache ZURÜCKGEHALTEN („wartet auf Bábel“). Die Übersetzung macht Bábel — hier siehst du nur die Vollständigkeit.",
  "Megkeresések": "Ansprachen",
  "Megkereső link megnyitása (nem számít kattintásnak)": "Link der Ansprache öffnen (zählt nicht als Klick)",

@@ -5543,6 +5543,7 @@
  "Megkeresés-riport": "Report oslovenia",
  "Megkeresés-tölcsér": "Lievik oslovení",
  "Megkeresés-tölcsér — hol akadnak el": "Lievik oslovenia — kde uviaznu",
+ "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy levél vagy mock saját szövegéből hiányzik a fordítás, az az egy üzenet TARTVA („Bábelre vár”) — a piac nyitva marad. A fordítást Bábel végzi — itt csak a teljességet látod.": "Oslovenie, mock a stránka pre hostí idú len v základnom jazyku krajiny ({lang}). Ak vo vlastnom texte e-mailu alebo mocku chýba preklad, POZDRŽANÁ zostane len táto jedna správa („čaká na Bábel“) — trh zostáva otvorený. Preklad robí Bábel — tu vidíš len úplnosť.",
  "Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy ({lang}). Ha egy vevő-oldali szöveg is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi — itt csak a teljességet látod.": "Oslovenie, mock a stránka pre hostí idú len v základnom jazyku krajiny ({lang}). Ak chýba čo i len jeden text pre zákazníka, oslovenie je POZDRŽANÉ („čaká na Bábel“). Preklad robí Bábel — tu vidíš len úplnosť.",
  "Megkeresések": "Oslovenia",
  "Megkereső link megnyitása (nem számít kattintásnak)": "Otvoriť odkaz z oslovenia (nepočíta sa ako kliknutie)",
