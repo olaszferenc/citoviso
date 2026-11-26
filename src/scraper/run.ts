@@ -230,7 +230,7 @@ async function main(): Promise<void> {
     console.log(`  scrape_run ${runId} (running)`);
   }
   liveRunId = runId;
-  // The job's own description on its row (ADR-XXXX): whoever started it (console, ssh script),
+  // The job's own description on its row (ADR-0497): whoever started it (console, ssh script),
   // an interruption can be continued from the DB by the worker's resumer (src/worker/resume.ts).
   const job = { ...jobSpecOf({ regionId: region.id, scout, cap }), ...(country ? { country } : {}) };
   await recordScrapeJob(runId, job);

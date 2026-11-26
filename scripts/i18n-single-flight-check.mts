@@ -188,7 +188,7 @@ try {
   {
     const read = (rel: string): string => readFileSync(path.join(ROOT, rel), "utf8");
     const scrape = read("src/console/scrapeJob.ts");
-    // ADR-XXXX: the console enqueues for the worker; the one-job gate is the live-queue count.
+    // ADR-0497: the console enqueues for the worker; the one-job gate is the live-queue count.
     const fn = scrape.slice(scrape.indexOf("export async function startScrapeJob("), scrape.indexOf("export async function startScoutJob("));
     expect(fn.indexOf("liveWorkCount()") >= 0 && fn.indexOf("liveWorkCount()") < fn.indexOf("requestLanguagePack"), "scrape: a csomag-kérés a „már fut” kapu MÖGÖTT");
     expect(!/ensureLanguagePack/.test(fn), "scrape: nem vár (requestLanguagePack)");

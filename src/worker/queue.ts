@@ -1,4 +1,4 @@
-// The work queue of the separate worker (ADR-XXXX, migration 0159, tulaj 2026-11-26: „a deploy
+// The work queue of the separate worker (ADR-0497, migration 0159, tulaj 2026-11-26: „a deploy
 // prioritást élvez”). The console ENQUEUES and READS; the worker (src/worker/main.ts, its own
 // systemd service) claims and runs. A console restart never touches running work.
 //

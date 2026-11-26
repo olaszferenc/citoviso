@@ -23,7 +23,7 @@
 //   ⑦ a friss életjelű futást a takarító NEM bántja (nem öl élőt)
 //   ⑧ a saját hibájára bukott futás „hibára futott" marad — a két történet nem
 //      mosódik össze, mert az operátor következő lépése más
-//   ⑨ a deploy-kapu (GATE 4) a kódcsere előtt JELEZ, a restart után IGAZOL (nem vár, ADR-XXXX)
+//   ⑨ a deploy-kapu (GATE 4) a kódcsere előtt JELEZ, a restart után IGAZOL (nem vár, ADR-0497)
 //
 // Valós DB-n, saját eldobható fixture-rel (a közös parkhoz nem nyúl), és a végén
 // mindent visszatakarít.
@@ -371,7 +371,7 @@ try {
     aliveRow.includes("életjel:"),
   );
 
-  // ⑨ a deploy-kapu (ADR-XXXX, tulaj 2026-11-26 „a deploy prioritást élvez”): NEM vár a futó
+  // ⑨ a deploy-kapu (ADR-0497, tulaj 2026-11-26 „a deploy prioritást élvez”): NEM vár a futó
   // munkára, hanem a kódcsere ELŐTT jelez, és a restart UTÁN igazolja, hogy a dolgozó él és
   // átvette a munkát. (Szerkezeti mérés a scripten; a viselkedést a work-queue-check és a
   // scrape-restart-probe méri.)

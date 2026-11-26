@@ -3459,7 +3459,7 @@ async function handle(
     const notice = url.searchParams.get("hiba");
     return send(res, 200, scrapePage(await getScrapeJob(), await getScrapeRuns(), regions, notice));
   }
-  // POST /scrape/start — enqueue for the separate worker (ADR-XXXX; one at a time).
+  // POST /scrape/start — enqueue for the separate worker (ADR-0497; one at a time).
   if (method === "POST" && path === "/scrape/start") {
     const form = await readBody(req);
     const regionId = form.get("region") ?? "";

@@ -1,4 +1,4 @@
-## ADR-XXXX — A deploy nem vár futó munkára: a hosszú munka külön dolgozóban, DB-feladatsorból, folytatható lépésekben
+## ADR-0497 — A deploy nem vár futó munkára: a hosszú munka külön dolgozóban, DB-feladatsorból, folytatható lépésekben
 
 - **Dátum:** 2026-11-26 (este)
 - **Státusz:** elfogadva — tulaj: „a deploy prioritást élvez” (11-26), az 1+2 változatot jóváhagyta („elfogadom”). **1. lépés landolt: a felderítés / scrape.** A többi hosszú munka (mock-generálás, szöveg-újraírás) a következő lépés.

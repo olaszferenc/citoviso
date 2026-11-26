@@ -1,4 +1,4 @@
-// citoviso-worker — the separate worker of the long jobs (ADR-XXXX, tulaj 2026-11-26: „a deploy
+// citoviso-worker — the separate worker of the long jobs (ADR-0497, tulaj 2026-11-26: „a deploy
 // prioritást élvez”; deploy/systemd/citoviso-worker.service).
 //
 // The console only enqueues (work_job) and reads; this process claims a job and runs it as a

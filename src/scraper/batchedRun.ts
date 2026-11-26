@@ -143,7 +143,7 @@ export async function enrichAndSaveInBatches(
     savedEarlier: number;
     /** Only with --out: the saved leads are also kept here for the JSON file. */
     collect?: QualifiedLead[];
-    /** Asked before every batch (ADR-XXXX): true = stop HERE, at a unit boundary — every batch
+    /** Asked before every batch (ADR-0497): true = stop HERE, at a unit boundary — every batch
      *  so far is committed, nothing is half-done; the run is continued later from the DB. */
     shouldStop?: () => boolean;
   },

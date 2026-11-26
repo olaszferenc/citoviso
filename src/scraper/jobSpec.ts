@@ -1,4 +1,4 @@
-// What a scrape / felderítés job IS, durably (ADR-XXXX, tulaj 2026-11-26: „a deploy prioritást
+// What a scrape / felderítés job IS, durably (ADR-0497, tulaj 2026-11-26: „a deploy prioritást
 // élvez” — a deploy never waits for running work).
 //
 // Until now the only description of a running job was the console's memory (scrapeJob.ts state +

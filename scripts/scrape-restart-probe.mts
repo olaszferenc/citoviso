@@ -1,5 +1,5 @@
 // scrape-restart-probe — does a felderítés job survive what a deploy (and worse) does to it?
-// (ADR-XXXX, tulaj 2026-11-26: „a deploy prioritást élvez” — a deploy never waits for running work.)
+// (ADR-0497, tulaj 2026-11-26: „a deploy prioritást élvez” — a deploy never waits for running work.)
 //
 // Dev machine only (the shared dev DB; the fő fa console :4600 for the console scenario).
 // An ACTIVE throw-away region `zz-restart-<8>` with one tile and N rows whose websites point at

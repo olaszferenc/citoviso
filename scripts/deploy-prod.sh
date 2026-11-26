@@ -11,7 +11,7 @@
 #   GATE 1  only a commit already ON origin/main may deploy (land first);
 #   GATE 2  diff-before-deploy: the exact prod-version → target diff is printed;
 #   GATE 3  pending migrations trigger a pg_dump before applying;
-#   GATE 4  a deploy NEVER waits for running work and NEVER loses it (ADR-XXXX, tulaj 2026-11-26):
+#   GATE 4  a deploy NEVER waits for running work and NEVER loses it (ADR-0497, tulaj 2026-11-26):
 #           long jobs run in the separate worker (citoviso-worker); the deploy only SIGNALS
 #           (marker before the code swap), and AFTER the restart it VERIFIES that the worker is
 #           alive and the interrupted work was taken over (or still finishing its step) — else red;
@@ -324,7 +324,7 @@ GO=""
 for arg in "$@"; do
   case "$arg" in
     --go) GO="--go" ;;
-    --ignore-scrape) fail "--ignore-scrape KIVEZETVE (ADR-XXXX): a deploy már nem vár futó munkára és nem öli meg — nincs mit átlépni" ;;
+    --ignore-scrape) fail "--ignore-scrape KIVEZETVE (ADR-0497): a deploy már nem vár futó munkára és nem öli meg — nincs mit átlépni" ;;
     --full-kb-shots) FULL_KB_SHOTS=1 ;;
     *) fail "ismeretlen kapcsoló: $arg" ;;
   esac
@@ -377,7 +377,7 @@ fi
 
 echo "── cél: $SHA ($(git log -1 --format=%s "$SHA"))"
 
-# ── GATE 4 — a deploy nem vár futó munkára, és nem veszít munkát (ADR-XXXX) ──────
+# ── GATE 4 — a deploy nem vár futó munkára, és nem veszít munkát (ADR-0497) ──────
 # Mérve 2026-09-11 és 2026-11-26: a scrape a konzol GYEREKFOLYAMATA volt, a restart
 # (KillMode=control-group) megölte, a csempe sorai `proc`-ban ragadtak, és senki nem
 # folytatta. Ezért ez a kapu korábban MEGÁLLÍTOTTA a deployt, amíg scrape futott

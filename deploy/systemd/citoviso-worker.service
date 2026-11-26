@@ -1,5 +1,5 @@
 [Unit]
-# A hosszú munkák KÜLÖN dolgozója (ADR-XXXX, tulaj 2026-11-26: „a deploy prioritást élvez”).
+# A hosszú munkák KÜLÖN dolgozója (ADR-0497, tulaj 2026-11-26: „a deploy prioritást élvez”).
 # A konzol csak feladatot tesz a sorba (work_job), ez a folyamat futtatja (ma: felderítés / scrape).
 # A konzol újraindítása (deploy) nem érinti. A deploy csak jelez (/opt/citoviso/DEPLOYING): a futó
 # darab a következő adaghatáron megáll, a dolgozó a jelzés végén kilép (exit 0), a systemd az ÚJ

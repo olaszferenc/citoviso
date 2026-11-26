@@ -1,5 +1,5 @@
 // work-queue-check — a hosszú munka a KÜLÖN dolgozóban fut, a deploy nem vár rá és nem veszíti el
-// (ADR-XXXX, tulaj 2026-11-26: „a deploy prioritást élvez”).
+// (ADR-0497, tulaj 2026-11-26: „a deploy prioritást élvez”).
 //
 // Miért: mérve 2026-09-11 és 2026-11-26 (scripts/scrape-restart-probe.mts, a régi kódon): a
 // felderítés a konzol gyerekfolyamata volt, a `systemctl restart citoviso-console` megölte, a
@@ -41,7 +41,7 @@ import { claimNextWork, enqueueWork, releaseOrphanedWork } from "../src/worker/q
 import { resumeInterrupted } from "../src/worker/resume.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
-const LEGACY = "431c83ac"; // origin/main before ADR-XXXX: in-process spawn, waiting GATE 4
+const LEGACY = "431c83ac"; // origin/main before ADR-0497: in-process spawn, waiting GATE 4
 const REGION = `zz-restart-${randomUUID().slice(0, 8)}`;
 process.env.CIT_WORKER_ONLY_REGION = REGION; // this check's queue calls touch only its own region
 const ROOT = path.join(import.meta.dirname, "..");

@@ -1,4 +1,4 @@
-// The worker's resumer (ADR-XXXX, tulaj 2026-11-26: „a deploy prioritást élvez”): work stopped
+// The worker's resumer (ADR-0497, tulaj 2026-11-26: „a deploy prioritást élvez”): work stopped
 // from outside — the deploy's boundary stop, a worker restart, kill -9, a power cut — continues
 // FROM THE DB, without anyone's click. Two sources:
 //

@@ -698,7 +698,7 @@ export async function reopenScoutTile(tileId: string, onlyPlaceIds?: readonly st
  *  ⛔ A tile is NOT stuck while a run of it (job.scout, 0159) is alive — a job the console did
  *  not start (an ssh script) included — or was interrupted and waits for the worker's resumer
  *  (src/worker/resume.ts): reopening it would hand its rows back to `new`, and the resumed job would
- *  find nothing to do (ADR-XXXX). */
+ *  find nothing to do (ADR-0497). */
 export async function reapStuckScoutTiles(regionId: string, jobTileIds: readonly string[]): Promise<void> {
   const stuck = await db
     .selectFrom("scout_tile as t")

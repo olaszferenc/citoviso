@@ -21,7 +21,7 @@ A fő fából futtasd (`/home/citoviso/citoviso`), a cél-commit legyen `origin/
 | # | Lépés | Blokkol? | Megjegyzés |
 |---|---|---|---|
 | 1 | **GATE 1** — a cél-commit őse az `origin/main`-nek | ⛔ igen | előbb land |
-| 2 | **GATE 4** — fut-e éles munka (deploy eleje) | tájékoztat | ADR-XXXX: a deploy NEM vár; a munka a külön dolgozóban fut (`citoviso-worker`), a `--ignore-scrape` kivezetve |
+| 2 | **GATE 4** — fut-e éles munka (deploy eleje) | tájékoztat | ADR-0497: a deploy NEM vár; a munka a külön dolgozóban fut (`citoviso-worker`), a `--ignore-scrape` kivezetve |
 | 3 | **GATE 2** — `git diff --stat <éles>..<cél>` | tájékoztat | a HEAD-egyezés + tiszta fa = checkout kimarad |
 | 4 | **GATE 1b** — `legal-check.mts` + az éles `.env` 5 `LEGAL_ENTITY_*` kulcsa | ⛔ igen | csak ezt az 5 kulcsot nézi — a domain-kulcsokat NEM (lásd §2) |
 | 5 | **GATE 1c/kép** — a cél-commit worktree-jében `kb-shot --check-committed`, pixel-összevetés (ADR-0220) | ⛔ igen | kihagyás CSAK `KB_SHOT_GATE_WAIVE="<≥20 kar. indoklás>"`, a `DEPLOYED`-naplóba íródik |
@@ -96,7 +96,7 @@ Az éles állapot kérdése egy parancs: `$SSH 'git -C /opt/citoviso/app rev-par
       ugyanúgy a deploy restartja ELŐTT kerüljön a `.env`-be, mint a fenti kulcsok (előtte `.env`-mentés).
       Ellenőrzés a restart után: a `citoviso-console`/`citoviso-public` naplóban „boot-fordítás KIKAPCSOLVA”;
       a fordítás költsége a `translation_spend` táblában (`trigger`: deploy/cli/on-demand).
-- [x] ~~Nincs futó éles scrape~~ — 2026-11-26 óta (ADR-XXXX) NEM feltétel: a deploy nem vár, a dolgozó folytat.
+- [x] ~~Nincs futó éles scrape~~ — 2026-11-26 óta (ADR-0497) NEM feltétel: a deploy nem vár, a dolgozó folytat.
 - [ ] Legyen idő a teljes §4 füst-próbára (~30–40 perc) közvetlenül utána; a deploy és a füst-próba között ne
       menjen kiküldés (outreach).
 

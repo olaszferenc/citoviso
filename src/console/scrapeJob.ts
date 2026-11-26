@@ -1,6 +1,6 @@
 // Scrape launcher for the operator console (PILOT.md §7d ① — scrape from the UI, not the CLI).
 //
-// ⛔ ADR-XXXX (tulaj 2026-11-26, „a deploy prioritást élvez”): the console NO LONGER runs the
+// ⛔ ADR-0497 (tulaj 2026-11-26, „a deploy prioritást élvez”): the console NO LONGER runs the
 // scrape. It used to spawn src/scraper/run.ts as its own child — in the console unit's cgroup,
 // so every `systemctl restart citoviso-console` (each deploy) killed the job (measured
 // 2026-09-11 and 2026-11-26), and the deploy's GATE 4 had to wait for it. Now the console only
