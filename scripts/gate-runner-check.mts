@@ -41,7 +41,7 @@
 //   · (ADR-0446) a bukó kapu EGYSZER újrafut: zöld újrafutás = zöld, hangos „↻” sorral és az első hiba
 //     kimenetével + statisztika-sorral; piros újrafutás = piros, az első futás kimenetével együtt;
 //     CIT_GATE_RETRY=0 mellett nincs újrafutás, és időtúllépés után sincs (J),
-//   · (ADR-XXXX) az óránkénti futás CIT_GATE_RED_OUT-tal NEM áll meg az első pirosnál (minden kapu
+//   · (ADR-0483) az óránkénti futás CIT_GATE_RED_OUT-tal NEM áll meg az első pirosnál (minden kapu
 //     ítéletet kap), PONTOSAN a pirosakat adja át (+ DONE jel), az átadott könyvtár újrafuttatása csak
 //     azokat futtatja, és land-módban a kapcsoló hatástalan (M),
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
@@ -148,7 +148,7 @@ node scripts/browserblock.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] counted…"
 node scripts/count.mjs >"$GATE_LOG" || gate_failed
 `;
-// ── M: the hourly hand-off (ADR-XXXX). Two red browser gates and one green one, two threads: the
+// ── M: the hourly hand-off (ADR-0483). Two red browser gates and one green one, two threads: the
 // hourly runner with CIT_GATE_RED_OUT must judge ALL three (no stop at the first red) and hand over
 // exactly the two red ones, which a direct runner call on that dir re-runs (and nothing else).
 const HOURLY_RED_GATES = String.raw`

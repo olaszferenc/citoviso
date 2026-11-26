@@ -1,4 +1,4 @@
-## ADR-XXXX — Óránkénti böngészős kapuk: kapunkénti alap, minden kapu ítéletet kap, legfeljebb 2 gépi hely
+## ADR-0483 — Óránkénti böngészős kapuk: kapunkénti alap, minden kapu ítéletet kap, legfeljebb 2 gépi hely
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva (tulaj: „Mehet”, 2026-11-26)

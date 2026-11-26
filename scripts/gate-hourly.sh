@@ -12,7 +12,7 @@
 # the gates whose files the landed range touched run.
 #
 #   green → the head becomes the new base; the "alerted" mark is cleared.
-#   red   → PER-GATE BASE (2026-11-26, ADR-XXXX): the runner judges EVERY gate (CIT_GATE_RED_OUT —
+#   red   → PER-GATE BASE (2026-11-26, ADR-0483): the runner judges EVERY gate (CIT_GATE_RED_OUT —
 #           it no longer stops at the first red) and hands over the red ones; the base moves to the
 #           head anyway, and the red gates are kept in $HDIR/red-jobs and re-run EVERY hour on the
 #           current origin/main (range: red_base...head, red_base = where they first went red) until

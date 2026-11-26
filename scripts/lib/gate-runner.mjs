@@ -664,7 +664,7 @@ function browserGate(job) {
 }
 // ── LAND MODE: browser gates run hourly on origin/main, not in the land (see the header, ADR-0446) ──
 const HOURLY = !!process.env.LAND_RANGE && process.env.CIT_GATE_HOURLY === "1";
-// HOURLY KEEP-GOING + RED HAND-OFF (2026-11-26, ADR-XXXX). Measured: one red browser gate kept the
+// HOURLY KEEP-GOING + RED HAND-OFF (2026-11-26, ADR-0483). Measured: one red browser gate kept the
 // hourly base on 2026-11-16 for ten days (477 commits), so EVERY hour re-ran all 92 browser gates for
 // 950–1220 s (a third of the machine) — and, stopping at the first red, never even judged the rest.
 // With CIT_GATE_RED_OUT=<dir> in hourly mode the runner does not stop at a red: every gate runs, and
