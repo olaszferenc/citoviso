@@ -149,7 +149,7 @@ export async function createMultilangOrder(
     };
   }
 
-  // ADR-XXXX: a "[TESZT]" lead's order charges the provider minimum, without the coupon derivation.
+  // ADR-0498: a "[TESZT]" lead's order charges the provider minimum, without the coupon derivation.
   const testCharge = await testChargeForTenant(tenantId, money.currency);
   const order = await db
     .insertInto("order_intent")

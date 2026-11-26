@@ -1,4 +1,4 @@
-// REFUND + STORNO from code (ADR-XXXX) — every paid payment of ONE lead given back in full, its invoices reversed
+// REFUND + STORNO from code (ADR-0498) — every paid payment of ONE lead given back in full, its invoices reversed
 // (src/payment/refund.ts). Dry-run by default: lists what it would do. --go does it.
 //
 // ⛔ A REAL lead's money is a business decision, not a tool run: the tool refuses a lead that is not a

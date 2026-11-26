@@ -1,4 +1,4 @@
-// TEST-LEAD CHARGE (ADR-XXXX, owner 2026-11-26 „Végpróba”: „7 € helyett 0,10 €”).
+// TEST-LEAD CHARGE (ADR-0498, owner 2026-11-26 „Végpróba”: „7 € helyett 0,10 €”).
 //
 // A "[TESZT] …" lead (isTestLeadName — the one marker the owner uses everywhere) is the owner's own
 // walk through the REAL production chain: real gateway, real invoicer, real card. Its orders must not

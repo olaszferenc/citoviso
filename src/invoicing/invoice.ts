@@ -82,7 +82,7 @@ export interface InvoiceProvider {
   readonly name: string;
   issueInvoice(input: InvoiceInput): Promise<InvoiceResult>;
   /**
-   * ADR-XXXX: issue the STORNO (reversing) document of an already issued invoice, dated `date`
+   * ADR-0498: issue the STORNO (reversing) document of an already issued invoice, dated `date`
    * (YYYY-MM-DD). The result is the storno document: its own number, and the amounts as the provider
    * answers them (negative). Throws with the provider's reason. Optional — a provider without it cannot
    * reverse, and the caller says so (never a manual click instead).

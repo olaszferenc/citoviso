@@ -1496,7 +1496,7 @@ async function handleOrderRequest(
     );
     return;
   }
-  // ADR-XXXX: a "[TESZT]" lead's order charges the provider minimum (testCharge.ts) — AFTER the
+  // ADR-0498: a "[TESZT]" lead's order charges the provider minimum (testCharge.ts) — AFTER the
   // client-price check (the configurator shows, and the buyer accepts, the real list figure) and
   // before the twin lookup / the record, which must both see the charged amount. No domain fee and
   // no offer ride on it: the invoice would split and derive them from a price that is not charged.
@@ -1505,7 +1505,7 @@ async function handleOrderRequest(
   if (testCharge !== null) {
     console.log(
       `[console] TESZT-RENDELÉS: a(z) ${formatMinor(price, money.currency)} helyett ${formatMinor(testCharge, money.currency)} ` +
-        `terhelés (a szolgáltató minimuma, ADR-XXXX) — az ársor változatlan`,
+        `terhelés (a szolgáltató minimuma, ADR-0498) — az ársor változatlan`,
     );
   }
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).

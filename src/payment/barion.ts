@@ -446,7 +446,7 @@ export class BarionGateway implements PaymentGateway {
   }
 
   /**
-   * ADR-XXXX: refund a Succeeded payment (POST /v2/Payment/Refund — the request/response shape of the
+   * ADR-0498: refund a Succeeded payment (POST /v2/Payment/Refund — the request/response shape of the
    * official barion-web-php SDK, RefundRequestModel / TransactionToRefundModel / RefundedTransactionModel,
    * read 2026-11-26: PaymentId + TransactionsToRefund[{TransactionId, POSTransactionId, AmountToRefund,
    * Comment}] → RefundedTransactions[{TransactionId, Total, Status, …}]). The transaction id comes from

@@ -147,12 +147,12 @@ export interface PaymentGateway {
   /** ADR-0251: cancel the authorization — the block on the card is lifted, 0 charged. */
   releaseHold?(gatewayRef: string): Promise<boolean>;
   /**
-   * ADR-XXXX: give `total` (MINOR unit of `currency`) of a SUCCEEDED payment back to the payer's card.
+   * ADR-0498: give `total` (MINOR unit of `currency`) of a SUCCEEDED payment back to the payer's card.
    * Never throws: `ok: false` carries the provider's reason. Optional — a gateway without it cannot refund,
    * and the caller says so (never a manual click instead).
    */
   refund?(gatewayRef: string, total: number, currency: string, comment: string): Promise<RefundResult>;
 }
 
-/** ADR-XXXX: the outcome of a refund call. */
+/** ADR-0498: the outcome of a refund call. */
 export type RefundResult = { readonly ok: true; readonly ref: string } | { readonly ok: false; readonly error: string };

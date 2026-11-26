@@ -232,7 +232,7 @@ export class SzamlazzAgent implements InvoiceProvider {
   }
 
   /**
-   * ADR-XXXX: the STORNO document of an issued invoice. Spec (docs.szamlazz.hu/agent/reversing_invoice,
+   * ADR-0498: the STORNO document of an issued invoice. Spec (docs.szamlazz.hu/agent/reversing_invoice,
    * request / xml / response, read 2026-11-26): POST multipart to the same endpoint, field
    * `action-szamla_agent_st`, root `xmlszamlast` (ns http://www.szamlazz.hu/xmlszamlast); children in the
    * fixed order beallitasok (auth, eszamla, szamlaLetoltes, valaszVerzio) → fejlec (szamlaszam, keltDatum,

@@ -148,7 +148,7 @@ export async function createFirstChargeOrder(
     months,
     coupon ? coupon.percent : 0,
   ).total;
-  // ADR-XXXX: a "[TESZT]" lead's upsell charges the provider minimum, without the coupon derivation.
+  // ADR-0498: a "[TESZT]" lead's upsell charges the provider minimum, without the coupon derivation.
   const testCharge = await testChargeForTenant(tenantId, money.currency);
   const charged = testCharge ?? price;
 
@@ -186,7 +186,7 @@ export async function createFirstChargeOrder(
     .executeTakeFirstOrThrow();
   return {
     orderId: row.id,
-    // What is charged (ADR-XXXX: a test lead's minimum), so the bar's „levonva” figure is the card's.
+    // What is charged (ADR-0498: a test lead's minimum), so the bar's „levonva” figure is the card's.
     price: charged,
     listPrice,
     months,

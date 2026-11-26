@@ -239,7 +239,7 @@ export async function twinAlreadyContacted(
       ]),
     )
     .execute();
-  // ADR-XXXX: the owner's own test leads all carry HIS address — one earlier "[TESZT]" walk must not hold
+  // ADR-0498: the owner's own test leads all carry HIS address — one earlier "[TESZT]" walk must not hold
   // the next one (the same exemption as ownerTestPhone.ts). A REAL lead on the same contact still holds it.
   const self = await q.selectFrom("lead").select("name").where("id", "=", leadId).executeTakeFirst();
   const selfIsTest = isTestLeadName(self?.name);

@@ -1,4 +1,4 @@
--- VISSZAUTALÁS (ADR-XXXX, tulaj 2026-11-26 „Végpróba”: „a visszautalás Barion refund kódból … ha erre nincs
+-- VISSZAUTALÁS (ADR-0498, tulaj 2026-11-26 „Végpróba”: „a visszautalás Barion refund kódból … ha erre nincs
 -- kód, az HIÁNY”): a fizetés a szolgáltatónál visszautalható (src/payment/refund.ts), és ez a során látszik:
 --   · status 'refunded' — a pénz visszament a kártyára (nem bevétel);
 --   · refunded_at / refund_amount (minor egység) / refund_ref (a szolgáltató visszautalási azonosítója).

@@ -326,7 +326,7 @@ async function sharedPhoneHold(leadId: string): Promise<string | null> {
 }
 
 /**
- * ADR-XXXX (owner 2026-11-26, „Végpróba”): a "[TESZT]" lead's letter goes to the OWNER's own address
+ * ADR-0498 (owner 2026-11-26, „Végpróba”): a "[TESZT]" lead's letter goes to the OWNER's own address
  * (sendOutreachMail already exempts it from the window, the one-shot and the shared contact). It is
  * no market's letter, so it neither fills a country's daily cap nor the cold ramp's day total — and
  * the tick sends it outside the window and past a full cap (runDispatchTick). The real leads' window
@@ -431,7 +431,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     .execute();
 
   let settings = await getAutoDispatchSettings();
-  // ADR-XXXX: a closed window / a full cap does not end the tick while a "[TESZT]" lead may still go
+  // ADR-0498: a closed window / a full cap does not end the tick while a "[TESZT]" lead may still go
   // (to the owner's own address) — then only test leads are claimed, and the reason is reported when
   // none is waiting.
   let closed: Exclude<TickOutcome, { kind: "off" | "empty" | "done" }> | null = null;
@@ -494,7 +494,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     for (const cand of rows) {
       const iso = cc.get(cand.lead_id) ?? null;
       const known = iso ? countryConfigSync(iso) : null;
-      // ADR-XXXX: a test lead goes whatever its country's window / cap; with everything closed, only it.
+      // ADR-0498: a test lead goes whatever its country's window / cap; with everything closed, only it.
       if (!isTestLeadName(cand.lead_name) && (closed || (known && !open.has(known.iso2)))) continue;
       const row = await trx
         .selectFrom("outreach_dispatch")

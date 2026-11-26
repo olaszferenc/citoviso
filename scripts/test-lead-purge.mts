@@ -1,4 +1,4 @@
-// PURGE ONE "[TESZT]" LEAD'S WHOLE CHAIN, WITH A BACKUP (ADR-XXXX, owner 2026-11-26 „Végpróba … 7. Takarítás:
+// PURGE ONE "[TESZT]" LEAD'S WHOLE CHAIN, WITH A BACKUP (ADR-0498, owner 2026-11-26 „Végpróba … 7. Takarítás:
 // mentés /opt/citoviso/backups/hr-vegproba-<ts>/-be, majd az összes [TESZT] adat törlése”; the 2026-10-04
 // Muschel clean-up was the same thing by hand).
 //

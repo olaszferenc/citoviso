@@ -1,5 +1,5 @@
 // Gate: a "[TESZT]" lead's orders charge the payment provider's MINIMUM, a real lead's never
-// (ADR-XXXX, owner 2026-11-26 „Végpróba … 7 € helyett 0,10 €”). The owner walks the real production
+// (ADR-0498, owner 2026-11-26 „Végpróba … 7 € helyett 0,10 €”). The owner walks the real production
 // chain with a real card; the price sheet must not be rewritten for it, and a real buyer must never
 // get the minimum.
 //

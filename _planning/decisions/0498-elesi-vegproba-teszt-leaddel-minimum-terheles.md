@@ -1,4 +1,4 @@
-## ADR-XXXX — Élesi végpróba [TESZT]-leaddel: minimum-terhelés, ablak- és keret-kivétel, visszautalás és sztornó kódból
+## ADR-0498 — Élesi végpróba [TESZT]-leaddel: minimum-terhelés, ablak- és keret-kivétel, visszautalás és sztornó kódból
 
 - **Dátum:** 2026-11-26 (este)
 - **Státusz:** elfogadva (tulaj „Végpróba” 22:08; „7 € helyett 0,10 €”, „a küldési ablakot CSAK a [TESZT] leadekre … ma este”, a koordinátoron át, `cit9b4690e3`)

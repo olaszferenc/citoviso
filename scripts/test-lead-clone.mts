@@ -1,4 +1,4 @@
-// [TESZT] CLONE OF A REAL LEAD (ADR-XXXX, owner 2026-11-26 „Végpróba”) — the owner's live walk of the WHOLE
+// [TESZT] CLONE OF A REAL LEAD (ADR-0498, owner 2026-11-26 „Végpróba”) — the owner's live walk of the WHOLE
 // production chain (approval page → send → mock → trial → payment → admin) on a copy of a real, chain-found
 // lead, without the real lead ever being touched or contacted.
 //

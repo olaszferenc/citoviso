@@ -1179,11 +1179,11 @@ export interface PaymentTable {
   /** ADR-0251 (0077): `reserved` = the gateway holds the amount while the domain is
    *  being registered; `released` = the hold was given back (nothing charged). */
   status: Generated<"pending" | "paid" | "failed" | "cancelled" | "reserved" | "released" | "refunded">;
-  /** ADR-XXXX (0159): the money went back to the card (payment/refund.ts). */
+  /** ADR-0498 (0159): the money went back to the card (payment/refund.ts). */
   refunded_at: Timestamp | null;
-  /** ADR-XXXX (0159): the refunded amount, minor unit of `currency`. */
+  /** ADR-0498 (0159): the refunded amount, minor unit of `currency`. */
   refund_amount: number | null;
-  /** ADR-XXXX (0159): the provider's refund reference (Barion: the refund transaction id). */
+  /** ADR-0498 (0159): the provider's refund reference (Barion: the refund transaction id). */
   refund_ref: string | null;
   /** ADR-0251 (0077): this pay-link asked for a HOLD (Reservation), not a charge. */
   reservation: Generated<boolean>;

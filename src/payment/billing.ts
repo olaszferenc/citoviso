@@ -380,7 +380,7 @@ async function findOrCreateRenewalOrder(
     );
   }
 
-  // ADR-XXXX: a "[TESZT]" lead renews at the provider minimum — no domain line, no coupon derivation.
+  // ADR-0498: a "[TESZT]" lead renews at the provider minimum — no domain line, no coupon derivation.
   const testCharge = await testChargeForTenant(sub.tenantId, sub.currency);
   const total = price + domainFee;
   const charged = testCharge ?? total;

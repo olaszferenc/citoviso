@@ -69,7 +69,7 @@ export class MockGateway implements PaymentGateway {
     return true;
   }
 
-  /** ADR-XXXX: the mock moved no money, so a refund always succeeds. MOCK_REFUND_FAIL=1 forces the failure. */
+  /** ADR-0498: the mock moved no money, so a refund always succeeds. MOCK_REFUND_FAIL=1 forces the failure. */
   async refund(gatewayRef: string, total: number, currency: string, _comment: string): Promise<RefundResult> {
     if (process.env.MOCK_REFUND_FAIL === "1") return { ok: false, error: "kényszerített hiba (MOCK_REFUND_FAIL)" };
     console.log(`[payment:mock] visszautalás · ${gatewayRef} · ${total} ${currency}`);

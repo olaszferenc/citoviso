@@ -1,4 +1,4 @@
-// [TESZT] CLONE + THE DISPATCH TICK FOR TEST LEADS (ADR-XXXX, owner 2026-11-26 „Végpróba”) — on a SCRATCH
+// [TESZT] CLONE + THE DISPATCH TICK FOR TEST LEADS (ADR-0498, owner 2026-11-26 „Végpróba”) — on a SCRATCH
 // database (scripts/lib/hr-world.mts: one Croatian lead, real engine mock, mock mail/payment), nothing leaves
 // the machine.
 //

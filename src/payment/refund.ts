@@ -1,4 +1,4 @@
-// REFUND + STORNO (ADR-XXXX, owner 2026-11-26 „Végpróba”: „a visszautalás Barion refund kódból … majd sztornó
+// REFUND + STORNO (ADR-0498, owner 2026-11-26 „Végpróba”: „a visszautalás Barion refund kódból … majd sztornó
 // számla. Ha erre nincs kód, az HIÁNY: megírod, nem kézzel kattintod.”).
 //
 // One paid payment is given back in full: the gateway refunds it to the payer's card (gateway.refund), the
