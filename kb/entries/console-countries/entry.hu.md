@@ -153,8 +153,10 @@ Az ország **„Ország”** fülén az **„Adatok szerkesztése”** link nyit
   a sor zöld: *„EUR pénztárca megvan (barion)”*.
 - **Nyelv.** Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy. A lap a
   vevő-oldali feliratokat számolja (a konzol saját feliratai nem számítanak, azok magyarul
-  maradnak). Ha egy is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi
-  — itt csak a teljességet látod.
+  maradnak). Ha valami hiányzik, a sor sárga, de nem zár: a piac nyitva marad. Csak az az egy
+  levél vagy mock vár („Bábelre vár”), amelynek a saját szövegéből hiányzik a fordítás — a többi
+  megy. Neked nincs teendőd: a fordítást Bábel végzi, itt csak a teljességet látod. Zár csak
+  akkor, ha az országnak nincs alapnyelve.
 - **Jog.** Az ország jogi csomagja az ország nyelvén (ÁSZF, elállás, adatkezelés, DPA,
   impresszum, süti, a megkeresés jogi bekezdése, leiratkozó). Franciaországban és
   Portugáliában a **„Fogyasztói vitarendező”** is megjelenik: ha nincs beállítva,
