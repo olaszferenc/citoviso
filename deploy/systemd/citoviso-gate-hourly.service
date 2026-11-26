@@ -14,8 +14,11 @@ User=citoviso
 WorkingDirectory=/home/citoviso/citoviso
 ExecStart=/bin/bash /home/citoviso/citoviso/scripts/gate-hourly.sh
 # A teljes böngészős kör terhelés alatt percekig tart; a futtató kapunkénti csend-korlátja (900 s)
-# a beragadást már kezeli — ez csak végső plafon.
-TimeoutStartSec=3600
+# a beragadást már kezeli — ez csak végső plafon. 3 óra (2026-11-26, ADR-0483 után): a kapunkénti alap
+# első, felzárkózó futása MINDEN böngészős kapura ítéletet ad 2 szálon (mérve 27 commiton 2488 s,
+# 512 commiton > 1 óra) — a 3600 s-os plafon minden órában félbe vágta, eredmény nélkül, és a futás
+# így sosem lépett tovább. A timer közben nem indít újat (oneshot), utána a futások percesek.
+TimeoutStartSec=10800
 # Alacsonyabb prioritás: a sessionök munkáját ne lassítsa.
 Nice=10
 IOSchedulingClass=idle
