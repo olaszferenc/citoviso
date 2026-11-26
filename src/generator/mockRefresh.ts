@@ -29,6 +29,7 @@ import { persistMockLanguage, renderMockMeasured } from "./mockLanguage.js";
 import { secureMockPhotos } from "./photoTransport.js";
 import { curateMockPhotos } from "./photoCurate.js";
 import { getHeroPin } from "./heroOverride.js";
+import { accentFromPhotoUrls } from "../media/photoAccent.js";
 
 export interface RefreshRow {
   readonly id: string;
@@ -88,6 +89,12 @@ export async function refreshMock(row: RefreshRow, opts: { readonly backupDir?: 
       gateChanged = true;
     }
   }
+  // §B.6 (owner 2026-11-26): a mock without its own accent gets one from its photos here, so the waiting
+  // stock recolours itself — the skin's accent stays only when the photos carry no colour of their own.
+  if (!siteData.palette?.accent && (siteData.photos?.length ?? 0) > 0) {
+    const accent = await accentFromPhotoUrls((siteData.photos ?? []).map((p) => p.url)).catch(() => null);
+    if (accent) siteData = { ...siteData, palette: { accent } };
+  }
   const depth = await withDepthArm(siteData, { leadId: String(row.lead_id), artifactId: String(row.id), template: recipe.template });
   siteData = depth.siteData;
   const { html, language } = await renderMockMeasured(recipe, siteData, { phase: "mock" });
@@ -121,7 +128,9 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     // Not the rows a person or a rule took out (twins, no contact …): only those waiting for the review chain.
     .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
-    .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
+    // Since qafix7 (11-26 night) the TOWN-PAGE mocks (<5 own photos, town picture) are refreshed too: the HU
+    // row's own_town branch is open, and a stamp bump otherwise strands them (not current, never refreshed).
+    .where(sql<boolean>`(${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} or a.inputs->'siteData'->'townPhoto' is not null)`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
     // A half-done offer first (owner 2026-11-26): a lead with one plan already passed by the colleague.
@@ -182,7 +191,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where("d.status", "in", ["queued", "held"])
     .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
-    .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
+    .where(sql<boolean>`(${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} or a.inputs->'siteData'->'townPhoto' is not null)`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
     .executeTakeFirst();

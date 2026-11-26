@@ -7,6 +7,7 @@ import { ARCHETYPES, type RenderedSection } from "./archetypes.js";
 import { CHROME_CSS, renderFooter, renderNav } from "./chrome.js";
 import { EMPHASIS_CSS, PRIMITIVE_CSS, PRIMITIVES } from "./primitives.js";
 import { isSampleOnly, type Photo, type Recipe, type RenderPhase, type SiteData } from "./recipe.js";
+import { repeatsText } from "../text/textOverlap.js";
 import { renderSeoHead, seoTitle } from "./seo.js";
 import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
@@ -14,7 +15,7 @@ import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
 import { amenityIconSvg } from "./amenityIcon.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
-import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
+import { copyOf, esc, firstSentence, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
 import { isStockPhoto, stockGallery, stockHeroBackdrop, stockUrl, styledStockLibrary } from "./stock.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
@@ -859,6 +860,63 @@ function withStockFill(data: SiteData): SiteData {
  * page's only `photos` entry for this render, so the template's own hero and the gallery pick it
  * up, and the stock fill counts one picture. The stored data never carries it in `photos`.
  */
+/**
+ * Page lines in reading order — H1, the intro's first sentence, the „Nálunk” heading, the band caption (tagline),
+ * the gallery heading, the highlights — and the LATER of two repeating lines is dropped: the features title and
+ * the gallery title leave the recipe copy, the tagline and the repeating highlights leave the data. The intro's
+ * first sentence is never dropped (it is the intro); it only counts as an earlier line.
+ */
+function withoutRepeatedLines(recipe: Recipe, data: SiteData): { recipe: Recipe; data: SiteData } {
+  const proper = [data.name, data.place?.city ?? "", data.contact?.address ?? ""].filter(Boolean);
+  const heroLead = copyOf(recipe, "hero").lead ?? "";
+  const h1 = heroLead || data.tagline || data.name;
+  const kept: string[] = [h1];
+  const sub = firstSentence(data.intro);
+  if (sub) kept.push(sub);
+  const repeats = (line: string): boolean => kept.some((k) => repeatsText(k, line, proper));
+  const keep = (line: string | undefined): boolean => {
+    if (!line || !line.trim()) return true;
+    if (repeats(line)) return false;
+    kept.push(line);
+    return true;
+  };
+  let sections = recipe.sections;
+  const dropCopy = (kind: string): void => {
+    sections = sections.map((sec) => {
+      if (sec.kind !== kind || !sec.copy?.title) return sec;
+      const { title: _t, accent: _a, ...rest } = sec.copy;
+      return { ...sec, copy: rest };
+    });
+  };
+  if (!keep(copyOf(recipe, "features").title)) dropCopy("features");
+  let out = data;
+  // The band's caption is the tagline only when it is not the H1 already (the templates skip that case themselves).
+  if (data.tagline && data.tagline !== h1 && !keep(data.tagline)) out = { ...out, tagline: "" };
+  if (!keep(copyOf(recipe, "gallery").title)) dropCopy("gallery");
+  const highlights = (data.highlights ?? []).filter((h) => keep(h));
+  if (highlights.length !== (data.highlights ?? []).length) out = { ...out, highlights };
+  return { recipe: sections === recipe.sections ? recipe : { ...recipe, sections }, data: out };
+}
+
+/** The lodging's own photos on the page (not stock, not the town's hero). */
+function ownPhotoCount(data: SiteData): number {
+  return data.photos.filter((p) => !isStockPhoto(p) && p.url !== data.townPhoto?.url).length;
+}
+
+/** No own photo → the gallery's editorial heading / eyebrow give way to the neutral „Galéria” (see renderSite). */
+function withNeutralGalleryHeading(recipe: Recipe, data: SiteData): Recipe {
+  if (ownPhotoCount(data) > 0) return recipe;
+  const neutral = T(data, "Galéria");
+  let changed = false;
+  const sections = recipe.sections.map((s) => {
+    if (s.kind !== "gallery" || (!s.copy?.title && !s.copy?.eyebrow)) return s;
+    changed = true;
+    const { title: _t, eyebrow: _e, accent: _a, ...rest } = s.copy ?? {};
+    return { ...s, copy: { ...rest, title: neutral } };
+  });
+  return changed ? { ...recipe, sections } : recipe;
+}
+
 function withTownHero(data: SiteData): SiteData {
   const t = data.townPhoto;
   if (!t || data.photos.some((p) => p.url === t.url)) return data;
@@ -1125,6 +1183,15 @@ export function renderSite(
   // image slots are filled with watermarked stock illustrations — gallery + room cards only.
   // Owner 2026-11-16: the same fill on the live page — what the mock promised is what the trial shows.
   data = withStockFill(withTownHero(data));
+  // A gallery that opens with the TOWN's picture or a sample (no own photo of the lodging at all) must not carry
+  // the writer's heading about the lodging's photos („Fotók az apartmanról” over the Balatonfüred fountain —
+  // quality colleague 2026-11-26, plan kepnelkuli-hero: a neutral heading and the sample sentence). One place,
+  // every template: the editorial gallery copy is replaced by the neutral „Galéria”.
+  recipe = withNeutralGalleryHeading(recipe, data);
+  // The same statement must not stand on the page twice (owner 2026-11-26, Monos): in page order the H1 keeps
+  // its line, and a later heading / band caption / highlight that repeats an earlier one is dropped — one
+  // place, every template, at render time (so the refresh fixes the stock too). text/textOverlap.ts measures.
+  ({ recipe, data } = withoutRepeatedLines(recipe, data));
   // ADR-0059 ③ on the mock: real-but-photoless rooms borrow a gallery photo (marked),
   // so no card is left as a bare icon panel next to a page full of real imagery.
   if (phase === "mock" && data.rooms?.length) data = { ...data, rooms: roomsForMock(data) };

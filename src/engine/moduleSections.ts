@@ -662,6 +662,9 @@ export function notShownYet(d: SiteData, items: readonly string[]): string[] {
   });
 }
 
+/** The fewest cards a separate facilities block may stand on when the page's highlights already show facilities. */
+export const SAMPLE_AMENITY_MIN = 4;
+
 function amenitiesSampleBlock(d: SiteData): string {
   // Never an item the page already shows (11-26, quality colleague, 31/31 plans: Jázmin's highlights and
   // Kevikincses' about chips came back in „Amit kínálunk”) — the same text, or the same facility kind (icon) —
@@ -673,6 +676,10 @@ function amenitiesSampleBlock(d: SiteData): string {
   if (!items.length && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null)) return "";
   // Every sourced item is already on the page → no block (no repeat, no empty frame).
   if (!items.length && (d.sampleAmenities ?? []).length) return "";
+  // A stub of 1–3 cards next to a page that already shows its facilities („Egy pillantásra”, ADR-0486: the module's
+  // surface on the mock) is a near-empty section, not a module (owner 2026-11-26, Lila Central: two cards and a
+  // 190 px hole above the price table). Fewer than SAMPLE_AMENITY_MIN items → the native grid is the surface.
+  if (items.length && items.length < SAMPLE_AMENITY_MIN && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null)) return "";
   // Nothing sourced: the module still SHOWS (ADR-0061 all-in — a module the lead buys may
   // not be silent), as its frame with no item in it, and the note says so — the pricing
   // sample's pattern („ezen az előnézeten szándékosan nincs egyetlen ár sem”).
@@ -1444,9 +1451,11 @@ export function moduleSectionGroups(
           // (owner order 2026-08-27); free-text falls back to the keyword matcher.
           // On the MOCK: only what the page does not show yet (Laura, BaBo 11-26: „Légkondicionálás”, „Grillezési
           // lehetőség” word for word under „Egy pillantásra” and again here) — nothing new → no block.
-          ((items) => (items.length ? listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t, d.amenityIconMap)) : ""))(
-            opts.demo ? notShownYet(d, d.amenities) : [...d.amenities],
-          )
+          ((items) =>
+            items.length &&
+            !(opts.demo && items.length < SAMPLE_AMENITY_MIN && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null))
+              ? listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t, d.amenityIconMap))
+              : "")(opts.demo ? notShownYet(d, d.amenities) : [...d.amenities])
         : s.has("amenities")
           ? amenitiesSampleBlock(d)
           : "",

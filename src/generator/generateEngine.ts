@@ -22,6 +22,7 @@ import { planRecipe, withArchetype } from "../engine/planner.js";
 import type { Recipe, RecipeSection, Room, SiteData, Stat } from "../engine/recipe.js";
 import { getDisabledModules, sampleDenyKeys } from "../moduleSales.js";
 import { parseHex } from "../engine/palette.js";
+import { accentFromPhotoUrls } from "../media/photoAccent.js";
 import { leadToSiteData, toSitePhotos } from "../engine/siteData.js";
 import { SKINS } from "../engine/skins.js";
 import { pickTemplateSkin, TEMPLATES } from "../engine/templates.js";
@@ -722,9 +723,11 @@ async function generateEngineMockInner(
           },
         }
       : {}),
-    // §B.6: photo-derived per-property accent from the brief (validated HEX). Persisted so the
-    // live re-render reproduces it (mock=live); harmonized into the skin's rails at render time.
-    ...(brief && parseHex(brief.palette.accent) ? { palette: { accent: brief.palette.accent } } : {}),
+    // §B.6: photo-derived per-property accent — from the AI brief when it carries a HEX, else sampled
+    // LOCALLY from the property's own photos (media/photoAccent.ts, $0; owner 2026-11-26: every cold mock
+    // wore its skin's stock accent). Persisted so the live re-render reproduces it (mock=live);
+    // harmonized into the skin's rails at render time.
+    ...(await ownAccentOf(brief?.palette.accent, photos.map((p) => p.url))),
     // REAL rooms when the listing publishes them — the mock then shows the property's
     // own units instead of numbered samples (§B.17: source = the scraper's structured
     // portal field, nothing inferred). Only the NAMES/capacities are real; the room
@@ -1006,4 +1009,12 @@ export async function generateEngineMockFor(
 ): Promise<EngineGenerateResult> {
   const loaded = await loadLead(idOrName);
   return generateEngineMock(loaded, regionId, opts);
+}
+
+
+/** §B.6: the mock's own accent — the brief's HEX if valid, else the dominant vivid hue of its photos; {} when neither. */
+async function ownAccentOf(briefAccent: string | undefined, photoUrls: readonly string[]): Promise<{ palette?: { accent: string } }> {
+  if (briefAccent && parseHex(briefAccent)) return { palette: { accent: briefAccent } };
+  const sampled = photoUrls.length ? await accentFromPhotoUrls(photoUrls).catch(() => null) : null;
+  return sampled ? { palette: { accent: sampled } } : {};
 }

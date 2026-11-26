@@ -29,7 +29,17 @@ export interface PhotoText {
 export const TEXT_MIN_CONFIDENCE = 75;
 /** Width the photo is read at (a date stamp is ~2 % of the width: still legible). */
 const READ_WIDTH = 1280;
-const DATE_RE = /(?:19|20)\d{2}\s?[/.\-]\s?\d{1,2}\s?[/.\-]\s?\d{1,2}|\d{1,2}\s?[/.\-]\s?\d{1,2}\s?[/.\-]\s?(?:19|20)\d{2}/;
+// A camera date stamp: numeric (2011/08/26, 26.08.2011) or with a month name in either order (Janka Villa,
+// 2026-11-26: „2021. aug. 13.” on a band photo passed every slot — the stamp was read, the pattern did not know
+// month names). Hungarian and English abbreviations, with or without the dot.
+const MONTH = "(?:jan|feb|m[áa]r|[áa]pr|m[áa]j|may|j[úu]n|j[úu]l|aug|sze?pt?|sep|okt|oct|nov|dec)[a-záéíóöőúüű]*\\.?";
+const DATE_RE = new RegExp(
+  `(?:19|20)\\d{2}\\s?[/.\\-]\\s?\\d{1,2}\\s?[/.\\-]\\s?\\d{1,2}` +
+    `|\\d{1,2}\\s?[/.\\-]\\s?\\d{1,2}\\s?[/.\\-]\\s?(?:19|20)\\d{2}` +
+    `|(?:19|20)\\d{2}\\.?\\s?${MONTH}\\s?\\d{1,2}\\b` +
+    `|\\b\\d{1,2}\\.?\\s?${MONTH}\\s?(?:19|20)\\d{2}`,
+  "i",
+);
 
 function langDir(): string {
   return path.resolve(process.cwd(), path.dirname(config.photoKindModelPath), "tessdata");

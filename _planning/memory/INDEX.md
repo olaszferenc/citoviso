@@ -17,6 +17,7 @@
 - [2026-11-26_kivezetett_sablon_kapu.md](2026-11-26_kivezetett_sablon_kapu.md) — 2026-11-26 — Kivezetett sablon: kiküldési és próba-kapu (+ Freedom 50 új tervek)
 - [2026-11-26_fooldal-ar-orszag-szerint.md](2026-11-26_fooldal-ar-orszag-szerint.md) — 2026-11-26 — A főoldal ára a látogató országából, a nyelve a böngészőből (ADR-0490)
 - [2026-11-26_eles_konzol_gyorsitas.md](2026-11-26_eles_konzol_gyorsitas.md) — 2026-11-26 — Éles konzol gyorsítása (35 mp → 0,3 mp)
+- [2026-11-26_ejszakai_szabaly_csomag.md](2026-11-26_ejszakai_szabaly_csomag.md) — 2026-11-26 éjjel — Első szabály-kör ADR-0495 után (tulaj + mintavételes kolléga jelzéseiből)
 - [2026-11-26_bongeszo-mcp-lusta-inditas.md](2026-11-26_bongeszo-mcp-lusta-inditas.md) — 2026-11-26 — Böngésző- és térkép-MCP csak ott fut, ahol használják (lusta indító)
 - [2026-11-25_modem-sim-minerealnak.md](2026-11-25_modem-sim-minerealnak.md) — 2026-11-25 — A modem-SIM a MineREAL-é: Citoviso SMS/MMS ki, MineREAL-konzol szűrése
 - [2026-11-25_kepnelkuli_hero_megvalositas.md](2026-11-25_kepnelkuli_hero_megvalositas.md) — 2026-11-25 — Kép nélküli és kevés képes lead: településkép-tár (megvalósítás, `cit561ec018`)

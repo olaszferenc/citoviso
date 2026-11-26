@@ -41,6 +41,7 @@ import { config } from "../config.js";
 import { db } from "../db/client.js";
 import { countryConfigSync, countryOfLead } from "../country.js";
 import { isSamePicture, sizelessPhotoKey } from "../engine/samePicture.js";
+import { repeatsText } from "../text/textOverlap.js";
 import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
@@ -51,7 +52,14 @@ import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 13;
+export const RENDER_GATE_VERSION = 14;
+/**
+ * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty
+ * (a background that never painted, a section whose content is missing — the §B no-JS empty-band case). The
+ * templates' own rhythm stays under it (measured 11-26 on the 18 sample mocks: wordmark-grow's tallest run is
+ * 286 px); a thin SECTION (two cards and padding) is not a band and is handled by the generator's own rules.
+ */
+export const PAGE_MAX_GAP_PX = 400;
 
 /**
  * The opening screen's top part must carry a picture, not a near-blank band (coordinator 2026-11-25, Igal: an
@@ -86,7 +94,7 @@ const QUIET_MS = 500;
 /** Vision subjects that never belong on a lodging page shown to its owner. */
 const FORBIDDEN_SUBJECTS = new Set(["ad_banner", "sign_map", "people_doc", "toilet"]);
 
-export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render" | "thin";
+export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render" | "thin" | "gap";
 
 export interface RenderFinding {
   readonly code: RenderFindingCode;
@@ -126,6 +134,13 @@ interface PageMeasure {
   readonly brokenWords: string[];
   /** The desktop first screen = the letter's picture (filled by auditMockFile, not by MEASURE_JS). */
   readonly desktopBrokenWords?: string[];
+  /** The tallest ink-free vertical run (CSS px) and where it starts. */
+  readonly maxGap?: number;
+  readonly gapAt?: number;
+  /** Visible headings / captions in page order. */
+  readonly texts?: { text: string; mod: string; y: number }[];
+  /** The page title (the lodging's and the town's name): proper names for the text-repeat rule. */
+  readonly title?: string;
 }
 
 const fileOf = (u: string): string => decodeURIComponent(photoUrlKey(u).split("/").pop() ?? u);
@@ -212,7 +227,36 @@ const MEASURE_JS = `(() => {
     }
     if (brokenWords.length >= 5) break;
   }
-  return { slots, broken, scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wideText, brokenWords };
+  // THE LARGEST HOLE: the biggest vertical run of the page with no ink at all (no text, no picture, no
+  // background image) — an empty band or a near-empty section (owner 2026-11-26, §B 6c: no dead bands).
+  const ink = [];
+  for (const el of Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6,p,li,a,span,img,svg,figure,button,td,th,dt,dd,blockquote,figcaption,label,input,select,textarea,em,strong,small,time"))) {
+    if (!shown(el)) continue;
+    if (el.tagName !== "IMG" && el.tagName !== "SVG" && !(el.textContent || "").trim() && !["INPUT","SELECT","TEXTAREA"].includes(el.tagName)) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    ink.push({ top: r.top + scrollY, bottom: r.bottom + scrollY });
+  }
+  for (const sl of slots) ink.push({ top: sl.y, bottom: sl.y + sl.h });
+  ink.sort((a, b) => a.top - b.top);
+  let reach = 0;
+  let maxGap = 0;
+  let gapAt = 0;
+  for (const k of ink) {
+    if (k.top - reach > maxGap) { maxGap = Math.round(k.top - reach); gapAt = Math.round(reach); }
+    if (k.bottom > reach) reach = k.bottom;
+  }
+  // Visible headings and captions, in page order — the text-repeat rule reads them (text/textOverlap.ts).
+  const texts = [];
+  for (const el of Array.from(document.querySelectorAll("h1,h2,h3,.t-quote,figcaption,blockquote"))) {
+    if (!shown(el)) continue;
+    const t = (el.textContent || "").trim().replace(/\s+/g, " ");
+    if (t.length < 8) continue;
+    const r = el.getBoundingClientRect();
+    texts.push({ text: t.slice(0, 160), mod: modOf(el), y: Math.round(r.top + scrollY) });
+    if (texts.length >= 40) break;
+  }
+  return { slots, broken, scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wideText, brokenWords, maxGap, gapAt, texts, title: document.title || "" };
 })()`;
 
 /**
@@ -236,7 +280,7 @@ export async function auditMockFile(
   mockAbs: string,
   town: TownUrls = { gallery: [] },
   /** 0155: the lead's country row's dispatch_stock_ok — false = a marked sample in a gallery / room slot fails too. */
-  opts: { readonly stockOk?: boolean } = {},
+  opts: { readonly stockOk?: boolean; /** The lodging's and the town's names: never a repeat by themselves. */ readonly proper?: readonly string[] } = {},
 ): Promise<Omit<RenderGateResult, "mtime" | "at" | "version">> {
   const isTown = (u: string): boolean => (town.hero != null && sizelessPhotoKey(u) === sizelessPhotoKey(town.hero)) || town.gallery.some((g) => sizelessPhotoKey(g) === sizelessPhotoKey(u));
   const photos = createPhotoCache();
@@ -379,6 +423,25 @@ export async function auditMockFile(
 
   const findings: RenderFinding[] = [];
   const slots = measure.slots;
+  // The same statement twice on the page (owner 2026-11-26, Monos): any two visible headings / captions that
+  // repeat each other — proper names stripped, the hero subtitle ↔ intro pair excepted by the templates' design.
+  {
+    const lines = (measure.texts ?? []).sort((a, b) => a.y - b.y);
+    const proper = [...(opts.proper ?? []), measure.title ?? ""].filter(Boolean);
+    const seen: { text: string; mod: string }[] = [];
+    let reported = 0;
+    for (const l of lines) {
+      const dup = seen.find((k) => repeatsText(k.text, l.text, proper));
+      if (dup && reported < 3) {
+        findings.push({ code: "repeat", detail: `ismétlődő szöveg: „${dup.text.slice(0, 50)}” ↔ „${l.text.slice(0, 50)}” (${dup.mod}, ${l.mod})` });
+        reported++;
+      }
+      seen.push({ text: l.text, mod: l.mod });
+    }
+  }
+  if ((measure.maxGap ?? 0) > PAGE_MAX_GAP_PX) {
+    findings.push({ code: "gap", detail: `üres sáv a lapon: ${measure.maxGap} px tartalom nélkül (${measure.gapAt} px-től; legfeljebb ${PAGE_MAX_GAP_PX})` });
+  }
   if (heroLightShare >= HERO_MAX_LIGHT_SHARE) {
     findings.push({ code: "thin", detail: `a nyitóképernyő szinte üres (${Math.round(heroLightShare * 100)}% világos, kép nélkül)` });
   }
@@ -402,7 +465,9 @@ export async function auditMockFile(
   }
   const groups: Slot[][] = [];
   for (const s of slots) {
-    const g = groups.find((gr) => gr.some((o) => photoUrlKey(o.u) === photoUrlKey(s.u) || isSamePicture(hashOf.get(o.u), hashOf.get(s.u))));
+    const g = groups.find((gr) =>
+      gr.some((o) => photoUrlKey(o.u) === photoUrlKey(s.u) || sizelessPhotoKey(o.u) === sizelessPhotoKey(s.u) || isSamePicture(hashOf.get(o.u), hashOf.get(s.u))),
+    );
     if (g) g.push(s);
     else groups.push([s]);
   }
@@ -600,13 +665,14 @@ export async function renderGateFor(artifactId: string): Promise<RenderGateResul
   if (cached) return cached;
   let result: RenderGateResult;
   try {
-    const sd = (a.inputs as { siteData?: { townPhoto?: { url?: string; pick?: { tier?: "town" | "land" | "region" } }; townGallery?: { url?: string }[] } } | null)?.siteData;
+    const sd = (a.inputs as { siteData?: { name?: string; city?: string; townPhoto?: { url?: string; pick?: { tier?: "town" | "land" | "region" } }; townGallery?: { url?: string }[] } } | null)?.siteData;
+    const proper = [sd?.name ?? "", sd?.city ?? ""].filter(Boolean);
     const town: TownUrls = {
       ...(sd?.townPhoto?.url ? { hero: sd.townPhoto.url } : {}),
       ...(sd?.townPhoto?.pick?.tier ? { heroTier: sd.townPhoto.pick.tier } : {}),
       gallery: (sd?.townGallery ?? []).map((t) => t.url).filter((u): u is string => typeof u === "string"),
     };
-    const r = await auditMockFile(mockAbs, town, { stockOk });
+    const r = await auditMockFile(mockAbs, town, { stockOk, proper });
     result = { version: RENDER_GATE_VERSION, mtime, at: now, ...r, ...(stockOk ? {} : { stockOk }) };
   } catch (e) {
     // Not stored: a crashed browser is our gap, the next send attempt renders again.
