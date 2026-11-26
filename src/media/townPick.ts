@@ -460,6 +460,38 @@ export async function settlementAtPoint(lat: number, lon: number): Promise<strin
   return name;
 }
 
+/**
+ * Does a SETTLEMENT of this name lie within `km` of the point, in the given country (Nominatim search, OSM's
+ * own service: ≤ 1 req/s, cached)? The town-name check of the town-picture step (2026-11-26): a city field
+ * holding an address fragment („Ajtó”, „277-es számú ajtó”, „Ntak: Sz…”) names no settlement there.
+ * null = the service did not answer (unknown — the caller must not act on it).
+ */
+const namedMemo = new Map<string, boolean | null>();
+export async function settlementNamed(name: string, country: string, lat: number, lon: number, km = 25): Promise<boolean | null> {
+  const key = `${country}|${fold(name)}|${lat.toFixed(2)}|${lon.toFixed(2)}`;
+  if (namedMemo.has(key)) return namedMemo.get(key)!;
+  if (!name.trim()) return false;
+  const wait = lastGeocode + 1100 - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastGeocode = Date.now();
+  let hit: boolean | null = null;
+  try {
+    const q = new URLSearchParams({ format: "jsonv2", q: name, countrycodes: country.toLowerCase(), featureType: "settlement", limit: "10" });
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?${q}`, {
+      headers: { "User-Agent": "citoviso-scraper/0.1 (+https://github.com/olaszferenc/citoviso)", Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (r.ok) {
+      const rows = (await r.json()) as { lat: string; lon: string }[];
+      hit = rows.some((x) => kmBetween({ lat, lon }, { lat: Number(x.lat), lon: Number(x.lon) }) <= km);
+    }
+  } catch {
+    hit = null;
+  }
+  if (hit !== null) namedMemo.set(key, hit);
+  return hit;
+}
+
 const fold = (x: string): string => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 // ── the style of the place (which sample rooms fit) ───────────────────────────
