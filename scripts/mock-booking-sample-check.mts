@@ -256,7 +256,9 @@ if (SELFTEST) {
     }
     return out;
   };
-  const NO_PRICE = sab(mockHtml, "rows: [{ base: true, amount: 24000 + idx * 4000 }]", "rows: []", "minta-árlista kivéve");
+  // The sample row in whatever currency the page carries (ADR-0461, country layer 3/9: the amount
+  // comes from a per-currency table since 6b5e487c) — the sabotage empties the list, not one figure.
+  const NO_PRICE = sab(mockHtml, /rows: \[\{ base: true, amount: [^}]+\}\]/, "rows: []", "minta-árlista kivéve");
   const FLAT_RECEIPT = sab(
     NO_PRICE,
     '(askMode ? tr("Így néz ki, amikor a vendége árajánlatot kér") : tr("Így néz ki, amikor a vendége foglal"))',
@@ -271,8 +273,9 @@ if (SELFTEST) {
       sab(
         sab(mockHtml, '(demo ? tr("Minta-ár") : tr("Az ár"))', 'tr("Az ár")', "minta-cím kivéve"),
         // Drop only the demo branch: whatever follows it (ADR-0393 added a multi-room branch
-        // in front of q.perStay) becomes the basis line, as on a real-price page.
-        /var basis = demo && multi\s*\? tr\("A minta-ár szobánként[^"]*"\)\s*: demo\s*\? tr\("A minta-ár a TELJES SZÁLLÁSRA[^"]*"\)\s*: /,
+        // in front of q.perStay) becomes the basis line, as on a real-price page. The basis
+        // sentence names the guest count since the plural-aware trn() (tr or trn, both match).
+        /var basis = demo && multi\s*\? trn?\("A minta-ár szobánként[^"]*"(?:, \w+)?\)\s*: demo\s*\? trn?\("A minta-ár a TELJES SZÁLLÁSRA[^"]*"(?:, \w+)?\)\s*: /,
         "var basis = ",
         "minta-alap sor kivéve",
       ),

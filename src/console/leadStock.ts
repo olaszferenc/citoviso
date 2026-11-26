@@ -29,6 +29,7 @@ import { isHuMobileE164, normalizePhone } from "../text/phone.js";
 import { MOCK_QA_PASSED_SQL } from "../outreach/mockQaReview.js";
 import { MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 import { pickShownMock } from "./leadFilters.js";
+import { swr } from "./swrCache.js";
 import { countCountries, inReportCountry, reportPeriod, type CountryCount, type ReportCountry, type ReportPeriod } from "./reportData.js";
 import { countryConfig, countryOf } from "../country.js";
 
@@ -112,21 +113,39 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
   const countryOfRow = (l: { raw_country: string | null; area_country: string | null }): string =>
     countryOf({ country: l.raw_country }, l.area_country) ?? "";
 
-  const mocks = await sql<{ lead_id: string; status: string; pass: boolean; flag: boolean; town: boolean; generated_at: Date }>`
-    select a.lead_id, a.status,
-           coalesce(a.inputs->>'reviewVerdict' = 'pass' and a.inputs->'review'->>'verdict' = 'pass'
-                    and ${MOCK_QA_PASSED_SQL} and ${MOCK_CURRENT_GENERATOR_SQL}, false) as pass,
-           coalesce(a.inputs->>'reviewVerdict' = 'flag', false) as flag,
-           coalesce(jsonb_typeof(a.inputs->'siteData'->'townPhoto') = 'object', false) as town,
-           a.generated_at
-      from mock_artifact a
-     order by a.generated_at desc`.execute(db);
-  const mocksByLead = new Map<string, { status: string; pass: boolean; flag: boolean; town: boolean }[]>();
-  for (const m of mocks.rows) {
-    const list = mocksByLead.get(m.lead_id) ?? [];
-    list.push({ status: m.status, pass: m.pass, flag: m.flag, town: m.town });
-    mocksByLead.set(m.lead_id, list);
+  // TWO STEPS (2026-11-26, measured on the VPS): reading the review flags out of every mock's
+  // `inputs` decompressed the whole JSON six times per row — 4.7–7.5 s for the 21 600 mocks, against
+  // 0.07 s for the plain columns. The shown mock is chosen by STATUS alone (pickShownMock), so the
+  // statuses come first, and the JSON is opened only for the one shown mock of each qualified lead,
+  // once per row (the `|| '{}'` copy is the decompressed value the flags then read).
+  const qualifiedIds = new Set(leads.rows.filter((l) => l.q).map((l) => l.id));
+  const statuses = await sql<{ id: string; lead_id: string; status: string }>`
+    select a.id, a.lead_id, a.status from mock_artifact a order by a.generated_at desc`.execute(db);
+  const byLead = new Map<string, { id: string; status: string }[]>();
+  for (const m of statuses.rows) {
+    if (!qualifiedIds.has(m.lead_id)) continue;
+    const list = byLead.get(m.lead_id) ?? [];
+    list.push({ id: m.id, status: m.status });
+    byLead.set(m.lead_id, list);
   }
+  const shownIds: string[] = [];
+  for (const list of byLead.values()) {
+    const shown = pickShownMock(list);
+    if (shown) shownIds.push(shown.id);
+  }
+  const flags = shownIds.length
+    ? await sql<{ id: string; lead_id: string; status: string; pass: boolean; flag: boolean; town: boolean }>`
+        select a.id, a.lead_id, a.status,
+               coalesce(i->>'reviewVerdict' = 'pass' and i->'review'->>'verdict' = 'pass'
+                        and ${MOCK_QA_PASSED_SQL} and ${MOCK_CURRENT_GENERATOR_SQL}, false) as pass,
+               coalesce(i->>'reviewVerdict' = 'flag', false) as flag,
+               coalesce(jsonb_typeof(i->'siteData'->'townPhoto') = 'object', false) as town
+          from mock_artifact a
+         cross join lateral (select a.inputs || '{}'::jsonb as i offset 0) x
+         where a.id = any(${shownIds}::uuid[])`.execute(db)
+    : { rows: [] };
+  const mocksByLead = new Map<string, { status: string; pass: boolean; flag: boolean; town: boolean }[]>();
+  for (const m of flags.rows) mocksByLead.set(m.lead_id, [{ status: m.status, pass: m.pass, flag: m.flag, town: m.town }]);
 
   const sent = new Set(
     (await db.selectFrom("prospect").select("lead_id").where("sent_at", "is not", null).execute()).map((r) => r.lead_id),
@@ -180,19 +199,13 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
   return { qualified, all: leads.rows.map((l) => ({ at: new Date(l.at).getTime(), country: countryOfRow(l) })) };
 }
 
-// The classification is the same for every period (state now) — one 60 s cache serves the
-// card, the report and the list filter alike.
-let cache: { at: number; data: Promise<Awaited<ReturnType<typeof classifyAll>>> } | null = null;
+// The classification is the same for every period (state now) — one cache serves the card, the
+// report and the list filter alike. Stale-while-revalidate (swrCache.ts, owner 2026-11-26 „kurva
+// lassú”): a click is served the last classification at once and a refresh runs behind it; only the
+// first call after a restart waits.
 const TTL_MS = 60_000;
 function classified(): Promise<Awaited<ReturnType<typeof classifyAll>>> {
-  if (!cache || Date.now() - cache.at > TTL_MS) {
-    const data = classifyAll();
-    cache = { at: Date.now(), data };
-    data.catch(() => {
-      if (cache?.data === data) cache = null;
-    });
-  }
-  return cache.data;
+  return swr("leadStock.classified", TTL_MS, classifyAll);
 }
 
 const inPeriod = (at: number, p: ReportPeriod): boolean => at >= p.fromMs && at <= p.toMs;

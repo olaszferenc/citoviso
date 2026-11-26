@@ -20,7 +20,12 @@
 //   ③ JS-sel: a sáv lapoz (számláló + tiltott nyíl a szélén),
 //      a claymorphism 4 → N → 4 (felirat „Kevesebb fotó”); JS nélkül: nincs lapozó és nincs
 //      gomb, a claymorphism mind az N kártyát mutatja, a sáv minden kártyája doboz > 0;
-//   ④ kis adat: 3 fotónál a claymorphism gomb nélkül; 1 fotónál a sáv lapozó nélkül.
+//   ④ kis adat: a vezérlő a galéria TÉNYLEGES elemszámát követi — a sáv lapozója csak 2+ elemnél,
+//      a claymorphism gombja csak 4-nél több kártyánál látszik; a saját fotó mind elérhető, egyszer.
+//      (2026-11-16 óta, tulaj, 3bb1c33a; ADR-0479: kevés saját
+//      fotónál a minta-/településképes töltés az ÉLŐ lapon is kiegészíti a galériát, ahogy a mockon —
+//      addig 1 fotónál nem volt galéria, 3-nál 3 kártya, ezért a régi „nincs lapozó / nincs gomb” a
+//      saját fotók számához kötötte a vezérlőt, és a jóváhagyott töltés óta minden futáson bukott.)
 //
 //   npx tsx scripts/gallery-reach-check.mts              # zöld futás
 //   npx tsx scripts/gallery-reach-check.mts --self-test  # PIROS kontroll (2 visszarontás)
@@ -196,12 +201,16 @@ try {
       const pager = await visCount(page, "[data-cit-gpager]");
       const btn = await visCount(page, "[data-cit-gexpand]");
       const p = (await page.evaluate(PROBE_JS)) as Probe;
-      const want = t === "claymorphism" ? btn === 0 : n === 1 ? pager === 0 : true;
-      // Each photo once: with 1 photo it is the hero and there is no gallery at all (no empty frame).
-      // (a stock card — index -1 — fills a short live gallery; it is not an owner photo)
+      // The control follows what the gallery really holds (the live page fills a short gallery with
+      // stock / town pictures since 2026-11-16, 3bb1c33a): the strip pages only with 2+ items, the
+      // claymorphism button opens only when more than 4 cards exist — never a control with nothing behind it.
+      const G = p.order.length;
+      const control = t === "claymorphism" ? btn > 0 : pager > 0;
+      const wantControl = t === "claymorphism" ? G > 4 : G >= 2;
+      // Each own photo once (a stock/town card — index -1 — is no owner photo).
       const reach = new Set([...p.order, ...p.elsewhere].filter((i) => i >= 0));
-      ok(want && reach.size === n && p.order.every((i) => i < 0 || !p.elsewhere.includes(i)),
-        `${t} ${n} fotó: minden fotó elérhető, egyszer (galéria ${p.order.length} + máshol ${p.elsewhere.length}), ${t === "claymorphism" ? "nincs gomb" : n === 1 ? "nincs lapozó" : "rendben"}`);
+      ok(control === wantControl && reach.size === n && p.order.every((i) => i < 0 || !p.elsewhere.includes(i)),
+        `${t} ${n} fotó: minden fotó elérhető, egyszer (galéria ${G} + máshol ${p.elsewhere.length}), ${t === "claymorphism" ? "gomb" : "lapozó"} ${wantControl ? "van" : "nincs"} (${control ? "van" : "nincs"})`);
       await ctx.close();
     }
   }
@@ -210,8 +219,10 @@ try {
 }
 
 if (SELF_TEST) {
-  const cap = fails.some((f) => f.startsWith("organic") && f.includes("slot mind a 12"));
-  const order = fails.some((f) => f.startsWith("claymorphism") && f.includes("még nem látott"));
+  // The verdict lines were reworded with the „each photo once” rule (37fc5ab1, owner 2026-11-24):
+  // the cap now shows as „not every photo reachable”, the hero-first gallery as „a gallery photo is seen elsewhere”.
+  const cap = fails.some((f) => f.startsWith("organic") && f.includes("minden fotó elérhető a lapon") && f.includes("/ 12"));
+  const order = fails.some((f) => f.startsWith("claymorphism") && f.includes("sem látszik máshol"));
   console.log(cap ? "✅ PIROS KONTROLL ①: a visszaállított 4-es vágást elkapta" : "⛔ PIROS KONTROLL ①: a vágás ÁTCSÚSZOTT");
   console.log(order ? "✅ PIROS KONTROLL ②: a hőssel kezdődő galériát elkapta" : "⛔ PIROS KONTROLL ②: a hőssel kezdődő galéria ÁTCSÚSZOTT");
   process.exit(cap && order ? 0 : 1);

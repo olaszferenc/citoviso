@@ -680,7 +680,9 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
       "prospect.mms_sent_at as mms_sent_at",
       "prospect.unsubscribed_at as unsubscribed_at",
       "lead.name as lead_name",
-      "mock_artifact.inputs as inputs",
+      // Only the two keys styleOf/templateOf read — the whole `inputs` (≈6 KB of JSON a mock) was
+      // shipped and parsed for every sent prospect, twice per dashboard click (measured 2026-11-26).
+      sql<Record<string, unknown> | null>`case when mock_artifact.id is null then null else jsonb_build_object('skin', mock_artifact.inputs->'skin', 'template', mock_artifact.inputs->'template') end`.as("inputs"),
     ])
     .where("prospect.sent_at", "is not", null)
     .execute()

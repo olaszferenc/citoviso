@@ -16,5 +16,12 @@ User=citoviso
 WorkingDirectory=/home/citoviso/citoviso
 ExecStart=/home/citoviso/citoviso/node_modules/.bin/tsx scripts/outreach-dispatch.mts tick
 TimeoutStartSec=600
+# A KONZOL ELŐBB KAP PROCESSZORT (2026-11-26, tulaj: „kurva lassú az éles belsős admin”): a tick
+# mock-frissítése (Chromium + OCR) körönként 1–2 perc CPU-t visz a 2 magos VPS-en, és ugyanabban a
+# system.slice-ban versenyez a konzollal (alapsúly 100 mindkettő). Alacsony súllyal és nice-szal a
+# háttér csak a konzol által nem használt időt kapja — a kiküldés nem áll le, csak hátrébb sorol.
+CPUWeight=20
+Nice=10
+IOWeight=20
 StandardOutput=append:/home/citoviso/.claude/citoviso-outreach-dispatch.log
 StandardError=inherit
