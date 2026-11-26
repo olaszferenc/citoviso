@@ -1,4 +1,4 @@
-## ADR-XXXX — Éjszakai szabály-csomag (11-26): saját akcentszín, ismétlés-tilalom, üres sáv, településkép-galéria, dátumbélyeg, egy fotó két vágatban
+## ADR-0496 — Éjszakai szabály-csomag (11-26): saját akcentszín, ismétlés-tilalom, üres sáv, településkép-galéria, dátumbélyeg, egy fotó két vágatban
 
 - **Dátum:** 2026-11-26 (éjjel)
 - **Státusz:** elfogadva (ADR-0495 ③–④ első köre: a tulaj és a mintavételes kolléga jelzéseiből EGY csomag, vak mérés, egy élesítés)

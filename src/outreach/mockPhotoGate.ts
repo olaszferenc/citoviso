@@ -54,7 +54,7 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T15:00:00Z"; // set after the dep
 // first kept counting as current (BaBo: the repeat, the empty ring, the corridor card). qafix5 re-renders those —
 // but a qafix4 plan the quality colleague already PASSED stays current (its file is what was reviewed; the
 // approval chain still binds the pass to the file's mtime), so a ready offer does not drop off the owner's page.
-// 11-26 night (ADR-XXXX, the rule bundle): own accent from the photos, neutral gallery heading on a town page, no
+// 11-26 night (ADR-0496, the rule bundle): own accent from the photos, neutral gallery heading on a town page, no
 // 1–3-card sample facilities block, no repeated line, month-name date stamps, one portal photo in two crops =
 // one picture → qafix7 re-renders the waiting stock (the refresh step covers the town-page mocks too since this stamp).
 export const MOCK_HEROFIX_STAMP = "2026-11-26-qafix7";

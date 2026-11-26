@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-ejszakai-szabaly-csomag-1126-sajat-szin-ismetles-ures-sav.md) — Éjszakai szabály-csomag (11-26): saját akcentszín, ismétlés-tilalom, üres sáv, településkép-galéria, dátumbélyeg, egy fotó két vágatban
+- [ADR-0496](decisions/0496-ejszakai-szabaly-csomag-11-26-sajat-akcentszin.md) — Éjszakai szabály-csomag (11-26): saját akcentszín, ismétlés-tilalom, üres sáv, településkép-galéria, dátumbélyeg, egy fotó két vágatban
 - [ADR-0495](decisions/0495-a-minosegi-kollega-szabalyfelfedezo-nem.md) — A minőségi kolléga szabályfelfedező, nem darabonkénti kapu: a tulaj lapját a gépi render-kapu táplálja
 - [ADR-0494](decisions/0494-land-optimista-elokor-a-kapuk-a-land-zar-elott.md) — Land: optimista előkör — a kapuk a land-zár ELŐTT futnak, a zár alatt csak a push (2026-11-26)
 - [ADR-0493](decisions/0493-unnepnapok-automatikus-ingyenes-forrasbol-nager.md) — Ünnepnapok automatikus, ingyenes forrásból (Nager.Date), felvételkor és évente, forrás-jelöléssel
