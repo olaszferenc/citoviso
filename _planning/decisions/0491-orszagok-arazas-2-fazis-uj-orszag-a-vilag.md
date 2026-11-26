@@ -1,4 +1,4 @@
-## ADR-XXXX — „Országok / Árazás” 2. fázis: új ország a világ-katalógusból; Indulás = jóváhagyás teljesség nélkül; Szünetel
+## ADR-0491 — „Országok / Árazás” 2. fázis: új ország a világ-katalógusból; Indulás = jóváhagyás teljesség nélkül; Szünetel
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva (a tulaj jóváhagyta a megvalósítási tervet; az F2 indítása a koordinátoron, `cit9b4690e3`, át)
