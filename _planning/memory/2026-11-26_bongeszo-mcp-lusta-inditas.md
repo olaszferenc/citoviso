@@ -35,5 +35,14 @@ Session `cit2f755e49`, brief `~/rc-briefs/cit-bongeszo-mcp-csak-agenseknek-20261
 - Önteszt: `python3 scripts/mcp-lazy.py --selftest`. Valódi CLI-vel is igazolva (2.1.332, chrome-devtools-mcp 1.14.0): hívás nélküli sessionben a proxy alatt nincs `npm exec`; `list_pages` hívásnál a szerver elindul és helyesen válaszol; kilépés után nem marad árva folyamat.
 - ⛔ A valódi szervert ezután sem öljük le (a CLI nem indítja újra). Ha a valódi szerver kilép, a proxy is kilép, ugyanúgy, mint eddig.
 
+## Élesítés a gépen (17:30)
+- A `~/.claude.json` átírva (mentés: `~/.claude.json.bak-mcp-lazy-20261126`, a jogosultság 600 maradt). A gyorsítótár protokollszinten feltöltve: `chrome-devtools` és `chrome` 33 eszközzel.
+- Végponttól végpontig, valódi CLI-vel a munkafából: hívás nélkül a két Chrome-proxy alatt nincs `npm exec` (a proxy ~17 MB RSS a ~190 MB helyett); `list_pages` hívásnál a chrome-devtools elindul.
+- A `logging/setLevel` kérést is a proxy válaszolja meg, mert a szerverek `logging` képességet hirdetnek.
+
+## ⚠️ Külön hiba: az openstreetmap az új sessionökben nem indul (már a változás előtt sem)
+- Az `@cyanheads/openstreetmap-mcp-server@latest` (0.7.4, 11-23) Node ≥24-et kér, a gépen Node 20.19 fut → „Configuration error — server failed to start”. A futó 15 példány 16 napos, egy régebbi kiadásból.
+- A proxy ezen nem változtat: gyorsítótár nélkül azonnal indítaná, a szerver elhasal, mint eddig. Javítás: Node 24 a gépen, vagy egy Node 20-zal működő kiadás rögzítése. Ezt külön kell eldönteni és kipróbálni.
+
 ## Mi érvényesül csak újraindulás után
 - A konfigot a CLI a session indulásakor olvassa. A már futó sessionökben a régi, azonnal indított szerverek futnak tovább, amíg a watchdog újra nem indítja őket. Kézzel senkit nem indítottunk újra.

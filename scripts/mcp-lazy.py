@@ -44,7 +44,9 @@ import threading
 CACHE_DIR = os.path.expanduser(os.environ.get("MCP_LAZY_CACHE", "~/.cache/citoviso-mcp-lazy"))
 INIT_ID = "mcp-lazy-init"
 TOOLS_ID = "mcp-lazy-tools"
-LOCAL_METHODS = {"initialize", "tools/list", "ping"}
+# logging/setLevel: the CLI may send it right after the handshake; answering it here
+# keeps a session that never calls a tool from starting the real server.
+LOCAL_METHODS = {"initialize", "tools/list", "ping", "logging/setLevel"}
 
 
 def log(msg):
@@ -165,7 +167,7 @@ class Proxy:
             self.send_client({"jsonrpc": "2.0", "id": mid, "result": res})
         elif method == "tools/list":
             self.send_client({"jsonrpc": "2.0", "id": mid, "result": self.cache["tools"]})
-        elif method == "ping":
+        elif method in ("ping", "logging/setLevel"):
             self.send_client({"jsonrpc": "2.0", "id": mid, "result": {}})
 
     def run(self):
