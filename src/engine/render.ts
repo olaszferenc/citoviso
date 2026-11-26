@@ -966,6 +966,9 @@ export function renderSite(
   // ADR-0059 §1: module data that has a native channel is woven into the data BEFORE
   // the template renders, so it lands inside the template's own sections.
   data = weaveSellingPoints(data);
+  // The section copy may not promise pictures the page does not show (11-26, quality colleague, Kiskúti:
+  // gallery title „…és az alaprajzokról” while floor plans never reach a page — photoKind „never”).
+  recipe = withoutAbsentPictureClaims(recipe);
   // A star classification in the name or an alt („Panoráma Faház****”, fd50391f, 2026-10-27)
   // is no sourced fact (§B.17) — off the MOCK, render-time, so a plain rerender fixes it. The
   // live site prints the owner's own name as they set it.
@@ -1169,4 +1172,20 @@ function withoutGallery(
 
 function escText(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Copy words naming a floor plan (hu · en · de · hr/sl · it): such drawings never stand on a page. */
+const FLOOR_PLAN_WORDS = /alaprajz|floor ?plans?|grundriss|tlocrt|načrt|planimetri/i;
+
+/** Drops a section copy field that names floor plans — the template then prints its default heading. */
+export function withoutAbsentPictureClaims(recipe: Recipe): Recipe {
+  if (!recipe.sections?.some((s) => s.copy && Object.values(s.copy).some((v) => typeof v === "string" && FLOOR_PLAN_WORDS.test(v)))) return recipe;
+  return {
+    ...recipe,
+    sections: recipe.sections.map((s) => {
+      if (!s.copy) return s;
+      const copy = Object.fromEntries(Object.entries(s.copy).filter(([, v]) => !(typeof v === "string" && FLOOR_PLAN_WORDS.test(v))));
+      return { ...s, copy };
+    }),
+  };
 }

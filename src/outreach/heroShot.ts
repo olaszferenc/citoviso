@@ -23,6 +23,11 @@ const SHOT_DIR = path.resolve(process.cwd(), "sites/_outreach-shots");
 /** Rendered at desktop layout, downscaled to e-mail width (~608px wide file). */
 const VIEWPORT = { width: 1216, height: 760 };
 const SCALE = 0.5;
+/** The plan-framing ribbon lives in its OWN strip under the page (CSS px), never on top of it
+ *  (11-26, quality colleague: at the bottom edge it cut the floating CTA, at the top the fixed menu).
+ *  The page renders RIBBON_CSS shorter, so the final image keeps the old 1216×760 size. */
+const RIBBON_CSS = 34;
+const PAGE_VIEW = { width: VIEWPORT.width, height: VIEWPORT.height - RIBBON_CSS };
 
 /** Portal hosts rate-limit bursts (lake-balaton.com answered 429 to the mock's
  * 12 parallel image loads) — one polite pause + retry usually clears it. */
@@ -126,7 +131,7 @@ async function cachedShot(artifactId: string): Promise<HeroShotResult | null> {
   // /assets/stock, so a no-photo mock's hero showed the placeholder icon.
   // v4 cache-busted v3: those shots were taken without verifying the first
   // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
-  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v7.png`);
+  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v8.png`);
   return (await fileExists(dest)) ? { path: dest } : null;
 }
 
@@ -217,7 +222,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
     const ribbonLang = await prepareMailLang(shotLang);
     const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
-    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v7.png`);
+    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v8.png`);
 
     await mkdir(SHOT_DIR, { recursive: true });
     // Declared OUTSIDE the browser block: it is the reason the operator reads on
@@ -244,7 +249,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
       // WITH the URL — that sentence is what the operator needs to read.
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
         const page = await browser.newPage({
-          viewport: VIEWPORT,
+          viewport: PAGE_VIEW,
           deviceScaleFactor: SCALE,
           // Our honest, identifiable identity (politeness doctrine: never spoof
           // a browser). Also the practical fix: lake-balaton.com answers 429 to
@@ -341,7 +346,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
           // functions with a `__name` helper that does not exist in the page
           // context, so a function-valued evaluate throws ReferenceError.
           const view = (await page.evaluate(`(() => {
-            const vh = ${VIEWPORT.height};
+            const vh = ${PAGE_VIEW.height};
             const inView = (el) => {
               const r = el.getBoundingClientRect();
               return r.bottom > 0 && r.top < vh && r.width > 8 && r.height > 8;
@@ -381,20 +386,10 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
           // §A: bake the plan-framing INTO the pixels — the mock's own demo-framing
           // footer is below the fold, and a forwarded/saved image must keep the
           // "preliminary plan" claim on its own (guard-agent hardening, 2026-08-01).
-          await page.evaluate((ribbonText: string) => {
-            const b = document.createElement("div");
-            b.textContent = ribbonText;
-            b.setAttribute(
-              "style",
-              // At the BOTTOM edge (11-26, quality colleague): at the top it covered the fixed menu of
-              // gate-opening / wordmark-grow — „a felső menü a sáv alá csúszik, félig levágva”.
-              "position:fixed;bottom:0;left:0;right:0;z-index:2147483647;background:#0e2a47;" +
-                "color:#fff;font:600 15px/1 Arial,sans-serif;letter-spacing:.12em;" +
-                "text-align:center;padding:9px 0",
-            );
-            document.body.appendChild(b);
-          }, ribbon);
-          await page.screenshot({ path: dest, fullPage: false });
+          // The ribbon is composited as a separate strip BELOW the screenshot — it can never cover
+          // a fixed menu, a floating CTA or any other part of the page.
+          const shot = await page.screenshot({ fullPage: false });
+          await withRibbonStrip(shot, ribbon, dest);
           // The cache's benefit is a NUMBER, not a promise: this line says how many
           // requests we did NOT send to the portal on this render (ADR-0203's metric).
           const st = photos.stats();
@@ -420,4 +415,25 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     console.warn(`[heroShot] ${artifactId}: ${(e as Error).message}`);
     return { path: null, fail: { code: "error", detail: (e as Error).message.slice(0, 200) } };
   }
+}
+
+const escXml = (t: string): string =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** Appends the „ELŐZETES LÁTVÁNYTERV” strip under the page screenshot (never over it). */
+export async function withRibbonStrip(shot: Buffer, text: string, dest: string): Promise<void> {
+  const meta = await sharp(shot).metadata();
+  const w = meta.width ?? Math.round(VIEWPORT.width * SCALE);
+  const h = Math.round(RIBBON_CSS * SCALE);
+  const fs = Math.round(15 * SCALE * 10) / 10;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
+    `<rect width="100%" height="100%" fill="#0e2a47"/>` +
+    `<text x="50%" y="50%" dy=".35em" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" ` +
+    `font-weight="600" font-size="${fs}" letter-spacing="${(15 * SCALE * 0.12).toFixed(2)}">${escXml(text)}</text></svg>`;
+  await sharp(shot)
+    .extend({ bottom: h, background: "#0e2a47" })
+    .composite([{ input: Buffer.from(svg), top: meta.height ?? Math.round(PAGE_VIEW.height * SCALE), left: 0 }])
+    .png()
+    .toFile(dest);
 }

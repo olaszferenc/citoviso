@@ -8,7 +8,7 @@
 //      the front, so a bathtub there opens the page just as a bathtub hero would (11-24);
 //      those shots also carry Photo.backstage, and the opening sequence skips them
 
-import { bandScore, classifyPhotoUrl, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
+import { bandScore, classifyPhotoUrl, photoFocusX, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
 import { applyHeroPin } from "./heroOverride.js";
 
@@ -48,15 +48,26 @@ export async function curateMockPhotos<T extends { url: string }>(
     // A real bedroom for the room cards (11-26: plan 2's „Szálláslehetőség” card showed a bed icon while the
     // gallery had the twin room): the local classifier's best label, clearly a bedroom and showcase-fit.
     const bedroom = v != null && v.label === "a bedroom with a bed" && (pr["a bedroom with a bed"] ?? 0) >= 0.35 && isShowcase(v);
-    const notCard = v != null && ["a car", "a parking lot", "a street with parked cars", "a group of people", "a woman in a bikini", "a dog", "a cat"].reduce((a, l) => a + (pr[l] ?? 0), 0) >= 0.08;
+    const notCard = v != null && ["a car", "a parking lot", "a street with parked cars", "a group of people", "a woman in a bikini", "a person", "a person sitting on a pier", "a man fishing", "children playing", "a dog", "a cat"].reduce((a, l) => a + (pr[l] ?? 0), 0) >= 0.08;
     const notBand = i > 0 && v != null && (!isBandWorthy(v) || !bs);
     const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, kindLabel: _oldLabel, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean; kindLabel?: string };
     return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}), ...(v ? { kindLabel: v.label } : {}) } as T & { dhash?: string };
   });
+  // A vehicle / person / animal shot goes to the END of the set (11-26, quality colleague: Jaja's gallery
+  // OPENED on the blue SUV) — it may stay in the gallery, never lead it. The hero (index 0) stays put.
+  const curated: typeof ordered = ordered.length > 1
+    ? [ordered[0]!, ...ordered.slice(1).filter((p) => !(p as { notCard?: boolean }).notCard), ...ordered.slice(1).filter((p) => (p as { notCard?: boolean }).notCard)]
+    : ordered;
+  // The hero's portrait-crop focus point (11-26): the phone shows the photo's busiest column window.
+  if (curated[0]) {
+    const { focusX: _oldFx, ...h } = curated[0] as typeof curated[0] & { focusX?: number };
+    const fx = await photoFocusX(curated[0].url).catch(() => null);
+    curated[0] = (fx == null ? h : { ...h, focusX: fx }) as typeof curated[0];
+  }
   return {
-    photos: ordered,
+    photos: curated,
     duplicates: dd.dropped.map((p) => fileOf(p.url)),
     offPage: dd.photos.filter((_, i) => !keep.includes(i)).map((p) => `${fileOf(p.url)} (${kinds[dd.photos.indexOf(p)]?.label ?? "?"})`),
-    heroMoved: ordered[0]?.url !== kept[0]?.url,
+    heroMoved: curated[0]?.url !== kept[0]?.url,
   };
 }

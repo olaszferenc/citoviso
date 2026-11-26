@@ -76,7 +76,7 @@ export const PHOTO_MIN_LUMA = 50;
 /** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
 export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 4;
+const VERSION = 5;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -314,7 +314,14 @@ export function isOffPagePhoto(v: PhotoKind | null, isHero: boolean): boolean {
   if ((p["a toilet"] ?? 0) >= TOILET_OFF_PAGE) return true;
   // People on the page: a stranger in a bikini by the pool, a group of guests (quality colleague, 11-26:
   // Meszesvölgy's highlighted pool photo and gallery opener) — off the page, hero or not.
-  return (p["a woman in a bikini"] ?? 0) + (p["a group of people"] ?? 0) >= PEOPLE_OFF_PAGE;
+  // 11-26 (quality colleague, Stéghouse): ONE person sitting on the jetty slipped through — the labels named
+  // only bikinis and groups. A single person, an angler and children count too.
+  return peopleMass(v) >= PEOPLE_OFF_PAGE;
+}
+export const PEOPLE_LABELS = ["a woman in a bikini", "a group of people", "a person", "a person sitting on a pier", "a man fishing", "children playing"];
+export function peopleMass(v: PhotoKind): number {
+  const p = v.probs ?? {};
+  return PEOPLE_LABELS.reduce((a, l) => a + (p[l] ?? 0), 0);
 }
 /** People mass from which a photo leaves the page. */
 export const PEOPLE_OFF_PAGE = 0.15;
@@ -365,6 +372,20 @@ export function isHeroWorthy(v: PhotoKind): boolean {
   // (No „the house must show” rule — owner 2026-11-25: the hero is the wow shot, a sunset over the lake
   // included; the quality colleague picks it from a contact sheet, qa-review.mts heroes.)
   return heroScore(v) >= 0.25;
+}
+
+/**
+ * May the quality colleague SEE this photo among the hero candidates (qa-review.mts heroes)? The same hard
+ * no-gos as isHeroWorthy (kitchen, bathroom, non-lodging, dark), but no heroScore floor: the colleague judges
+ * the wow (11-26, BaBo: its flowered terrace and garden steps scored 0.21–0.24 and the sheet showed only a
+ * dark corridor). The machine pick (withBestHeroFirst) keeps isHeroWorthy.
+ */
+export function isHeroCandidate(v: PhotoKind): boolean {
+  if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
+  if (NOT_HERO_TOP.has(v.label) || backstageMass(v) >= BACKSTAGE_MAX) return false;
+  if (peopleMass(v) >= PEOPLE_OFF_PAGE) return false;
+  if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
+  return heroScore(v) >= 0.1;
 }
 /** Mean luma below this is too dark for the first screen. */
 export const HERO_MIN_LUMA = 80;
@@ -451,4 +472,61 @@ export function withBestHeroFirst<T>(photos: readonly T[], kinds: readonly (Phot
   const first = kinds[0];
   if (first && isHeroWorthy(first) && heroScore(first) >= bestScore - 0.15) return [...photos];
   return [photos[best]!, ...photos.filter((_, i) => i !== best)];
+}
+
+/**
+ * Where a PORTRAIT crop of this photo should sit (0–100, CSS background-position x %), for the
+ * full-bleed hero on a phone (11-26, quality colleague: the parallax hero cut the chosen wow photo
+ * to a shed wall / a dark corner on mobile). Local and deterministic: the column window of a
+ * 390×844 crop with the most edge detail (gradient energy), lightly pulled to the centre.
+ * Cached on disk per URL. null = not measurable (then the template keeps `center`).
+ */
+export async function photoFocusX(url: string): Promise<number | null> {
+  const key = createHash("sha1").update(`focus-v1|${url}`).digest("hex");
+  const file = path.join(CACHE_DIR, `${key}.json`);
+  try {
+    return (JSON.parse(await readFile(file, "utf8")) as { x: number | null }).x;
+  } catch {
+    // not cached yet
+  }
+  let x: number | null = null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (res.ok) x = await focusXOfBuffer(Buffer.from(await res.arrayBuffer()));
+  } catch {
+    x = null;
+  }
+  await mkdir(CACHE_DIR, { recursive: true });
+  await writeFile(file, JSON.stringify({ x })).catch(() => undefined);
+  return x;
+}
+
+export async function focusXOfBuffer(buf: Buffer): Promise<number | null> {
+  const g = await sharp(buf).rotate().greyscale().resize(128, 128, { fit: "inside" }).raw().toBuffer({ resolveWithObject: true });
+  const { width: w, height: h } = g.info;
+  const d = g.data;
+  const winW = Math.round(w * Math.min(1, (390 / 844) / (w / h)));
+  if (winW >= w - 1) return null;
+  const col = new Array<number>(w).fill(0);
+  for (let y = 1; y < h - 1; y++) {
+    for (let xx = 1; xx < w - 1; xx++) {
+      const i = y * w + xx;
+      col[xx]! += Math.abs(d[i + 1]! - d[i - 1]!) + Math.abs(d[i + w]! - d[i - w]!);
+    }
+  }
+  const total = col.reduce((a, v) => a + v, 0) || 1;
+  const span = w - winW;
+  let best = Math.round(span / 2);
+  let bestScore = -Infinity;
+  for (let s = 0; s <= span; s++) {
+    let e = 0;
+    for (let k = s; k < s + winW; k++) e += col[k]!;
+    // centre pull: a 10 % energy handicap at the far edge — a busy edge must clearly win
+    const score = e / total - 0.1 * Math.abs(s - span / 2) / (span / 2);
+    if (score > bestScore) {
+      bestScore = score;
+      best = s;
+    }
+  }
+  return Math.round(((best / span) * 100) / 5) * 5;
 }
