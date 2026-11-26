@@ -1,4 +1,4 @@
-## ADR-XXXX — „Országok / Árazás”: egy CRM-lap az országoknak és az áraiknak (1. fázis, migráció nélkül)
+## ADR-0484 — „Országok / Árazás”: egy CRM-lap az országoknak és az áraiknak (1. fázis, migráció nélkül)
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva (tulaj: a terv „tökéletes”, a megvalósítási terv „mehet” — a koordinátoron, `cit9b4690e3`, keresztül)

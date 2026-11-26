@@ -9,7 +9,7 @@
 - `nav.ts`: CRM › „Országok / Árazás”; a Rendszer › Országok menüpont megszűnt.
 - `pricingPage.ts` / `views.ts`: `pricingBody` (beágyazható), `regionGapNote`, beágyazott fejléc a megosztott ár-régió figyelmeztetésével.
 - KB: console-countries átírva + két új kép; console-pricing bevezető.
-- ADR-XXXX (orszagok-arazas-egy-lap-1-fazis).
+- ADR-0484 (orszagok-arazas-egy-lap-1-fazis).
 
 **Igazolás:** country-page-e2e új ⑦ szakasza zöld, 0 JS-hiba; country-hr-e2e 46/47 (a bukó a mock-sablon kapu, ADR-0423, nem ez a munka); ui-shot 390+1280 Read-del; i18n-lint, design-token-lint, country-layer-check, free-trial-config-check zöld.
 
