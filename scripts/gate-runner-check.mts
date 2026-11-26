@@ -41,6 +41,9 @@
 //   · (ADR-0446) a bukó kapu EGYSZER újrafut: zöld újrafutás = zöld, hangos „↻” sorral és az első hiba
 //     kimenetével + statisztika-sorral; piros újrafutás = piros, az első futás kimenetével együtt;
 //     CIT_GATE_RETRY=0 mellett nincs újrafutás, és időtúllépés után sincs (J),
+//   · (ADR-XXXX) az óránkénti futás CIT_GATE_RED_OUT-tal NEM áll meg az első pirosnál (minden kapu
+//     ítéletet kap), PONTOSAN a pirosakat adja át (+ DONE jel), az átadott könyvtár újrafuttatása csak
+//     azokat futtatja, és land-módban a kapcsoló hatástalan (M),
 //   · (ADR-0265) az 1. fázis a kapuidő-ELŐZMÉNY szerint a leghosszabb kaput indítja először, az
 //     előzmény nélküli kaput a legelején; az előzményt minden futás tartósan frissíti, és egy
 //     sérült előzmény-fájl nem bukás.
@@ -51,7 +54,7 @@
 //
 // Futtatás:       npx tsx scripts/gate-runner-check.mts
 // Piros önteszt:  npx tsx scripts/gate-runner-check.mts --self-test
-//   (harmincegy visszarontás — a böngészős kapu a land-en is blokkol · a land-blocking jelölés hatástalan ·
+//   (harminchárom visszarontás — az óránkénti átadó mód megáll az első pirosnál · a pirosak nem adódnak át · a böngészős kapu a land-en is blokkol · a land-blocking jelölés hatástalan ·
 //    az óránkénti mód mindent futtat · az újrafuttatás ki · időtúllépés is újrafut · a commit-módú halasztás ki · csak-olvasó opció ki · író-jelölő ki · flush-őr ki · szkript-kizárás ki ·
 //    a bukás kiírása ki · piros ítélet tárolása · diffet olvasó kapu tárolása · a követetlen-fájl
 //    feltétel ki · pipefail ki a kulcs-diffből · a git exec-path a hash-elt PATH-ban · a teljes PATH
@@ -144,6 +147,17 @@ echo "[pre-commit] browser-blocking…"
 node scripts/browserblock.mjs >"$GATE_LOG" || gate_failed
 echo "[pre-commit] counted…"
 node scripts/count.mjs >"$GATE_LOG" || gate_failed
+`;
+// ── M: the hourly hand-off (ADR-XXXX). Two red browser gates and one green one, two threads: the
+// hourly runner with CIT_GATE_RED_OUT must judge ALL three (no stop at the first red) and hand over
+// exactly the two red ones, which a direct runner call on that dir re-runs (and nothing else).
+const HOURLY_RED_GATES = String.raw`
+echo "[pre-commit] hred-7…"
+node scripts/hred7.mjs 7 >"$GATE_LOG" || gate_failed
+echo "[pre-commit] hred-5…"
+node scripts/hred5.mjs 5 >"$GATE_LOG" || gate_failed
+echo "[pre-commit] hgreen…"
+node scripts/hgreen.mjs >"$GATE_LOG" || gate_failed
 `;
 // ── L: one automatic re-run (ADR-0446). `flip` fails on its first run only; `always` always fails.
 const RETRY_GATES = String.raw`
@@ -255,8 +269,14 @@ const HANG = `import { spawn } from "node:child_process"; import { appendFileSyn
 const COUNTER = (name: string, extra = ""): string =>
   `import { appendFileSync, existsSync } from "node:fs"; appendFileSync(process.env.FIX_OUT + "/${name}", "x");${extra}`;
 
+const HRED = (name: string): string =>
+  `${COUNTER(name, " /* drives Chromium via playwright-core (fixture) */")} await new Promise((r) => setTimeout(r, 300)); process.exit(Number(process.argv[2]));`;
 const FIXTURES: Record<string, string> = {
   "count.mjs": COUNTER("count"),
+  // M: red browser gates (slow enough that the green one is still queued when the first goes red).
+  "hred7.mjs": HRED("hred7"),
+  "hred5.mjs": HRED("hred5"),
+  "hgreen.mjs": `await new Promise((r) => setTimeout(r, 600)); ${COUNTER("hgreen", " /* drives Chromium via playwright-core (fixture) */")}`,
   // K: a browser gate by the runner's rule (the word in its source) — deferred to the land at commit time.
   "browser.mjs": COUNTER("browser", " /* drives Chromium via playwright-core (fixture) */"),
   // K: the same, but marked land-blocking WITH a reason — the land must still wait for it.
@@ -693,6 +713,34 @@ async function audit(v: Variant): Promise<string[]> {
   say(units === want, `J · a poolos kapu kimenete megváltozott (egységek: „${units}”, „${want}” várt) — a szívverés nem nyúlhat a kimenethez`);
   dispose(px);
 
+  // ── M: hourly keep-going + red hand-off ─────────────────────────────────────────────────
+  {
+    const m = prepare(v, HOURLY_RED_GATES, "2");
+    const rd = (f: string): string => {
+      try {
+        return readFileSync(path.join(m.out, f), "utf8");
+      } catch {
+        return "";
+      }
+    };
+    const mn = (f: string): number => rd(f).length;
+    const red = path.join(m.out, "red-out");
+    const m1 = m.run({ LAND_RANGE: "HEAD~1...HEAD", CIT_GATE_HOURLY: "1", CIT_GATE_JOBS: "2", CIT_GATE_RETRY: "0", CIT_GATE_RED_OUT: red });
+    const handed = existsSync(red) ? readdirSync(red).filter((f) => f.endsWith(".argv")).map((f) => readFileSync(path.join(red, f), "utf8").split("\0")[1]).sort() : [];
+    say(m1.rc !== 0, `M · két piros kapu mellett az óránkénti futás ZÖLDEN zárult (rc=${m1.rc})`);
+    say(mn("hgreen") === 1, `M · az óránkénti átadó módban a futtató az első piros után NEM indította el a hátralévő kaput (hgreen=${mn("hgreen")}) — a többi kapu ítélet nélkül maradt\n${m1.out.slice(-600)}`);
+    say(handed.join(",") === "scripts/hred5.mjs,scripts/hred7.mjs", `M · nem PONTOSAN a két piros kapu adódott át (${handed.join(",") || "semmi"})`);
+    say(rd("red-out/DONE") === "3\t2\n", `M · a DONE jel hiányzik vagy hamis („${rd("red-out/DONE").trim()}”, „3<tab>2” várt) — az óránkénti szkript nem tudhatja, hogy minden kapu ítéletet kapott`);
+    // The handed-over dir re-runs exactly the red ones (a direct runner call, as gate-hourly.sh does).
+    const env = { ...cleanEnv(), FIX_OUT: m.out, CIT_GATE_SLOTS: m.slots, CIT_GATE_HISTORY_FILE: path.join(m.out, "history.json"), CIT_GATE_RETRY_LOG: path.join(m.out, "retries.log"), LAND_RANGE: "HEAD~1...HEAD", CIT_GATE_HOURLY: "1", CIT_GATE_JOBS: "2", CIT_GATE_RETRY: "0", CIT_GATE_RED_OUT: path.join(m.out, "red-out-2") };
+    const m2 = spawnSync("node", [path.join(m.dir, "scripts/lib/gate-runner.mjs"), red, m.dir], { env, encoding: "utf8", timeout: 120_000 });
+    say(m2.status === 3 && mn("hred7") === 2 && mn("hred5") === 2 && mn("hgreen") === 1, `M · az átadott piros kapuk újrafuttatása nem pontosan a két pirosat futtatta (rc=${m2.status}, hred7=${mn("hred7")} hred5=${mn("hred5")} hgreen=${mn("hgreen")})\n${(m2.stdout ?? "").slice(-400)}`);
+    // Outside hourly mode CIT_GATE_RED_OUT is ignored: the commit/land still stops at the first red.
+    const m3 = m.run({ LAND_RANGE: "HEAD~1...HEAD", CIT_FULL_LAND: "1", CIT_GATE_JOBS: "2", CIT_GATE_RETRY: "0", CIT_GATE_RED_OUT: path.join(m.out, "red-out-3") });
+    say(m3.rc !== 0 && !existsSync(path.join(m.out, "red-out-3")), `M · land-módban a CIT_GATE_RED_OUT hatott (rc=${m3.rc}) — az átadó mód csak óránként élhet`);
+    dispose(m);
+  }
+
   // ── K: commit mode defers browser gates; the land runs only the land-blocking ones; the hourly
   // run only the others; CIT_FULL_COMMIT=1 / CIT_FULL_LAND=1 run all ───────────────────────
   const k = prepare(v, BROWSER_GATES, "4");
@@ -841,6 +889,8 @@ if (SELF_TEST) {
     ["csak a közvetlen gyerek ölve", { ...shipped, runner: mutate("tree", runnerText, "const seen = new Set(processTree(root));", "const seen = new Set([root]);") }],
     ["a böngészős kapu a land-en is blokkol", { ...shipped, runner: mutate("off-land", runnerText, "const OFF_LAND = !!process.env.LAND_RANGE && ", "const OFF_LAND = false && ") }],
     ["a land-blocking jelölés hatástalan", { ...shipped, runner: mutate("land-block", runnerText, "const hourlyGate = (job) => browserGate(job) && !landBlocking(job);", "const hourlyGate = (job) => browserGate(job);") }],
+    ["az óránkénti átadó mód is megáll az első pirosnál", { ...shipped, runner: mutate("hourly-halt", runnerText, "const halted = () => failed.length > 0 && !RED_OUT;", "const halted = () => failed.length > 0;") }],
+    ["a piros kapuk nem adódnak át", { ...shipped, runner: mutate("red-handoff", runnerText, "if (existsSync(from)) copyFileSync(from, path.join(RED_OUT, `${id}${ext}`));", "") }],
     ["az óránkénti mód mindent futtat", { ...shipped, runner: mutate("hourly-all", runnerText, "if (HOURLY && !hourlyGate(j)) {", "if (false) {") }],
     ["az újrafuttatás ki", { ...shipped, runner: mutate("retry-off", runnerText, "if (!RETRY || r1.rc === 0", "if (true || r1.rc === 0") }],
     ["időtúllépés is újrafut", { ...shipped, runner: mutate("retry-timeout", runnerText, "r1.rc === 0 || r1.timedOut ||", "r1.rc === 0 ||") }],
@@ -857,7 +907,7 @@ if (SELF_TEST) {
     console.log("⛔ gate-runner-check ÖNTESZT: legalább egy visszarontás ZÖLD maradt — az őr vak rá.");
     process.exit(1);
   }
-  console.log("✅ gate-runner-check önteszt: mind a harmincegy visszarontás pirosat adott.");
+  console.log("✅ gate-runner-check önteszt: mind a harminchárom visszarontás pirosat adott.");
   process.exit(0);
 }
 
@@ -867,4 +917,4 @@ if (bad.length) {
   for (const b of bad) console.log(`   · ${b}`);
   process.exit(1);
 }
-console.log("✅ gate-runner-check: a párhuzamos futtató mind a tizenkét forgatókönyvben (A–L) tartja a soros hook szerződését, az író-sávval, a gépi slottal, a land-mentes böngészős kapukkal és az egyszeri újrafuttatással együtt.");
+console.log("✅ gate-runner-check: a párhuzamos futtató mind a tizenhárom forgatókönyvben (A–M) tartja a soros hook szerződését, az író-sávval, a gépi slottal, a land-mentes böngészős kapukkal és az egyszeri újrafuttatással együtt.");
