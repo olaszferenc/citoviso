@@ -4199,7 +4199,8 @@ a.rp-cc.on { background: var(--citui-navy-900); border-color: var(--citui-navy-9
 .oc-card { container-type: inline-size; margin-top: 14px; }
 .oc-card .con-w__h .oc-more { margin-left: auto; font-weight: 600; color: var(--citui-link-ink); }
 .oc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.05fr); gap: 10px; margin-top: 10px; }
-.oc-tag { font-style: normal; font-size: 10px; font-weight: 700; line-height: 1.4; color: var(--citui-ink-inverse); background: color-mix(in srgb, var(--citui-bad) 55%, var(--citui-warn)); border-radius: 5px; padding: 0 5px; margin-left: 6px; }
+/* „2. kör” (ADR-0442 plan: white on dark orange). The follow-up channel mix (bad 55% + warn) is too light for 10px text (2,97:1 light, 1,97:1 dark, console-contrast 11-26); bad-ink 75% carries white at 5,3:1 in light, and dark mode follows the on-bad rule (navy on the bright fill). */
+.oc-tag { font-style: normal; font-size: 10px; font-weight: 700; line-height: 1.4; color: var(--citui-on-bad); background: color-mix(in srgb, var(--citui-bad-ink) 75%, var(--citui-warn)); border-radius: 5px; padding: 0 5px; margin-left: 6px; }
 .con .oc-tile, .oc-tile { display: block; border: 1px solid var(--citui-line); border-radius: var(--citui-radius-sm); padding: 11px 12px 10px; background: var(--citui-surface-2); color: var(--citui-ink); text-decoration: none; min-width: 0; }
 .con .oc-tile:hover, .oc-tile:hover { border-color: var(--citui-link-ink); text-decoration: none; }
 .con .oc-tile--re, .oc-tile--re { background: color-mix(in srgb, var(--citui-warn) 10%, var(--citui-panel)); border-color: color-mix(in srgb, var(--citui-bad) 30%, var(--citui-line)); }
