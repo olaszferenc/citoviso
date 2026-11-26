@@ -1,4 +1,4 @@
-## ADR-XXXX — „Országok / Árazás” 4. fázis: a kiküldés szabályai országonként, az ország során; az auto-approve a repóba költözik
+## ADR-0487 — „Országok / Árazás” 4. fázis: a kiküldés szabályai országonként, az ország során; az auto-approve a repóba költözik
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva. A tulaj a megvalósítási tervet a koordinátoron (`cit9b4690e3`) át hagyta jóvá; a jóváhagyásról 2026-11-26-án döntött, ez a „B”.
