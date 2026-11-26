@@ -16,6 +16,16 @@ Nincs kapcsoló, ami átugorja. A pre-commit (`systemd-units check`) nem enged n
 nélküli időzítőt a repóba. Mérve 2026-09-23: a renderelő a kézzel telepített 8 éles egységgel
 **bájtra** egyezik — a GATE 6 első futása csak a hiányzót teszi fel.
 
+## ⚖️ Élesen: `user.slice` CPUWeight=10 / IOWeight=10 (2026-11-26, tulaj „mehet” a konzol-gyorsításra)
+
+Mérve 2026-11-26 13:20: a sessionök ssh-n párhuzamosan futtattak 22 `rerender-mock`-ot, 4 szeletes
+`qa-review`-t és `_fill-ok` szkripteket (load 31 a 2 vCPU-n), mind a `user.slice`-ban, és ugyanakkora
+súllyal versenyeztek, mint a `system.slice` (konzol, public, időzítők). A konzol oldalai 12–29 mp-re
+lassultak. Beállítás: `systemctl set-property user.slice CPUWeight=10 IOWeight=10` (tartós drop-in a
+`/etc/systemd/system.control/` alatt). Utána ugyanazon terhelés mellett a hub-oldalak 0,2–1,3 mp.
+Semmit nem állít le, csak a szolgáltatások maradék idejét kapja az ssh-s munka. ⚠️ Ezt NEM a GATE 6
+telepíti; új VPS-en kézzel kell, az ellenőrzés: `systemctl show user.slice -p CPUWeight`.
+
 ## `citoviso-alert@` — a ház riasztást kap, ha egy időzített feladat elhasal (ADR-0276)
 
 Minden prod service `[Unit]`-jában `OnFailure=citoviso-alert@%n.service`. Ha az egység `failed`
