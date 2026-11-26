@@ -80,7 +80,7 @@ export const PHOTO_MIN_LUMA = 50;
 /** Laplacian variance at 512 px: sharp photos ≥ 230 (a smooth sunset 48), a 3 px Gaussian blur ~32. */
 export const PHOTO_MIN_SHARPNESS = 35;
 /** Bump when the labels or the threshold change: cached verdicts of an older version are re-scored. */
-const VERSION = 9;
+const VERSION = 10;
 
 const SIZE = 224;
 const MEAN = [0.48145466, 0.4578275, 0.40821073] as const;
@@ -230,6 +230,12 @@ async function classifyPhotoBufferFresh(buf: Buffer): Promise<PhotoKind | null> 
     if (t?.dateStamp) {
       kind = "junk";
       why = `dátumbélyegző a fotón (${t.dateStamp})`;
+    } else if (t && signWords(t.words).length) {
+      // A sign / lettering in the picture — „SI VILLA” on the wall, a Schwarzkopf board, „WELLNESS HOTEL”, a portal
+      // ad with a logo (quality colleagues 11-26: it went to the letter's edge, the contact block, the gallery):
+      // off every slot, not only the hero.
+      kind = "junk";
+      why = `felirat a fotón (${signWords(t.words).slice(0, 3).join(" ")})`;
     }
   }
   const byLabel: Record<string, number> = {};
@@ -434,6 +440,10 @@ export function heroSized(v: PhotoKind): boolean {
   const q = v.quality;
   if (!q || !q.long) return true;
   return q.long >= HERO_MIN_LONG && (q.short == null || q.short >= HERO_MIN_SHORT);
+}
+/** Confidently read words that are real lettering: ≥ 4 letters (digits alone — a house number — do not count). */
+export function signWords(words: readonly string[]): string[] {
+  return words.filter((w) => (w.match(/\p{L}/gu)?.length ?? 0) >= 4);
 }
 /** Mean luma below this is too dark for the first screen. */
 export const HERO_MIN_LUMA = 80;

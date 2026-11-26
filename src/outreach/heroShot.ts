@@ -22,7 +22,9 @@ const SHOT_DIR = path.resolve(process.cwd(), "sites/_outreach-shots");
 
 /** Rendered at desktop layout, downscaled to e-mail width (~608px wide file). */
 const VIEWPORT = { width: 1216, height: 760 };
-const SCALE = 0.5;
+// Full resolution (11-26, quality colleague 3: the letter's picture was soft / pixelated in 9 of 11 — the shot was
+// 608 px wide while the letter file (emailOpen.ts) is cut at up to 1120 px, so it was shown enlarged).
+const SCALE = 1;
 /** The plan-framing ribbon lives in its OWN strip under the page (CSS px), never on top of it
  *  (11-26, quality colleague: at the bottom edge it cut the floating CTA, at the top the fixed menu).
  *  The page renders RIBBON_CSS shorter, so the final image keeps the old 1216×760 size. */
@@ -131,7 +133,7 @@ async function cachedShot(artifactId: string): Promise<HeroShotResult | null> {
   // /assets/stock, so a no-photo mock's hero showed the placeholder icon.
   // v4 cache-busted v3: those shots were taken without verifying the first
   // screen's images, so a portal 429 could freeze an EMPTY hero into the cache.
-  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v8.png`);
+  const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v9.png`);
   return (await fileExists(dest)) ? { path: dest } : null;
 }
 
@@ -222,7 +224,7 @@ async function renderHeroShot(artifactId: string): Promise<HeroShotResult> {
     // Two steps on purpose: the i18n guards key on `T(<identifier>, "literal")`.
     const ribbonLang = await prepareMailLang(shotLang);
     const ribbon = T(ribbonLang, "ELŐZETES LÁTVÁNYTERV — CITOVISO");
-    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v8.png`);
+    const dest = path.join(SHOT_DIR, `${artifactId}-${mtime}-v9.png`);
 
     await mkdir(SHOT_DIR, { recursive: true });
     // Declared OUTSIDE the browser block: it is the reason the operator reads on

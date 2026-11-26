@@ -526,7 +526,11 @@ export function roomsForMock(d: SiteData): readonly Room[] {
   // one keeps its own panel rather than repeat a photo another card already wears — or, on the
   // mock with the stock fill open, a watermarked bedroom illustration (withStockCards).
   const rc = d.photos.length ? roomCardPhotos(d) : { cards: [] as readonly Photo[], single: undefined };
-  const pool = [...rc.cards];
+  // Never the hero (11-26, Kálvária: the colleague's hero was a bedroom, and the named room's
+  // card took the same photo — the gate stopped both plans for „ugyanaz a kép 2 helyen”).
+  // (Only the hero: the about frame steps aside for a card photo itself — wordmarkGrow aboutPic.)
+  const frontUrls = new Set(d.photos.slice(0, 1).map((p) => p.url));
+  const pool = rc.cards.filter((p) => !frontUrls.has(p.url));
   // Bedrooms run out → the lodging's sitting room / house / garden shots, each once (11-26, quality colleague,
   // Ildikó: a real room's card stood as a grey panel with a bed icon on a page full of photos).
   const spare = d.photos.length > 2

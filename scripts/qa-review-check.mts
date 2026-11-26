@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { focusXOfBuffer, heroSized, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import { focusXOfBuffer, signWords, heroSized, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
 import { sampleRooms, galleryOrder, roomsForMock } from "../src/engine/templateKit.js";
@@ -186,7 +186,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   await withRibbonStrip(page, "ELŐZETES LÁTVÁNYTERV — CITOVISO", out);
   const meta = await sharpLib(out).metadata();
   const corner = await sharpLib(out).extract({ left: 600, top: 355, width: 4, height: 4 }).raw().toBuffer();
-  check("levélkép: a sáv a kép ALATT, külön csíkban — a jobb alsó gomb nem kerül alá", meta.height === 363 + 17 && corner[0]! > 200 && corner[2]! < 60);
+  check("levélkép: a sáv a kép ALATT, külön csíkban — a jobb alsó gomb nem kerül alá", meta.height === 363 + 34 && corner[0]! > 200 && corner[2]! < 60);
 }
 {
   const ph = (n: number, extra: Partial<PH> = {}): PH => ({ url: `https://x.test/${n}.jpg`, alt: "k", provenance: "portal", ...extra });
@@ -275,6 +275,13 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("parallax „Egy pillantásra”: nem ismétli a képes sorokat, fajtánként egy, csak ikonos tétel", /x\.i >= plan\.rows\.length && x\.k !== null && !gridKinds\.has\(x\.k\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
   check("szabványos tételek: a szolgáltatás a 70-es katalógus tételére képződik, a nem-szolgáltatás sor kimarad (nincs ikon nélküli csempe)",
     catalogueIdFor("Biliárd és darts") === "board_games" && catalogueIdFor("Televízió a szobákban") === "flat_tv" && catalogueIdFor("Jakuzzi") === "jacuzzi" && catalogueIdFor("Kisállattal") === "pet_friendly" && catalogueIdFor("Kúria több épülettel") === null && catalogueIdFor("Csendes kis utcában") === null);
+  check("felirat a fotón (tábla, falfelirat) le az oldalról; házszám nem", signWords(["VILLA"]).length === 1 && signWords(["12", "A3"]).length === 0 && /felirat a fotón/.test(readFileSync(new URL("../src/media/photoKind.ts", import.meta.url), "utf8")));
+  check("hero-jelöltek számozása stabil (URL szerint, a pintől független)", /urls\.sort\(\);/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
+  {
+    const ph3 = (n: number, extra: Partial<PH> = {}): PH => ({ url: `https://k.test/${n}.jpg`, alt: "k", provenance: "portal", ...extra });
+    const rs3 = roomsForMock({ name: "K", photos: [ph3(1, { bedroom: true, subject: "interior" }), ph3(2), ph3(3, { bedroom: true, subject: "interior" })], rooms: [{ name: "Kétágyas" }] } as unknown as SD);
+    check("megnevezett szoba kártyája nem a nyitókép (Kálvária)", rs3[0]?.photo?.url === ph3(3).url, String(rs3[0]?.photo?.url));
+  }
 }
 
 if (failed) {

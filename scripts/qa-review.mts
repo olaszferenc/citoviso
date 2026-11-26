@@ -151,6 +151,9 @@ async function heroCandidates(artifactId: string): Promise<{ leadId: string; url
     // (size: isHeroCandidate → heroSized, 1000 × 700 px — the moving cover's floor, 11-26)
     urls.push(p.url);
   }
+  // A STABLE numbering (11-26, quality colleague 4, Várlak: after a pick the pinned photo moved to place 1, and a
+  // second pick by the old sheet's number chose another photo) — by URL, independent of the current hero.
+  urls.sort();
   return { leadId: a.lead_id, urls };
 }
 
