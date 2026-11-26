@@ -4,7 +4,7 @@ title: Jóváhagyás — mehet-e ki a megkeresés, és hol
 audience: operator
 category: lead-path
 anchors: console.approval
-updated: 2026-11-25
+updated: 2026-11-26
 ---
 
 A **„Jóváhagyás”** lapon döntöd el, hogy egy megkeresés kimehet-e a leadnek. A listán csak az a lead
@@ -17,12 +17,19 @@ szám sem számolja. Megkeresés csak a te jóváhagyásod után megy ki.
 ## „Jóváhagyásra vár”
 
 Bal oldalt a lista. Felül keresőmező (név vagy település), alatta szűrés honlap szerint
-(**„Nincs honlap”** / **„Elavult honlap”**); a **„Szűrők törlése”** mindent visszaállít. Telefonon a
+(**„Nincs honlap”** / **„Elavult honlap”**); a **„Szűrők törlése”** mindent visszaállít. Ha a
+listában több ország leadje vár, a honlap-szűrő fölött egy **„Ország”** szűrősor is megjelenik
+(országonként egy gomb), a lista tetején pedig országonként látod, hány lead vár — minden
+országnak saját küldési ablaka és napi kvótája van. A leadek sorában ilyenkor az ország kódja
+is ott áll a település előtt. Telefonon a
 lista felül áll, alatta a kiválasztott lead.
 
 - **A kiválasztott lead fejlécében** a neve és a települése mellett a **„Keresés”** gomb új ablakban
   megnyitja a Google-t a szállás nevével, a településsel és az e-mail-címmel; alatta az
-  elérhetőségei jelvényként, benne az adattal. A megkeresés e-mailben megy.
+  elérhetőségei jelvényként, benne az adattal. A megkeresés e-mailben megy. Külföldi
+  leadnél akkor sem megy üzenet a mobilszámra, ha van: a lead országában nincs engedélyezett
+  mobil-csatorna (a magyar SIM-es modem külföldi számra nem küld), ezért csak e-mail megy, a mobil
+  megkeresés tartva marad. Ezzel nincs teendőd — a „Mehet” az e-mailt engedi ki.
 - **A megkeresés szövege** (alapból összecsukva, a címére kattintva nyílik le): a levél tárgya és
   bekezdései, szerkeszthetően. Ha átírsz valamit, nyomd meg a **„Mentés”** gombot, mielőtt a
   **„Mehet”**-re koppintasz — a „Mehet” a szöveget nem menti el. Üresen hagyott mező = a gépi szöveg megy; ha már elmentettél saját szöveget, a **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros

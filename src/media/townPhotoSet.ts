@@ -22,7 +22,7 @@ import type { TownPhoto } from "../engine/recipe.js";
 import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL } from "../outreach/mockPhotoGate.js";
 import { pickTownPhotos, TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION, type TownPick, type TownPickResult, type TownStyle } from "./townPick.js";
 
-export type TownSetTrigger = "scrape" | "generate" | "backfill";
+export type TownSetTrigger = "scrape" | "generate" | "backfill" | "chain";
 
 export interface TownPhotoSetRow {
   readonly country: string;
@@ -137,21 +137,7 @@ export async function ensureTownPhotoSet(t: EnsureInput, trigger: TownSetTrigger
   const job = (async (): Promise<TownPhotoSetRow | null> => {
     const lang = langForCountry(country) ?? "en";
     const r = await pickTownPhotos({ city: name, country, lat: t.lat, lon: t.lon, lang });
-    const values = {
-      country,
-      city_key: townKey(name),
-      city: name,
-      lat: t.lat,
-      lon: t.lon,
-      version: TOWN_PICK_VERSION,
-      threshold: TOWN_PICK_THRESHOLD,
-      tier: r.tier,
-      style: r.style,
-      heroes: JSON.stringify(r.heroes),
-      gallery: JSON.stringify(r.gallery),
-      stats: JSON.stringify({ ...r.stats, ...(r.wikidata ? { wikidata: r.wikidata } : {}) }),
-      trigger,
-    };
+    const values = townSetValues({ ...t, city: name, country }, r, trigger);
     await db
       .insertInto("town_photo_set")
       .values({ ...values, picked_at: sql`now()` } as never)
@@ -267,4 +253,43 @@ export async function townsInNeed(opts: { scrapeRunId?: string; country?: string
     .map((e) => ({ city: e.city, country: e.country, lat: median(e.lats), lon: median(e.lons), leads: e.leads }))
     .sort((a, b) => b.leads - a.leads || a.city.localeCompare(b.city))
     .slice(0, opts.limit ?? Infinity);
+}
+
+/** The town_photo_set row of a finished pick (the generator-side upsert and the chain step share it). */
+export function townSetValues(t: EnsureInput, r: TownPickResult, trigger: TownSetTrigger) {
+  const country = t.country.toUpperCase();
+  const name = townName(t.city);
+  return {
+    country,
+    city_key: townKey(name),
+    city: name,
+    lat: t.lat,
+    lon: t.lon,
+    version: TOWN_PICK_VERSION,
+    threshold: TOWN_PICK_THRESHOLD,
+    tier: r.tier,
+    style: r.style,
+    heroes: JSON.stringify(r.heroes),
+    gallery: JSON.stringify(r.gallery),
+    stats: JSON.stringify({ ...r.stats, ...(r.wikidata ? { wikidata: r.wikidata } : {}) }),
+    trigger,
+  };
+}
+
+/**
+ * The same upsert as plain SQL for the chain's live path (ssh + psql, like the contact apply). Every text value is
+ * dollar-quoted with a tag that cannot occur in it, so no value can break out of its literal.
+ */
+export function townSetUpsertSql(v: ReturnType<typeof townSetValues>): string {
+  const lit = (x: string): string => {
+    let tag = "tp";
+    while (x.includes(`$${tag}$`)) tag += "x";
+    return `$${tag}$${x}$${tag}$`;
+  };
+  const num = (x: number): string => (Number.isFinite(x) ? String(x) : "null");
+  return (
+    `insert into town_photo_set (country, city_key, city, lat, lon, version, threshold, tier, style, heroes, gallery, stats, trigger, picked_at) values (` +
+    [lit(v.country), lit(v.city_key), lit(v.city), num(v.lat), num(v.lon), String(Math.trunc(v.version)), lit(v.threshold), lit(v.tier), lit(v.style), `${lit(v.heroes)}::jsonb`, `${lit(v.gallery)}::jsonb`, `${lit(v.stats)}::jsonb`, lit(v.trigger), "now()"].join(", ") +
+    `) on conflict (country, city_key) do update set city = excluded.city, lat = excluded.lat, lon = excluded.lon, version = excluded.version, threshold = excluded.threshold, tier = excluded.tier, style = excluded.style, heroes = excluded.heroes, gallery = excluded.gallery, stats = excluded.stats, trigger = excluded.trigger, picked_at = now();`
+  );
 }

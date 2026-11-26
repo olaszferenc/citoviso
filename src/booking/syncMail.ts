@@ -133,7 +133,7 @@ export async function sendOwnerSyncFailing(link: CalendarLinkRow): Promise<void>
     link.lastDayCount !== null
       ? T(lang, "A korábban áthozott {n} foglalt nap érvényben marad.", { n: link.lastDayCount })
       : "";
-  const why = link.lastError ? T(lang, "Amit a link válaszol: {err}", { err: link.lastError }) : "";
+  const why = link.lastError ? T(lang, "Amit a link válaszol: {err}", { err: T(lang, link.lastError) }) : "";
   const todo = T(
     lang,
     "Ellenőrizze a linket a Modulok › Online foglalás képernyőn, a portál kártyáján. Ha a portálon új linket kapott, válassza le a régit, és kösse össze az újjal.",

@@ -4,7 +4,7 @@ title: Országok — egy ország adatai, és mikor nyitható meg
 audience: operator
 category: system
 anchors: console.countries
-updated: 2026-11-19
+updated: 2026-11-26
 ---
 
 A **„Országok”** lapon (Rendszer › Országok) kezeled az országokat: itt veszel fel egy új
@@ -58,6 +58,12 @@ A panel tetején hat lépés van: **„Adatok”** → **„Ár és fizetés”*
   fogadnia kell az ország pénznemét. Hiányos ársornál a vendég foglalási kérése is elhasalna,
   ezért ez zárófeltétel. Az árakat az **Árazás** lapon töltöd ki; a régiót és a pénznemet az
   „Adatok” lépésben választod. Nem EU-s ország ebben a körben nem nyitható (a számlázása nincs megoldva).
+- **Fizetési tárca** (ugyanebben a lépésben, külön sorban). Hiába fogadja a szolgáltató a pénznemet,
+  ha a mi fiókunkban nincs hozzá pénztárca, a vevő pénze nem tud megérkezni. Ez is zárófeltétel.
+  Ha hiányzik, a sor piros, és ezt írja: *„nincs EUR pénztárca a barion fiókban — EUR fizetés addig
+  nem fogadható; a tárca nyitása a tulaj döntése”* (az ország pénznemével és szolgáltatójával).
+  Ezt itt nem tudod megoldani: szólj a tulajnak, ő nyitja meg a tárcát a szolgáltatónál. Ha megvan,
+  a sor zöld: *„EUR pénztárca megvan (barion)”*.
 - **Nyelv.** Megkeresés, mock és vendégoldal csak az ország alapnyelvén megy. A lap a
   vevő-oldali feliratokat számolja (a konzol saját feliratai nem számítanak, azok magyarul
   maradnak). Ha egy is hiányzik, a megkeresés TARTVA („Bábelre vár”). A fordítást Bábel végzi

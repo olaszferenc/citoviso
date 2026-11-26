@@ -18,7 +18,7 @@ A kép nélküli leadek mockja eddig egyetlen vak Wikipedia-képet kapott (ADR-0
    - Minden hibát általános szabály javít (§2c), kézi csere soha.
 3. **Szintek:** település → környék tájképe (csak a lead saját országából, a kép koordinátájából eldöntve, Nominatim) → régió (országszint nélkül) → semmi.
 4. **Tár:** `town_photo_set` (0153), egy sor településenként: 3–6 hero, 4–6 helyi galériakép és a stílus. A hero-t a település e-mailes leadjei között szétosztjuk (i mod n), a galériát leadenként elforgatjuk.
-5. **⛔ Csak e-mailes leadért, just-in-time** (tulaj 2026-11-25): előre futtatott pótlás nincs, se top 500, se az összes település. A gyűjtés akkor fut, amikor a lánc egy konkrét e-mail-címes, kép nélküli vagy kevés képes leadhez ér, a mock előtt (`generator/townHero.ts`), és a településnek még nincs aktuális válogatása. Az eredmény a településre cache-elődik. Szabályváltozáskor a tárolt válogatásokat újraszűrjük, új keresés nélkül: `scripts/town-photo-sets.mts --rescreen` (és `--restyle`).
+5. **⛔ Csak e-mailes leadért, just-in-time** (tulaj 2026-11-25): előre futtatott pótlás nincs, se top 500, se az összes település. A gyűjtés a lánc lépéseként fut, a kontaktkereső után és a mock előtt (`scripts/town-photo-gather.mts`, a Debian gépen, lásd v6); a generátor csak olvas. A településnek ilyenkor még nincs aktuális válogatása. Az eredmény a településre cache-elődik. Szabályváltozáskor a tárolt válogatásokat újraszűrjük, új keresés nélkül: `scripts/town-photo-sets.mts --rescreen` (és `--restyle`).
 6. **1–4 saját kép:** a saját képek elöl. A saját első kép csak akkor marad hero, ha a lakhely külsejét vagy kilátását mutatja (outside ≥0,35) és legalább 1200 px.
 7. **Mintaszobák stílus szerint:** mediterrán, alpesi, vidéki és városi (`src/engine/stockRooms.json`, Wikimedia Commons, CLIP-válogatás, `scripts/stock-rooms-build.mts`).
    - A stílust a hely adja: tengerpart, ha a Wikidata P206 tengert nevez (vagy ha az OSM-partvonal 5 km-en belül van); hegy, ha a magasság ≥600 m (Wikidata P2044, vagy az OpenTopoData SRTM); város, ha a lakosság ≥20 000; különben falu.
@@ -43,7 +43,12 @@ A kép nélküli leadek mockja eddig egyetlen vak Wikipedia-képet kapott (ADR-0
 - Ha a településen nincs „jó”, a környék, majd a régió jelöltjei kerülnek a bíró elé; ha egyik sem jó, nincs hero és nincs levél. A „rossz” kép a galériába sem kerül.
 - Költség API-egyenértékben a CLI `total_cost_usd`-jából, a válogatással tárolva: 1–2 hívás településenként, 0,8–2,8 cent.
 - 5. vak kör (20 új település): 13 kép nélküli lead → 7 kimenő (szememmel 5 jó, 2 határeset, 0 rossz), 6 kiesik a „csak jó” szabály miatt (46%).
-- ⚠️ Az éles gépen nincs `claude` CLI. Ott a bíró zártan bukik (nincs hero, nincs levél), amíg a település-válogatás ezen a gépen nem fut (a `kor.sh` mintája szerint), vagy amíg az éles gép nem kap CLI-t. Ez döntés.
+- **Döntés (koordinátor 2026-11-26, „a” út):** a település-válogatás (gyűjtés, CLIP, bíró) a Debian gépen fut, a gyűjtő lánc lépéseként: a kontaktkereső után, a fo-terv előtt, just-in-time, csak az e-mailes, kép nélküli vagy kevés képes leadek településeire.
+  - Eszköz: `scripts/town-photo-gather.mts`. Egy kód, `CIT_DB=prod|dev` kapcsolóval (az uj-lanc-hr mintájára); élesen ssh + psql útján ír, mint a kontakt-apply.
+  - Az éles generátor CSAK olvassa a kész `town_photo_set`-et (`generator/townHero.ts`); ha nincs, a lead vár, a generálás nem bukik.
+  - A lánc oldala előkészítve, az élőhöz nem nyúltam: `~/rc-briefs/uj-lanc-hr/telepkep/telepkep.sh`, a módosított `fo-terv/fo-cand.sql` (kevés képes lead csak „jó” hero-val tervezhető, különben vár) és `atallas-telepkep.sh check|go|rollback`.
+  - A `go` a HR-élesítéssel együtt, a tulaj szavára fut; előfeltétele, hogy az éles DB-n legyen 0153.
+  - Dev teljes kör igazolva: kontaktkereső (e-mailt talált, dev konzolon beírva) → településkép-lépés (Túrkeve: nincs jó, vár; Keszthely: a bíró „jó” hero-t adott) → mock → render-kapu (Keszthely átment, Túrkeve visszatartva).
 
 ### Eltérés
 - Az ADR-0436 4. pontja megszűnik: a hero nem ismétlődik a galériában.

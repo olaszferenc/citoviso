@@ -2709,6 +2709,7 @@ await shootConsole(
   const huItems: RdItem[] = [
     { key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" },
     { key: "prices", state: "ok", gating: true, title: "Ársor és fizetés", detail: "„hu” ár-régió teljes, HUF — a fizetési szolgáltató (barion) fogadja" },
+    { key: "wallet", state: "ok", gating: true, title: "Fizetési tárca", detail: "HUF pénztárca megvan (barion)" },
     { key: "babel", state: "ok", gating: true, title: "Nyelvi csomag (Bábel)", detail: "magyar — a forrásnyelv, nincs mit fordítani" },
     { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "hazai csomag — a forrás maga" },
     { key: "holidays", state: "warn", gating: false, title: "Ünnepnapok", detail: "nincs megadva — ma a válasz csak hétvégén áll" },
@@ -2717,6 +2718,7 @@ await shootConsole(
   const bgItems: RdItem[] = [
     { key: "data", state: "ok", gating: true, title: "Ország-adatok", detail: "minden kötelező mező helyes" },
     { key: "prices", state: "bad", gating: true, title: "Ársor és fizetés", detail: "ár-régió „global”: hiányzó modulár: gallery, rooms, amenities, pricing" },
+    { key: "wallet", state: "bad", gating: true, title: "Fizetési tárca", detail: "nincs EUR pénztárca a barion fiókban — EUR fizetés addig nem fogadható; a tárca nyitása a tulaj döntése" },
     { key: "babel", state: "bad", gating: true, title: "Nyelvi csomag (Bábel)", detail: "bg: 3 978 / 4 000 vevő-oldali felirat lefordítva — Bábelre vár", pct: 99 },
     { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "mind a 227 egység bg nyelven" },
     { key: "holidays", state: "ok", gating: true, title: "Ünnepnapok", detail: "12 nap, 2026 és 2027 lefedve" },
@@ -2725,6 +2727,7 @@ await shootConsole(
   const hrItems: RdItem[] = [
     { key: "data", state: "bad", gating: true, title: "Ország-adatok", detail: "nincs ország-sor — vedd fel az országot" },
     { key: "prices", state: "bad", gating: true, title: "Ársor és fizetés", detail: "nincs ország-sor" },
+    { key: "wallet", state: "bad", gating: true, title: "Fizetési tárca", detail: "nincs ország-sor" },
     { key: "babel", state: "ok", gating: true, title: "Nyelvi csomag (Bábel)", detail: "hr: mind a 4 000 vevő-oldali felirat lefordítva" },
     { key: "legal", state: "ok", gating: true, title: "Jogi csomag", detail: "mind a 227 egység hr nyelven" },
     { key: "holidays", state: "bad", gating: true, title: "Ünnepnapok", detail: "nincs megadva" },

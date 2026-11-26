@@ -1738,7 +1738,9 @@ async function serveAdmin(
             bookable: bookable.has(u.id),
           })),
           unitId: unit.id,
-          links,
+          // The stored sync sentence (booking/sync.ts SYNC_MSG) is the Hungarian source; the
+          // owner reads it in the admin's language (catalogue-harvested, HU byte for byte).
+          links: links.map((l) => ({ ...l, lastError: l.lastError ? T(content?.lang ?? "hu", l.lastError) : null })),
           // NEMZETKÖZI C: the portal cards follow the lodging's country (no Szállás.hu in HR).
           ...(await (async () => {
             const row = await countryOfSite(site.id);
@@ -1755,7 +1757,11 @@ async function serveAdmin(
           ),
           // K1 · K7: conflicts with accepted bookings, and each link's short sync log.
           conflicts: await getLinkConflicts(links.map((l) => l.id)),
-          runs: await getSyncRuns(links.map((l) => l.id)),
+          runs: await (async () => {
+            const lang = content?.lang ?? "hu";
+            const runs = await getSyncRuns(links.map((l) => l.id));
+            return new Map([...runs].map(([id, rs]) => [id, rs.map((r) => ({ ...r, error: r.error ? T(lang, r.error) : r.error }))]));
+          })(),
           // ADR-0371: the same import link under another room of the place (Szállás.hu trap).
           sharedLinks: await sharedImportLinks(unit.id),
           // A12: a refused link is answered in its own card (`ph` = the portal it was typed into).

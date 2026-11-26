@@ -21,7 +21,7 @@ Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `
 - `src/media/townJudge.ts`: a CLIP legjobb 6 jelöltjét egy előfizetéses `claude -p` képes ítélet bírálja, csak a „jó” lehet hero. 5. vak kör: 13 lead → 7 kimenő (0 rossz), 6 kiesik (46%).
 
 ## Nyitott
-- ⚠️ Élesen nincs `claude` CLI: a bíró ott zártan bukik. Döntés kell: a település-válogatás a Debianon fusson (a `kor.sh` mintája szerint), vagy CLI élesre.
+- Döntés („a”, 2026-11-26): a válogatás a Debianon fut a lánc lépéseként (`scripts/town-photo-gather.mts`, `CIT_DB=prod|dev`); az éles generátor csak olvas. Átállás: `~/rc-briefs/uj-lanc-hr/atallas-telepkep.sh go`, a HR-élesítéssel együtt, a tulaj szavára (előfeltétel: 0153 élesen). Dev teljes kör igazolva (kontakt → válogatás → mock → kapu).
 - A `town_photo_dispatch` kapcsolót a tulaj nyitja. Élesítés csak az ő kérésére.
 - A szobatár bővítése (Pexels: a kereső Cloudflare-ellenőrzést ad, saját böngészőprofilos kolléga kell).
 - Fakóság-padló a hero-ra (a v4 gyengéinek fele szürke, párás), vak újraméréssel.

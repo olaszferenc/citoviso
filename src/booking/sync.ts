@@ -55,7 +55,11 @@ export const SYNC_BUDGET_MS = 120_000;
 /** K7: a link failing without a break for this long gets the owner a mail (once). */
 export const LASTING_FAILURE_HOURS = 24;
 
-/** Owner-facing sentences (A2: a human sentence, never an HTTP status). */
+/**
+ * Owner-facing sentences (A2: a human sentence, never an HTTP status). Kept as the Hungarian
+ * SOURCE (stored in calendar_link.last_error); the catalogue harvests them (extract-i18n
+ * DATA_FILES) and every view shows them through T(lang, …).
+ */
 export const SYNC_MSG = {
   badUrl: "A link nem érvényes webcím.",
   unreachable: "A link nem érhető el, vagy nem naptár. Másolja be újra a portál naptár-exportjának linkjét.",
