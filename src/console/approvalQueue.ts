@@ -1,6 +1,6 @@
 // Owner approval page for the new single-pass chain (owner 2026-11-06): every lead the
 // single-pass checker let through (MEHET) waits HELD with the PENDING note until the owner
-// looks at the whole site and says yes or no. Since 2026-11-26 (ADR-XXXX) the list is fed by the
+// looks at the whole site and says yes or no. Since 2026-11-26 (ADR-0495) the list is fed by the
 // MACHINE render gate on both plans, not by the quality colleague's pass (see mockQaReview.ts). Left: the waiting list. Right: the full site
 // of the selected lead (both plans, desktop or phone width), scaled to fit. "Mehet" puts the
 // row back on the dispatch queue, "Nem" cancels it; either way the next lead opens.

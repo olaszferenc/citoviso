@@ -1,6 +1,6 @@
 // The quality colleague's tool (owner 2026-11-25, src/outreach/mockQaReview.ts).
 //
-// ⛔ SINCE 2026-11-26 EVENING (owner, ADR-XXXX) THE COLLEAGUE IS A RULE FINDER, NOT A PER-ITEM GATE: the
+// ⛔ SINCE 2026-11-26 EVENING (owner, ADR-0495) THE COLLEAGUE IS A RULE FINDER, NOT A PER-ITEM GATE: the
 // owner's page and the dispatcher ask the machine render gate and the owner's yes; a colleague's `pass` is
 // not needed, a `fail` on the current file still holds that one mock. The day's work is a SAMPLE:
 //

@@ -1,4 +1,4 @@
-## ADR-XXXX — A minőségi kolléga szabályfelfedező, nem darabonkénti kapu: a tulaj lapját a gépi render-kapu táplálja
+## ADR-0495 — A minőségi kolléga szabályfelfedező, nem darabonkénti kapu: a tulaj lapját a gépi render-kapu táplálja
 
 - **Dátum:** 2026-11-26 (este)
 - **Státusz:** elfogadva (tulaj: „Ok” a javaslatra; a koordináló session `cit96bd8170`)

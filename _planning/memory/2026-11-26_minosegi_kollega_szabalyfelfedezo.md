@@ -7,7 +7,7 @@ Session `cit96bd8170` (brief `~/rc-briefs/production-20261126-192546.md`, tulaj-
 - Kolléga-kapacitás: 4 kolléga, 148 ítélet, 4,5–6,3 ítélet/aktív óra, csúcs 16–17/óra; pass 65 / 21 / 38 / 5 %. Pass-arány órára: 93 % (friss javítás utáni anyag), 12 % (két ismert generátor-hiba minden mockon), 100 % (19:10-es mérce) → a számot a generátor állapota mozgatta.
 - A bukott mock sehol nem kuka: a sor tart, a következő generátor-javítás újrarendereli, újra sorra kerül (90 bukottból 8 már). Valódi „örök várás” csak a nyitókép nélküli leadnél van (7 tartott + településkép „nincs jó hero” 44 %).
 
-## Döntés és kód (ADR-XXXX)
+## Döntés és kód (ADR-0495)
 - A tulaj lapját és a kiküldőt a gépi render-kapu + a tulaj „Mehet”-je táplálja; a kolléga passza nem kapu, a fail-je tart.
 - `qa-review.mts sample | note | findings`; `gate-blind-sample.mts` (vak mérés); `CHAIN_WAIT_NOTES` (új + régi várakozó-jegyzet).
 - Új kolléga-brief: `~/rc-briefs/minosegi-kollega-mintavetel-20261126.md`.

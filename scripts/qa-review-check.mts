@@ -3,7 +3,7 @@
 //
 // ① The quality colleague's FAIL on THIS mock file holds the letter on every path (src/outreach/mockQaReview.ts):
 //    the dispatcher's per-row check and the shared send path ask it; the PASS is not required anywhere since
-//    2026-11-26 (ADR-XXXX) — the machine render gate and the owner's yes decide; only the owner's sample letter
+//    2026-11-26 (ADR-0495) — the machine render gate and the owner's yes decide; only the owner's sample letter
 //    (`sampleTo`) is exempt from the fail too. ② The photo filter is an ALLOW-list
 //    (src/media/photoKind.ts): a picture that is not surely the lodging, or too small / dark / blurred,
 //    is "junk" and stays off the page, out of the hero and out of the opening. Hermetic: no DB, no model.

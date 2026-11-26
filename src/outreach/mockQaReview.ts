@@ -13,7 +13,7 @@
 // A review is bound to the mock FILE it saw (mtime, like the render gate's cache): a re-render makes
 // it stale, and a stale review is no review.
 //
-// ⛔ THE PASS IS NOT A GATE ANY MORE (owner 2026-11-26 evening, ADR-XXXX). Measured on 11-26: 148 verdicts
+// ⛔ THE PASS IS NOT A GATE ANY MORE (owner 2026-11-26 evening, ADR-0495). Measured on 11-26: 148 verdicts
 // by four colleagues, ~85 % fails, nearly all the SAME two or three generator faults failed one by one; every
 // generator fix made every pass stale (bound to the file), so the colleagues re-judged the same material all
 // day, and the owner's page got 2 leads. The colleague's value was in FINDING rules the machine gate missed,
