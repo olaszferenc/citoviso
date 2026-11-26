@@ -112,7 +112,7 @@ export function homepagePlansHtml(
 // are Bábel's committed packs (src/i18n/babel/packs), read as the seed file itself, so a
 // language is served exactly when its committed pack covers the page.
 //
-// ── The price list (owner 2026-11-26, ADR-XXXX; overrides ADR-0473 ③ "euro list for every
+// ── The price list (owner 2026-11-26, ADR-0490; overrides ADR-0473 ③ "euro list for every
 // other language"): the visitor's COUNTRY decides it (Cloudflare's CF-IPCountry), not the
 // language. The country row's pricing region, when its sheet is owner-confirmed and complete;
 // else the "global" sheet under the same condition; else the static "custom offer" block (no

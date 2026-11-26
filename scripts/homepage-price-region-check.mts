@@ -1,5 +1,5 @@
 // Guard — the homepage's PRICE LIST follows the visitor's COUNTRY, its LANGUAGE the browser
-// (owner 2026-11-26, ADR-XXXX). Read-only: it renders public/index.html with simulated request
+// (owner 2026-11-26, ADR-0490). Read-only: it renders public/index.html with simulated request
 // headers against the dev pricing + country tables and writes nothing.
 //
 //   ① the country (CF-IPCountry) picks the row's pricing region when that sheet is

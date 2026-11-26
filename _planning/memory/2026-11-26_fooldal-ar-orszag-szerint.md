@@ -1,4 +1,4 @@
-# 2026-11-26 — A főoldal ára a látogató országából, a nyelve a böngészőből (ADR-XXXX)
+# 2026-11-26 — A főoldal ára a látogató országából, a nyelve a böngészőből (ADR-0490)
 
 Session `citc00b6cf8`, koordinátor `cit9b4690e3`, brief `~/rc-briefs/fooldal-ar-orszag-szerint-20261126.md`. Élesen NINCS.
 

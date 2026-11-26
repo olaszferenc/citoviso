@@ -1,4 +1,4 @@
-## ADR-XXXX — A főoldal ára a látogató ORSZÁGÁBÓL jön, a nyelve a böngészőből (ha nincs ársor: Globális)
+## ADR-0490 — A főoldal ára a látogató ORSZÁGÁBÓL jön, a nyelve a böngészőből (ha nincs ársor: Globális)
 
 **Státusz:** ELFOGADVA. Tulaj 2026-11-26, a koordinátoron (`cit9b4690e3`) át: „adott országból böngészve adott ország lista ha van, ha nincs Globális”; kiegészítés: „nyelv = böngésző nyelve, ha van”. Brief `~/rc-briefs/fooldal-ar-orszag-szerint-20261126.md`.
 **Épít:** ADR-0443 (pénz-út: `regionPriceGaps`, a `global` csak az anonim főoldal-kijelzés), ADR-0460 (piac-kapu), ADR-0465 (euró ár-réteg), ADR-0437 (ország-sor `pricing_region`).
