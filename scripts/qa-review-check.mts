@@ -241,6 +241,8 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const extra = amenOf(renderSite(r, { ...base, sampleAmenities: ["Parkoló", "Medence"] } as SD, { phase: "mock" }));
     check("„Amit kínálunk”: az új tétel (Medence) megmarad, a látott (Parkoló) kimarad", /Medence/.test(extra) && !/Parkol/.test(extra), extra.slice(0, 300));
   }
+  check("cím: a kettétörő szót a lap maga kicsinyíti (data-cit-fit-words, 60 % / 16 px alja)", /data-cit-fit-words/.test(readFileSync(new URL("../src/engine/render.ts", import.meta.url), "utf8")));
+  check("gépi kapu: a nyitóképet a kolléga-jelölt szabálya méri (isHeroCandidate), nem írja felül a választását", /!isHeroCandidate\(hv\)/.test(readFileSync(new URL("../src/outreach/mockRenderGate.ts", import.meta.url), "utf8")));
 }
 
 if (failed) {

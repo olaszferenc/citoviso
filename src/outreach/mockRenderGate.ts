@@ -44,13 +44,13 @@ import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { bandScore, classifyPhotoBuffer, isHeroWorthy, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
+import { bandScore, classifyPhotoBuffer, isHeroCandidate, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 12;
+export const RENDER_GATE_VERSION = 13;
 
 /**
  * The opening screen's top part must carry a picture, not a near-blank band (coordinator 2026-11-25, Igal: an
@@ -438,7 +438,10 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
       findings.push({ code: "stock", detail: `mintakép a nyitóképen: ${fileOf(heroUrl)}` });
     } else if (heroUrl && heroBytes) {
       const hv = await classifyPhotoBuffer(heroBytes);
-      if (hv && !isHeroWorthy(hv)) {
+      // The HARD no-gos only (kitchen, bathroom, non-lodging, person, vehicle, dark): which of the fit photos is the
+      // wow is the quality colleague's pick (qa-review heroes, isHeroCandidate) — the gate must not overrule it
+      // with the machine pick's score floor (11-26, BaBo: the chosen geranium terrace was blocked as „not a hero”).
+      if (hv && !isHeroCandidate(hv)) {
         findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv.label}): ${fileOf(heroUrl)}` });
       }
     }

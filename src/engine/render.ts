@@ -207,9 +207,25 @@ export function withGalleryPhotoList(html: string, data: SiteData): string {
  */
 const LONG_WORD_CSS =
   "<style data-cit-long-word>h1,h2,h3,h4,.t-quote,blockquote,figcaption{overflow-wrap:anywhere;hyphens:manual;-webkit-hyphens:manual}</style>";
+// A heading whose word still breaks across two lines shrinks until it fits whole (11-26: Zalavölgye, Riva,
+// Terézia, Laura, Mecsekgyöngye stood ⛔ at the render gate for „két sorba tört szó a címben” — the CSS
+// above only keeps the word inside the screen, it cannot keep it in one piece). Step 6 %, floor 60 % (never under 16 px); on
+// load, after fonts, and on resize. No word broken = nothing changes.
+const FIT_WORDS_JS =
+  "<script data-cit-fit-words>(function(){" +
+  "function broken(el){var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),n;while((n=w.nextNode())){var t=n.textContent||'',re=/\\S+/g,m;" +
+  "while((m=re.exec(t))){if(m[0].length<4)continue;var r=document.createRange();r.setStart(n,m.index);r.setEnd(n,m.index+m[0].length);" +
+  "var tops={},k=0,rs=r.getClientRects();for(var i=0;i<rs.length;i++){if(rs[i].width>1){var y=Math.round(rs[i].top);if(!tops[y]){tops[y]=1;k++;}}}if(k>1)return true;}}return false;}" +
+  "function fit(){var els=document.querySelectorAll('h1,h2,h3,.t-quote');for(var i=0;i<els.length;i++){var el=els[i];el.style.fontSize='';" +
+  "if(!el.offsetWidth||!broken(el))continue;var base=parseFloat(getComputedStyle(el).fontSize),f=1;" +
+  "var lo=Math.max(0.6,16/base);while(f-0.06>=lo&&broken(el)){f-=0.06;el.style.fontSize=(base*f).toFixed(1)+'px';}}}" +
+  "fit();addEventListener('load',fit);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);" +
+  "var q;addEventListener('resize',function(){clearTimeout(q);q=setTimeout(fit,150);});})();</script>";
+
 function withLongWordBreak(html: string): string {
   if (html.includes("data-cit-long-word")) return html;
-  return html.includes("</head>") ? html.replace("</head>", `${LONG_WORD_CSS}</head>`) : html;
+  const withCss = html.includes("</head>") ? html.replace("</head>", `${LONG_WORD_CSS}</head>`) : html;
+  return withCss.includes("</body>") ? withCss.replace("</body>", `${FIT_WORDS_JS}</body>`) : withCss;
 }
 
 function injectImgFallback(html: string): string {
