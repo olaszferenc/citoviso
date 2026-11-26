@@ -1,4 +1,4 @@
-## ADR-XXXX — Kivezetett sablonú mock nem megy ki újra, és nem épül belőle próba-oldal
+## ADR-0481 — Kivezetett sablonú mock nem megy ki újra, és nem épül belőle próba-oldal
 
 **Dátum:** 2026-11-26 · **Státusz:** elfogadva (tulaj: „1 ok javítsd”) · Épít: ADR-0423 (új mockhoz csak három sablon)
 

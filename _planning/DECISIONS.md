@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-kivezetett-sablon-nem-megy-ki-es-nem-lesz-proba.md) — Kivezetett sablonú mock nem megy ki újra, és nem épül belőle próba-oldal
+- [ADR-0481](decisions/0481-kivezetett-sablonu-mock-nem-megy-ki-ujra-es-nem.md) — Kivezetett sablonú mock nem megy ki újra, és nem épül belőle próba-oldal
 - [ADR-0480](decisions/0480-commit-es-land-gyorsitasa-inkrementalis.md) — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra
 - [ADR-0479](decisions/0479-kep-nelkuli-es-keves-kepes-lead-automata.md) — Kép nélküli és kevés képes lead: automata, országfüggetlen településkép-tár
 - [ADR-0478](decisions/0478-elesites-gyorsitasa-a-mock-kapu-uresjarata-ki.md) — Élesítés gyorsítása: a mock-kapu üresjárata ki, képítélet-tár, a `--go` átveszi a próbafuttatást, a deploy mindig a main szkriptjével fut, a fordítás nem állít meg

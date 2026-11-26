@@ -5,7 +5,7 @@
 ## Elvégzett munka
 - Brief („melyik magtípust kapta a legújabb próbázó?”): Freedom 50 Apartman → a kivezetett horizontal (októberi link 1. terve).
 - Freedom 50: két új mock (parallax d93ed47a, wordmark-grow ba7687df) a próbázó adataiból; levél a tulaj jóváhagyásával, online `/configure/<id>` linkekkel; élesen új prospect 977fb38f (1/2/3 terv), a levél mindkét címére kiment (11-25).
-- Kód: `src/outreach/templateGate.ts` + bekötés (`trialCampaign.ts` artifactBlocks, `sendOutreachSms.ts` mobileOutreachGates, `autoDispatch.ts` enqueue + küldés, `src/trial/start.ts` currentTemplatePlanOf). ADR-XXXX.
+- Kód: `src/outreach/templateGate.ts` + bekötés (`trialCampaign.ts` artifactBlocks, `sendOutreachSms.ts` mobileOutreachGates, `autoDispatch.ts` enqueue + küldés, `src/trial/start.ts` currentTemplatePlanOf). ADR-0481.
 - Őr: `scripts/retired-template-send-check.mts` (pre-commit); `trial-plan-binding-check` ④; tesztadatok a tulaj sablonjaira (nonopener, behavior, trial-campaign, plan-switch, free-trial-check/e2e, trial-promise, plan-link-owned-content, proba-c-checkout).
 
 ## Módosított fájlok
