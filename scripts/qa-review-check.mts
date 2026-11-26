@@ -286,6 +286,11 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("parallax-rács: a címben/alcímben felsorolt tétel nem jön vissza csempeként", /firstSentence\(data\.intro\), \.\.\.headings\]\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
   check("alkalmas nyitókép nélküli sor kikerül a kolléga-sorból (tartva), nem jön vissza ⭐-gal", /nincs mozgatható, alkalmas nyitókép/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
   check("rács és kiemelés-lista: a szakaszcímekben felsorolt tétel („Kert, terasz, parkoló”) nem jön vissza", /recipe\.sections\.flatMap\(\(s\) => \[s\.copy\?\.title/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /recipe\.sections\.flatMap\(\(s\) => \[s\.copy\?\.title/.test(readFileSync(new URL("../src/engine/templates/gateOpening.ts", import.meta.url), "utf8")));
+  {
+    const photos = [1, 2, 3, 4, 5, 6].map((n) => ({ url: `https://z.test/${n}.jpg`, alt: "z", provenance: "portal", kindLabel: "the outside of a house", subject: "exterior", bedroom: false }));
+    const html = renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { name: "H", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos, highlights: [] } as unknown as SD, { phase: "mock" });
+    check("5+ saját fotó, nincs hálókép: a szobakártya vízjeles MINTA-illusztrációt kap (tulaj 11-26), a galériában stock nincs", (html.match(/\/assets\/stock\//g) ?? []).length === 1 && /data-cit-module="rooms"/.test(html));
+  }
 }
 
 if (failed) {

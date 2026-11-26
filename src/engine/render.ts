@@ -838,7 +838,10 @@ function localTownPhotos(data: SiteData): Photo[] {
 function withStockFill(data: SiteData): SiteData {
   // The town's hero is no own photo (withTownHero put it first): it never stops the fill.
   const own = data.photos.filter((p) => !isStockPhoto(p) && p.url !== data.townPhoto?.url).length;
-  if (own >= OWN_PHOTOS_NO_STOCK) return data;
+  // 5+ own photos: no stock in the GALLERY (owner 11-24), but a room card the lodging shows no bedroom for wears a
+  // watermarked MINTA bedroom illustration (owner 2026-11-26: „feltöltünk mindent stock képekkel, nem?” — instead of
+  // a text-only „Szálláslehetőség” card or a dropped block).
+  if (own >= OWN_PHOTOS_NO_STOCK) return { ...data, stock: { gallery: [], cards: true } };
   const alt = T(data, "Illusztráció");
   // Plan kepnelkuli-hero ③: the town's LOCAL pictures come first after the own photos, then the MINTA rooms.
   const local = localTownPhotos(data);
