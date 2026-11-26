@@ -14,6 +14,7 @@ import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
 import { sampleRooms, galleryOrder, roomsForMock } from "../src/engine/templateKit.js";
 import { withoutAbsentPictureClaims, renderSite, isAddressLabel } from "../src/engine/render.js";
+import { catalogueIdFor } from "../src/engine/amenityIcon.js";
 import { showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal, type DetectedObject } from "../src/media/photoObjects.js";
 import type { SiteData as SD, Photo as PH } from "../src/engine/recipe.js";
 import { mockRatingShown } from "../src/engine/rating.js";
@@ -207,7 +208,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("nyitókép mobilon: a kivágás a kép részletgazdag oldalára áll", fx != null && fx >= 80, `fx=${fx}`);
   check("parallax: a nyitókép a fókuszpont szerint vág (--cit-hero-fx), a mélységhatás vászna is", /--cit-hero-fx/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /uniform vec2 off,cover,sh/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
   check("parallax mobil: a rögzített réteg is a fókuszpont szerint vág (nem kényszerített center)", /cs\.backgroundPosition\|\|'center'/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
-  check("„Amit kínálunk”: forrás-lista nélkül nem üres keret és nem a kiemelések duplája — kimarad", /if \(!items\.length && \(d\.highlights \?\? \[\]\)\.some\(\(h\) => matchIcon\(h\) !== "dot"\)\) return "";/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  check("„Amit kínálunk”: forrás-lista nélkül nem üres keret és nem a kiemelések duplája — kimarad", /if \(!items\.length && \(d\.highlights \?\? \[\]\)\.some\(\(h\) => catalogueIdFor\(h, d\.amenityIconMap\) !== null\)\) return "";/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
   {
     const ph2 = (n: number, kindLabel?: string): PH => ({ url: `https://y.test/${n}.jpg`, alt: "k", provenance: "portal", ...(kindLabel ? { kindLabel } : {}) });
     const c2 = sampleRooms({ name: "S", photos: [ph2(1), ph2(2), ph2(3, "a garden with a terrace"), ph2(4, "a kitchen")], sampleRoomCount: 0 } as unknown as SD)[0];
@@ -271,7 +272,9 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const sr = roomsForMock({ name: "Z", photos: [1, 2, 3, 4, 5].map((n) => ({ url: `https://z.test/${n}.jpg`, alt: "z", provenance: "portal", kindLabel: "the outside of a house" })) } as unknown as SD);
     check("szálláskártya: nincs szoba-kép → beltéri kép, ha az sincs, a szoba-blokk elmarad (nem szöveges kártya)", sr.every((r) => !r.photo) && /rooms\.every\(\(r\) => !r\.photo\)\) return null/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
   }
-  check("parallax „Egy pillantásra”: nem ismétli a képes sorokat, fajtánként egy, csak ikonos tétel", /x\.i >= plan\.rows\.length && x\.k !== "dot" && !gridKinds\.has\(x\.k\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
+  check("parallax „Egy pillantásra”: nem ismétli a képes sorokat, fajtánként egy, csak ikonos tétel", /x\.i >= plan\.rows\.length && x\.k !== null && !gridKinds\.has\(x\.k\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
+  check("szabványos tételek: a szolgáltatás a 70-es katalógus tételére képződik, a nem-szolgáltatás sor kimarad (nincs ikon nélküli csempe)",
+    catalogueIdFor("Biliárd és darts") === "board_games" && catalogueIdFor("Televízió a szobákban") === "flat_tv" && catalogueIdFor("Jakuzzi") === "jacuzzi" && catalogueIdFor("Kisállattal") === "pet_friendly" && catalogueIdFor("Kúria több épülettel") === null && catalogueIdFor("Csendes kis utcában") === null);
 }
 
 if (failed) {

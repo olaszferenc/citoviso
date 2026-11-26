@@ -20,7 +20,7 @@
 import { calendarSyncPortals, countryConfigSync } from "../country.js";
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
-import { amenityIconSvg } from "./amenityIcon.js";
+import { amenityIconSvg, catalogueIdFor } from "./amenityIcon.js";
 import { matchIcon } from "./icons.js";
 import { sampleAmenityItems } from "./sampleFromSource.js";
 import { mapEmbed } from "./primitives.js";
@@ -652,11 +652,13 @@ export function notShownYet(d: SiteData, items: readonly string[]): string[] {
   const norm = (t: string): string => t.toLocaleLowerCase("hu").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
   const shown = [...(d.highlights ?? []), ...(d.usp ?? [])];
   const shownText = shown.map(norm).filter(Boolean);
-  const shownKind = new Set(shown.map((t) => matchIcon(t)).filter((k) => k !== "dot"));
+  const shownKind = new Set(shown.map((t) => catalogueIdFor(t, d.amenityIconMap)).filter(Boolean));
+  const seen = new Set<string>();
   return items.filter((it) => {
-    const k = matchIcon(it);
+    const k = catalogueIdFor(it, d.amenityIconMap);
     const n = norm(it);
-    return k !== "dot" && !shownKind.has(k) && !shownText.some((x) => x === n || x.includes(n) || n.includes(x));
+    // a STANDARD item only (owner 2026-11-26), not shown above, one per catalogue item
+    return k !== null && !shownKind.has(k) && !seen.has(k) && Boolean(seen.add(k)) && !shownText.some((x) => x === n || x.includes(n) || n.includes(x));
   });
 }
 
@@ -668,7 +670,7 @@ function amenitiesSampleBlock(d: SiteData): string {
   // No sourced facility list while the page already shows its highlights → no block at all (11-26, quality
   // colleague): the empty frame failed every review (Riva, Kiskúti), and filling it from the highlights
   // printed the same items twice („Egy pillantásra” + „Amit kínálunk”, Sirató).
-  if (!items.length && (d.highlights ?? []).some((h) => matchIcon(h) !== "dot")) return "";
+  if (!items.length && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null)) return "";
   // Every sourced item is already on the page → no block (no repeat, no empty frame).
   if (!items.length && (d.sampleAmenities ?? []).length) return "";
   // Nothing sourced: the module still SHOWS (ADR-0061 all-in — a module the lead buys may

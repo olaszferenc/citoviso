@@ -8,7 +8,7 @@
 // only for the photo scrims (skin-agnostic legibility, same convention as fullbleed).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
-import { amenityIconSvg } from "../amenityIcon.js";
+import { amenityIconSvg, catalogueIdFor } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -324,10 +324,11 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // same three items in „Ami nálunk vár” and here), one per facility kind (Jaja: „Játszótér” ≈ „Mászóka, csúszda,
   // hinta”), and only facilities — a text-only tile without an icon („Borkóstolás”, „Nagyobb létszámú csoportoknak”)
   // is no service tile. The hook keeps the highlight's real index.
-  const gridKinds = new Set(data.highlights.slice(0, plan.rows.length).map((h) => matchIcon(h)).filter((k) => k !== "dot"));
+  // Standard items only (owner 2026-11-26): a line that maps to no catalogue item is not a tile.
+  const gridKinds = new Set(data.highlights.slice(0, plan.rows.length).map((h) => catalogueIdFor(h, data.amenityIconMap)).filter(Boolean));
   const grid = data.highlights
-    .map((h, i) => ({ h, i, k: matchIcon(h) }))
-    .filter((x) => x.i >= plan.rows.length && x.k !== "dot" && !gridKinds.has(x.k) && Boolean(gridKinds.add(x.k)))
+    .map((h, i) => ({ h, i, k: catalogueIdFor(h, data.amenityIconMap) }))
+    .filter((x) => x.i >= plan.rows.length && x.k !== null && !gridKinds.has(x.k) && Boolean(gridKinds.add(x.k)))
     .slice(0, 8);
   const heroPhoto = plan.hero?.url;
   const bandAUrl = plan.bandA?.url;

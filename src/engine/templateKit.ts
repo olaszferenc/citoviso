@@ -530,7 +530,7 @@ export function roomsForMock(d: SiteData): readonly Room[] {
   // Bedrooms run out → the lodging's sitting room / house / garden shots, each once (11-26, quality colleague,
   // Ildikó: a real room's card stood as a grey panel with a bed icon on a page full of photos).
   const spare = d.photos.length > 2
-    ? [...d.photos.slice(2)].reverse().filter((p) => !p.backstage && !p.notCard && !pool.includes(p) && p.lounge === true)
+    ? [...d.photos.slice(2)].reverse().filter((p) => !p.notCard && !pool.includes(p) && (p.lounge === true || (!!p.kindLabel && /^(a living room|a hotel room interior|a dining table|a kitchen|a small kitchenette)$/.test(p.kindLabel))))
     : [];
   const borrowed = (d.rooms ?? []).map((r) => {
     if (r.photo) return r;

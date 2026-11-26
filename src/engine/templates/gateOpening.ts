@@ -35,7 +35,7 @@
 // enquiry intro is dropped for the same ADR: no sticky booking control beside the booking
 // block. Text comes from SiteData and the copywriter layer; a missing fact drops its block.
 
-import { amenityIconSvg } from "../amenityIcon.js";
+import { amenityIconSvg, catalogueIdFor } from "../amenityIcon.js";
 import { iconSvg, starIcon } from "../icons.js";
 import { mo, motionCss, motionJs } from "../motion.js";
 import { isSamePicture, sizelessPhotoKey } from "../samePicture.js";
@@ -507,7 +507,14 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
   const city = data.place?.city ?? "";
   const eyebrow = heroCopy.eyebrow ?? city;
   const lede = heroCopy.lead ?? (firstSentence(data.intro, 200) || data.tagline);
-  const feat = data.highlights.slice(0, 8);
+  // The highlight list carries STANDARD items only, one per catalogue item (owner 2026-11-26); the hook keeps the
+  // highlight's real index.
+  const featSeen = new Set<string>();
+  const featIdx = data.highlights
+    .map((h, i) => ({ h, i, k: catalogueIdFor(h, data.amenityIconMap) }))
+    .filter((x) => x.k !== null && !featSeen.has(x.k) && Boolean(featSeen.add(x.k)))
+    .slice(0, 8);
+  const feat = featIdx.map((x) => x.h);
   const rating = data.rating;
   const ratingStr = rating ? String(rating.value).replace(".", ",") : "";
   const scale = ratingScale(data);
@@ -638,7 +645,7 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
       ${
         feat.length
           ? `<ul class="ko-items" aria-label="${esc(T(data, "Kiemelések"))}">${feat
-              .map((h, i) => `<li class="ko-item" ${mo("up", (i % 2) * 80)}>${((ic) => (ic ? `<i>${ic}</i>` : ""))(amenityIconSvg(h, data.amenityIconMap))}<h3${highlightHook(data, i)}>${esc(h)}</h3></li>`)
+              .map((h, n) => `<li class="ko-item" ${mo("up", (n % 2) * 80)}><i>${amenityIconSvg(h, data.amenityIconMap)}</i><h3${highlightHook(data, featIdx[n]!.i)}>${esc(h)}</h3></li>`)
               .join("")}</ul>`
           : ""
       }
