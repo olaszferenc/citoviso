@@ -12,6 +12,7 @@ import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
 import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
+import { amenityIconSvg } from "./amenityIcon.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
 import { isStockPhoto, stockGallery, stockHeroBackdrop, stockUrl, styledStockLibrary } from "./stock.js";
@@ -350,6 +351,68 @@ function stampSellingPointsAnchor(html: string, data: SiteData): string {
     return html.slice(0, close) + ` data-cit-module="usp"` + html.slice(close);
   }
   return html;
+}
+
+/**
+ * The amenities module's surface when the mock has no „Amit kínálunk” block of its own (owner
+ * 2026-11-26, configurator-placement ② variant A). The sample block stays away when the page's highlights
+ * already name the facilities (dfb45955, a24c3f50: the empty frame and the repeated list both failed the
+ * quality review), which left the sellable module with no surface: its configurator switch moved nothing
+ * (ADR-0061 all-in, §I). Now the native selling-points section („Egy pillantásra”) IS that surface: every
+ * highlight the page dresses with a facility icon (amenityIconSvg, the templates' own icon rule) carries the
+ * amenities anchor, cut on its own (`data-cit-cut="self"`), so switching amenities off takes exactly those
+ * items out of the section and the rest stays. No new block, nothing printed twice.
+ * Mock only (the sample set is empty on a live page); a page that already has an amenities surface is left alone.
+ * An item never spans the intro, another highlight, a list or a section — only the one entry is cut.
+ */
+function stampAmenityItems(
+  html: string,
+  data: SiteData,
+  phase: RenderPhase,
+  opts: { sampleAllow?: ReadonlySet<string>; sampleDeny?: ReadonlySet<string> } = {},
+): string {
+  if (!demoModuleSamples(data, phase, opts.sampleAllow, opts.sampleDeny).has("amenities")) return html;
+  // ELEMENT anchors only: the templates' CSS carries `[data-cit-module="amenities"]` selectors too.
+  if (/<[a-zA-Z][a-zA-Z0-9]*\b[^>]*\sdata-cit-module="amenities"/.test(html)) return html;
+  const body = /<body\b/i.exec(html)?.index ?? 0;
+  // Every template marks each shown highlight with its copy hook (copyHook("highlights", { i }),
+  // guarded by copy-hook-check) — the item is found by that hook, never by the words (a photo caption
+  // „Kert” is not the „Kert” selling point).
+  const hookOf = (i: number) => `data-cit-copy="highlights" data-cit-copy-i="${i}"`;
+  const otherHook = (inner: string, i: number) =>
+    /data-cit-copy="intro"/.test(inner) ||
+    [...inner.matchAll(/data-cit-copy="highlights" data-cit-copy-i="(\d+)"/g)].some((m) => Number(m[1]) !== i);
+  const stamps = new Set<number>();
+  data.highlights.forEach((t, i) => {
+    // A facility item = one the page dresses with a facility icon — the very function the templates draw
+    // it with (catalogue label, translation map, keyword matcher), so „ikonos tétel” means what it shows.
+    if (!amenityIconSvg(t, data.amenityIconMap)) return;
+    const hook = hookOf(i);
+    // A highlight can be shown twice (a hero sticker and the list): the SMALLEST item is the list entry.
+    let best: { open: number; len: number } | null = null;
+    for (let at = html.indexOf(hook, body); at >= 0; at = html.indexOf(hook, at + hook.length)) {
+      const textEl = html.lastIndexOf("<", at);
+      let item: { open: number; len: number } | null = null;
+      // The item = the widest element around the hooked text holding no other highlight and not the intro.
+      for (let cur = textEl; cur > body; cur = html.lastIndexOf("<", cur - 1)) {
+        const name = /^<([a-zA-Z][a-zA-Z0-9]*)/.exec(html.slice(cur, cur + 40))?.[1];
+        if (!name) continue; // a closing tag or a comment
+        const end = elementEnd(html, cur, name);
+        if (end <= at) continue; // closes before the hooked element
+        if (/^(section|main|body|ul|ol)$/i.test(name) || otherHook(html.slice(cur, end), i)) break;
+        item = { open: cur, len: end - cur };
+      }
+      if (item && (!best || item.len < best.len)) best = item;
+    }
+    if (best && !/^<[^>]*data-cit-module=/.test(html.slice(best.open, html.indexOf(">", best.open) + 1))) stamps.add(best.open);
+  });
+  if (!stamps.size) return html;
+  let out = html;
+  for (const at of [...stamps].sort((a, b) => b - a)) {
+    const nameEnd = at + 1 + /^<([a-zA-Z][a-zA-Z0-9]*)/.exec(out.slice(at, at + 40))![1]!.length;
+    out = out.slice(0, nameEnd) + ' data-cit-module="amenities" data-cit-cut="self"' + out.slice(nameEnd);
+  }
+  return out;
 }
 
 /** See stampSellingPointsAnchor: the narrowest element around all highlights inside
@@ -1073,7 +1136,7 @@ export function renderSite(
     data = splitWholeBand(data);
     const raw = injectWholeBand(TEMPLATES[recipe.template]!.render(recipe, data, phase), data, phase);
     const page = stampSampleRoomPhotos(
-      stampSellingPointsAnchor(withModuleSections(raw, data, phase, modOpts), data),
+      stampAmenityItems(stampSellingPointsAnchor(withModuleSections(raw, data, phase, modOpts), data), data, phase, modOpts),
       data,
       phase,
     );
@@ -1148,7 +1211,7 @@ ${EMPHASIS_CSS}
 </body>
 </html>`;
   const page = stampSampleRoomPhotos(
-    stampSellingPointsAnchor(withModuleSections(rawPage, data, phase, modOpts), data),
+    stampAmenityItems(stampSellingPointsAnchor(withModuleSections(rawPage, data, phase, modOpts), data), data, phase, modOpts),
     data,
     phase,
   );

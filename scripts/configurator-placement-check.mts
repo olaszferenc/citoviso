@@ -15,6 +15,10 @@
 //      still works — already-sent mocks must keep selling.
 //
 //   npx tsx scripts/configurator-placement-check.mts
+//   npx tsx scripts/configurator-placement-check.mts --self-test   # PIROS kontroll (2 visszarontás):
+//     ① az amenities-jel le a natív kiemelés-tételekről (a 2026-11-26 délelőtti állapot, dfb45955):
+//        a modul kapcsolója néma, a csomagban lévő felülete nem látszik;
+//     ② a data-cit-native bélyeg le (régi artifact alakja új adattal): a konfigurátor injektál.
 
 import { chromium, type Page } from "playwright-core";
 import { mkdtemp, writeFile } from "node:fs/promises";
@@ -29,11 +33,19 @@ import { TEMPLATES } from "../src/engine/templates.js";
 import { injectConfigurator } from "../src/generator/configurator.js";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 
+const SELF_TEST = process.argv.includes("--self-test");
+/** The self-test's two sabotages on a NEW artifact (see the header); a no-op on a normal run. */
+function sabotage(html: string): string {
+  if (!SELF_TEST) return html;
+  return html.replaceAll(' data-cit-module="amenities" data-cit-cut="self"', "").replace(/\sdata-cit-native="[^"]*"/, "");
+}
 let failures = 0;
+const failedNames: string[] = [];
 function check(name: string, cond: boolean, detail?: unknown): void {
   if (cond) out(`  ✓ ${name}`);
   else {
     failures++;
+    failedNames.push(name);
     err(`  ✗ ${name}${detail === undefined ? "" : ` — ${JSON.stringify(detail)}`}`);
   }
 }
@@ -87,7 +99,7 @@ console.log(`ADR-0061 all-in mock (${Object.keys(TEMPLATES).length} sablon):\n`)
 async function measureTemplate(t: string, page: Page) {
   const recipe: Recipe = { template: t, skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
-  const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
+  const html = sabotage(await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead"));
 
   const absent = OFFERED_SURFACES.filter(([, re]) => !re.test(bare)).map(([n]) => n);
   const missingT = absent.length ? `${t}(${absent.join(",")})` : null;
@@ -122,7 +134,7 @@ async function measureTemplate(t: string, page: Page) {
 async function checkToggles(page: Page): Promise<void> {
   const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
-  const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
+  const html = sabotage(await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead"));
   const dir = await mkdtemp(path.join(tmpdir(), "cfg-toggle-"));
   const f = path.join(dir, "p.html");
   await writeFile(f, html, "utf8");
@@ -171,7 +183,7 @@ async function checkToggles(page: Page): Promise<void> {
 async function checkPresets(page: Page): Promise<void> {
   const recipe: Recipe = { template: "organic", skin: "", archetype: "", sections: [] };
   const bare = renderSite(recipe, LEAD, { phase: "mock" });
-  const html = await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead");
+  const html = sabotage(await injectConfigurator(bare, "00000000-0000-0000-0000-000000000000", "Teszt Lead"));
   const dir = await mkdtemp(path.join(tmpdir(), "cfg-preset-"));
   const f = path.join(dir, "p.html");
   await writeFile(f, html, "utf8");
@@ -363,6 +375,20 @@ for (const sc of scenarios) {
 }
 await browser.close();
 
+if (SELF_TEST) {
+  const expected = [
+    "⭐⭐ MINDEN modul ki/bekapcsolása láthatóan változtat az oldalon (§I: nincs néma modul)",
+    "⭐⭐ a csomagban lévő modul felülete LÁTSZIK",
+    "⭐⭐ új artifactra a konfigurátor NULLA generikus minta-kártyát injektál",
+  ];
+  const missed = expected.filter((n) => !failedNames.includes(n));
+  if (missed.length) {
+    console.error(`\n⛔ configurator-placement-check --self-test: a visszarontás ÁTCSÚSZOTT:\n  ${missed.join("\n  ")}`);
+    process.exit(1);
+  }
+  console.log(`\n✅ configurator-placement-check --self-test: mindkét visszarontás piros (${expected.length} várt ellenőrzés bukott)`);
+  process.exit(0);
+}
 if (failures) {
   console.error(`\n⛔ configurator-placement-check: ${failures} bukott ellenőrzés.`);
   process.exit(1);
