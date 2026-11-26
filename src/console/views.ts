@@ -7694,17 +7694,21 @@ function actorDot(e: LeadActivityEntry, lang: string): string {
 }
 
 /** „ma 13:20" · „tegnap 16:20" · „10.02. 10:03" — in the operator's (Budapest) wall clock. */
+// ONE formatter for the whole process (2026-11-26, profiled on the VPS): building three
+// Intl.DateTimeFormat objects per call was 87% of the dashboard's replies block — 92 replies,
+// their threads and answers, ~8 s CPU per render. The output is unchanged.
+const WHEN_SHORT_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Budapest",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
 function whenShort(iso: string, lang: string, now: Date = new Date()): string {
-  const fmt = (d: Date) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Europe/Budapest",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).format(d); // "2026-10-05, 13:20"
+  const fmt = (d: Date) => WHEN_SHORT_FMT.format(d); // "2026-10-05, 13:20"
   const [day, time] = fmt(new Date(iso)).split(", ") as [string, string];
   const today = fmt(now).split(", ")[0];
   const yesterday = fmt(new Date(now.getTime() - 86_400_000)).split(", ")[0];
@@ -9176,25 +9180,42 @@ import { pwaHead } from "../ui/pwa.js";
  *  machine happens to render. */
 const CONSOLE_TZ = APP_TZ; // the operator console is platform-side (ADR-0290)
 
+// Formatters are built once per locale (2026-11-26: a fresh Intl.DateTimeFormat per call was the
+// console's hottest path — see WHEN_SHORT_FMT). Same options, same output.
+const CONSOLE_DT_FMT = new Map<string, Intl.DateTimeFormat>();
+const CONSOLE_T_FMT = new Map<string, Intl.DateTimeFormat>();
+
 function consoleDateTime(d: Date | string, lang: string): string {
-  return new Intl.DateTimeFormat(dateLocale(lang), {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: CONSOLE_TZ,
-  }).format(typeof d === "string" ? new Date(d) : d);
+  const loc = dateLocale(lang);
+  let f = CONSOLE_DT_FMT.get(loc);
+  if (!f) {
+    f = new Intl.DateTimeFormat(loc, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: CONSOLE_TZ,
+    });
+    CONSOLE_DT_FMT.set(loc, f);
+  }
+  return f.format(typeof d === "string" ? new Date(d) : d);
 }
 
 function consoleTime(d: Date | string, lang: string): string {
-  return new Intl.DateTimeFormat(dateLocale(lang), {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: CONSOLE_TZ,
-  }).format(typeof d === "string" ? new Date(d) : d);
+  const loc = dateLocale(lang);
+  let f = CONSOLE_T_FMT.get(loc);
+  if (!f) {
+    f = new Intl.DateTimeFormat(loc, {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: CONSOLE_TZ,
+    });
+    CONSOLE_T_FMT.set(loc, f);
+  }
+  return f.format(typeof d === "string" ? new Date(d) : d);
 }
 
 /** What the status column SAYS, derived from what the row IS. 'failed' covers two
