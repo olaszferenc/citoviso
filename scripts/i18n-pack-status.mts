@@ -5,6 +5,7 @@
 // `npx tsx scripts/babel-pack.mts export <lang>` / `kb-export <lang>` lists it for his session.
 import { ensureAllLanguagePacks, packCoverage } from "../src/i18n/packs.js";
 import { db } from "../src/db/client.js";
+import { needsConsolePack } from "../src/i18n/lang.js";
 
 const ensure = process.argv.includes("--ensure");
 const rows = ensure ? await ensureAllLanguagePacks() : await packCoverage();
@@ -15,7 +16,9 @@ if (!rows.length) {
   for (const r of rows) {
     const state = r.ok ? "✅ TELJES" : "⛔ HIÁNYOS — Bábelre vár";
     const kb = r.kb ? ` · KB ${r.kb.total - r.kb.missing}/${r.kb.total}` : "";
-    console.log(`${r.lang}: ${r.total - r.missing}/${r.total}${kb} ${state}${r.missing ? ` — ${r.missing} UI-string hiányzik` : ""}${r.kb?.missing ? ` — ${r.kb.missing} KB-entry hiányzik/elavult` : ""}`);
+    // Non-console languages are measured on the buyer-side strings only (packs.packScope).
+    const scope = needsConsolePack(r.lang) ? "" : " (vevő-oldal)";
+    console.log(`${r.lang}: ${r.total - r.missing}/${r.total}${scope}${kb} ${state}${r.missing ? ` — ${r.missing} UI-string hiányzik` : ""}${r.kb?.missing ? ` — ${r.kb.missing} KB-entry hiányzik/elavult` : ""}`);
   }
   if (rows.some((r) => !r.ok)) {
     console.log(

@@ -9,6 +9,8 @@
 // silently have offered the operator 28 console languages, each first click kicking off a
 // 2405-string AI pack + KB translation with hu-fallback until it finished.
 
+import { readFileSync } from "node:fs";
+
 import { allCountriesSync, countryConfigSync } from "../country.js";
 
 /** The languages our OWN surfaces (operator console, tenant admin, owner login) are really
@@ -139,6 +141,28 @@ export function siteLangs(): string[] {
  */
 export function uiLangs(): string[] {
   return [...new Set([DEFAULT_LANG, ...UI_LANGS, ...allCountriesSync().map((c) => c.defaultLang)])];
+}
+
+/**
+ * The languages Bábel translates the OPERATOR CONSOLE into (owner 2026-11-23, Bábel's log):
+ * the seven "full console" packs. Every other language is buyer-side only — its pack is
+ * complete when the strings a lead, buyer or guest can meet are (packs.buyerCatalog), and a
+ * console-only string is not a gap there. ⛔ ONE SOURCE: src/i18n/console-langs.json is read
+ * here (pack coverage, deploy GATE 5, babel-pack export) AND by ~/rc-briefs/watch/babel-watch.py
+ * (git show origin/main:src/i18n/console-langs.json) — widen the console set only in that file.
+ */
+let consoleLangsCache: readonly string[] | null = null;
+export function consoleLangs(): readonly string[] {
+  if (!consoleLangsCache) {
+    const file = new URL("./console-langs.json", import.meta.url);
+    consoleLangsCache = JSON.parse(readFileSync(file, "utf8")) as string[];
+  }
+  return consoleLangsCache;
+}
+
+/** True when `lang`'s pack must also cover the console-only strings (see consoleLangs). */
+export function needsConsolePack(lang: string): boolean {
+  return consoleLangs().includes(lang);
 }
 
 /**

@@ -15,7 +15,7 @@ import { sql } from "kysely";
 
 import { db, pool } from "../db/client.js";
 import { ensureKbTranslations, kbCoverage, kbSeedPending, type KbPackStatus } from "./kbPacks.js";
-import { DEFAULT_LANG } from "./lang.js";
+import { DEFAULT_LANG, needsConsolePack } from "./lang.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CATALOG_PATH = path.resolve(HERE, "catalog.json");
@@ -229,10 +229,21 @@ export interface PackStatus {
  * measurement, and only differ in whether they may act on the gap.
  */
 export async function missingPackStrings(lang: string): Promise<string[]> {
-  const catalog = await loadCatalog();
-  if (lang === DEFAULT_LANG || !catalog.length) return [];
+  const scope = await packScope(lang);
+  if (lang === DEFAULT_LANG || !scope.length) return [];
   const existing = (await loadPack(lang)) ?? {};
-  return catalog.filter((s) => !existing[s]);
+  return scope.filter((s) => !existing[s]);
+}
+
+/**
+ * The strings `lang`'s pack is measured against (coverage, deploy GATE 5, babel-pack export):
+ * the whole catalog for a console language (lang.consoleLangs — Bábel translates the operator
+ * console into those seven), the buyer-side catalog for every other one. Without this split
+ * every non-console language read as ~3300 strings short forever (fr 4522/7533 on every
+ * deploy) and each deploy dropped an empty ticket into Bábel's inbox.
+ */
+export async function packScope(lang: string): Promise<string[]> {
+  return needsConsolePack(lang) ? loadCatalog() : buyerCatalog();
 }
 
 const CONTEXT_PATH = path.resolve(HERE, "catalog-context.json");
@@ -386,12 +397,12 @@ async function exclusiveRun(lang: string, wait: boolean): Promise<PackStatus> {
 
 /** Coverage without writing. `fresh` re-reads the pack from the DB (another process wrote it). */
 async function coverageNow(lang: string, opts: { fresh?: boolean } = {}): Promise<PackStatus> {
-  const catalog = await loadCatalog();
-  if (lang === DEFAULT_LANG || !catalog.length) return { lang, total: catalog.length, missing: 0, ok: true };
+  const scope = await packScope(lang);
+  if (lang === DEFAULT_LANG || !scope.length) return { lang, total: scope.length, missing: 0, ok: true };
   if (opts.fresh) cache.delete(lang);
   const missing = (await missingPackStrings(lang)).length;
   const kb = await kbCoverage(lang);
-  return { lang, total: catalog.length, missing, ok: missing === 0 && kb.ok, kb };
+  return { lang, total: scope.length, missing, ok: missing === 0 && kb.ok, kb };
 }
 
 /** Write the whole pack row and refresh this process's cache. */
@@ -466,7 +477,8 @@ async function provision(lang: string): Promise<PackStatus> {
     await upsertPack(lang, seeded.merged);
     console.log(`[i18n] ${lang}: Bábel-mag alkalmazva — ${seeded.changed} string a babel/packs/${lang}.json-ból`);
   }
-  const missing = catalog.filter((s) => !seeded.merged[s]).length;
+  const scope = await packScope(lang);
+  const missing = scope.filter((s) => !seeded.merged[s]).length;
   // ADR-0045 ③ (§J.25): a language is only "ready" WITH its knowledge base — same entry
   // point as the UI strings. A KB failure must not break the string pack; it reports loudly.
   let kb: KbPackStatus | null = null;
@@ -477,11 +489,11 @@ async function provision(lang: string): Promise<PackStatus> {
   }
   if (missing)
     console.error(
-      `[i18n] ⛔ hiányos csomag (${lang}): ${missing}/${catalog.length} — hu-fallback; Bábelre vár ` +
+      `[i18n] ⛔ hiányos csomag (${lang}): ${missing}/${scope.length} — hu-fallback; Bábelre vár ` +
         `(npx tsx scripts/babel-pack.mts export ${lang})`,
     );
   if (kb && !kb.ok) console.error(`[i18n] ⛔ hiányos KB (${lang}): ${kb.missing}/${kb.total} — Bábelre vár (babel-pack kb-export ${lang})`);
-  return { lang, total: catalog.length, missing, ok: missing === 0 && (kb?.ok ?? false), kb };
+  return { lang, total: scope.length, missing, ok: missing === 0 && (kb?.ok ?? false), kb };
 }
 
 /** The full pack map for client-side injection (booking widget / configurator). Hungarian →
@@ -535,14 +547,14 @@ export async function ensureAllLanguagePacks(): Promise<PackStatus[]> {
 /** Coverage report WITHOUT generating (the tracking view): pack size vs catalog +
  *  KB translation freshness (ADR-0045 ③). */
 export async function packCoverage(): Promise<PackStatus[]> {
-  const catalog = await loadCatalog();
   const langs = await knownLanguages();
   const out: PackStatus[] = [];
   for (const lang of langs) {
+    const scope = await packScope(lang);
     const pack = (await loadPack(lang)) ?? {};
-    const missing = catalog.filter((s) => !pack[s]).length;
+    const missing = scope.filter((s) => !pack[s]).length;
     const kb = await kbCoverage(lang);
-    out.push({ lang, total: catalog.length, missing, ok: missing === 0 && kb.ok, kb });
+    out.push({ lang, total: scope.length, missing, ok: missing === 0 && kb.ok, kb });
   }
   return out;
 }

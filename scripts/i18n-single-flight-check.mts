@@ -30,7 +30,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureLanguagePack, loadCatalog, packBuilding, requestLanguagePack } from "../src/i18n/packs.js";
+import { ensureLanguagePack, loadCatalog, packBuilding, packScope, requestLanguagePack } from "../src/i18n/packs.js";
 import { pool } from "../src/db/client.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -80,9 +80,12 @@ const L1 = "zz", L2 = "zy", L3 = "zx", L4 = "zw", L5 = "zv";
 const ALL = [L1, L2, L3, L4, L5];
 const seedFile = (l: string): string => path.join(SEED_DIR, `${l}.json`);
 const catalog = await loadCatalog();
-const N = catalog.length;
-/** A seed covering the first `k` plain catalog strings. */
-const plain = catalog.filter((h) => !h.includes("{"));
+// The fixture languages are not console languages (src/i18n/console-langs.json), so their
+// pack is measured on the buyer-side scope (packs.packScope), not on the whole catalog.
+const scope = await packScope(L1);
+const N = scope.length;
+/** A seed covering the first `k` plain in-scope strings. */
+const plain = scope.filter((h) => !h.includes("{"));
 const seedOf = (l: string, k: number): Record<string, string> => Object.fromEntries(plain.slice(0, k).map((h) => [h, `[${l}] ${h}`]));
 const packSize = async (l: string): Promise<number> =>
   ((await pool.query("select (select count(*) from jsonb_object_keys(strings))::int n from language_pack where lang=$1", [l])).rows[0] as { n: number } | undefined)?.n ?? 0;
@@ -100,6 +103,12 @@ await cleanup(ALL);
 mkdirSync(SEED_DIR, { recursive: true });
 
 try {
+  console.log("⓪ hatókör: konzol-nyelv a teljes katalógust, a többi a vevő-oldalt méri");
+  {
+    expect((await packScope("de")).length === catalog.length, `de (konzol-nyelv): ${(await packScope("de")).length}/${catalog.length}`);
+    expect(N > 0 && N < catalog.length, `${L1} (nem konzol-nyelv): ${N}/${catalog.length} — a csak-konzolos sor nem hiány`);
+  }
+
   console.log(`① öt párhuzamos ensureLanguagePack egy folyamatban (${N} string, a mag 50-et fed)`);
   {
     writeFileSync(seedFile(L1), JSON.stringify(seedOf(L1, 50)));

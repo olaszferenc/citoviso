@@ -7,7 +7,11 @@
 //
 //   export <lang> [--all] [--surface konzol] [--out file.json]
 //       the strings to translate (default: the ones missing from the pack), each with its
-//       surface and the current translation if any → JSON [{hu, felulet, most?}]
+//       surface and the current translation if any → JSON [{hu, felulet, most?}].
+//       Scope = packs.packScope: the whole catalog for the seven console languages
+//       (src/i18n/console-langs.json), the buyer-side strings for every other language —
+//       the console is not built there, so its strings are not a gap. `--surface konzol`
+//       lists the console strings anyway (an explicit request widens the scope).
 //   import <lang> <file.json> [--seed | --apply]
 //       a {hu: translation} map back. Every entry passes the SAME placeholder contract as
 //       the engine (placeholderProblem); unknown keys (not in the catalogue) are refused.
@@ -75,8 +79,8 @@ import {
   kbTranslationValid,
   translatableKbEntries,
 } from "../src/i18n/kbPacks.js";
-import { DEFAULT_LANG } from "../src/i18n/lang.js";
-import { babelSeed, loadCatalog, loadPack, placeholderProblem } from "../src/i18n/packs.js";
+import { DEFAULT_LANG, needsConsolePack } from "../src/i18n/lang.js";
+import { babelSeed, loadCatalog, loadPack, packScope, placeholderProblem } from "../src/i18n/packs.js";
 import { db } from "../src/db/client.js";
 import { collectTranslatableStrings } from "../src/tenant/multilangCore.js";
 import { babelSiteSeedPath } from "../src/tenant/multilangGenerate.js";
@@ -244,7 +248,10 @@ const pack = (await loadPack(lang)) ?? {};
 
 if (cmd === "export") {
   const surface = opt("--surface");
-  const rows = catalog
+  const scope = surface ? catalog : await packScope(lang);
+  if (!surface && !needsConsolePack(lang))
+    console.error(`${lang}: vevő-oldali hatókör (${scope.length}/${catalog.length}) — a konzolt erre a nyelvre nem építjük (src/i18n/console-langs.json)`);
+  const rows = scope
     .filter((hu) => flag("--all") || !pack[hu])
     .filter((hu) => !surface || surfaceOf(hu).split("+").includes(surface))
     .map((hu) => ({ hu, felulet: surfaceOf(hu), ...(pack[hu] ? { most: pack[hu] } : {}) }))
