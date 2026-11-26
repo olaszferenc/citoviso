@@ -77,7 +77,7 @@ const PARALLAX_CSS = `
   body.cit-tpl-parallax .cit-mast-links{max-width:720px}
 
   /* HERO — masthead contract: copy sits low so the top of the photo belongs to the name */
-  .t-par--hero{align-items:flex-end;background-position:var(--cit-hero-fx,50%) center}
+  .t-par--hero{align-items:flex-end;background-position:var(--cit-hero-fx,50%) 35%}
   /* lower band strengthened for legible accent headline on a BRIGHT photo
      (contract: design-refs/engine/hero-contrast, guard: hero-contrast-check) */
   /* lighter upper half (11-26, quality colleague: the chosen wow photo was „erősen sötétítve”) — the copy

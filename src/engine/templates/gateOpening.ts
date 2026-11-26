@@ -268,7 +268,7 @@ p{margin:0 0 1em}
 /* ── hero: full screen, the gate opens on load ── */
 .ko-hero{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;min-height:100svh;overflow:hidden}
 .ko-hero-bg{position:absolute;inset:0;z-index:-2;background:var(--cit-surface)}
-.ko-hero-bg img{width:100%;height:100%;object-fit:cover}
+.ko-hero-bg img{width:100%;height:100%;object-fit:cover;object-position:var(--cit-hero-fx,50%) 35%}
 .ko-gate{display:none}
 .ko-leaf{position:relative;width:50.15%;height:100%;overflow:hidden;background:var(--cit-bg)}
 .ko-leaf img{position:absolute;top:0;width:200%;height:100%;max-width:none;object-fit:cover}

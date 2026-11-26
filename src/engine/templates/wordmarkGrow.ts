@@ -118,7 +118,7 @@ section{padding:clamp(70px,10vh,124px) 0}
 
 /* hero */
 .w-hero{position:relative;height:66vh;min-height:420px;overflow:hidden}
-.w-hero img{width:100%;height:118%;object-fit:cover;position:absolute;inset:-9% 0}
+.w-hero img{width:100%;height:118%;object-fit:cover;object-position:var(--cit-hero-fx,50%) 35%;position:absolute;inset:-9% 0}
 /* Bottom-weighted veil only — the top of the photo stays open (the reference
    keeps its hero bright); the copy gets its floor from the lower gradient. */
 .w-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,

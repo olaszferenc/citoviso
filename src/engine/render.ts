@@ -985,6 +985,9 @@ export function renderSite(
   // The section copy may not promise pictures the page does not show (11-26, quality colleague, Kiskúti:
   // gallery title „…és az alaprajzokról” while floor plans never reach a page — photoKind „never”).
   recipe = withoutAbsentPictureClaims(recipe);
+  // A highlight is a facility or a feature, never the ADDRESS (11-26, quality colleague, Riva: „Balatonbogláron, a
+  // Fiumei utcában” stood among the feature labels) — off the mock, render-time; the contact block carries it.
+  if (phase === "mock" && data.highlights?.some(isAddressLabel)) data = { ...data, highlights: data.highlights.filter((h) => !isAddressLabel(h)) };
   // A star classification in the name or an alt („Panoráma Faház****”, fd50391f, 2026-10-27)
   // is no sourced fact (§B.17) — off the MOCK, render-time, so a plain rerender fixes it. The
   // live site prints the owner's own name as they set it.
@@ -1204,4 +1207,10 @@ export function withoutAbsentPictureClaims(recipe: Recipe): Recipe {
       return { ...s, copy };
     }),
   };
+}
+
+/** A street / square / promenade named in the label (hu · en · de · hr/sl): an address, not a feature. */
+const ADDRESS_WORDS = /(?:^|[\s,])(?:\S*\s)?(?:utc[aáá]\S*|út(?:ja|on|nál)?|útján|tér(?:en|nél)?|köz(?:ben)?|sétány\S*|fasor\S*|körút\S*|street|road|avenue|straße|strasse|gasse|ulica|ulici|cesta|trg)(?=$|[\s,.])/i;
+export function isAddressLabel(label: string): boolean {
+  return ADDRESS_WORDS.test(label.trim());
 }

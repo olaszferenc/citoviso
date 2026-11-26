@@ -13,7 +13,7 @@ import { focusXOfBuffer, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPageP
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
 import { sampleRooms, galleryOrder } from "../src/engine/templateKit.js";
-import { withoutAbsentPictureClaims, renderSite } from "../src/engine/render.js";
+import { withoutAbsentPictureClaims, renderSite, isAddressLabel } from "../src/engine/render.js";
 import { showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal, type DetectedObject } from "../src/media/photoObjects.js";
 import type { SiteData as SD, Photo as PH } from "../src/engine/recipe.js";
 import { mockRatingShown } from "../src/engine/rating.js";
@@ -243,6 +243,8 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   }
   check("cím: a kettétörő szót a lap maga kicsinyíti (data-cit-fit-words, 60 % / 16 px alja)", /data-cit-fit-words/.test(readFileSync(new URL("../src/engine/render.ts", import.meta.url), "utf8")));
   check("gépi kapu: a nyitóképet a kolléga-jelölt szabálya méri (isHeroCandidate), nem írja felül a választását", /!isHeroCandidate\(hv\)/.test(readFileSync(new URL("../src/outreach/mockRenderGate.ts", import.meta.url), "utf8")));
+  check("kiemelés: utcacím („Balatonbogláron, a Fiumei utcában”) nem címke, a szolgáltatás marad", isAddressLabel("Balatonbogláron, a Fiumei utcában") && !isAddressLabel("Saját parkoló") && !isAddressLabel("Kilátás a Balatonra") && !isAddressLabel("Közvetlen vízpart"));
+  check("nyitókép széles vágásnál a felső harmadra áll (35 %) — mindhárom sablon és a mélységhatás", ["gateOpening.ts", "wordmarkGrow.ts", "parallax.ts"].every((f) => /var\(--cit-hero-fx,50%\) 35%/.test(readFileSync(new URL(`../src/engine/templates/${f}`, import.meta.url), "utf8"))) && /\(0\.35-0\.5\)\*\(1-cy\)/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
 }
 
 if (failed) {

@@ -106,8 +106,9 @@ function size(){var r=host.getBoundingClientRect();if(!r.width||!r.height)return
 var dpr=Math.min(2,window.devicePixelRatio||1),w=r.width*dpr,h=r.height*dpr,k=Math.min(1,Math.sqrt(MAXPX/(w*h)));
 w=Math.round(w*k);h=Math.round(h*k);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;gl.viewport(0,0,w,h);}
 var ca=r.width/r.height,ia=iw/ih,cx=ca>ia?1:ca/ia,cy=ca>ia?ia/ca:1;gl.uniform2f(U('cover'),cx,cy);
-// the photo's focus point (--cit-hero-fx, photoKind.photoFocusX) — the canvas crops where the CSS photo does
-var fx=parseFloat(getComputedStyle(el).getPropertyValue('--cit-hero-fx'));fx=isNaN(fx)?0.5:fx/100;gl.uniform2f(U('sh'),(fx-0.5)*(1-cx),0);}
+// the photo's focus point (--cit-hero-fx, photoKind.photoFocusX; vertically the upper third, 35 %, where the house
+// stands — 11-26: a centred wide crop zoomed on Alexandra's gate bars and cut the roof) — the canvas crops where the CSS photo does
+var fx=parseFloat(getComputedStyle(el).getPropertyValue('--cit-hero-fx'));fx=isNaN(fx)?0.5:fx/100;gl.uniform2f(U('sh'),(fx-0.5)*(1-cx),(0.35-0.5)*(1-cy));}
 function draw(now){if(dead)return;if(!t0)t0=now;if(last)phase+=(now-last)/1000*SPEED;last=now;
 if(visible){size();var t=phase,a=AMP,e=Math.min(1,(now-t0)/1500);e=e*e*(3-2*e);
 gl.uniform2f(U('off'),e*(Math.sin(t*2*Math.PI/14)*0.022*a+mx*0.02*a),e*(Math.cos(t*2*Math.PI/14)*0.010*a+my*0.012*a));
