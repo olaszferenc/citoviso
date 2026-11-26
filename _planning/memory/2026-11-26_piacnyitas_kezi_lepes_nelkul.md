@@ -29,3 +29,33 @@ Lánc (uj-lanc-hr git): `felderito/{teruletek.py,osszes.sh,orzo.sh,felderito.py,
 ## Nyitott (koordinátornak)
 - Átállás: deploy (discovery-areas.mts élesen) + fő-fa ff után `bash ~/rc-briefs/uj-lanc-hr/atallas-felderites.sh check|go`.
 - Az átállás-szkript (atallas-felderites.sh) most a felderítést ÉS az audit a/b/d-t együtt viszi.
+
+## Részenkénti élesítés + településkép just-in-time (koordinátor 2026-11-26 14:00, élesen mérve 13:50)
+
+**(1) Felderítés részenként** (lánc-másolat `~/rc-briefs/uj-lanc-hr/felderito/`):
+- `maps_crawl.mjs` csempénként dolgozik: egy csempe listázása (minden szóval) → a már bejárt csempék helyeinek adatlapjai → következő csempe. Egy rész `--chunk` (10) új csempe vagy `--chunk-min` (45) perc után „rész” állapottal áll meg. Egy hely csak akkor nyílik meg, ha a saját csempéje már teljesen listázva van. A futó HR-17 fájljaival kompatibilis.
+- Üres csempe: ha az első 2 szó nem ad helyet a csempén belül, a többi szót kihagyja. Szimulálva 21 bejárt területen: −5 % keresés, kb. 2000 csempéből 39 hely veszett volna el. Szót nem vettem ki: HR-17-ben minden szó 200–1000 helyet talál elsőként.
+- `osszes.sh` minden rész után `elesit --go`. Ez idempotens: a lapon már szereplő hely kimarad, az új lead csak a most beszúrt sorokból számít.
+- Dev vak próba (HR-19, 4 csempe, rész = 1 csempe / 6 perc): az első 11 lead 8 perc múlva megvolt. 8 rész alatt 175 lead, 244 sor, 0 ftid- és 0 lead-duplikátum.
+- Mérés élesen: HR-17 első 29 csempéje 6035 helyet adott, tehát a lassúság az adatlap-fázis. Kb. 7 mp/adatlap mellett ez ~12 óra; részenként ebből folyamatos leadfolyam lesz.
+
+**Repó:**
+- `scripts/discovery-areas.mts`: a `process.exit` 64 KiB-nál elvágta a stdoutot (HR-17 340 csempéje: „column 65537”). Most a kiürülés után lép ki.
+
+**(2) Településkép just-in-time, háttérben:**
+- `telepkep/varo.py` = a `fo-cand.sql` megfordított településkép-feltétellel; futáskor származtatja. Dev-en: fo-cand 481 + várók 162 = feltétel nélkül 643, metszet 0, a sorrend a kulcs-holtversenyeken belül azonos.
+- `town-photo-gather.mts --leads` a fő terv sorrendjében dolgozik, országonként felváltva, a lead országa countryOf szerint, `--budget-min` időkerettel.
+- `telepkep.sh` a lanc.sh-ból háttérben indul (0,02 s), a lanc-zár nem öröklődik.
+- Élesen olvasva: a fő terv körében csak 139 lead vár településképre (a backlog-szám 5048 volt). Ebből 67 e-mailes, 47 település; a próbalistán az első 12-ből 6 HR település.
+- Dev: 6 település 17 perc alatt (12 perces keret), 5/6 jó, 14 maradt a következő körre.
+
+**Hiányzó szabályok (nem építettem):**
+- „Nincs jó hero”: éles napló szerint 35/80 (44 %), a <15 leades településeken 11/14. A fo-cand ilyenkor örökre vár.
+- 70 csak-mobilos HU lead is vár: a fo-cand a településképre várakoztatja őket, de a gyűjtő az ADR-0479 szerint csak e-mailesért fut.
+- Szemét városnév („277-es számú ajtó”).
+
+**Mellékes:** a dev DB HU-sorában a `send_window_to` 17 volt; élesen és a migrációban 20. Ez minden commitnál buktatta a country-layer-check-et (a tiszta mainen is). Visszaállítottam 20-ra (csak dev).
+
+**Átállás:** `bash ~/rc-briefs/uj-lanc-hr/atallas-reszek.sh check | go --stop-walk | rollback <tgz>`
+- Előfeltétel: a repó-commit landolva + fő-fa ff.
+- A `--stop-walk` PID szerint leállítja az élő bejárást (folytatható), másol, öntesztel, majd az orzo.sh-val újraindítja.
