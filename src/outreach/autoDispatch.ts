@@ -40,6 +40,7 @@ import type { QualifiedLead } from "../scraper/types.js";
 import { applyColdBrake, parseColdRamp, rampCapOn, type ColdRamp } from "./coldRamp.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { ensureDailyPlan } from "./experiment.js";
+import { retiredTemplateReason } from "./templateGate.js";
 
 /**
  * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
@@ -141,6 +142,9 @@ export async function enqueueDispatch(input: {
   if (!art) return { ok: false, reason: "nincs ilyen mock" };
   if (art.lead_id !== input.leadId) return { ok: false, reason: "a mock nem ehhez a leadhez tartozik" };
   if (art.status !== "approved") return { ok: false, reason: `a mock nincs jóváhagyva (állapot: ${art.status})` };
+  // ADR-0423: only the owner's three templates go out (templateGate.ts) — also via the queue.
+  const retiredQ = retiredTemplateReason(art.inputs);
+  if (retiredQ) return { ok: false, reason: retiredQ };
   // Vera's PASS on the CURRENT text is a precondition of the go decision (ADR-0329); the tick
   // re-checks it (a later text change makes it stale → held).
   if ((art.inputs as { reviewVerdict?: unknown } | null)?.reviewVerdict !== "pass") {
@@ -538,6 +542,9 @@ async function dispatchOne(
     .executeTakeFirst();
   if (!art) return { status: "skipped", note: "a mock időközben törlődött" };
   if (art.status !== "approved") return { status: "held", note: `a mock nincs jóváhagyva (állapot: ${art.status})` };
+  // ADR-0423: a retired-template mock never goes out (templateGate.ts); a fresh mock re-queues it.
+  const retired = retiredTemplateReason(art.inputs);
+  if (retired) return { status: "held", note: retired };
   // The quality colleague's look (owner 2026-11-25): the pass must be on THIS file — a re-render since
   // makes it stale, and the row waits (held) for a new look; the colleague's next pass re-queues it.
   const qa = await qaReviewState(artifactId);

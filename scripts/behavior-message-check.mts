@@ -179,7 +179,7 @@ async function fixture(
   leads.push(lead.id);
   const art = await db
     .insertInto("mock_artifact")
-    .values({ lead_id: lead.id, path: `sites/_behaviorcheck_${stamp}.html`, status: "approved", inputs: JSON.stringify({}) })
+    .values({ lead_id: lead.id, path: `sites/_behaviorcheck_${stamp}.html`, status: "approved", inputs: JSON.stringify({ engine: "composition", recipe: { template: "parallax" }, siteData: {} }) })
     .returning("id")
     .executeTakeFirstOrThrow();
   const sentAt = o.sentAt ?? new Date("2026-11-02T09:30:00+01:00");

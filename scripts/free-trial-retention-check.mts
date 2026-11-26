@@ -121,7 +121,7 @@ const SITE = {
   contact: { email: "info@example.com", phone: "+36 30 123 4567", address: "8360 Keszthely, Fő utca 1." },
   geo: { lat: 46.7655, lon: 17.2418 },
 } as unknown as SiteData;
-const RECIPE = { template: "editorial", skin: "", archetype: "", sections: [] } as unknown as Recipe;
+const RECIPE = { template: "parallax", skin: "", archetype: "", sections: [] } as unknown as Recipe;
 const FORM = { name: "Teszt Elek", email: "trialretention@example.invalid", phone: "+36 30 123 4567", aszfAccepted: true, photoRightsAccepted: true };
 
 /** Tables a blocker reads; they are never purged (a row there refuses the purge). */

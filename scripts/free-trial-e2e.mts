@@ -126,7 +126,7 @@ const SITE = {
   contact: { email: "info@example.com", phone: "+36 30 123 4567", address: "8360 Keszthely, Fő utca 1." },
   geo: { lat: 46.7655, lon: 17.2418 },
 } as unknown as SiteData;
-const RECIPE = { template: "editorial", skin: "", archetype: "", sections: [] } as unknown as Recipe;
+const RECIPE = { template: "parallax", skin: "", archetype: "", sections: [] } as unknown as Recipe;
 const EMAIL_A = `e2e-a-${stamp}@example.invalid`;
 const EMAIL_B = `e2e-b-${stamp}@example.invalid`;
 const FORM = (email: string) => ({ name: "Teszt Elek", email, phone: "+36 30 765 4321", aszfAccepted: true, photoRightsAccepted: true });

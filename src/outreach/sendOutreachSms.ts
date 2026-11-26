@@ -57,6 +57,7 @@ import { isLiveHost } from "../invoicing/keyGuard.js";
 import { copyOutreachSms } from "./pilotCopy.js";
 import { alreadyCustomerBlocks } from "./customerGate.js";
 import { planCountStill } from "./planSet.js";
+import { retiredTemplateReason } from "./templateGate.js";
 import { tagLinkInText } from "./openVia.js";
 
 export interface SmsSendReport {
@@ -226,7 +227,7 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
   if (!p.artifactId) return no("nincs mock-artifact — nincs mit kurátornak jóváhagynia");
   const artStatus = await db
     .selectFrom("mock_artifact")
-    .select("status")
+    .select(["status", "inputs"])
     .where("id", "=", p.artifactId)
     .executeTakeFirst();
   if (artStatus?.status !== "approved") {
@@ -234,6 +235,9 @@ export async function mobileOutreachGates(prospectId: string): Promise<MobileGat
       `a mock kurátori jóváhagyásra vár (artifact: '${artStatus?.status ?? "ismeretlen"}') — küldés csak 'approved' után`,
     );
   }
+  // ADR-0423: a mock on a retired template is never pushed onto a phone again (templateGate.ts).
+  const retired = retiredTemplateReason(artStatus.inputs);
+  if (retired) return no(retired);
 
   const d = await buildDraftForProspect(prospectId);
   if (!d) return no("a piszkozat nem állítható elő");

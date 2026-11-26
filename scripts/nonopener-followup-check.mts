@@ -164,7 +164,7 @@ async function fixture(tag: string, o: { email?: string | null; sentAt?: Date; u
   leads.push(lead.id);
   const art = await db
     .insertInto("mock_artifact")
-    .values({ lead_id: lead.id, path: `sites/_nonopenercheck_${stamp}.html`, status: "approved", inputs: JSON.stringify({}) })
+    .values({ lead_id: lead.id, path: `sites/_nonopenercheck_${stamp}.html`, status: "approved", inputs: JSON.stringify({ engine: "composition", recipe: { template: "parallax" }, siteData: {} }) })
     .returning("id")
     .executeTakeFirstOrThrow();
   const sentAt = o.sentAt ?? daysAgo(20);

@@ -57,7 +57,7 @@ const SITE: SiteData = {
   contact: { email: "info@example.com", phone: "+36 30 123 4567", address: "8360 Keszthely, Fő utca 1." },
   geo: { lat: 46.7655, lon: 17.2418 },
 } as unknown as SiteData;
-const RECIPE: Recipe = { template: "editorial", skin: "", archetype: "", sections: [] } as unknown as Recipe;
+const RECIPE: Recipe = { template: "parallax", skin: "", archetype: "", sections: [] } as unknown as Recipe;
 const MOCK_REL = `sites/_pcc_${stamp}.html`;
 const MOCK_FILE = path.resolve(process.cwd(), MOCK_REL);
 const FORM = { name: "Teszt Elek", email: "pcc@example.invalid", phone: "+36 30 123 4567", aszfAccepted: true, photoRightsAccepted: true };

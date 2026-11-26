@@ -40,6 +40,7 @@ import { budapestIsoDay } from "../text/budapestTime.js";
 import { normalizePhone } from "../text/phone.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { listProspectPlans } from "../outreach/planSet.js";
+import { isCurrentTemplateArtifact } from "../outreach/templateGate.js";
 import { getFreeTrialConfig, trialUntilFrom } from "./config.js";
 import { loadPricing } from "../pricing.js";
 import { tenantTrialPackage, trialModuleIds, trialModulesFromSelection, trialPackageView } from "./package.js";
@@ -146,6 +147,27 @@ async function planArtifactOf(
 }
 
 /**
+ * The plan a trial may be built from when the visitor picked `picked`: itself when it is on
+ * one of the owner's templates (or a legacy copy — refused further down with its own cleanup),
+ * otherwise the first other plan of the link that is on an owner template and not rejected;
+ * null when the link has none.
+ */
+async function currentTemplatePlanOf(prospectId: string, primaryArtifactId: string, picked: string): Promise<string | null> {
+  const own = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", picked).executeTakeFirst();
+  if (!isEngineArtifact(own?.inputs) || isCurrentTemplateArtifact(own?.inputs)) return picked;
+  const primary = await db.selectFrom("mock_artifact").select("path").where("id", "=", primaryArtifactId).executeTakeFirst();
+  const plans = await listProspectPlans(prospectId, { artifactId: primaryArtifactId, artifactPath: primary?.path ?? "" });
+  const others = plans.map((x) => x.artifactId).filter((id) => id !== picked);
+  if (!others.length) return null;
+  const rows = await db.selectFrom("mock_artifact").select(["id", "status", "inputs"]).where("id", "in", others).execute();
+  for (const id of others) {
+    const r = rows.find((y) => y.id === id);
+    if (r && r.status !== "rejected" && isCurrentTemplateArtifact(r.inputs)) return id;
+  }
+  return null;
+}
+
+/**
  * Start (or return the already-started) free trial for the lead behind an outreach token.
  * Refuses a lead that already bought, and a lead whose trial has ended.
  */
@@ -163,7 +185,7 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
   // is refused before anything is written.
   const picked = await planArtifactOf(p.id, p.mock_artifact_id, input.planArtifactId ?? null);
   if (picked === "not_found" || picked === "not_available") return { ok: false, error: picked };
-  const artifactId = picked;
+  let artifactId = picked;
 
   const v = validate(input, await countryConfig(await countryOfLead(p.lead_id)));
   if (typeof v === "string") return { ok: false, error: v };
@@ -205,6 +227,20 @@ export async function startTrial(prospectToken: string, input: TrialInput, now =
     else await alertTrialNotStarted(p.lead_id, "legacy HTML-másolat mock — élő próba-oldal nem készíthető belőle; semmi nem jött létre"); // i18n-exempt: operátori napló
     return { ok: false, error: "not_available" };
   }
+
+  // 1c. ADR-0423: a trial is never BUILT on a retired template (Freedom 50, 2026-11-24: an
+  // October link's horizontal plan 1 became the live trial site). Another plan of the same
+  // link on an owner template takes its place (the Kinézet tab still shows the rest); with
+  // none, nothing starts and the house is told a fresh mock is needed. A trial already built
+  // (prior.tenant_id) is left alone: its site exists, the plan switch handles the look.
+  const current = prior?.tenant_id ? artifactId : await currentTemplatePlanOf(p.id, p.mock_artifact_id, artifactId);
+  if (!current) {
+    const why = "a link minden terve kivezetett sablonon készült (ADR-0423) — friss mock kell, utána indítható a próba; semmi nem jött létre"; // i18n-exempt: operátori napló
+    if (prior && unprovisioned) await abandonTrialStart(prior.id, p.lead_id, why, null);
+    else await alertTrialNotStarted(p.lead_id, why);
+    return { ok: false, error: "not_available" };
+  }
+  artifactId = current;
 
   // 2. The market gate, as at the paid go-live: a live page publishes legal pages, and
   //    those exist only for an approved market (ADR-0111). Trial has no billing
