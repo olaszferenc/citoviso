@@ -149,11 +149,15 @@ async function main(): Promise<void> {
     // admin Súgó fülén, a nézet pedig dinamikusan fordítja: T(lang, c.label). Betakarítás
     // nélkül egy lengyel tenant magyar csoportcímeket látna, minden kapu zölden.
     "src/kb/kbCategories.ts",
+    // iCal sync (2026-11-26): SYNC_MSG is stored in calendar_link.last_error as the Hungarian
+    // source and translated where it is shown (T(lang, l.lastError) on the module page, the
+    // lasting-failure mail and the setup wizard) — a Croatian owner read it in Hungarian.
+    "src/booking/sync.ts",
   ];
   for (const rel of DATA_FILES) {
     const src = await readFile(path.join(ROOT, rel), "utf8").catch(() => "");
     // Registry labels show on the owner's admin AND (publicLabel/publicDesc) on the site.
-    const surface = rel === "src/kb/kbCategories.ts" ? "admin" : "admin+honlap";
+    const surface = rel === "src/kb/kbCategories.ts" || rel === "src/booking/sync.ts" ? "admin" : "admin+honlap";
     const add = (hu: string): void => {
       for (const s of surface.split("+")) note(hu, s);
     };
