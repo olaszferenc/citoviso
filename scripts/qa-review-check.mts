@@ -264,6 +264,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   }
   check("fotótapéta / pálmás trópusi strand lekerül az oldalról (Vandus)", isOffPagePhoto(K("ok", "a living room", { probs: { "a photo wallpaper mural on a wall": 0.25 } }), false) && isOffPagePhoto(K("ok", "a lake shore", { probs: { "palm trees on a tropical beach": 0.3 } }), true));
   check("két kolléga megosztja a sort: qa-review queue --half 0-7 | 8-f (nincs dupla renderelés)", /--half/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /inHalf\(r\.artifactId\)/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
+  check("kolléga-sor: félkész ajánlat elöl (az egyik terve már átment), több kollégánál --shard k/n", /exists \(select 1 from mock_artifact m where m\.lead_id = outreach_dispatch\.lead_id/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /--shard/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
 }
 
 if (failed) {

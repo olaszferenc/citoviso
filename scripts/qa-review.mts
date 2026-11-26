@@ -195,7 +195,7 @@ async function hero(artifactId: string, n: number, why: string): Promise<void> {
   console.log(`✅ nyitókép rögzítve (${n}. jelölt), ${plans.length} terv újrarenderelve — most nézd át őket: shots <id>`);
 }
 
-async function queue(limit: number, half: "0-7" | "8-f" | null = null): Promise<void> {
+async function queue(limit: number, half: "0-7" | "8-f" | null = null, shard: { k: number; n: number } | null = null): Promise<void> {
   const rows = await db
     .selectFrom("outreach_dispatch")
     .innerJoin("mock_artifact as a", "a.id", "outreach_dispatch.artifact_id")
@@ -208,6 +208,9 @@ async function queue(limit: number, half: "0-7" | "8-f" | null = null): Promise<
     ]))
     .where(DISPATCH_PHOTOS_OK_SQL)
     .where(MOCK_CURRENT_GENERATOR_SQL)
+    // A HALF-DONE OFFER FIRST (owner 2026-11-26: „ha megvan egy leadnek az egyik terve, akkor a másikkal folytassuk”):
+    // a lead one of whose plans the colleague already passed goes to the front — its other plan finishes the offer.
+    .orderBy(sql`exists (select 1 from mock_artifact m where m.lead_id = outreach_dispatch.lead_id and m.inputs->'qaReview'->>'verdict' = 'pass') desc`)
     .orderBy(DISPATCH_PRIORITY)
     .orderBy("outreach_dispatch.queued_at")
     .limit(limit * 12)
@@ -215,7 +218,9 @@ async function queue(limit: number, half: "0-7" | "8-f" | null = null): Promise<
   let shown = 0;
   // Two colleagues share the queue (owner 2026-11-26: „LEGYEN MÁSODIK KOLLÉGA”): --half 0-7 | 8-f keeps each to the
   // rows whose MAIN plan id starts with its half — no row is rendered or judged twice.
-  const inHalf = (id: string): boolean => !half || (/^[0-7]/i.test(id) ? half === "0-7" : half === "8-f");
+  // --shard k/n (more colleagues, owner 2026-11-26: „a 25 is nagyon kevés”): the main plan id's first hex digit mod n.
+  const inHalf = (id: string): boolean =>
+    shard ? parseInt(id[0] ?? "0", 16) % shard.n === shard.k - 1 : !half || (/^[0-7]/i.test(id) ? half === "0-7" : half === "8-f");
   for (const r of rows) {
     if (shown >= limit) break;
     if (!inHalf(r.artifactId)) continue;
@@ -270,7 +275,10 @@ try {
     const li = process.argv.indexOf("--limit");
     const hi = process.argv.indexOf("--half");
     const half = hi > 0 && (process.argv[hi + 1] === "0-7" || process.argv[hi + 1] === "8-f") ? (process.argv[hi + 1] as "0-7" | "8-f") : null;
-    await queue(li > 0 ? Math.max(1, Number(process.argv[li + 1]) || 5) : 5, half);
+    const si = process.argv.indexOf("--shard");
+    const sm = si > 0 ? /^(\d+)\/(\d+)$/.exec(process.argv[si + 1] ?? "") : null;
+    const shard = sm && Number(sm[1]) >= 1 && Number(sm[1]) <= Number(sm[2]) && Number(sm[2]) <= 16 ? { k: Number(sm[1]), n: Number(sm[2]) } : null;
+    await queue(li > 0 ? Math.max(1, Number(process.argv[li + 1]) || 5) : 5, half, shard);
   } else if (cmd === "shots" && arg) {
     for (const f of await shots(arg)) console.log(f);
   } else if ((cmd === "pass" || cmd === "fail") && arg) {
@@ -288,7 +296,7 @@ try {
   } else if (cmd === "status") {
     await status();
   } else {
-    console.error('Használat: qa-review.mts queue [--limit N] [--half 0-7|8-f] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
+    console.error('Használat: qa-review.mts queue [--limit N] [--half 0-7|8-f | --shard k/n] | shots <id> | pass <id> "<mit néztél>" | fail <id> "<mi a baj>" | status | heroes <id> | hero <id> <n> "<miért>"');
     process.exitCode = 2;
   }
 } finally {

@@ -124,6 +124,8 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
+    // A half-done offer first (owner 2026-11-26): a lead with one plan already passed by the colleague.
+    .orderBy(sql`exists (select 1 from mock_artifact m where m.lead_id = d.lead_id and m.inputs->'qaReview'->>'verdict' = 'pass') desc`)
     .orderBy("d.queued_at")
     .limit(limit)
     .execute();
