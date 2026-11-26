@@ -60,11 +60,15 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the dep
 // 11-26 night (ADR-0496, the rule bundle): own accent from the photos, neutral gallery heading on a town page, no
 // 1–3-card sample facilities block, no repeated line, month-name date stamps, one portal photo in two crops =
 // one picture → qafix7 re-renders the waiting stock (the refresh step covers the town-page mocks too since this stamp).
-export const MOCK_HEROFIX_STAMP = "2026-11-26-qafix7";
+// 11-27 (slotfit1, one predicate per slot): the generator and the render gate judge every photo slot with the same
+// photoKind function. Since this stamp a FRESH mock carries it too (generateEngine inputs.terhatasAt), so the
+// stamp alone decides — a mock made after MOCK_HEROFIX_LIVE_AT by the older code is refreshed like any other.
+// A plan the quality colleague already PASSED stays current (as at qafix5): its file is what was reviewed.
+export const MOCK_HEROFIX_STAMP = "2026-11-27-slotfit1";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
-  and (a.generated_at >= ${MOCK_HEROFIX_LIVE_AT}::timestamptz or coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}
-       or (coalesce(a.inputs->>'terhatasAt', '') >= '2026-11-26-qafix4' and a.inputs->'qaReview'->>'verdict' = 'pass'
-           and a.inputs->>'heroDepthArm' = 'depth')))`;
+  and (coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}
+       or ((a.generated_at >= ${MOCK_HEROFIX_LIVE_AT}::timestamptz or coalesce(a.inputs->>'terhatasAt', '') >= '2026-11-26-qafix4')
+           and a.inputs->'qaReview'->>'verdict' = 'pass' and a.inputs->>'heroDepthArm' = 'depth')))`;
 
 /**
  * THE OWNER'S SWITCH for the <N-photo branch (owner rule 2026-11-25 via cit5980e14c: „amíg a képtár nincs

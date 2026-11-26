@@ -70,6 +70,7 @@ import {
   T,
   type ArtTemplate,
   galleryPhotos,
+  fitsSlot,
 } from "../templateKit.js";
 
 const ARROW = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>`;
@@ -109,17 +110,19 @@ export function gatePhotoOf(photos: readonly Photo[], explicit?: Photo): Photo |
   if (!hero) return null;
   const distinct = (p: Photo | undefined): p is Photo =>
     Boolean(p && p.url && p.url !== hero.url && !isSamePicture(p.dhash, hero.dhash) && sizelessPhotoKey(p.url) !== sizelessPhotoKey(hero.url));
+  // The leaves are the OPENING slot (11-27): only an opening-fit photo (templateKit.fitsSlot — the render gate's
+  // fitsOpening; a missing verdict = not fit), the stored / tenant choice included.
   // The tenant's own choice wins (ADR-0423: „tudja majd tenant ezt is konfigurálni”).
-  if (distinct(explicit)) return explicit;
-  // Never a kitchen/bathroom shot on the leaves (Photo.backstage, 2026-11-24).
+  if (distinct(explicit) && fitsSlot(explicit, "opening")) return explicit;
+  // Never a kitchen/bathroom shot on the leaves (2026-11-24).
   // …and the best wide shot first (photoKind.bandScore via photoCurate, 2026-11-25: Sunset Villa's leaves
   // were its kitchen-living corner, the first photo in line). A close-up / dark / non-scene photo
-  // (notBand) only when nothing else is left; the order is otherwise kept.
+  // (not band-fit) only when nothing else is left; the order is otherwise kept.
   const rest = photos
     .slice(1)
-    .filter((p) => distinct(p) && !p.backstage)
+    .filter((p) => distinct(p) && fitsSlot(p, "opening"))
     .map((p, i) => ({ p, i }))
-    .sort((a, b) => Number(Boolean(a.p.notBand)) - Number(Boolean(b.p.notBand)) || (b.p.bandScore ?? -1) - (a.p.bandScore ?? -1) || a.i - b.i)
+    .sort((a, b) => Number(!fitsSlot(a.p, "band")) - Number(!fitsSlot(b.p, "band")) || (b.p.bandScore ?? -1) - (a.p.bandScore ?? -1) || a.i - b.i)
     .map((x) => x.p);
   // Owner, 2026-11-23 (plan design-refs/tenant-site/generator-javitas): the leaves must show a
   // DIFFERENT SUBJECT from what opens up behind them — Krisztina Panzió's second photo was the
@@ -703,9 +706,9 @@ function renderGate(recipe: Recipe, data: SiteData, phase: RenderPhase): string 
     const wide = shown % 2 ? shown - 1 : -1;
     // The full-row tile is a showcase of its own — never a kitchen or a bathroom (11-25: Három Testvér
     // and Vörösmarty tér closed their gallery with a full-width shower). Swap in the nearest showcase.
-    if (wide >= 0 && ordered[wide]!.backstage) {
+    if (wide >= 0 && !fitsSlot(ordered[wide], "opening")) {
       for (let j = wide - 1; j >= 0; j--) {
-        if (!ordered[j]!.backstage) {
+        if (fitsSlot(ordered[j], "opening")) {
           [ordered[j], ordered[wide]] = [ordered[wide]!, ordered[j]!];
           break;
         }

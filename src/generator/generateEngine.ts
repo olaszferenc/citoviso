@@ -49,7 +49,7 @@ import { curateMockPhotos } from "./photoCurate.js";
 import { getHeroPin } from "./heroOverride.js";
 import { GATE_OPENING, gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { townPhotosForMock } from "./townHero.js";
-import { DEFAULT_MIN_OWN_PHOTOS } from "../outreach/mockPhotoGate.js";
+import { DEFAULT_MIN_OWN_PHOTOS, MOCK_HEROFIX_STAMP } from "../outreach/mockPhotoGate.js";
 import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
@@ -899,6 +899,10 @@ async function generateEngineMockInner(
       siteData: siteData as unknown as Record<string, unknown>,
       // ADR-0472: the depth-hero experiment arm ('depth' | 'control' | 'skip:<why>'); absent = off.
       ...(depth.arm ? { heroDepthArm: depth.arm } : {}),
+      // The generator's rule stamp (11-27): a fresh mock carries the stamp of the code that made it, so a stamp
+      // bump alone marks every older mock for the refresh (mockPhotoGate MOCK_CURRENT_GENERATOR_SQL) — no
+      // deploy-time constant needed.
+      terhatasAt: MOCK_HEROFIX_STAMP,
       // `inputs` is not an archive — `rerender-mock.mts` RE-RENDERS from it (ADR-0143 ①).
       // Persisting the key under the `region` NAME field would resurrect the scrape key on
       // the next re-render, which is the exact loop that ADR closed. `regionId` keeps the

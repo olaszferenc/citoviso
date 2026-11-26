@@ -6,11 +6,13 @@
 //   ④ then the showcase photos, the kitchen/bathroom ones last (photoKind.withShowcaseFirst): the
 //      wordmark-grow intro cycles photos 2–5 in its big frame and gate-opening takes its leaf from
 //      the front, so a bathtub there opens the page just as a bathtub hero would (11-24);
-//      those shots also carry Photo.backstage, and the opening sequence skips them
+//      every photo carries the positive slot marks okOpening / okBand / okContact (11-27) — the
+//      render gate's own predicates (photoKind fitsOpening / fitsBand / fitsContact), so a slot the
+//      generator fills is a slot the gate passes
 
-import { bandScore, classifyPhotoUrl, heroSized, NOT_CARD_LABELS, NOT_CARD_MASS, photoFocusX, isBandWorthy, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst } from "../media/photoKind.js";
+import { bandScore, classifyPhotoUrl, fitsBand, fitsContact, fitsHero, fitsOpening, NOT_CARD_MASS, notCardMass, photoFocusX, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst, type PhotoKind } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
-import { detectPhotoObjects, showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal } from "../media/photoObjects.js";
+import { detectPhotoObjects, type DetectedObject, showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal } from "../media/photoObjects.js";
 import { applyHeroPin } from "./heroOverride.js";
 
 export interface CuratedPhotos<T> {
@@ -19,6 +21,24 @@ export interface CuratedPhotos<T> {
   readonly duplicates: string[];
   readonly offPage: string[];
   readonly heroMoved: boolean;
+}
+
+/**
+ * A photo's slot marks (11-27) — each the render gate's OWN predicate (photoKind fitsOpening / fitsBand /
+ * fitsContact), narrowed by what only the generator sees: the object detector's vehicle / animal (11-26: Jaja's
+ * SUV, Pince's dog, Zalabéri's blue car). Stricter than the gate, never looser — scripts/qa-review-check.mts proves
+ * it. No verdict (v null) → every mark false.
+ */
+export function slotMarks(v: PhotoKind | null, objs: readonly DetectedObject[] | null): { okOpening: boolean; okBand: boolean; okContact: boolean; notCard: boolean } {
+  const vehicleSeen = objs != null && showsVehicleOrAnimal(objs);
+  const notCard = (v != null && notCardMass(v) >= NOT_CARD_MASS) || vehicleSeen;
+  return {
+    okOpening: fitsOpening(v),
+    // …nor a band / the gate leaf with a car, a dog or a person in it (11-26, round 4: Pince's band, Alfa's feature)
+    okBand: fitsBand(v) && !notCard,
+    okContact: fitsContact(v) && !notCard,
+    notCard,
+  };
 }
 
 const fileOf = (u: string): string => u.split(/[?#]/)[0]!.split("/").pop() ?? u;
@@ -38,22 +58,30 @@ export async function curateMockPhotos<T extends { url: string }>(
     if (!o) return false;
     return showsPerson(o) || showsBathroomFixture(o, mass(i, ["a bathroom with a shower", "a toilet"]), mass(i, ["a kitchen", "a small kitchenette"]));
   };
-  const keep = dd.photos.map((_, i) => i).filter((i) => !isOffPagePhoto(kinds[i] ?? null, i === 0) && !detailOff(i));
+  // THE HERO FIRST, THEN THE OFF-PAGE CUT (11-27): the off-page exemption („a sight may open the page”) belongs to
+  // the FINAL hero. Until then it went to the ORIGINAL first photo before the hero swap — a church that lost the
+  // hero place stayed on the page and filled the contact picture, which the render gate then refused.
+  // Hero candidates: no person / WC detail (the object detector), the hero no-gos of photoKind (fitsHero).
+  // (a snowy / night / people shot is off the page even as the hero: never a candidate)
+  const heroKinds = dd.photos.map((_, i) => (detailOff(i) || isOffPagePhoto(kinds[i] ?? null, true) ? null : kinds[i] ?? null));
+  const machine = withBestHeroFirst(dd.photos, heroKinds);
+  // The colleague's pick wins — only when it passes the gate's hero rule (fitsHero: sized for the moving cover
+  // 11-26 Badacsony, no person / vehicle, not dark, not a kitchen / bathroom); else the machine's hero stands.
+  const pinnedAt = opts.pinnedUrl ? dd.photos.findIndex((p) => p.url === opts.pinnedUrl) : -1;
+  const heroFirst = pinnedAt >= 0 && fitsHero(heroKinds[pinnedAt] ?? null) ? applyHeroPin(machine, opts.pinnedUrl!) : machine;
+  const idxOf = new Map(dd.photos.map((p, i) => [p, i] as const));
+  const kept = heroFirst.filter((p, at) => {
+    const i = idxOf.get(p)!;
+    return !isOffPagePhoto(kinds[i] ?? null, at === 0) && !detailOff(i);
+  });
+  const keep = kept.map((p) => idxOf.get(p)!);
   const objOf = new Map(dd.photos.map((p, i) => [p, objects[i] ?? null] as const));
-  const kept = keep.map((i) => dd.photos[i]!);
-  const keptKinds = keep.map((i) => kinds[i] ?? null);
-  const machine = withBestHeroFirst(kept, keptKinds);
-  // The colleague's pick wins — unless the photo is too small for the moving cover (11-26, Badacsony): then the
-  // machine's best sized hero stands, and the next hero pick offers only sized photos.
-  const pinnedKind = opts.pinnedUrl ? keptKinds[kept.findIndex((p) => p.url === opts.pinnedUrl)] ?? null : null;
-  const heroFirst = opts.pinnedUrl && (!pinnedKind || heroSized(pinnedKind)) ? applyHeroPin(machine, opts.pinnedUrl) : machine;
-  const kindOf = (p: T & { dhash?: string }) => keptKinds[kept.indexOf(p)] ?? null;
-  const ordered = withShowcaseFirst(heroFirst, heroFirst.map(kindOf)).map((p, i) => {
-    // The hero is withBestHeroFirst's choice; every other kitchen/bathroom shot is flagged, so the
-    // opening sequence (wordmark-grow frame, gate leaf) skips it. A stale flag is cleared.
+  const kindOf = (p: T & { dhash?: string }) => kinds[idxOf.get(p) ?? -1] ?? null;
+  const ordered = withShowcaseFirst(kept, kept.map(kindOf)).map((p) => {
+    // POSITIVE slot marks (11-27), each from the render gate's own predicate (photoKind fitsOpening / fitsBand /
+    // fitsContact): a photo fills a slot only when the gate will pass it there. No verdict → false (no slot).
     const v = kindOf(p);
-    const backstage = i > 0 && v != null && !isShowcase(v);
-    // A close-up / dark / non-scene shot never fills a full-bleed band (11-25, quality colleague).
+    // Band fitness (bandScore): the bands and the gate leaf take the highest scorers.
     const bs = v != null ? bandScore(v) : undefined;
     // A feature card shows the PLACE: no vehicle, person or animal (11-26: Jaja's „Balatoni panoráma” card
     // was a blue SUV with its number plate; Gyékényes a fisherman).
@@ -62,17 +90,14 @@ export async function curateMockPhotos<T extends { url: string }>(
     // gallery had the twin room): the local classifier's best label, clearly a bedroom and showcase-fit.
     const bedroomClip = v != null && v.label === "a bedroom with a bed" && (pr["a bedroom with a bed"] ?? 0) >= 0.35 && isShowcase(v);
     const objs = objOf.get(p as never) ?? null;
-    // a car at the edge, a dog in front of the house (11-26: Jaja's SUV, Pince's dog, Zalabéri's blue car)
-    const notCard = (v != null && NOT_CARD_LABELS.reduce((a, l) => a + (pr[l] ?? 0), 0) >= NOT_CARD_MASS) || (objs != null && showsVehicleOrAnimal(objs));
+    const { okOpening, okBand, okContact, notCard } = slotMarks(v, objs);
     // a sofa / armchairs (the lone card's picture when there is no bed — never a corridor, BaBo 11-26)
     // …INDOOR only (11-26: a garden sofa and a swing passed): the classifier's best label is a room
     const lounge = objs != null && showsSittingArea(objs) && v != null && isShowcase(v) && ["a living room", "a hotel room interior", "a bedroom with a bed"].includes(v.label);
     const bedSeen = objs != null && showsBed(objs) && v != null && isShowcase(v);
     const bedroom = bedroomClip || bedSeen;
-    // …nor a band / the gate leaf with a car, a dog or a person in it (11-26, round 4: Pince's band, Alfa's feature)
-    const notBand = i > 0 && ((v != null && (!isBandWorthy(v) || !bs)) || notCard);
-    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, kindLabel: _oldLabel, lounge: _oldLounge, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean; kindLabel?: string; lounge?: boolean };
-    return { ...rest, ...(backstage ? { backstage: true } : {}), ...(notBand ? { notBand: true } : {}), ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}), ...(v ? { kindLabel: v.label } : {}), ...(lounge ? { lounge: true } : {}) } as T & { dhash?: string };
+    const { backstage: _old, notBand: _oldBand, bandScore: _oldScore, notCard: _oldCard, kindLabel: _oldLabel, lounge: _oldLounge, okOpening: _oo, okBand: _ob, okContact: _oc, ...rest } = p as typeof p & { backstage?: boolean; notBand?: boolean; bandScore?: number; notCard?: boolean; kindLabel?: string; lounge?: boolean; okOpening?: boolean; okBand?: boolean; okContact?: boolean };
+    return { ...rest, okOpening, okBand, okContact, ...(bs ? { bandScore: bs } : {}), ...(notCard ? { notCard: true } : {}), ...(bedroom && !(rest as { bedroom?: boolean }).bedroom ? { bedroom: true } : {}), ...(v ? { kindLabel: v.label } : {}), ...(lounge ? { lounge: true } : {}) } as T & { dhash?: string };
   });
   // A vehicle / person / animal shot goes to the END of the set (11-26, quality colleague: Jaja's gallery
   // OPENED on the blue SUV) — it may stay in the gallery, never lead it. The hero (index 0) stays put.
@@ -89,6 +114,6 @@ export async function curateMockPhotos<T extends { url: string }>(
     photos: curated,
     duplicates: dd.dropped.map((p) => fileOf(p.url)),
     offPage: dd.photos.filter((_, i) => !keep.includes(i)).map((p) => `${fileOf(p.url)} (${detailOff(dd.photos.indexOf(p)) ? "tárgy: ember/WC/mosdó" : (kinds[dd.photos.indexOf(p)]?.label ?? "?")})`),
-    heroMoved: curated[0]?.url !== kept[0]?.url,
+    heroMoved: curated[0]?.url !== dd.photos.find((_, i) => !isOffPagePhoto(kinds[i] ?? null, false) && !detailOff(i))?.url,
   };
 }

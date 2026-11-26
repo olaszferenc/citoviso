@@ -34,7 +34,7 @@ import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { isStockPhoto } from "../stock.js";
-import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos, fitsSlot } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -513,8 +513,9 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     // Owner 2026-11-23 (variant B, design-refs/tenant-site/generator-javitas): FOUR photos
     // cycle in the big frame, none of them the hero; the hero fades in inside the frame as it
     // starts to grow, and is the picture the page keeps — what grows is never what stays.
-    // Never a kitchen/bathroom shot in the frame (Photo.backstage, 2026-11-24).
-    photos: photos.filter((p) => !p.backstage && p.url !== hero?.url && !isSamePicture(p.dhash, hero?.dhash)).slice(0, 4).map((p) => p.url),
+    // Never a kitchen/bathroom shot in the frame (2026-11-24) — the opening slot's rule (fitsSlot, 11-27: the
+    // render gate's fitsOpening; a missing verdict = not fit).
+    photos: photos.filter((p) => fitsSlot(p, "opening") && p.url !== hero?.url && !isSamePicture(p.dhash, hero?.dhash)).slice(0, 4).map((p) => p.url),
     ...(hero ? { hero: hero.url } : {}),
   };
 

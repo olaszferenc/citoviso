@@ -10,10 +10,13 @@
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { focusXOfBuffer, signWords, heroSized, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import { bandScore, fitsBand, fitsContact, fitsHero, fitsOpening, focusXOfBuffer, signWords, heroSized, isNightShot, isBandWorthy, isHeroCandidate, isHeroWorthy, isOffPagePhoto, isShowcase, PHOTO_OK_MIN, type PhotoKind } from "../src/media/photoKind.js";
+import LABELS_JSON from "../src/media/photoKindLabels.json" with { type: "json" };
+import { slotMarks } from "../src/generator/photoCurate.js";
+import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
 import sharpLib from "sharp";
 import { withRibbonStrip } from "../src/outreach/heroShot.js";
-import { sampleRooms, galleryOrder, roomsForMock } from "../src/engine/templateKit.js";
+import { sampleRooms, galleryOrder, roomsForMock, allotPhotos, contactPhotoOf, fitsSlot } from "../src/engine/templateKit.js";
 import { withoutAbsentPictureClaims, renderSite, isAddressLabel } from "../src/engine/render.js";
 import { catalogueIdFor } from "../src/engine/amenityIcon.js";
 import { showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal, type DetectedObject } from "../src/media/photoObjects.js";
@@ -138,11 +141,11 @@ check("sávkép: fürdő nem jó", !isBandWorthy(K("ok", "a sauna or jacuzzi", {
 check("sávkép: a ház kívülről jó", isBandWorthy(K("ok", "the outside of a house")));
 check("sávkép: párna-közeli (közeli-címkék ≥ 0,2) nem jó",
   !isBandWorthy(K("ok", "a bedroom with a bed", { probs: { "a bedroom with a bed": 0.5, "a close-up of a decorative pillow": 0.25 } })));
-check("a sávokat a közelkép-jelzés nélküli képek töltik", /bandFit/.test(src("src/engine/templateKit.ts")) && /notBand/.test(src("src/generator/photoCurate.ts")));
+check("a sávokat a sáv-alkalmas (okBand) képek töltik", /const bandFit = \(p: Photo\): boolean => fitsSlot\(p, "band"\);/.test(src("src/engine/templateKit.ts")) && /okBand: fitsBand\(v\)/.test(src("src/generator/photoCurate.ts")));
 check("telefonon a sávkép nem képernyőnyi ablak (a fotó nagy része látszik)", /t-par--band'\)\)\{var h=Math\.round\(r\.height\*1\.25\)/.test(src("src/engine/templates/parallax.ts")));
 const gate = src("src/outreach/mockRenderGate.ts");
 check("a kapu a levél képét (asztali első képernyő) is nézi szótörésre", /DESKTOP_VIEWPORT/.test(gate) && /desktopBrokenWords/.test(gate));
-check("a kapu a sávképet is méri (bandScore)", /bandScore\(v\)/.test(gate));
+check("a kapu a sávképet is méri (fitsBand ⊇ bandScore)", /!fitsBand\(v\)/.test(gate) && /bandScore\(v\) > 0/.test(kindSrc));
 check("a dátumbélyegzős fotó junk (helyi szövegfelismerő)", /dátumbélyegző a fotón/.test(kindSrc) && /readPhotoText/.test(kindSrc));
 check("az e-mail a kapcsolat-sorban nem nagybetűs, a @ előtt törhet", /a\.t-mail\{text-transform:none/.test(src("src/engine/templates/parallax.ts")) && /<wbr>@/.test(src("src/engine/templates/parallax.ts")));
 
@@ -241,7 +244,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     check("tárgyfelismerő: ágy → szobakártya-kép; kanapé → a magányos kártya képe; folyosó (semmi) → egyik sem",
       showsBed([O("bed", 0.7, 0.3)]) && showsSittingArea([O("couch", 0.8, 0.3)]) && !showsBed([]) && !showsSittingArea([]));
     check("kiemelt sor: csak a szövegéhez illő képet kap (nincs semleges/címke nélküli tartalék)", !/NEUTRAL_ROW/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
-    check("sáv és kapuszárny: jármű/ember/állat-kép nem (notBand ⊇ notCard)", /\|\| notCard\);/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")));
+    check("sáv és kapuszárny: jármű/ember/állat-kép nem (okBand ⊆ !notCard)", /okBand: fitsBand\(v\) && !notCard/.test(readFileSync(new URL("../src/generator/photoCurate.ts", import.meta.url), "utf8")));
   }
   {
     const base = { name: "Kevi", intro: "Ház a tónál.", tagline: "Ház a tónál", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Saját parkoló", "Wifi", "Grillsütő"] } as unknown as SD;
@@ -255,7 +258,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     check("„Amit kínálunk”: 4 új tétel → a blokk áll, a látott (Parkoló) kimarad", /Medence/.test(four) && /Szauna/.test(four) && !/Parkol/.test(four), four.slice(0, 300));
   }
   check("cím: a kettétörő szót a lap maga kicsinyíti (data-cit-fit-words, 60 % / 16 px alja)", /data-cit-fit-words/.test(readFileSync(new URL("../src/engine/render.ts", import.meta.url), "utf8")));
-  check("gépi kapu: a nyitóképet a kolléga-jelölt szabálya méri (isHeroCandidate), nem írja felül a választását", /!isHeroCandidate\(hv\)/.test(readFileSync(new URL("../src/outreach/mockRenderGate.ts", import.meta.url), "utf8")));
+  check("gépi kapu: a nyitóképet a kolléga-jelölt szabálya méri (fitsHero = isHeroCandidate), nem írja felül a választását", /!fitsHero\(hv\)/.test(readFileSync(new URL("../src/outreach/mockRenderGate.ts", import.meta.url), "utf8")));
   check("kiemelés: utcacím („Balatonbogláron, a Fiumei utcában”) nem címke, a szolgáltatás marad", isAddressLabel("Balatonbogláron, a Fiumei utcában") && !isAddressLabel("Saját parkoló") && !isAddressLabel("Kilátás a Balatonra") && !isAddressLabel("Közvetlen vízpart"));
   check("nyitókép széles vágásnál a felső harmadra áll (35 %) — mindhárom sablon és a mélységhatás", ["gateOpening.ts", "wordmarkGrow.ts", "parallax.ts"].every((f) => /var\(--cit-hero-fx,50%\) 35%/.test(readFileSync(new URL(`../src/engine/templates/${f}`, import.meta.url), "utf8"))) && /\(0\.35-0\.5\)\*\(1-cy\)/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
   check("kapu-újramérés: a kiküldő ütem a régebbi kapu-verzióval mért várakozó terveket maga méri újra (a jóváhagyó lapról nem esnek ki)", /regateStaleQueue\(gateBudget\)/.test(readFileSync(new URL("./outreach-dispatch.mts", import.meta.url), "utf8")) && /renderGate\?\.version !== RENDER_GATE_VERSION/.test(readFileSync(new URL("../src/generator/mockRefresh.ts", import.meta.url), "utf8")));
@@ -265,7 +268,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const html = renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { name: "J", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Napozóágyak és", "Wifi"] } as unknown as SD, { phase: "mock" });
     check("csonka címke („Napozóágyak és”) a lógó kötőszó nélkül jelenik meg", />Napozóágyak</.test(html) && !/Napozóágyak és/.test(html));
     check("parallax nyitókép-cím árnyékot kap (világos homlokzaton is olvasható kiemelés)", /\.t-hero h1\{[^}]*text-shadow/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
-    check("generátor-bélyeg qafix5; a kolléga által átengedett qafix4-es terv aktuális marad (nem esik le a tulaj lapjáról)", /qafix5/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /'2026-11-26-qafix4' and a\.inputs->'qaReview'->>'verdict' = 'pass'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
+    check("generátor-bélyeg qafix5+; a kolléga által átengedett qafix4-es terv aktuális marad (nem esik le a tulaj lapjáról)", /qafix5/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /'2026-11-26-qafix4'\)\s*and a\.inputs->'qaReview'->>'verdict' = 'pass'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
   }
   {
     const base2 = { name: "L", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Légkondicionálás", "Wifi", "Grillezési lehetőség"] } as unknown as SD;
@@ -296,7 +299,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const rs3 = roomsForMock({ name: "K", photos: [ph3(1, { bedroom: true, subject: "interior" }), ph3(2), ph3(3, { bedroom: true, subject: "interior" })], rooms: [{ name: "Kétágyas" }] } as unknown as SD);
     check("megnevezett szoba kártyája nem a nyitókép (Kálvária)", rs3[0]?.photo?.url === ph3(3).url, String(rs3[0]?.photo?.url));
   }
-  check("kapcsolat-kép: jármű/ember/állat nem; szobakártya csak ágy/kanapé (konyha, kályha nem), különben a szoba-blokk minden úton elmarad", /outdoor\(p\) && !p\.notCard/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /rs\.every\(\(r\) => !r\.photo\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  check("kapcsolat-kép: jármű/ember/állat nem; szobakártya csak ágy/kanapé (konyha, kályha nem), különben a szoba-blokk minden úton elmarad", /outdoor\(p\) && contactFit\(p\)/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /rs\.every\(\(r\) => !r\.photo\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
   check("parallax-rács: a címben/alcímben felsorolt tétel nem jön vissza csempeként", /firstSentence\(data\.intro\), \.\.\.headings\]\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
   check("alkalmas nyitókép nélküli sor kikerül a kolléga-sorból (tartva), nem jön vissza ⭐-gal", /nincs mozgatható, alkalmas nyitókép/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
   check("rács és kiemelés-lista: a szakaszcímekben felsorolt tétel („Kert, terasz, parkoló”) nem jön vissza", /recipe\.sections\.flatMap\(\(s\) => \[s\.copy\?\.title/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /recipe\.sections\.flatMap\(\(s\) => \[s\.copy\?\.title/.test(readFileSync(new URL("../src/engine/templates/gateOpening.ts", import.meta.url), "utf8")));
@@ -305,6 +308,95 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const html = renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { name: "H", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos, highlights: [] } as unknown as SD, { phase: "mock" });
     check("5+ saját fotó, nincs hálókép: a szobakártya vízjeles MINTA-illusztrációt kap (tulaj 11-26), a galériában stock nincs", (html.match(/\/assets\/stock\//g) ?? []).length === 1 && /data-cit-module="rooms"/.test(html));
   }
+}
+
+// ── ⑤ ONE PREDICATE PER SLOT (2026-11-27): what the generator puts in a slot, the render gate passes there ──
+// Blind sample 11-27: Parallax 0/20 — the generator filled the band / opening / contact / hero with photos the gate
+// then refused (two rules). Now photoCurate.slotMarks and the gate call the same photoKind functions; this proves it
+// on 4 000 seeded random verdicts over the real label set, then through the templates' own slot pickers.
+{
+  const labels = (LABELS_JSON as { labels: { label: string; kind: string }[] }).labels;
+  let seed = 20261127;
+  const rnd = (): number => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const pickL = (): string => labels[Math.floor(rnd() * labels.length)]!.label;
+  const kinds: PhotoKind["kind"][] = ["ok", "ok", "ok", "ok", "sight", "never", "junk"];
+  const randomKind = (): PhotoKind => {
+    const probs: Record<string, number> = {};
+    const top = pickL();
+    probs[top] = 0.3 + rnd() * 0.5;
+    for (let j = 0; j < 4; j++) { const l = pickL(); probs[l] = (probs[l] ?? 0) + rnd() * (rnd() < 0.3 ? 0.3 : 0.08); }
+    return {
+      kind: kinds[Math.floor(rnd() * kinds.length)]!, label: top, score: probs[top]!, sight: rnd() * 0.7, never: rnd() * 0.4, ok: rnd(), probs,
+      ...(rnd() < 0.9 ? { quality: { long: 600 + Math.floor(rnd() * 1600), short: 400 + Math.floor(rnd() * 1000), luma: 40 + rnd() * 120, lap: 20 + rnd() * 400, top: 20 + rnd() * 150 } } : {}),
+    } as PhotoKind;
+  };
+  const car: DetectedObject[] = [{ label: "car", score: 0.8, x: 0.1, y: 0.5, w: 0.3, h: 0.2 }];
+  let bad = 0;
+  let filled = { opening: 0, band: 0, contact: 0, hero: 0 };
+  const sample: PhotoKind[] = [];
+  for (let n = 0; n < 4000; n++) {
+    const v = randomKind();
+    sample.push(v);
+    const m = slotMarks(v, rnd() < 0.15 ? car : null);
+    if (m.okOpening && !fitsOpening(v)) bad++;
+    if (m.okBand && !fitsBand(v)) bad++;
+    if (m.okContact && !fitsContact(v)) bad++;
+    if (isHeroWorthy(v) && !fitsHero(v)) bad++;
+    filled = { opening: filled.opening + +m.okOpening, band: filled.band + +m.okBand, contact: filled.contact + +m.okContact, hero: filled.hero + +isHeroWorthy(v) };
+  }
+  check(`slot-predikátum: 4000 véletlen ítéletből a generátor jelzője sosem enged, amit a kapu tilt (nyitás ${filled.opening}, sáv ${filled.band}, kapcsolat ${filled.contact}, gépi hős ${filled.hero})`,
+    bad === 0 && filled.opening > 0 && filled.band > 0 && filled.contact > 0 && filled.hero > 0);
+  const none = slotMarks(null, null);
+  check("friss mock a generátor bélyegét viseli (a bélyeg-emelés egymagában frissíti a régebbi kóddal készült állományt)",
+    /terhatasAt: MOCK_HEROFIX_STAMP,/.test(src("src/generator/generateEngine.ts")) && /\(coalesce\(a\.inputs->>'terhatasAt', ''\) >= \$\{MOCK_HEROFIX_STAMP\}\s*or \(\(a\.generated_at >= \$\{MOCK_HEROFIX_LIVE_AT\}/.test(src("src/outreach/mockPhotoGate.ts")));
+  check("slot-predikátum: ítélet nélküli kép egyik slotra sem alkalmas (generátor és kapu)", !none.okOpening && !none.okBand && !none.okContact && !fitsOpening(null) && !fitsBand(null) && !fitsContact(null) && !fitsHero(null));
+  check("sáv: egy luma-küszöb (a 70/85 kettősség megszűnt)", !/BAND_GOOD_LUMA/.test(kindSrc) && /export const BAND_MIN_LUMA = 85;/.test(kindSrc));
+  // Through the templates' own slot pickers: random photo sets, marked by slotMarks, each filled slot re-judged by the gate's rule.
+  const byUrl = new Map<string, PhotoKind>();
+  let slotBad = 0;
+  let slotsFilled = 0;
+  for (let t = 0; t < 300; t++) {
+    const photos: PH[] = [];
+    for (let j = 0; j < 3 + Math.floor(rnd() * 9); j++) {
+      const v = sample[Math.floor(rnd() * sample.length)]!;
+      const url = `https://slot.test/${t}-${j}.jpg`;
+      byUrl.set(url, v);
+      const m = slotMarks(v, null);
+      photos.push({ url, alt: "x", provenance: "portal", okOpening: m.okOpening, okBand: m.okBand, okContact: m.okContact, ...(m.notCard ? { notCard: true } : {}), ...(bandScore(v) ? { bandScore: bandScore(v) } : {}), kindLabel: v.label, ...(rnd() < 0.5 ? { subject: rnd() < 0.5 ? "exterior" : "interior" } : {}) } as PH);
+    }
+    const d = { name: "S", intro: "x.", tagline: "x", contact: {}, photos, highlights: ["Kert", "Parkoló"] } as unknown as SD;
+    const plan = allotPhotos(d, { minGallery: 3, maxGallery: 6, maxRows: 2 });
+    const judge = (p: PH | undefined | null, ok: (v: PhotoKind | null) => boolean): void => {
+      if (!p) return;
+      slotsFilled++;
+      if (!ok(byUrl.get(p.url) ?? null)) slotBad++;
+    };
+    judge(plan.bandA, fitsBand);
+    judge(plan.bandB, fitsBand);
+    judge(plan.contact, fitsContact);
+    judge(gatePhotoOf(photos), fitsOpening);
+    const cp = contactPhotoOf(d, photos.at(-1));
+    judge(cp ? photos.find((p) => p.url === cp.url) : undefined, fitsContact);
+  }
+  check(`slot-töltés: 300 véletlen lap sávja, kapcsolat-képe és kapuszárnya mind átmegy a kapu slot-szabályán (${slotsFilled} töltött slot)`, slotBad === 0 && slotsFilled > 100);
+  check("slot-töltés: alkalmas kép nélkül a slot elmarad (nem tölt rosszal)",
+    (() => { const p = [1, 2, 3, 4].map((n) => ({ url: `https://e.test/${n}.jpg`, alt: "e", provenance: "portal", okOpening: false, okBand: false, okContact: false, subject: "exterior" }) as PH); const d = { name: "E", photos: p, highlights: [] } as unknown as SD; const a = allotPhotos(d, { minGallery: 3, maxGallery: 6, maxRows: 0 }); return !a.bandA && !a.bandB && !a.contact && gatePhotoOf(p) === null && contactPhotoOf(d, p[3]) === null; })());
+  check("slot-jelző: kurált kép hiányzó jelzője = nem alkalmas; kuráláson át nem ment kép (tulaj-feltöltés) a régi negatív jelzőkkel",
+    !fitsSlot({ url: "u", alt: "", provenance: "owner", okOpening: true } as PH, "band") && fitsSlot({ url: "u", alt: "", provenance: "owner" } as PH, "band") && !fitsSlot({ url: "u", alt: "", provenance: "owner", backstage: true } as PH, "opening"));
+  // The wiring: the gate judges each slot with exactly these functions, every template asks fitsSlot.
+  const gateSrc2 = src("src/outreach/mockRenderGate.ts");
+  check("bekötés: a kapu slotonként a photoKind predikátumával ítél (fitsHero / fitsOpening / fitsBand / fitsContact)",
+    /!fitsHero\(hv\)/.test(gateSrc2) && /!fitsOpening\(v\)/.test(gateSrc2) && /bands\.has\(u\) && !fitsBand\(v\)/.test(gateSrc2) && /contacts\.has\(u\) && !fitsContact\(v\)/.test(gateSrc2) && !/isShowcase|bandScore\(/.test(gateSrc2));
+  const curSrc = src("src/generator/photoCurate.ts");
+  check("bekötés: a generátor jelzői ugyanabból a függvényből (slotMarks: fitsOpening / fitsBand / fitsContact), a kolléga-pin csak fitsHero mellett",
+    /okOpening: fitsOpening\(v\)/.test(curSrc) && /okBand: fitsBand\(v\)/.test(curSrc) && /okContact: fitsContact\(v\)/.test(curSrc) && /fitsHero\(heroKinds\[pinnedAt\]/.test(curSrc) && !/notBand: true|backstage: true/.test(curSrc));
+  const engineFiles = ["src/engine/templateKit.ts", ...["gateOpening", "wordmarkGrow", "parallax", "dopamine", "fullbleed", "darkLuxury"].map((f) => `src/engine/templates/${f}.ts`)];
+  const stray = engineFiles.filter((f) => {
+    const t = src(f);
+    const body = f.endsWith("templateKit.ts") ? t.replace(/export function fitsSlot[\s\S]*?\n}\n/, "") : t;
+    return /\.backstage\b|\.notBand\b|\.okOpening\b|\.okBand\b|\.okContact\b/.test(body);
+  });
+  check(`bekötés: sablon a slot-jelzőt csak fitsSlot-on át olvassa${stray.length ? ` (közvetlen olvasás: ${stray.join(", ")})` : ""}`, stray.length === 0);
 }
 
 if (failed) {

@@ -161,16 +161,36 @@ function sceneAlt(d: SiteData): string {
  * those two get the neutral „<név> – fotó”; only "exterior" (the building from outside)
  * says „kívülről”.
  */
+/**
+ * May this photo fill the slot? THE question every template asks (2026-11-27): the generator's positive mark
+ * (photoCurate okOpening / okBand / okContact — the render gate's own predicates), `false` and a missing
+ * verdict both meaning NO, so a template never fills a slot with a photo the gate refuses; with no fitting
+ * photo the slot drops. A photo that never went through the curation (no mark at all: an owner upload on a
+ * live site, an old snapshot) keeps the legacy negative marks.
+ */
+export type PhotoSlot = "opening" | "band" | "contact";
+export function fitsSlot(p: Photo | undefined, slot: PhotoSlot): boolean {
+  if (!p) return false;
+  const mark = slot === "opening" ? p.okOpening : slot === "band" ? p.okBand : p.okContact;
+  if (mark !== undefined) return mark;
+  if (p.okOpening !== undefined) return false; // curated, but this mark missing → not fit
+  const bath = Boolean(p.backstage || (p.subject && NEVER_SURROUNDINGS.has(p.subject)));
+  if (slot === "opening") return !bath;
+  if (slot === "band") return !bath && !p.notBand;
+  return !bath && !p.notCard;
+}
+
 export function contactPhotoOf(
   d: SiteData,
   slot: Photo | undefined,
 ): { readonly url: string; readonly alt: string } | null {
   const photos = d.photos;
   if (!photos.length) return null;
-  const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject) && !p.notCard);
+  // Only a contact-fit photo (fitsSlot, 11-27: the gate's fitsContact) — none → no contact picture.
+  const ok = (p: Photo | undefined): p is Photo => fitsSlot(p, "contact");
+  const outdoor = photos.filter((p) => p.subject && SURROUNDINGS_SUBJECTS.has(p.subject) && ok(p));
   const scene = outdoor.filter((p) => p.url !== photos[0]!.url).at(-1) ?? outdoor.at(-1);
   if (scene) return { url: scene.url, alt: sceneAlt(d) };
-  const ok = (p: Photo | undefined): p is Photo => Boolean(p && !(p.subject && NEVER_SURROUNDINGS.has(p.subject)));
   const pick = ok(slot) ? slot : [...photos].reverse().find(ok);
   return pick ? { url: pick.url, alt: d.name } : null;
 }
@@ -371,17 +391,19 @@ export function allotPhotos(
     return i >= 0 && pool.length ? pool.splice(i, 1)[0] : undefined;
   };
   const outdoor = (p: Photo): boolean => Boolean(p.subject && SURROUNDINGS_SUBJECTS.has(p.subject));
-  // 11-25: the generator marks kitchen/bathroom shots `backstage` (photoCurate.ts); the vision `subject`
-  // is absent on the new mocks — Linetta's parallax contact showed the bathroom with its toilet.
-  const notBath = (p: Photo): boolean => !p.backstage && !(p.subject && NEVER_SURROUNDINGS.has(p.subject));
+  // 11-25: the vision `subject` is absent on the new mocks — Linetta's parallax contact showed the bathroom
+  // with its toilet; the slots read the generator's local marks (fitsSlot) instead.
+  // 11-27: every slot asks fitsSlot — the render gate's own predicate per slot, a missing verdict = not fit.
+  const notBath = (p: Photo): boolean => fitsSlot(p, "opening");
   // The contact's outdoor scene is chosen BEFORE the bands (contactPhotoOf's rule: the LAST outdoor
   // photo other than the hero) — a band must not take the only garden and leave the contact a room.
   // …and never a shot with a car, a person or an animal (11-26, Jaja: a blue SUV in the contact picture).
-  const lastOutdoor = [...pool].reverse().find((p) => outdoor(p) && !p.notCard);
+  const contactFit = (p: Photo): boolean => fitsSlot(p, "contact");
+  const lastOutdoor = [...pool].reverse().find((p) => outdoor(p) && contactFit(p));
   const scene = lastOutdoor ? take((p) => p === lastOutdoor) : undefined;
   // The bands are full-bleed screens of their own — never a kitchen or a bathroom (an empty band drops).
-  // …and never a close-up, a dark shot or a thing instead of a place (photoCurate notBand, 11-25).
-  const bandFit = (p: Photo): boolean => notBath(p) && !p.notBand;
+  // …and never a close-up, a dark shot or a thing instead of a place (11-25; 11-27: the gate's fitsBand).
+  const bandFit = (p: Photo): boolean => fitsSlot(p, "band");
   // The BEST band photos, not the next in line (11-25 evening): highest bandScore first; a photo
   // without a verdict keeps its old place behind the scored ones.
   const bestBand = (): Photo | undefined => {
@@ -405,7 +427,7 @@ export function allotPhotos(
   let contactAlt = scene ? sceneAlt(d) : d.name;
   if (!contact) {
     // The fixed slot was the LAST photo: keep that taste, a bathroom or toilet stepping aside.
-    const lastOk = [...pool].reverse().find((p) => notBath(p) && !p.notCard);
+    const lastOk = [...pool].reverse().find(contactFit);
     contact = lastOk ? take((p) => p === lastOk) : undefined;
     contactAlt = d.name;
   }
@@ -469,7 +491,7 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   // One card stands for the whole place or a kind — any showcase INSIDE photo fits it when the
   // lodging shows no bedroom (quality colleague 11-26, Sirató / T-Lak: the card was an empty bed
   // icon on a page with 5+ own photos, where the stock fill is off). Never the hero, a kitchen or
-  // bathroom (backstage), nor a photo with a vehicle / person / animal (notCard).
+  // bathroom (fitsSlot opening), nor a photo with a vehicle / person / animal (notCard).
   // From the END of the set: the hero, the about picture (photos[1]) and the bands take the front ones —
   // the card must not repeat a picture the page already shows (Linetta fixture, wordmark-grow about).
   // …and never the same file under another size folder / URL (Linetta: „beds.jpeg” as about AND card).
@@ -480,7 +502,7 @@ function roomCardPhotos(d: SiteData): { cards: readonly Photo[]; single: Photo |
   const inside = [...d.photos.entries()]
     .reverse()
     // a detected sofa (photoCurate `lounge`) — the label alone called a corridor „a hotel room interior” (BaBo)
-    .find(([i, p]) => i > 1 && !p.backstage && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1];
+    .find(([i, p]) => i > 1 && fitsSlot(p, "opening") && !p.notCard && p.lounge === true && !front.some((q) => sameShot(q, p)))?.[1];
   // A bedroom the hero / about frame already shows goes last (Linetta: after the vehicle shots moved to
   // the end, the bedroom became photos[1] — the about frame — and the card repeated it).
   const fresh = cards.filter((c) => !front.some((q) => sameShot(q, c)));

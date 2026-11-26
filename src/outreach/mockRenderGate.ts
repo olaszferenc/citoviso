@@ -46,13 +46,13 @@ import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { bandScore, classifyPhotoBuffer, isHeroCandidate, isOffPagePhoto, isShowcase, photoKindAvailable } from "../media/photoKind.js";
+import { classifyPhotoBuffer, fitsBand, fitsContact, fitsHero, fitsOpening, isOffPagePhoto, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 14;
+export const RENDER_GATE_VERSION = 15;
 /**
  * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty
  * (a background that never painted, a section whose content is missing — the §B no-JS empty-band case). The
@@ -517,8 +517,9 @@ export async function auditMockFile(
       // The HARD no-gos only (kitchen, bathroom, non-lodging, person, vehicle, dark): which of the fit photos is the
       // wow is the quality colleague's pick (qa-review heroes, isHeroCandidate) — the gate must not overrule it
       // with the machine pick's score floor (11-26, BaBo: the chosen geranium terrace was blocked as „not a hero”).
-      if (hv && !isHeroCandidate(hv)) {
-        findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv.label}): ${fileOf(heroUrl)}` });
+      // 11-27: photoKind.fitsHero — the very predicate the generator's hero pick and the colleague's pin pass.
+      if (!fitsHero(hv)) {
+        findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv?.label ?? "nincs ítélet"}): ${fileOf(heroUrl)}` });
       }
     }
     // THE OPENING SEQUENCE, TOO (11-24, second round): wordmark-grow cycles photos 2–5 in its big
@@ -526,7 +527,10 @@ export async function auditMockFile(
     // bathtub there opens the page just as a bathtub hero would (Pirkadat, Mia). Read from the page
     // itself (the intro's SHOTS list, the leaf <img>), judged with the same local classifier.
     const html = await readFile(mockAbs, "utf8").catch(() => "");
+    // Each picture with the SLOT it fills (11-27): every slot is judged with its own photoKind predicate — the very
+    // function the generator filled it with (photoCurate okOpening / okBand / okContact → templateKit.fitsSlot).
     const opening = new Set<string>();
+    const contacts = new Set<string>();
     const shots = /var SHOTS=(\[[^\]]*\])/.exec(html)?.[1];
     if (shots) {
       try {
@@ -543,7 +547,10 @@ export async function auditMockFile(
       opening.add(m[1]!.replace(/&amp;/g, "&"));
       bands.add(m[1]!.replace(/&amp;/g, "&"));
     }
-    for (const m of html.matchAll(/class="t-conphoto"><img src="([^"]+)"/g)) opening.add(m[1]!.replace(/&amp;/g, "&"));
+    for (const m of html.matchAll(/class="t-conphoto"><img src="([^"]+)"/g)) {
+      opening.add(m[1]!.replace(/&amp;/g, "&"));
+      contacts.add(m[1]!.replace(/&amp;/g, "&"));
+    }
     const heroHash = heroBytes ? await dHashFromBuffer(heroBytes).catch(() => undefined) : undefined;
     for (const u of opening) {
       if (stockUrl(u)) {
@@ -575,11 +582,14 @@ export async function auditMockFile(
         continue;
       }
       const v = await classifyPhotoBuffer(b);
-      if (v && !isShowcase(v)) {
-        findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${v.label}): ${fileOf(u)}` });
-      } else if (v && bands.has(u) && !bandScore(v)) {
+      const label = v?.label ?? "nincs ítélet";
+      if (!fitsOpening(v)) {
+        findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${label}): ${fileOf(u)}` });
+      } else if (bands.has(u) && !fitsBand(v)) {
         // A band is a screen of its own: a close-up, a dark shot or a thing instead of a place fails (11-25).
-        findings.push({ code: "subject", detail: `a széles sávképen közelkép / sötét / nem a helyet mutató kép (${v.label}): ${fileOf(u)}` });
+        findings.push({ code: "subject", detail: `a széles sávképen közelkép / sötét / nem a helyet mutató kép (${label}): ${fileOf(u)}` });
+      } else if (contacts.has(u) && !fitsContact(v)) {
+        findings.push({ code: "subject", detail: `a kapcsolat-képen jármű / ember / állat (${label}): ${fileOf(u)}` });
       }
     }
     for (const u of urls) {

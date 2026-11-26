@@ -110,17 +110,18 @@ export interface Photo {
    */
   readonly bedroom?: boolean;
   /**
-   * A kitchen, bathroom, dining or toilet shot (local classifier, generator/photoCurate.ts,
-   * 2026-11-24): it may stand in the gallery, never in the opening sequence — the wordmark-grow
-   * intro frame and the gate-opening leaf (Pirkadat and Mia opened on a toilet and a bathtub).
-   * Absent = showcase-fit or no verdict.
+   * SLOT FITNESS, POSITIVE (generator/photoCurate.ts, 2026-11-27): set on EVERY curated photo from the render
+   * gate's own predicates (media/photoKind.ts fitsOpening / fitsBand / fitsContact), so a slot the generator
+   * fills is a slot the gate passes. `false` = not fit, a photo without a verdict included. A template asks
+   * templateKit.fitsSlot, never the field. Absent = the photo never went through the curation (an owner
+   * upload on a live site, a snapshot from before 11-27): then the legacy negative marks below decide.
    */
+  readonly okOpening?: boolean;
+  readonly okBand?: boolean;
+  readonly okContact?: boolean;
+  /** LEGACY (before 11-27, read only when okOpening is absent): a kitchen, bathroom, dining or toilet shot. */
   readonly backstage?: boolean;
-  /**
-   * Not fit for a full-bleed band (local classifier, generator/photoCurate.ts, 2026-11-25): a
-   * close-up, a dark shot or no wide scene — it may stand in the gallery, never fill a band screen.
-   * Absent = band-fit or no verdict.
-   */
+  /** LEGACY (before 11-27, read only when okBand is absent): not fit for a full-bleed band. */
   readonly notBand?: boolean;
   /** Band fitness (photoKind.bandScore, 0–1): the bands take the highest scorers. Absent = no verdict. */
   readonly bandScore?: number;

@@ -47,7 +47,7 @@ import { CHAIN_WAIT_NOTES, QA_HOLD_PREFIX, QA_REVIEW_KEY, QA_WAIT_NOTE, faultTal
 import { cachedRenderGate, stockOkFor } from "../src/outreach/mockRenderGate.js";
 import { renderGateFor, renderGateReason } from "../src/outreach/mockRenderGate.js";
 import { PORTAL_USER_AGENT } from "../src/scraper/sources/portals/politeness.js";
-import { classifyPhotoUrl, isHeroCandidate } from "../src/media/photoKind.js";
+import { classifyPhotoUrl, fitsHero } from "../src/media/photoKind.js";
 import { getHeroPin, setHeroPin } from "../src/generator/heroOverride.js";
 import { refreshMock } from "../src/generator/mockRefresh.js";
 
@@ -161,8 +161,10 @@ async function heroCandidates(artifactId: string): Promise<{ leadId: string; url
   const urls: string[] = [];
   for (const p of photos) {
     const v = await classifyPhotoUrl(p.url);
-    if (v && !isHeroCandidate(v)) continue;
+    // The gate's own hero rule (photoKind.fitsHero, 11-27): a photo the gate would refuse — or one without a
+    // verdict — is no candidate, since the pin only stands when it passes (photoCurate).
     // (size: isHeroCandidate → heroSized, 1000 × 700 px — the moving cover's floor, 11-26)
+    if (!fitsHero(v)) continue;
     urls.push(p.url);
   }
   // A STABLE numbering (11-26, quality colleague 4, Várlak: after a pick the pinned photo moved to place 1, and a

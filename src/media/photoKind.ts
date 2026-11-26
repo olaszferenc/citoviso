@@ -401,16 +401,15 @@ export function heroScore(v: PhotoKind): number {
 }
 
 /** May this photo be the hero? Not a kitchen/bathroom/dining/toilet shot, not a non-lodging picture. */
+/** The machine pick's place-score floor (withBestHeroFirst); the colleague's pick needs only fitsHero. */
+export const HERO_MACHINE_MIN_SCORE = 0.25;
+// 11-27: the machine pick INHERITS every hard no-go of the gate's hero rule (fitsHero: person, vehicle, dark,
+// small, kitchen, bathroom, non-lodging) — until then it lacked the person/vehicle rule, so the generator could
+// open a page the render gate then refused („a nyitókép nem való nyitóképnek”).
 export function isHeroWorthy(v: PhotoKind): boolean {
-  if (v.kind !== "ok" || v.never >= 0.3 || v.sight >= PHOTO_KIND_THRESHOLD) return false;
-  if (NOT_HERO_TOP.has(v.label) || backstageMass(v) >= BACKSTAGE_MAX) return false;
-  // 11-25 (quality colleague, evening round): a dark corridor, a dark outbuilding corner and a sky over a
-  // far town were heroes — the first screen must be bright and show the PLACE itself.
-  if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
-  if (!heroSized(v)) return false;
   // (No „the house must show” rule — owner 2026-11-25: the hero is the wow shot, a sunset over the lake
   // included; the quality colleague picks it from a contact sheet, qa-review.mts heroes.)
-  return heroScore(v) >= 0.25;
+  return fitsHero(v) && heroScore(v) >= HERO_MACHINE_MIN_SCORE;
 }
 
 /**
@@ -424,7 +423,7 @@ export function isHeroCandidate(v: PhotoKind): boolean {
   if (NOT_HERO_TOP.has(v.label) || backstageMass(v) >= BACKSTAGE_MAX) return false;
   if (peopleMass(v) >= PEOPLE_OFF_PAGE) return false;
   // a car or a dog in front of the house (11-26, Pince): the colleague skipped it — never offer it
-  if (NOT_CARD_LABELS.reduce((a, l) => a + (v.probs?.[l] ?? 0), 0) >= NOT_CARD_MASS) return false;
+  if (notCardMass(v) >= NOT_CARD_MASS) return false;
   if (v.quality && v.quality.luma < HERO_MIN_LUMA) return false;
   if (!heroSized(v)) return false;
   return heroScore(v) >= 0.1;
@@ -455,7 +454,6 @@ export const HERO_MIN_LUMA = 80;
  */
 export function bandScore(v: PhotoKind): number {
   if (!isBandWorthy(v)) return 0;
-  if (v.quality && v.quality.luma < BAND_GOOD_LUMA) return 0;
   const p = v.probs ?? {};
   if ((p["a parking lot"] ?? 0) + (p["a car"] ?? 0) + (p["a street with parked cars"] ?? 0) + (p["a street"] ?? 0) >= 0.08) return 0;
   const s = heroScore(v);
@@ -463,7 +461,6 @@ export function bandScore(v: PhotoKind): number {
 }
 /** A band below this place-score stays empty (the template drops or flattens it). */
 export const BAND_MIN_SCORE = 0.3;
-export const BAND_GOOD_LUMA = 85;
 
 /**
  * May this photo stand in the opening sequence (the wordmark-grow intro cycle, the gate leaf, the
@@ -489,13 +486,43 @@ const BAND_TOP = new Set([
 ]);
 /** Close-up label mass above which a photo is a detail shot, not a band. */
 export const BAND_DETAIL_MAX = 0.2;
-/** A band darker than this (mean luma) reads as a black screen on a phone. */
-export const BAND_MIN_LUMA = 70;
+/** A band darker than this (mean luma) reads as a black screen on a phone. ONE value since 11-27: until then
+ *  isBandWorthy said 70 and bandScore 85, so a 70–85 photo was „band-worthy” to one rule and unfit to the other. */
+export const BAND_MIN_LUMA = 85;
 export function isBandWorthy(v: PhotoKind): boolean {
   if (!isShowcase(v) || !BAND_TOP.has(v.label)) return false;
   const detail = Object.entries(v.probs).reduce((a, [l, p]) => a + (LABELS.labels.find((x) => x.label === l)?.kind === "detail" ? p : 0), 0);
   if (detail >= BAND_DETAIL_MAX) return false;
   return !v.quality || v.quality.luma >= BAND_MIN_LUMA;
+}
+
+/**
+ * ONE PREDICATE PER SLOT (2026-11-27) — the generator fills a slot (photoCurate's okOpening / okBand / okContact,
+ * the hero pick) and the render gate (outreach/mockRenderGate.ts) judges it with THE SAME function. Until then the
+ * two used different rules (blind sample 11-27: Parallax 0/20 — a hotel-room close-up in the band, a kitchenette
+ * in the opening, a church on the contact picture, all filled by the generator and refused by the gate).
+ * No verdict (null: no model, unreadable image) = NOT fit: an unjudged photo fills no slot.
+ */
+/** The first screen: the hard no-gos of the colleague's hero choice (isHeroCandidate), and a picture that may stay
+ *  on the page as the hero (isOffPagePhoto: snow, night, people — the gate's page-wide rule judges the hero too). */
+export function fitsHero(v: PhotoKind | null): boolean {
+  return v != null && isHeroCandidate(v) && !isOffPagePhoto(v, true);
+}
+/** The opening sequence (wordmark-grow frame, gate leaf): showcase-fit and a picture that stays on the page. */
+export function fitsOpening(v: PhotoKind | null): boolean {
+  return v != null && isShowcase(v) && !isOffPagePhoto(v, false);
+}
+/** A full-bleed band: opening-fit and a wide, bright view of the place itself (bandScore > 0). */
+export function fitsBand(v: PhotoKind | null): boolean {
+  return v != null && fitsOpening(v) && bandScore(v) > 0;
+}
+/** The contact picture: opening-fit and no vehicle / person / animal mass (the feature cards' rule). */
+export function fitsContact(v: PhotoKind | null): boolean {
+  return v != null && fitsOpening(v) && notCardMass(v) < NOT_CARD_MASS;
+}
+export function notCardMass(v: PhotoKind): number {
+  const p = v.probs ?? {};
+  return NOT_CARD_LABELS.reduce((a, l) => a + (p[l] ?? 0), 0);
 }
 
 /**
