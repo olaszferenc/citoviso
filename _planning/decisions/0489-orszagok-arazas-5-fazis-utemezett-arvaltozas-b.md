@@ -1,4 +1,4 @@
-## ADR-XXXX — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) — emelés dátummal és értesítővel, csökkenés azonnal
+## ADR-0489 — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) — emelés dátummal és értesítővel, csökkenés azonnal
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva. A tulaj 2026-11-26-án a „B” változatot választotta az árváltozásra. A levél terve az **A** változat lett, lemondó mondat nélkül (a koordinátoron, `cit9b4690e3`, át).
