@@ -14,6 +14,7 @@
  " — saját cím nem rendelhető": " — vlastnú adresu nemožno objednať",
  " · {n} órája": " · pred {n} h",
  " · a mai naptól összesen {n} foglalt napot hoztunk át": " · od dnešného dňa sme preniesli spolu {n} obsadených dní",
+ " · forrás: {src}, évente magától frissül": " · zdroj: {src}, každý rok sa automaticky aktualizuje",
  " · kiküldve {date}": " · odoslané {date}",
  " · saját cím benne": " · vlastná adresa v cene",
  " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)": " (naposledy schválené — celkovo {n} schválených platí)",

@@ -14,6 +14,7 @@
  " — saját cím nem rendelhető": " — eigene Adresse nicht bestellbar",
  " · {n} órája": " · vor {n} Std.",
  " · a mai naptól összesen {n} foglalt napot hoztunk át": " · ab heute haben wir insgesamt {n} belegte Tage übernommen",
+ " · forrás: {src}, évente magától frissül": " · Quelle: {src}, wird jährlich automatisch aktualisiert",
  " · kiküldve {date}": " · versendet {date}",
  " · saját cím benne": " · eigene Adresse inklusive",
  " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)": " (zuletzt genehmigt — insgesamt {n} genehmigte Versionen)",

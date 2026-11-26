@@ -14,6 +14,7 @@
  " — saját cím nem rendelhető": " — indirizzo personalizzato non ordinabile",
  " · {n} órája": " · {n} ore fa",
  " · a mai naptól összesen {n} foglalt napot hoztunk át": " · da oggi abbiamo importato in totale {n} giorni occupati",
+ " · forrás: {src}, évente magától frissül": " · fonte: {src}, si aggiorna automaticamente ogni anno",
  " · kiküldve {date}": " · inviato il {date}",
  " · saját cím benne": " · indirizzo personalizzato incluso",
  " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)": " (l'ultima approvata — {n} pubblicazioni approvate in totale)",

@@ -14,6 +14,7 @@
  " — saját cím nem rendelhető": " — own address cannot be ordered",
  " · {n} órája": " · {n} hours ago",
  " · a mai naptól összesen {n} foglalt napot hoztunk át": " · {n} booked days imported in total, from today onward",
+ " · forrás: {src}, évente magától frissül": " · source: {src}, updated automatically every year",
  " · kiküldve {date}": " · sent {date}",
  " · saját cím benne": " · own address included",
  " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)": " (the most recently approved — {n} approved versions live in total)",

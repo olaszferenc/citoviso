@@ -14,6 +14,7 @@
  " — saját cím nem rendelhető": " — własnego adresu nie można zamówić",
  " · {n} órája": " · {n} godz. temu",
  " · a mai naptól összesen {n} foglalt napot hoztunk át": " · od dziś przenieśliśmy łącznie {n} zajętych dni",
+ " · forrás: {src}, évente magától frissül": " · źródło: {src}, aktualizuje się automatycznie co roku",
  " · kiküldve {date}": " · wysłano {date}",
  " · saját cím benne": " · własny adres w cenie",
  " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)": " (ostatnio zatwierdzona — łącznie {n} zatwierdzonych)",

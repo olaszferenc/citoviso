@@ -14,6 +14,7 @@
  " — saját cím nem rendelhető": " — lastnega naslova ni mogoče naročiti",
  " · {n} órája": " · pred {n} urami",
  " · a mai naptól összesen {n} foglalt napot hoztunk át": " · od danes smo skupaj prenesli {n} zasedenih dni",
+ " · forrás: {src}, évente magától frissül": " · vir: {src}, vsako leto se samodejno posodobi",
  " · kiküldve {date}": " · poslano {date}",
  " · saját cím benne": " · lasten naslov vključen",
  " (a legutóbb jóváhagyott — összesen {n} jóváhagyott él)": " (nazadnje odobreno — skupaj {n} odobrenih je aktivnih)",
