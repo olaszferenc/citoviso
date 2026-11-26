@@ -4,7 +4,7 @@ title: Foglalás beállítása — kérdésről kérdésre, a Segítővel
 audience: tenant
 category: bookings
 anchors: admin.booking.setup
-updated: 2026-10-16
+updated: 2026-11-26
 ---
 
 Ezen az egy oldalon mindent beállít, ami ahhoz kell, hogy a vendégek foglalhassanak: a szobákat,
@@ -75,12 +75,15 @@ tűnik el vele (naptár, árak, korábbi foglalások).
 
 ## Amit a vendég lát
 
-- **Kér idegenforgalmi adót?** — három válasz van. **„Igen”**: beírja az összeget (Ft / fő / éj), és a
+- **Kér idegenforgalmi adót?** — három válasz van. **„Igen”**: beírja az összeget (a szállás pénznemében,
+  például „Ft / fő / éj” vagy „€ / fő / éj”), és a
   vendég külön soron, kiszámolva látja. **„Nincs idegenforgalmi adó”**: a honlapja nem is említi.
   **„Még nem tudom”**: a vendég csak annyit lát, hogy a helyszínen adó fizetendő, összeget nem —
   számot nem találunk ki Ön helyett. Az adót a vendég a helyszínen fizeti, a végösszegbe nem számoljuk.
   A 18 év alatti vendég mentes az adó alól: a foglalásnál a vendég mindig megadja, hányan gyermekek
   („Ebből gyermek”), azokra nem számoljuk, és ezt egy mondat ki is mondja a vendégnek.
+  **Ha a szállása nem Magyarországon van**, és az országára nincs olyan idegenforgalmi-adó szabály,
+  amit a honlap kiírhat, ez a kérdés **nem jelenik meg** az oldalon — nincs vele teendője.
 - **Mi van benne az árban?** — egy rövid sor a végösszeg alatt (például: takarítás, ágynemű, reggeli).
   Nem kötelező; üresen hagyva ez a sor elmarad.
 

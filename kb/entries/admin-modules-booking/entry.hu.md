@@ -4,7 +4,7 @@ title: Foglalás-beállítások — naptár, szobák, értesítési címek
 audience: tenant
 category: bookings
 anchors: admin.modules.booking
-updated: 2026-11-04
+updated: 2026-11-26
 ---
 
 A foglalás-modul beállító-képernyőjét a Modulok fülön, a modul melletti **„Beállítás”** linkkel éri
@@ -50,7 +50,8 @@ vesszővel elválasztva (pl. recepció és tulajdonos). A vendég válasza is az
 ## Mit fizet a vendég a helyszínen? (idegenforgalmi adó)
 
 Az **„Idegenforgalmi adó”** mezőbe (a képernyő alján a **„Haladó beállítások”** sorra koppintva nyílik ki; ugyanezt kérdezi a **„Foglalás beállítása”** oldal is) azt az összeget írja be, amit a vendég a **helyszínen**
-fizet a szállásdíjon felül — **Ft / fő / éj** bontásban. A honlapján ez az összeg nem olvad
+fizet a szállásdíjon felül — fő / éj bontásban, a szállása pénznemében: a mező mellett forintos
+szállásnál „Ft / fő / éj”, eurós szállásnál „€ / fő / éj” áll. A honlapján ez az összeg nem olvad
 bele az árba: külön dobozban áll, „A helyszínen fizetendő ezen felül” felirattal, kiszámolva
 (pl. *500 Ft / fő / éj × 2 fő × 3 éj = 3 000 Ft*). A 18 év alatti vendég mentes: akiket a vendég
 a foglalásnál gyermekként ad meg, azokra nem számoljuk, és a doboz ezt egy mondatban ki is mondja.

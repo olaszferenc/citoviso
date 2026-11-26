@@ -4,7 +4,7 @@ title: Jogi adatok — impresszum és adatkezelési tájékoztató a honlapján
 audience: tenant
 category: account
 anchors: admin.legal
-updated: 2026-11-22
+updated: 2026-11-26
 ---
 
 A honlapjának két jogi oldala van: az **Impresszum** és az **Adatkezelési tájékoztató**.
@@ -92,14 +92,24 @@ szállás országa szerint mutatja a mezőket:
 - Az **adószám** mező az adott ország adóazonosítójának nevét viseli (például Olaszországban a
   Partita IVA, Portugáliában a NIF, Horvátországban az OIB). Spanyolországban, Portugáliában és
   Horvátországban magánszemélyként is kötelező kitölteni.
-- Horvátországban a panel az **OIB** utolsó, ellenőrző számjegyét is megnézi. Ha elgépelte, a mentés
-  után a mező alatt figyelmeztetés jelenik meg: a többi adatot elmentettük, az OIB-t nem. A mezőben
-  ott marad, amit beírt: javítsa a 11 jegyet, és koppintson újra a **„Jogi adatok mentése”** gombra.
-  Addig a honlapon a korábban mentett érték látszik.
+- Hat országban — Olaszország, Spanyolország, Portugália, Franciaország, Bulgária és Horvátország —
+  a panel az adóazonosító alakját és az ellenőrző jelét (az utolsó, a többiből kiszámolt jegyet vagy
+  betűt) is megnézi. Ha elgépelte, a mentés után a mező alatt figyelmeztetés jelenik meg:
+  - rossz hosszúságú vagy formájú számnál: *„Ez nem tűnik adóazonosítónak — a helyes alak például: …”*
+    (a példa az adott ország valódi formáját mutatja, Olaszországban például 11 számjegyet);
+  - ha a hossz jó, de a szám nem stimmel: *„Az adóazonosító ellenőrző jele nem stimmel — valószínűleg
+    elgépelés.”*;
+  - Horvátországban a saját szövegével: *„Az OIB 11 számjegyű.”*, illetve *„Az OIB ellenőrző számjegye
+    nem stimmel — valószínűleg elgépelés.”*
+
+  Ilyenkor a többi adatot elmentettük, az adóazonosítót nem. A mezőben ott marad, amit beírt: nézze
+  meg a hivatalos papírján (adóhatósági igazolás, cégkivonat), javítsa, és koppintson újra a
+  **„Jogi adatok mentése”** gombra. Addig a honlapon a korábban mentett érték látszik.
 - A **„Szálláshely-azonosító (NTAK)”** mező nem jelenik meg, mert az NTAK magyar nyilvántartás.
 - **Külön mezők** jelennek meg az ország saját nyilvántartási számaihoz. Olaszországban ilyen a
   nemzeti szálláshely-azonosító (CIN), Portugáliában a helyi szálláshely nyilvántartási száma és
-  az online panaszkönyv címe. A panaszkönyv címét előre kitöltöttük, a többit Önnek kell
+  az online panaszkönyv címe, Horvátországban a „Kategorizálási határozat száma” mező (a szállás
+  besorolásáról kapott hatósági határozat száma — ez kötelező, és a honlapon is megjelenik). A panaszkönyv címét előre kitöltöttük, a többit Önnek kell
   megadnia.
 
 Ezek ugyanúgy működnek, mint a többi mező: ha egy kötelező mező üres, a panel tetején

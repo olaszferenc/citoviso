@@ -4,7 +4,7 @@ title: Beállítások — operátor-fiók, riasztások és jelszócsere
 audience: operator
 category: system
 anchors: console.settings
-updated: 2026-10-13
+updated: 2026-11-26
 ---
 
 A **„Beállítások”** képernyőn látod a saját operátor-fiókod adatait, itt állítod be az
@@ -138,9 +138,10 @@ fizetés-sor, és a felület nem ad ki két linket ugyanarra. Ha a sor ott ragad
 rendezéshez **fejlesztői beavatkozás kell** — jelezd.
 
 **`unknown` — rendszerint lezárt piac.** A vevő országára nincs jóváhagyott jogi csomag, a
-gomb pedig látszik és hatástalan. A teendő nem a lead lapján van: a **Beállítások** lap
-**„Piacok”** panelján kell megnyitni az adott országot (lásd a Piacok súgót) — utána a
-gomb már valódi linket ad. Ha az országot üzletileg nem akarod megnyitni, a rendelés nem
+gomb pedig látszik és hatástalan. A teendő nem a lead lapján van: az **„Országok”** lapon
+(Rendszer › Országok) kell megnyitni az adott országot — koppints az ország sorára, majd a
+**„Megnyitás”** lépésben a **„Piac megnyitása”** gombra (részletesen az Országok súgójában, „A piac
+megnyitása” résznél). Utána a gomb már valódi linket ad. Ha az országot üzletileg nem akarod megnyitni, a rendelés nem
 teljesíthető: keresd meg a vevőt és mondd meg neki.
 
 **Ha a gomb nem látszik és a rendelés már ki van fizetve** — ilyenkor nincs is dolgod.
