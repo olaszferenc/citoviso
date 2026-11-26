@@ -19,6 +19,13 @@ Session `cit9d514f15` (SUB), koordinátor `cit9b4690e3`, brief `~/rc-briefs/piac
 Repó: `src/scout/discoveryAreas.ts`, `scripts/discovery-areas.mts`, `src/countryLexicon/hr.json`, `src/countryReadiness.ts`, `src/console/countryViews.ts`, `scripts/country-layer-check.mts`, `hooks/pre-commit`, `src/i18n/catalog*.json`.
 Lánc (uj-lanc-hr git): `felderito/{teruletek.py,osszes.sh,orzo.sh,felderito.py,elesit.py}`, `orszag.py`, `orszag.mjs`, `kontakt/futtato.sh`, `atallas-felderites.sh`.
 
+## Audit a/b/d (koordinátor kérésére, ugyanazon a napon)
+- (a) Jelöltek csak NYITOTT piacról: `orszag.py open_markets()` (az app terve: kapu + szótár + keresőszó; 10 perces cache, hibánál a régi lista, lista nélkül semmi) → `OPENCC` a `hc-cand.sql`/`nj-cand.sql`-ben, a kontakt-backlogokban; a `lanc.sh` GATECC = nyitott ∩ sor < MAX_BACKLOG. Dev-mérés: HU+HR nyitva a `cand`/`hc-cand`/`nj-cand` kimenete bájtra a régi; csak HU nyitva pontosan a nem-HU esik ki.
+- (b) `fo-cand.sql`: GATECC, a lead országa countryOf szerint (alias, scrape-terület), városkulcs = `townKey()` — `fo-terv/townkey_sql.py` generálja (Unicode-ból, ctype-független), `townkey-twin.sh` méri: prod 2439, dev 1322 város, 0 eltérés. Dev: +2 HU lead („MAGYARORSZÁG” alias), amit a régi kihagyott.
+- (d) `kontakt/felre.mjs`: zárt/szótár nélküli ország leadje okkal `out/felre.tsv`-be kerül (egyszer), és a piac nyitásakor magától visszajön (dev: zárt HR → 22 félre, nyitás után 25/25 felvéve).
+- (c) auto-approve.mts: nem nyúltam hozzá (a cita363cd23 F4 váltja ki).
+- Dev-hiány (megoldás nélkül): `~/.config/citoviso/neo-dev-operator.txt` nincs, ezért a kontakt dev-írása (apply.mjs) nem fut.
+
 ## Nyitott (koordinátornak)
 - Átállás: deploy (discovery-areas.mts élesen) + fő-fa ff után `bash ~/rc-briefs/uj-lanc-hr/atallas-felderites.sh check|go`.
-- Audit-leletek, nem javítva (más SUB-ok fájljai / éles szkript): a jelölt-SQL-ek nem nézik a piac-jóváhagyást; `fo-terv/fo-cand.sql` nem kezeli a GATECC-et, a lead országát csak `raw->>'country'`-ból olvassa, a város-kulcsa a HU/HR betűkre szabott; `/opt/citoviso/auto-approve.mts` Europe/Budapest + cron 8–16; szótár nélküli országon a kontakt/honlap-kapu minden körben újra elveszi ugyanazokat a leadeket.
+- Az átállás-szkript (atallas-felderites.sh) most a felderítést ÉS az audit a/b/d-t együtt viszi.
