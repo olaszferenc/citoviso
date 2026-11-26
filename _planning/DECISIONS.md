@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-0483](decisions/0483-orankenti-bongeszos-kapuk-kapunkenti-alap.md) — Óránkénti böngészős kapuk: kapunkénti alap, minden kapu ítéletet kap, legfeljebb 2 gépi hely
 - [ADR-0482](decisions/0482-bejovo-uzenet-orszaga-es-forditasa-a-konzol.md) — Bejövő üzenet országa és fordítása a konzol-nyelvre (Bábel a konzolon); közös ország-sáv minden riport-fülön
 - [ADR-0481](decisions/0481-kivezetett-sablonu-mock-nem-megy-ki-ujra-es-nem.md) — Kivezetett sablonú mock nem megy ki újra, és nem épül belőle próba-oldal
 - [ADR-0480](decisions/0480-commit-es-land-gyorsitasa-inkrementalis.md) — Commit és land gyorsítása: inkrementális típusellenőrzés a landon, gyors sáv a csak-dokumentum változásokra

@@ -30,7 +30,8 @@ legördülő (**„mind”** · nincs honlap · 0 lábnyom · van lábnyom · el
 **bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra · ország). A fülsor
 alatt minden riport-fülön ott az **„Ország”** sáv: **„Mind”** és országonként a kód, a név (telefonon
 csak a kód) és a fül sorainak száma abban az országban (itt: kiküldött linkek; a halvány 0-s ország
-be van állítva, de nincs sora). Egy országra koppintva minden panel arra szűkül, és a választás
+be van állítva, de nincs sora). A **„?”** chip azokat a sorokat számolja, amelyek leadjének nem
+ismert az országa (például régi lead, amelynél a cím még nem lett országhoz rendelve). Egy országra koppintva minden panel arra szűkül, és a választás
 mind a 8 fülön megmarad, amíg vissza nem állítod „Mind”-re; a sáv alatt ki is írja: „Csak <ország>”.
 A lead országa a szállás helyéből jön. A „Lead típus”
 csak az adott típusú leadeket hagyja meg: így egyetlen csoport tölcsérét látod önmagában, míg a

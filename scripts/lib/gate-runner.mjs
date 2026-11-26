@@ -125,7 +125,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -436,6 +436,7 @@ function lastLines(file, n) {
 function runInSlot(job, readOnly, slotName) {
   return new Promise((resolve) => {
     const env = { ...job.env };
+    if (HOURLY) env.LAND_RANGE = process.env.LAND_RANGE; // a carried-over red job checks the current range
     if (slotName) env.CIT_GATE_SLOT_HELD = slotName; // a nested runner asks for no slot of its own
     const mark = `${job.base}.ro`;
     if (readOnly) {
@@ -663,6 +664,16 @@ function browserGate(job) {
 }
 // ── LAND MODE: browser gates run hourly on origin/main, not in the land (see the header, ADR-0446) ──
 const HOURLY = !!process.env.LAND_RANGE && process.env.CIT_GATE_HOURLY === "1";
+// HOURLY KEEP-GOING + RED HAND-OFF (2026-11-26, ADR-0483). Measured: one red browser gate kept the
+// hourly base on 2026-11-16 for ten days (477 commits), so EVERY hour re-ran all 92 browser gates for
+// 950–1220 s (a third of the machine) — and, stopping at the first red, never even judged the rest.
+// With CIT_GATE_RED_OUT=<dir> in hourly mode the runner does not stop at a red: every gate runs, and
+// the red ones are handed over (their job files copied into <dir>, plus <dir>/DONE = "<jobs>\t<red>")
+// so scripts/gate-hourly.sh re-runs exactly them next hour, while the green ones move on. In hourly
+// mode the job's LAND_RANGE is the runner's own (a carried-over job gets the current range).
+const RED_OUT = HOURLY ? process.env.CIT_GATE_RED_OUT || "" : "";
+/** Stop scheduling new gates? (Not in the hourly hand-off mode: there every gate must be judged.) */
+const halted = () => failed.length > 0 && !RED_OUT;
 const OFF_LAND = !!process.env.LAND_RANGE && !HOURLY && process.env.CIT_FULL_LAND !== "1";
 const LAND_BLOCK_MARK = "// gate-runner: land-blocking —";
 function landBlocking(job) {
@@ -763,7 +774,7 @@ function pool(list, readOnly, onDone) {
     const running = new Set();
     const busy = new Set();
     const pump = () => {
-      if (failed.length === 0) {
+      if (!halted()) {
         for (let i = 0; i < list.length && running.size < PARALLEL; i++) {
           const job = list[i];
           const exclusive = !selfOverlapSafe(job);
@@ -808,9 +819,9 @@ serial.sort((a, b) => jobs.indexOf(a) - jobs.indexOf(b));
 const lane = serial.filter((j) => laneMarked(j));
 const strict = serial.filter((j) => !lane.includes(j));
 const tLane = Date.now();
-if (failed.length === 0) await pool([...lane], false, show);
+if (!halted()) await pool([...lane], false, show);
 const tStrict = Date.now();
-if (failed.length === 0 && strict.length) {
+if (!halted() && strict.length) {
   // ONE slot for the whole strict lane: it runs one gate at a time anyway, and re-queueing behind
   // a dozen waiting threads for every writer starved it (measured: 481 s for 14 writers vs ~170 s).
   const held = await acquireSlot();
@@ -818,7 +829,7 @@ if (failed.length === 0 && strict.length) {
     for (const job of strict) {
       const r = await runRetry(job, false, held);
       show(job, r);
-      if (r.rc !== 0) break;
+      if (r.rc !== 0 && !RED_OUT) break;
     }
   } finally {
     releaseSlot(held);
@@ -848,6 +859,16 @@ console.log(
     `leghosszabb-először (${known}/${phase1} kapunak volt előzménye) · ${secs} s ` +
     `(① ${phase1Secs} s · ${slotNote})`,
 );
+if (RED_OUT) {
+  mkdirSync(RED_OUT, { recursive: true });
+  for (const [, id] of failed) {
+    for (const ext of [".argv", ".env", ".cwd", ".label", ".quiet", ".stdin"]) {
+      const from = path.join(JOBS, `${id}${ext}`);
+      if (existsSync(from)) copyFileSync(from, path.join(RED_OUT, `${id}${ext}`));
+    }
+  }
+  writeFileSync(path.join(RED_OUT, "DONE"), `${jobs.length}\t${failed.length}\n`);
+}
 if (failed.length) {
   writeFileSync(path.join(JOBS, "FAILED"), failed.map(([rc, id, r]) => `${rc}\t${path.join(JOBS, `${id}.label`)}\t${r.out}\t${r.err}`).join("\n") + "\n");
   process.exit(3);

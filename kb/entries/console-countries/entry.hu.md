@@ -54,6 +54,15 @@ sorok helyett kártyák vannak: a hatrészes csík ugyanezt a hat feltételt mut
 A panel tetején hat lépés van: **„Adatok”** → **„Ár és fizetés”** → **„Nyelv”** → **„Jog”** →
 **„Megkeresés”** → **„Megnyitás”**. A lépés színe a lépés állapota, és írás közben frissül.
 
+- **Gyűjtő-lánc szótára** (az „Adatok” lépésben, külön sorban). A megnyitott piacon a gép ember
+  nélkül keres szállásokat, és ehhez az ország szótára kell: a területei és a keresőszavai. Ha
+  megvan, a sor zöld, és kiírja, hány területet fog bejárni (*„21 terület a felderítéshez”*). Ha
+  nincs, a sor sárga: *„nincs országszótár … — a felderítés és a kontaktkereső nem tud ezen az
+  országon dolgozni”*. Akkor is sárga, ha a szótár megvan, de nincs benne terület: *„a szótárban
+  nincs terület (subdivisions) — a felderítés nem tudja, mit járjon be”*. Ez nem zár: a piac a
+  szótár nélkül is megnyitható (próba és fizetés megy), csak a gép nem gyűjt ott leadet. Neked itt
+  nincs teendőd: a szótárat a fejlesztés készíti el az ország felvételekor, és amint elkészül, a sor
+  magától zöldre vált.
 - **Ár és fizetés.** Az ország ár-régiójának teljes ársora kell, és a fizetési szolgáltatónak
   fogadnia kell az ország pénznemét. Hiányos ársornál a vendég foglalási kérése is elhasalna,
   ezért ez zárófeltétel. Az árakat az **Árazás** lapon töltöd ki; a régiót és a pénznemet az
