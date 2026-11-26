@@ -2024,10 +2024,13 @@ export function modulesSection(
     // figure as the cell beside it, so one of the two was necessarily mislabelled.
     // mv.totalMonthly is the current recurring fee: it keeps a cancelled-but-paid
     // module, and already drops the spine, the superseded and the one-off products.
-    const currentAnnual = mv.totalMonthly * (12 - sub.annualFreeMonths);
+    // 0156: at the prices valid on the running period's START (subscriptionAdmin.currentMonthly) — a scheduled
+    // raise that took effect during the period does not rewrite what was paid for it.
+    const curMonthly = sub.currentMonthly ?? mv.totalMonthly;
+    const currentAnnual = curMonthly * (12 - (sub.currentFreeMonths ?? sub.annualFreeMonths));
     const feeCell = annual
       ? T(lang, "{price}/év", { price: esc(huf(currentAnnual)) })
-      : T(lang, "{price}/hó", { price: esc(huf(mv.totalMonthly)) });
+      : T(lang, "{price}/hó", { price: esc(huf(curMonthly)) });
     let periodBlock = "";
     // ⛔ NEM FAGYÁS ALATT. A SZEMEMMEL találtam meg a szállított lapon (az őröm nem
     // fogta): a felfüggesztés-blokk alatt ott virított a „2 hónap ajándék évente ·

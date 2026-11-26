@@ -4,7 +4,7 @@ title: Előfizetés — fordulónap, számla, fizetés és lemondás
 audience: tenant
 category: billing
 anchors: admin.subscription
-updated: 2026-09-15
+updated: 2026-11-26
 ---
 
 A **Modulok** fül tetején lévő **Előfizetés** kártya mutatja meg egy helyen, mit
@@ -45,9 +45,14 @@ A kártyán két összeg áll egymás mellett, és **szándékosan mást jelente
 - **„Következő számla”** — amit a **következő** fordulónapon fizet majd. Ebből a lemondott
   modul már hiányzik.
 
-Amíg nem mond le semmit, a kettő ugyanaz. Ha eltérnek, a különbség éppen azt mutatja meg,
-mennyivel lesz olcsóbb a fordulónap után. A modul sorában ilyenkor ott a pontos dátum is
-(*„Lemondva — …-ig aktív marad”*).
+Amíg nem mond le semmit, és nem változik a díj, a kettő ugyanaz. Két oka lehet, hogy eltérnek:
+
+- **lemondott egy modult** — a különbség azt mutatja meg, mennyivel lesz olcsóbb a fordulónap után.
+  A modul sorában ilyenkor ott a pontos dátum is (*„Lemondva — …-ig aktív marad”*);
+- **a Citoviso díja változik** — erről előre e-mailt kap (*„Változik a honlap-előfizetése díja”*), benne a
+  mostani és az új díjjal és az első új áras terhelés napjával. A „Következő számla” már az új díjat mutatja,
+  ha a következő fordulónap a változás kezdő napjára vagy utánra esik. A „Jelenlegi díj” mindig azt mutatja,
+  amennyit a most futó időszakra fizetett — akkor is, ha a változás az időszak közben lépett életbe.
 
 ## A következő számla tételei
 

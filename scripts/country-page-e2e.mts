@@ -323,6 +323,33 @@ try {
   check("mobilon a hat szakasz egymás alatt, a sáv rejtve", (await page.locator('[id^="out-"].hub-card').count()) === 6 && !(await page.locator("#out-bar").isVisible()));
   await page.setViewportSize({ width: 1280, height: 900 });
 
+  console.log("\n⑨ Árazás fül (5. fázis, 0156): ütemezett áremelés a mentés előtti ablakkal");
+  await page.goto(`${BASE}/countries?iso=HU&tab=price`, { waitUntil: "networkidle" });
+  const baseBefore = pricing.getBaseMonthly("hu");
+  await page.fill("#pr-base_monthly", String(baseBefore + 100));
+  await page.click('#pr2-form button[type="submit"]');
+  await page.waitForSelector("#pcs-dlg[open]", { timeout: 15_000 });
+  await page.waitForFunction(() => !!(document.getElementById("pcs-date") as HTMLInputElement).value, null, { timeout: 15_000 });
+  check("emelés → a mentés előtti ablak, kezdő dátummal (legkorábban +30 nap)", await page.locator("#pcs-from").isVisible() && (await page.inputValue("#pcs-date")) >= (await page.getAttribute("#pcs-date", "min") ?? "~"));
+  check("az összesítő az érintett előfizetőket számolja", (await page.locator("#pcs-body .pcs-kpi").count()) === 3);
+  if (process.env.PC_SHOT === "1") {
+    // Eye check only (assets/Temp is never committed): the dialog at desktop and phone width.
+    await page.screenshot({ path: "assets/Temp/ui-pcs-dialog-desktop.png" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: "assets/Temp/ui-pcs-dialog-mobile.png" });
+    await page.setViewportSize({ width: 1280, height: 900 });
+  }
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click("#pcs-save")]);
+  await page.waitForLoadState("networkidle");
+  const pend = await db.selectFrom("price_change").select(["kind", "effective_from", "applied_at"]).where("region", "=", "hu").execute();
+  await pricing.loadPricing(true);
+  check("mentés → függő emelés, a táblaár változatlan", pend.length === 1 && pend[0]!.kind === "raise" && !pend[0]!.applied_at && pricing.getBaseMonthly("hu") === baseBefore, JSON.stringify(pend));
+  check("a lapon a visszajelzés a kezdő dátummal", /áremelés .*érvényes/i.test((await page.locator(".pr2-notice").first().textContent()) ?? ""));
+  const early = await page.request.post(`${BASE}/pricing`, { form: { region: "hu", base_monthly: String(baseBefore + 200), effective_from: "2026-01-01" }, maxRedirects: 0 });
+  check("30 napnál korábbi kezdő dátum → elutasítva (szerver)", /túl korai/.test(decodeURIComponent(early.headers()["location"] ?? "")), early.headers()["location"] ?? "");
+  await db.deleteFrom("price_change").execute();
+  await pricing.loadPricing(true);
+
   console.log("\n⑥ JS-hibák");
   check("0 JS-hiba", jsErrors.length === 0, jsErrors.join(" | "));
 } finally {

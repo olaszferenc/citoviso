@@ -2681,6 +2681,25 @@ await shootConsole(
   undefined,
   "#pr2-form",
 );
+// „Országok / Árazás” 5. fázis (0156): the save dialog of a price raise — rendered by the SAME function the
+// preview returns (priceChangeSummary), sample: +1 000 Ft on the base fee from 2026-12-26, four subscriptions.
+{
+  const { priceChangeSummary } = await import("../src/console/priceChangeViews.js");
+  const sub = (siteName: string, cycle: "monthly" | "annual", nextCharge: string, first: string, now: number, frozen = false) =>
+    ({ subscriptionId: siteName, tenantId: siteName, siteName, frozen, cycle, currency: "HUF", nextCharge, firstNewCharge: first, now, next: now + (cycle === "annual" ? 10000 : 1000), diff: cycle === "annual" ? 10000 : 1000 });
+  const im = {
+    region: "hu", today: "2026-11-26", raiseFrom: "2026-12-26",
+    subs: [sub("Lidó Wellness és Bor Villa", "monthly", "2026-12-10", "2027-01-10", 9210), sub("Napfény Vendégház", "monthly", "2026-12-27", "2026-12-27", 7390), sub("Tó-parti Apartman", "annual", "2027-03-01", "2027-03-01", 73900), sub("Hegyi Kúria", "monthly", "2026-12-15", "2027-01-15", 8100, true)],
+    affected: 4, total: 4, frozenAffected: 1, monthlyDelta: 3833,
+  };
+  const body = priceChangeSummary(im as never, { raise: true, cut: false, earliest: "2026-12-26" });
+  const page = pricingPage(huPricing, [huPricing, globalPricing], null, salesDisabled, salesLive, undefined, undefined, undefined, kbPackages)
+    .replace('<dialog class="pcs-dlg" id="pcs-dlg"', '<dialog open class="pcs-dlg" id="pcs-dlg" style="position:static;margin:12px auto"')
+    .replace('<div id="pcs-body"></div>', `<div id="pcs-body">${body}</div>`)
+    .replace('<div class="pcs-from" id="pcs-from" hidden>', '<div class="pcs-from" id="pcs-from">')
+    .replace('<input type="date" id="pcs-date" name="effective_from">', '<input type="date" id="pcs-date" name="effective_from" value="2026-12-26" min="2026-12-26">');
+  await shootConsole(page, conOut("console-pricing").replace(/screen\.png$/, "price-change.png"), undefined, "#pcs-dlg");
+}
 // The two panels the guide walks through step by step (ADR-0360): the drag-and-drop
 // packages and the own-domain panel with the per-ending table.
 for (const [sel, file] of [["#pr2-s-pk", "packages.png"], ["#pr2-s-dom", "domain.png"]] as const) {

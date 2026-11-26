@@ -136,6 +136,8 @@ const VIEW_GROUPS = {
     "src/console/countryViews.ts",
     // „Országok / Árazás” (orszagok-arazas 1. fázis): the merged lap's table, tabs and Kiküldés tab.
     "src/console/countryHub.ts",
+    // „Országok / Árazás” 5. fázis: the price save dialog (summary + start date).
+    "src/console/priceChangeViews.ts",
     "src/countryReadiness.ts",
     // ADR-0336: the scout worksheet (/scout) — its labels („Felvétel”, „Csempe lezárása” …)
     // live in its own view file, so the handbook quotes THEM.

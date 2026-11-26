@@ -35,8 +35,9 @@ import { MODULE_CATALOG } from "../modules.js";
 import { getDisabledModules } from "../moduleSales.js";
 import { getTenantModules, isBilledModule } from "../tenant/modules.js";
 import {
-  computeAnnual,
-  computeMonthly,
+  applyDuePriceChanges,
+  computeAnnualAt,
+  computeMonthlyAt,
   getAnnualFreeMonths,
   getModulePrice,
   loadPricing,
@@ -302,7 +303,9 @@ async function findOrCreateRenewalOrder(
 
   const moduleIds = await renewableModuleIds(sub.tenantId);
   // ADR-0443: the subscription's OWN region — the customer renews in the currency they
-  // bought in, at that region's current list price.
+  // bought in. „Országok / Árazás” 5. fázis (0156, B — owner 2026-11-26): at the list price valid on the
+  // PERIOD'S START day (pricing.computeMonthlyAt), not today's: a scheduled raise dated D charges the first
+  // renewal whose period starts on/after D, whenever its order is minted; a cut is already in the tables.
   const region = sub.pricingRegion;
   // ADR-0088 §8: an armed switch takes effect HERE — the next minted renewal
   // bills the pending period; the subscription row adopts it when this order
@@ -310,7 +313,7 @@ async function findOrCreateRenewalOrder(
   const period = sub.pendingPeriod ?? sub.billingPeriod;
   const months = period === "annual" ? 12 : 1;
   const listPrice =
-    period === "annual" ? computeAnnual(moduleIds, region) : computeMonthly(moduleIds, region);
+    period === "annual" ? computeAnnualAt(moduleIds, region, isoDate(periodStart)) : computeMonthlyAt(moduleIds, region, isoDate(periodStart));
   // ADR-0109 ①: the saját-cím fee rides EVERY cycle (monthly fee x cycle months).
   // Never coupon-discounted — pass-through registrar cost (ADR-0109 ⑥).
   const domainDue = await domainFeeForRenewal(sub.tenantId, months, region);
@@ -511,6 +514,12 @@ export async function runBillingCycle(
   },
 ): Promise<BillingCycleResult> {
   await loadPricing();
+  // 0156: a scheduled raise whose day has come goes into the tables first (every other reader — the public
+  // price, the configurator, the offer — then sees it as the plain table price). Not on a one-tenant test run.
+  if (!opts?.tenantId) {
+    const applied = await applyDuePriceChanges(isoDate(now));
+    if (applied) console.log(`[billing] ${applied} ütemezett árváltozás életbe lépett (${isoDate(now)})`); // i18n-exempt: operátori napló
+  }
   const result = { renewalOrders: 0, notified: 0, frozen: 0, cancelled: 0 };
 
   let subsQ = db

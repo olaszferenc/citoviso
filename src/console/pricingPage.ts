@@ -73,7 +73,7 @@ export function pricingHead(
     <div class="pr2-head">
       <div>
         <h2 class="pr2-title">${T(lang, "Árazás")} ${helpLink("console.pricing")}</h2>
-        <p class="pr2-lead">${esc(T(lang, "Ár-régió: {region} · {currency}. A konfigurátor, a megrendelés és a levelek ár-sora innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).", { region: snap.region, currency: snap.currency }))}</p>
+        <p class="pr2-lead">${esc(T(lang, "Ár-régió: {region} · {currency}. A konfigurátor, a megrendelés és a levelek ár-sora innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át) — kivéve az áremelést: az a megadott kezdő naptól érvényes.", { region: snap.region, currency: snap.currency }))}</p>
         ${others.length ? `<p class="pr2-lead"><b>${esc(T(lang, "Ezt az ársort ezek az országok is használják: {list} — a módosítás náluk is érvényes.", { list: others.join(", ") }))}</b></p>` : ""}
       </div>
       ${conf}
@@ -84,7 +84,7 @@ export function pricingHead(
     <div class="pr2-head">
       <div>
         <h1 class="pr2-title">${T(lang, "Árazás és értékesítés")} ${helpLink("console.pricing")}</h1>
-        <p class="pr2-lead">${T(lang, "Az árazás egyetlen forrása — a konfigurátor, a megrendelés és a levelek ár-sora innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át).")}</p>
+        <p class="pr2-lead">${T(lang, "Az árazás egyetlen forrása — a konfigurátor, a megrendelés és a levelek ár-sora innen olvas. Mentés után azonnal él (a nyilvános oldal ~10 mp-en belül veszi át) — kivéve az áremelést: az a megadott kezdő naptól érvényes.")}</p>
       </div>
       ${conf}
     </div>
@@ -371,7 +371,7 @@ export function saveBar(lang: Lang, snap: PricingSnapshot): string {
       <span class="pr2-dirty" id="pr2-dirty"></span>
       <span class="pr2-errsum" id="pr2-err-sum" role="alert"></span>
       <button class="pr2-btn" type="button" id="pr2-reset">${T(lang, "Visszaállítás")}</button>
-      <button class="ok pr2-btn pr2-btn--pri" type="submit">${T(lang, "Mentés — {region}", { region: esc(regionLabel(lang, snap.region)) })}</button>
+      <button class="ok pr2-btn pr2-btn--pri" type="submit">${T(lang, "Mentés… — {region}", { region: esc(regionLabel(lang, snap.region)) })}</button>
     </div>`;
 }
 

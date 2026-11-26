@@ -329,10 +329,40 @@ véglegesek. A lap tetején a jel ezt mutatja: „Véglegesítve — a levelek �
 
 ## Mentés
 
-A „Mentés — {piac}” gomb (például „Mentés — Magyarország”) a kiválasztott piac árait, a
-végződés-táblát, az eladhatóság-kapcsolókat és a csomagok összetételét menti. A mentés azonnal él:
-a következő konfigurátor-megnyitás és mock-kiküldés már az új árakkal számol. Piaconként külön
-ments — a magyar mentés a globálist nem írja át. Kivétel a **„Csomagok”**, a **„Lead-ajánlatok”**,
+A „Mentés… — {piac}” gomb (például „Mentés… — Magyarország”) előbb egy összesítő ablakot nyit:
+**„Mentés előtt — mit változtat az árakon”**. Csak az ablak **„Mentés”** gombja ment; a **„Vissza”** gombbal
+a lapra térsz vissza, és semmi nem változik.
+
+**Ha egy ár nő** (alapdíj vagy modulár, vagy kevesebb ingyenes hónap az éves fizetésnél), az emelés
+**ütemezve** megy (a tulaj döntése, 2026-11-26):
+
+- az ablakban kötelező **„Az áremelés kezdő napja”**: legkorábban a mentés napja + 30 nap, a lap ezt
+  előre beírja (korábbi dátummal a szerver nem ment, és megmondja a legkorábbit);
+- az **új vevő** a kezdő naptól fizet új árat, a **meglévő előfizető** a kezdő nap utáni első megújulásától;
+- addig a lapon és mindenhol a mostani ár él. A kezdő napon a rendszer magától írja át;
+- a mentés napján minden érintett előfizető, a **szüneteltetettek is**, értesítő levelet kap a saját
+  nyelvén: a mostani és az új díjjal, és az első új áras terhelés napjával.
+
+Egy beütemezett emelés a lap tetején látszik (**„Ütemezett áremelés”**): melyik nap és mely tételek
+változnak. Addig a lap mezői a mostani árat mutatják. Ugyanazt az emelt árat **nem kell újra beírni**: a
+mentés felismeri, és nem ütemezi kétszer (második levél sem megy). Egy beütemezett emelést a felületen nem
+lehet visszavonni. Mivel a levél már kiment az előfizetőknek, a visszavonás a tulaj döntése, és a fejlesztés végzi.
+
+**Ha egy ár csökken**, az a mentés napján érvényes, a következő terheléstől mindenkinek, levél nélkül.
+Ha egy mentésben az egyik ár nő, a másik csökken, a kettő külön ütemeződik.
+
+Az ablak felül három számot mutat:
+- **„érintett előfizető”** (az összesből, ebből hány szünetel);
+- **„havi bevétel-változás a teljes átállás után”**;
+- **„az új ár kezdő napja”**.
+
+Alatta két mondat mondja ki, mikortól fizet az új vevő és a meglévő előfizető, és mikor megy ki a levél.
+A táblában előfizetőnként: ciklus, következő terhelés, **első új áras terhelés**, most, új, különbség.
+
+![Képernyőkép: a mentés előtti ablak egy áremelésnél — a számok, a kezdő nap és az előfizetőnkénti tábla](assets/hu/price-change.png)
+
+A mentés a kiválasztott piac árait, a végződés-táblát, az eladhatóság-kapcsolókat és a csomagok
+összetételét menti. Piaconként külön ments — a magyar mentés a globálist nem írja át. Kivétel a **„Csomagok”**, a **„Lead-ajánlatok”**,
 az **„Ingyenes próba”** és a **„Kupon”**: ezek minden piacra közösek, ezért bármelyik piac mentése
 menti őket. Ha a végződés-tábla hibás (mért ár nélkül vagy a plafon felett kínált végződés), a
 szerver semmit nem ment, és ezt írja: „Nem mentettem: a végződés-tábla hibás …”

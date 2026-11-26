@@ -100,7 +100,8 @@ try {
 
   // ③ structural: in the POST /pricing handler the trial refusal precedes every write.
   const server = readFileSync(new URL("../src/console/server.ts", import.meta.url), "utf8");
-  const post = server.slice(server.indexOf('if (method === "POST" && path === "/pricing")'));
+  // 0156: the same handler also answers POST /pricing/preview (it returns before any write).
+  const post = server.slice(server.indexOf('if (method === "POST" && (path === "/pricing" || path === "/pricing/preview"))'));
   const at = (needle: string): number => post.indexOf(needle);
   const refuse = at("freeTrialConfigErrors(trial)");
   const refuseC = at("couponConfigErrors(coupon)");

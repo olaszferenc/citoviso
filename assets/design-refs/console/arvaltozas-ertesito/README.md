@@ -23,7 +23,7 @@ A többi kombinációt (szünetel, éves) a `plan.html` váltói mutatják.
 3. **Keret:** a platform-levelek közös kerete (`src/email/platformLayout.ts` `platformMail`: logó, cím, lábléc, belépési sor). A feladó a platform neve.
 4. **Tárgy:** Változik a honlap-előfizetése díja — [oldal neve].
 5. **Cím a levélben:** Változik az előfizetése díja.
-6. **Bevezető mondat:** A Citoviso díjai [kezdő dátum]-tól változnak. Az Ön előfizetésére ez így vonatkozik:
+6. **Bevezető mondat:** A Citoviso díjai [kezdő dátum] napjától változnak. Az Ön előfizetésére ez így vonatkozik: (a mockban „-tól” állt; a formázott dátum ponttal végződik — „2026. 12. 26.” —, ezért a kód a „napjától” alakot használja, a tartalom ugyanaz).
 7. **Tábla** (`mailDetails`), sorrendben:
    - Mostani díj — [összeg] / hó vagy / év;
    - Új díj — [összeg] / hó vagy / év, kiemelve, mellette (+különbség);

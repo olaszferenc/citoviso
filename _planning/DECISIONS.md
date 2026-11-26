@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-orszagok-arazas-5-fazis-utemezett-arvaltozas.md) — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) — emelés dátummal és értesítővel, csökkenés azonnal
 - [ADR-0488](decisions/0488-a-nyelvi-csomag-hianya-nem-zarja-a-piacot-a.md) — A nyelvi csomag hiánya nem zárja a piacot: a „Bábelre vár” az ÜZENET szintjén él
 - [ADR-0487](decisions/0487-orszagok-arazas-4-fazis-a-kikuldes-szabalyai.md) — „Országok / Árazás” 4. fázis: a kiküldés szabályai országonként, az ország során; az auto-approve a repóba költözik
 - [ADR-0486](decisions/0486-az-amenities-modul-felulete-a-mockon-a-nativ.md) — Az amenities modul felülete a mockon a natív „Egy pillantásra” szakasz ikonos tételei

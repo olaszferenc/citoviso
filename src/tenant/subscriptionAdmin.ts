@@ -6,7 +6,7 @@
 import { regionOfTenant } from "../payment/orderRegion.js";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG } from "../modules.js";
-import { getAnnualFreeMonths, getBaseMonthly, getModulePrice, loadPricing, offeredTldOf } from "../pricing.js";
+import { getModulePrice, loadPricing, offeredTldOf, pricingSnapshotAt } from "../pricing.js";
 import { addMonths } from "../payment/subscription.js";
 import { DUNNING_CANCEL_OFFSET_DAYS, domainFeeForRenewal } from "../payment/billing.js";
 import { livePurchaseOffersForTenant, type ActiveOffer } from "../payment/offers.js";
@@ -32,6 +32,13 @@ export interface SubscriptionAdminData {
   /** Day-of-month of the anchor (the tenant's renewal day). */
   readonly renewDay: number;
   readonly nextInvoiceTotal: number;
+  /**
+   * „Országok / Árazás” 5. fázis (0156): the RUNNING period's monthly fee („Jelenlegi díj”) at the prices valid
+   * on its START day — a scheduled raise that took effect during the period does not rewrite what was paid
+   * for it (an annual subscriber could otherwise see the new price for up to 11 already-paid months).
+   */
+  readonly currentMonthly?: number;
+  readonly currentFreeMonths?: number;
   /**
    * Elek3 K2: what the NEXT renewal (at periodEnd) actually charges — the annual sum for an
    * annual cycle (or an armed switch that takes effect then), the monthly one otherwise.
@@ -194,15 +201,19 @@ export async function getSubscriptionAdmin(
 
   // The next invoice = base + every module that will still be subscribed at the
   // renewal: active, not leaving at the period end, monthly-billed, not replaced.
+  // „Országok / Árazás” 5. fázis (0156): at the prices valid on the NEXT PERIOD'S START — the same day the
+  // renewal is priced on (billing.ts) — so a scheduled raise shows here exactly as the notice letter said.
+  const nextStart = isoDate(new Date(sub.current_period_end as unknown as string));
+  const at = pricingSnapshotAt(region, nextStart);
   const items: NextInvoiceItem[] = mv.modules
     .filter(isBilledModule)
     .map((m) => ({
       id: m.id,
       label: m.label,
-      price: getModulePrice(m.id, region),
+      price: at.modulePrices.get(m.id) ?? getModulePrice(m.id, region),
       isNew: m.awaitingFirstCharge,
     }));
-  const modulesTotal = items.reduce((s, i) => s + i.price, getBaseMonthly(region));
+  const modulesTotal = items.reduce((s, i) => s + i.price, at.baseMonthly);
   // Elek B4: the screen's totals carry the domain fee exactly as the renewal mint does.
   // 3/10: a forecast screen — a beszerzés still running counts (the mint bills only a held name).
   const domainDue = await domainFeeForRenewal(tenantId, 1, region, { forecast: true });
@@ -307,7 +318,11 @@ export async function getSubscriptionAdmin(
       .executeTakeFirst();
     pendingEffectiveDate = isoDate(mintedMonthly ? addMonths(periodEndDate, 1) : periodEndDate);
   }
-  const freeMonths = getAnnualFreeMonths(region);
+  const freeMonths = at.annualFreeMonths;
+  const atCur = pricingSnapshotAt(region, isoDate(new Date(sub.current_period_start as unknown as string)));
+  const currentMonthly = mv.modules
+    .filter((m) => m.active && !m.spine && !m.supersededBy && !m.trialGrant)
+    .reduce((sum, m) => sum + (atCur.modulePrices.get(m.id) ?? m.priceMonthly), atCur.baseMonthly);
   // ADR-0088 ⑨: a mandate counts only with a token we could actually charge —
   // 'token' without one would advertise an automation that silently falls back.
   const autoCharge = sub.payment_method === "token" && !!sub.recurrence_token;
@@ -325,6 +340,8 @@ export async function getSubscriptionAdmin(
     periodEnd: isoDate(periodEndDate),
     renewDay: new Date(sub.anchor_date as unknown as string).getDate(),
     nextInvoiceTotal: total,
+    currentMonthly,
+    currentFreeMonths: atCur.annualFreeMonths,
     nextChargeTotal:
       sub.billing_period === "annual" || (pendingAnnual && pendingEffectiveDate === isoDate(periodEndDate))
         ? modulesTotal * (12 - freeMonths) + domainMonthly * 12

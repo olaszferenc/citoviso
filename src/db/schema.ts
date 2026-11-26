@@ -2402,6 +2402,30 @@ export interface EmailOpenTable {
   own: Generated<boolean>;
 }
 
+/** 0156 („Országok / Árazás” 5. fázis): a scheduled price change of a region (raise: dated, noticed; cut: now). */
+export interface PriceChangeTable {
+  id: Generated<string>;
+  region: string;
+  kind: "raise" | "cut";
+  effective_from: string;
+  old: JSONColumnType<Record<string, unknown>>;
+  new: JSONColumnType<Record<string, unknown>>;
+  created_by: string;
+  created_at: Generated<Date>;
+  notice_sent_at: Date | null;
+  applied_at: Date | null;
+  cancelled_at: Date | null;
+}
+
+/** 0156: the notice letter of a raise, once per subscription. */
+export interface PriceChangeNoticeTable {
+  price_change_id: string;
+  subscription_id: string;
+  first_new_charge: string | null;
+  sent_to: string | null;
+  sent_at: Generated<Date>;
+}
+
 export interface Database {
   messenger_presence: MessengerPresenceTable;
   region: RegionTable;
@@ -2452,6 +2476,8 @@ export interface Database {
   market: MarketTable;
   market_log: MarketLogTable;
   country: CountryTable;
+  price_change: PriceChangeTable;
+  price_change_notice: PriceChangeNoticeTable;
   site: SiteTable;
   site_plan_switch: SitePlanSwitchTable;
   site_slug_alias: SiteSlugAliasTable;

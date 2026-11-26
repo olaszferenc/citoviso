@@ -325,6 +325,7 @@ export async function loadPricing(force = false): Promise<void> {
     snapshots = next;
     packageAssignment = nextAssignment;
     loadedAt = Date.now();
+    pendingChanges = await loadPendingChanges();
   } catch {
     // DB unreachable: keep the last-known snapshots (fail-safe, gates stay closed).
   }
@@ -891,4 +892,202 @@ export function parseTldRows(raw: string | null): TldRow[] | null {
   } catch {
     return null;
   }
+}
+
+
+// ── „Országok / Árazás” 5. fázis (0156): SCHEDULED PRICE CHANGE (B, owner 2026-11-26) ───────────────────
+// A raise waits for its date in price_change; priceAt-style readers overlay it on the region's snapshot for
+// a given day; the daily billing run writes it into the tables on that day (applyDuePriceChanges), after
+// which every other reader sees it as the plain table price. A cut is written at once (its row is kept,
+// applied, as the record).
+
+/** The changed items of a price change, MINOR units: base fee, annual free months, module add-ons. */
+export interface PriceDelta {
+  readonly base?: number;
+  readonly freeMonths?: number;
+  readonly modules?: Readonly<Record<string, number>>;
+}
+
+interface PendingChange {
+  readonly id: string;
+  readonly region: string;
+  readonly effectiveFrom: string;
+  readonly next: PriceDelta;
+}
+
+let pendingChanges: readonly PendingChange[] = [];
+
+async function loadPendingChanges(): Promise<PendingChange[]> {
+  try {
+    const rows = await db
+      .selectFrom("price_change")
+      .select(["id", "region", "effective_from", "new"])
+      .where("applied_at", "is", null)
+      .where("cancelled_at", "is", null)
+      .orderBy("effective_from")
+      .orderBy("created_at")
+      .execute();
+    return rows.map((r) => ({ id: r.id, region: r.region, effectiveFrom: isoDay(r.effective_from), next: r.new as PriceDelta }));
+  } catch {
+    return []; // a DB before 0156: no scheduled change
+  }
+}
+
+const isoDay = (d: unknown): string => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+
+/** The pending (not yet applied) raises of a region, oldest date first. */
+export function pendingPriceChanges(region: string): readonly { id: string; effectiveFrom: string; next: PriceDelta }[] {
+  return pendingChanges.filter((c) => c.region === region);
+}
+
+function overlay(s: PricingSnapshot, d: PriceDelta): PricingSnapshot {
+  const modulePrices = new Map(s.modulePrices);
+  for (const [id, v] of Object.entries(d.modules ?? {})) modulePrices.set(id, v);
+  return {
+    ...s,
+    baseMonthly: d.base ?? s.baseMonthly,
+    annualFreeMonths: d.freeMonths ?? s.annualFreeMonths,
+    modulePrices,
+  };
+}
+
+/** The region's prices valid ON `day` (YYYY-MM-DD): today's tables + every pending change dated ≤ day. */
+export function pricingSnapshotAt(
+  region: string,
+  day: string,
+  /** Unsaved changes to project too (the save's preview / the notice of a change being saved). */
+  extra: readonly { readonly effectiveFrom: string; readonly next: PriceDelta }[] = [],
+): PricingSnapshot {
+  let s = snap(region);
+  const all = [...pendingChanges.filter((c) => c.region === region), ...extra].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+  for (const c of all) if (c.effectiveFrom <= day) s = overlay(s, c.next);
+  return s;
+}
+
+/** computeMonthly on the prices valid on `day` (the renewal's period start — billing.ts). */
+export function computeMonthlyAt(
+  moduleIds: readonly string[],
+  region: string,
+  day: string,
+  extra: readonly { readonly effectiveFrom: string; readonly next: PriceDelta }[] = [],
+): number {
+  const s = pricingSnapshotAt(region, day, extra);
+  let sum = s.baseMonthly;
+  for (const id of new Set(moduleIds)) {
+    if (isOneTimeModule(id)) continue;
+    const v = s.modulePrices.get(id);
+    sum += v !== undefined ? v : getModulePrice(id, region); // throws for a priced module the region lacks
+  }
+  return sum;
+}
+
+/** computeAnnual on the prices valid on `day`. */
+export function computeAnnualAt(
+  moduleIds: readonly string[],
+  region: string,
+  day: string,
+  extra: readonly { readonly effectiveFrom: string; readonly next: PriceDelta }[] = [],
+): number {
+  return computeMonthlyAt(moduleIds, region, day, extra) * (12 - pricingSnapshotAt(region, day, extra).annualFreeMonths);
+}
+
+/**
+ * Split a form's prices against the region's CURRENT prices into what goes up (raise — needs a date) and
+ * what goes down (cut — now). Fewer annual free months = a higher annual price = a raise.
+ */
+export function splitPriceChange(
+  region: string,
+  input: { readonly baseMonthly: number; readonly annualFreeMonths: number; readonly modulePrices: Readonly<Record<string, number>> },
+): { raise: { old: PriceDelta; next: PriceDelta } | null; cut: { old: PriceDelta; next: PriceDelta } | null } {
+  const s = snap(region);
+  // A value that equals what an already scheduled raise sets is no new change (the form shows today's table
+  // price; re-entering the scheduled one must not schedule — and notice — it twice).
+  const projected = pricingSnapshotAt(region, "9999-12-31");
+  const up: { old: Record<string, unknown>; next: Record<string, unknown> } = { old: {}, next: {} };
+  const down: { old: Record<string, unknown>; next: Record<string, unknown> } = { old: {}, next: {} };
+  const put = (side: typeof up, k: "base" | "freeMonths", o: number, n: number): void => {
+    side.old[k] = o;
+    side.next[k] = n;
+  };
+  const base = Math.max(0, Math.round(input.baseMonthly));
+  if (base > s.baseMonthly && base !== projected.baseMonthly) put(up, "base", s.baseMonthly, base);
+  else if (base < s.baseMonthly) put(down, "base", s.baseMonthly, base);
+  const free = Math.min(11, Math.max(0, Math.round(input.annualFreeMonths)));
+  if (free < s.annualFreeMonths && free !== projected.annualFreeMonths) put(up, "freeMonths", s.annualFreeMonths, free);
+  else if (free > s.annualFreeMonths) put(down, "freeMonths", s.annualFreeMonths, free);
+  const upM: [Record<string, number>, Record<string, number>] = [{}, {}];
+  const downM: [Record<string, number>, Record<string, number>] = [{}, {}];
+  for (const [id, raw] of Object.entries(input.modulePrices)) {
+    if (!Number.isFinite(raw)) continue;
+    const cur = s.modulePrices.get(id);
+    if (cur === undefined) continue; // a first price of a missing id is no change of a price (it completes the region)
+    const v = Math.max(0, Math.round(raw));
+    if (v > cur && v !== projected.modulePrices.get(id)) { upM[0][id] = cur; upM[1][id] = v; }
+    else if (v < cur) { downM[0][id] = cur; downM[1][id] = v; }
+  }
+  if (Object.keys(upM[1]).length) { up.old.modules = upM[0]; up.next.modules = upM[1]; }
+  if (Object.keys(downM[1]).length) { down.old.modules = downM[0]; down.next.modules = downM[1]; }
+  const has = (x: typeof up): boolean => Object.keys(x.next).length > 0;
+  return {
+    raise: has(up) ? { old: up.old as PriceDelta, next: up.next as PriceDelta } : null,
+    cut: has(down) ? { old: down.old as PriceDelta, next: down.next as PriceDelta } : null,
+  };
+}
+
+/** The full PricingInput of a snapshot — the ONE write path (savePricing) for an applied change. */
+function inputOf(s: PricingSnapshot): PricingInput {
+  return {
+    region: s.region,
+    currency: s.currency,
+    baseMonthly: s.baseMonthly,
+    annualFreeMonths: s.annualFreeMonths,
+    customDomainMonthly: s.customDomainMonthly,
+    domainMaxPriceEur: s.domainMaxPriceEur,
+    domainMinCommitmentMonths: s.domainMinCommitmentMonths,
+    domainMinPackageMonthly: s.domainMinPackageMonthly,
+    domainBuyoutPrice: s.domainBuyoutPrice,
+    pricingConfirmed: s.pricingConfirmed,
+    domainFreeInPackage: s.domainFreeInPackage,
+    modulePrices: Object.fromEntries(s.modulePrices),
+  };
+}
+
+/** Record a raise for `effectiveFrom` (pending — applied on that day by applyDuePriceChanges). Returns its id. */
+export async function schedulePriceRaise(region: string, change: { old: PriceDelta; next: PriceDelta }, effectiveFrom: string, by: string): Promise<string> {
+  const r = await db
+    .insertInto("price_change")
+    .values({ region, kind: "raise", effective_from: effectiveFrom, old: JSON.stringify(change.old) as never, new: JSON.stringify(change.next) as never, created_by: by })
+    .returning("id")
+    .executeTakeFirstOrThrow();
+  await loadPricing(true);
+  return r.id;
+}
+
+/** Record a cut that the caller writes now (kept as the record, applied at once). */
+export async function recordAppliedCut(region: string, change: { old: PriceDelta; next: PriceDelta }, day: string, by: string): Promise<void> {
+  await db
+    .insertInto("price_change")
+    .values({ region, kind: "cut", effective_from: day, old: JSON.stringify(change.old) as never, new: JSON.stringify(change.next) as never, created_by: by, applied_at: new Date() })
+    .execute();
+}
+
+/** The daily run (billing timer): write every pending change dated ≤ `day` into the tables. Returns how many. */
+export async function applyDuePriceChanges(day: string): Promise<number> {
+  await loadPricing(true);
+  const due = pendingChanges.filter((c) => c.effectiveFrom <= day);
+  let n = 0;
+  for (const c of due) {
+    await savePricing(inputOf(overlay(snap(c.region), c.next)));
+    await db.updateTable("price_change").set({ applied_at: new Date() }).where("id", "=", c.id).where("applied_at", "is", null).execute();
+    n++;
+  }
+  if (n) await loadPricing(true);
+  return n;
+}
+
+/** Cancel a pending raise (nothing applied, nothing to undo in the tables). */
+export async function cancelPriceChange(id: string): Promise<boolean> {
+  const r = await db.updateTable("price_change").set({ cancelled_at: new Date() }).where("id", "=", id).where("applied_at", "is", null).where("cancelled_at", "is", null).executeTakeFirst();
+  await loadPricing(true);
+  return Number(r.numUpdatedRows ?? 0) > 0;
 }

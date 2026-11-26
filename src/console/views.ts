@@ -117,6 +117,7 @@ import {
   newRegionForm,
 } from "./pricingPage.js";
 import { huArticle, huArticleLower } from "../hu.js";
+import { pendingRaisesNote, priceChangeDialog } from "./priceChangeViews.js";
 import { SITE_SHOT_VIEWPORT } from "../payment/shotSize.js";
 import { MOCK_OUTREACH_WINDOW, SEND_WINDOW } from "../sms/sendWindow.js";
 import {
@@ -824,6 +825,7 @@ export function pricingBody(
       ${embed ? `<input type="hidden" name="back_iso" value="${esc(embed.iso)}">` : ""}
       ${pricingHead(lang, snap, notice, embed)}
       ${embed ? regionGapNote(lang, snap) : regionTabs(lang, snap, regions)}
+      ${pendingRaisesNote(snap.region, snap.currency)}
       ${overviewBlock(lang)}
       ${sectionNav(lang)}
       ${packagesPanel(lang, snap, extras)}
@@ -839,6 +841,7 @@ export function pricingBody(
       </div>
       ${finalPanel(lang, snap)}
       ${saveBar(lang, snap)}
+      ${priceChangeDialog()}
       ${pricingPageData(lang, snap, extras)}
       <script>${ESCALATION_MONEY_JS}\n${PRICING_ADMIN_JS}</script>
     </form>

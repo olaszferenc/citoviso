@@ -2709,10 +2709,14 @@ async function handle(
     );
   }
   // POST /pricing — persist the prices + the "confirmed" gate flip (per region).
-  if (method === "POST" && path === "/pricing") {
+  // POST /pricing/preview — „Országok / Árazás” 5. fázis (0156): the same form, nothing written; answers the
+  // split (raise / cut), the earliest start date and the impact on the region's subscriptions (JSON + the
+  // server-rendered summary the save dialog shows).
+  if (method === "POST" && (path === "/pricing" || path === "/pricing/preview")) {
     const op = await currentOperator(req);
-    if (!op) return redirect(res, "/login");
+    if (!op) return path === "/pricing" ? redirect(res, "/login") : send(res, 401, JSON.stringify({ error: "login" }), "application/json");
     const form = await readBody(req);
+    const isPreview = path === "/pricing/preview";
     // Elek K3: a field the form did NOT send keeps its stored value — `Number(null)` is 0,
     // which used to zero `custom_domain_monthly` and clamp `domain_max_price_eur` to 1 on
     // every save of the new /pricing page (it no longer carries those legacy fields).
@@ -2757,6 +2761,41 @@ async function handle(
         snap.modulePrices.get(t.priceId) ??
         (snap.region === HU_PRICING_REGION ? t.priceDefault : undefined);
       if (v !== undefined) modulePrices[t.priceId] = v;
+    }
+    // „Országok / Árazás” 5. fázis (0156, B — owner 2026-11-26): what goes UP waits for its start date
+    // (≥ today + 30 days, refused otherwise), what goes DOWN is valid today. Validated before any write.
+    const { budapestIsoDay } = await import("../text/budapestTime.js");
+    const { splitPriceChange, schedulePriceRaise, recordAppliedCut } = await import("../pricing.js");
+    const { priceChangeImpact, sendPriceChangeNotices } = await import("../payment/priceChange.js");
+    const today = budapestIsoDay(new Date());
+    const earliest = new Date(Date.parse(`${today}T12:00:00Z`) + 30 * 86_400_000).toISOString().slice(0, 10);
+    const priceIn = {
+      baseMonthly: moneyOr("base_monthly", snap.baseMonthly),
+      annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
+      modulePrices,
+    };
+    const split = splitPriceChange(snap.region, priceIn);
+    const rawFrom = (form.get("effective_from") ?? "").trim();
+    const raiseFrom = split.raise ? (/^\d{4}-\d{2}-\d{2}$/.test(rawFrom) ? rawFrom : null) : null;
+    const fromError = split.raise
+      ? !raiseFrom
+        ? `Áremelésnél kezdő dátum kell — legkorábban ${earliest}.`
+        : raiseFrom < earliest
+          ? `A kezdő dátum túl korai — legkorábban ${earliest} (a mentés napja + 30 nap).`
+          : null
+      : null;
+    if (isPreview) {
+      const impact = await priceChangeImpact(snap.region, { raise: split.raise?.next ?? null, raiseFrom: raiseFrom ?? earliest, cut: split.cut?.next ?? null }, today);
+      const { priceChangeSummary } = await import("./priceChangeViews.js");
+      return send(
+        res,
+        200,
+        JSON.stringify({ raise: !!split.raise, cut: !!split.cut, earliest, raiseFrom: raiseFrom ?? earliest, fromError, summaryHtml: priceChangeSummary(impact, { raise: !!split.raise, cut: !!split.cut, earliest }) }),
+        "application/json",
+      );
+    }
+    if (fromError) {
+      return redirect(res, `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(`hiba:Nem mentettem: ${fromError}`)}`);
     }
     // ADR-0285 / ADR-0286: the GLOBAL lead-offer parameters ride on every region's form.
     // Validated BEFORE anything is written — a refused value must not leave half a save.
@@ -2827,11 +2866,14 @@ async function handle(
       if (escalation) await setEscalationConfig(escalation);
       if (coupon) await setCouponConfig(coupon);
       if (trial) await setFreeTrialConfig(trial);
+      // 0156: the raised items keep today's price in the tables (their raise is scheduled below); the cut
+      // items and every other field are written now.
+      const keepOld = split.raise?.old;
       await savePricing({
         region: snap.region,
         currency: snap.currency,
-        baseMonthly: moneyOr("base_monthly", snap.baseMonthly),
-        annualFreeMonths: num("annual_free_months", snap.annualFreeMonths),
+        baseMonthly: keepOld?.base ?? priceIn.baseMonthly,
+        annualFreeMonths: keepOld?.freeMonths ?? priceIn.annualFreeMonths,
         customDomainMonthly: moneyOr("custom_domain_monthly", snap.customDomainMonthly),
         // ADR-0093/0094/0109 domain terms (cap, commitment, ENTRY threshold, buyout).
         domainMaxPriceEur: num("domain_max_price_eur", snap.domainMaxPriceEur),
@@ -2841,11 +2883,25 @@ async function handle(
         pricingConfirmed: form.get("pricing_confirmed") === "on",
         // ADR-0360 ②: only a form that carries the domain panel may flip the switch.
         ...(form.get("dom_present") === "1" ? { domainFreeInPackage: form.get("domain_free_in_package") === "on" } : {}),
-        modulePrices,
+        modulePrices: { ...modulePrices, ...(keepOld?.modules ?? {}) },
       });
       if (snap.region === HU_PRICING_REGION) {
         await setDisabledModules(
           MODULE_CATALOG.filter((m) => !m.spine && form.get(`sell_${m.id}`) !== "on").map((m) => m.id),
+        );
+      }
+      if (split.cut) await recordAppliedCut(snap.region, split.cut, today, op.username);
+      if (split.raise && raiseFrom) {
+        // The impact BEFORE the raise is scheduled (after it, „now” would already contain it).
+        const impact = await priceChangeImpact(snap.region, { raise: split.raise.next, raiseFrom, cut: null }, today);
+        const id = await schedulePriceRaise(snap.region, split.raise, raiseFrom, op.username);
+        const notices = await sendPriceChangeNotices(id, impact);
+        console.log(`[pricing] áremelés ütemezve: ${snap.region} ${raiseFrom}-tól — ${op.username}; értesítő: ${notices.sent} előfizető (${notices.skipped} cím nélkül)`); // i18n-exempt: operátori napló
+        return redirect(
+          res,
+          `/pricing?region=${encodeURIComponent(snap.region)}${backIso}&saved=${encodeURIComponent(
+            `ok:Árazás mentve. Az áremelés ${raiseFrom}-tól érvényes; ${notices.sent} előfizető kapott értesítő levelet.${split.cut ? " Az árcsökkenés már érvényes." : ""}`,
+          )}`,
         );
       }
       // encodeURIComponent is NOT optional here: an accented string dropped raw
