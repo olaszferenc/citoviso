@@ -227,6 +227,9 @@ try {
     await page.click("#hol-add");
   }
   await settle();
+  // The live check answers each add; the LAST answer carries all three days — wait for it, not a fixed time
+  // (the old fixed settle read the hint before the last answer landed: red on main, a test race, not the lap).
+  await page.waitForFunction(() => document.querySelectorAll("#hol-years .cty-tag--ok").length === 2, null, { timeout: 15_000 }).catch(() => {});
   check("ünnepnap-szerkesztő: mindkét év lefedve", (await page.locator("#hol-years .cty-tag--ok").count()) === 2,
     `${(await page.locator("#hol-years").first().innerHTML()).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")} · #hol-years: ${await page.locator("#hol-years").count()}`);
   await saveAndWait();
@@ -266,7 +269,7 @@ try {
   check("Árazás fül: a régió árazó űrlapja", /tab=price/.test(page.url()) && (await page.locator('#pr2-form input[name="region"]').inputValue()) === "hu");
   await page.click('.hub-tabs [data-tab="out"]');
   await page.waitForLoadState("networkidle");
-  check("Kiküldés fül: csak olvas (a választó tiltva)", (await page.locator('input[name="out-mode"]').count()) === 2 && (await page.locator('input[name="out-mode"]:not([disabled])').count()) === 0);
+  check("Kiküldés fül: a képválasztó két lehetőséggel, szerkeszthető (4. fázis)", (await page.locator('input[name="photoMode"]').count()) === 2 && (await page.locator('input[name="photoMode"]:not([disabled])').count()) === 2);
   check("Kiküldés fül: összesítő + hat szakasz", (await page.locator("#out-sum .hub-kpi").count()) === 4 && (await page.locator('[id^="out-"].hub-card').count()) === 6);
   const rd = await page.request.get(`${BASE}/pricing`, { maxRedirects: 0 });
   check("/pricing → a hazai ország Árazás füle", rd.status() === 303 && /\/countries\?iso=HU&tab=price/.test(rd.headers()["location"] ?? ""), rd.headers()["location"] ?? "");
@@ -277,6 +280,47 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE}/countries`, { waitUntil: "networkidle" });
   check("mobilon kártyák, a táblázat rejtve", (await page.locator("#ovcard-HU").isVisible()) && !(await page.locator(".hub-tablewrap").isVisible()));
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  console.log("\n⑧ Kiküldés fül (4. fázis, 0155): szerkesztés, élő összesítő, mentés előtti ablak, mentés");
+  await page.goto(`${BASE}/countries?iso=HU&tab=out`, { waitUntil: "networkidle" });
+  check("a mentés-sáv induláskor rejtve", !(await page.locator("#out-bar").isVisible()));
+  const huDisp0 = await db.selectFrom("country").select(["daily_quota", "dispatch_sites", "dispatch_approval", "send_weekdays"]).where("iso2", "=", "HU").executeTakeFirstOrThrow();
+  check("HU jóváhagyás alapértéke: tulaj (0155, tulaj 2026-11-26 „B”)", huDisp0.dispatch_approval === "owner" && (await page.locator('input[name="approval"][value="owner"]').isChecked()));
+  const checked = page.waitForResponse((r) => r.url().endsWith("/countries/dispatch/check"), { timeout: 20_000 });
+  await page.fill('input[name="dailyQuota"]', "55");
+  await checked;
+  await page.waitForTimeout(150);
+  check("módosítás → a mentés-sáv megjelenik", await page.locator("#out-bar").isVisible());
+  check("a napi keret KPI követi a beírt számot", ((await page.locator("#out-k-day b").textContent()) ?? "").replace(/\s/g, "") === "55");
+  const c2 = page.waitForResponse((r) => r.url().endsWith("/countries/dispatch/check"), { timeout: 20_000 });
+  await page.click('#out-1 li:has(input[value="modern"]) [data-up]');
+  await c2;
+  await page.waitForTimeout(150);
+  await page.click("#out-review");
+  check("a mentés előtti ablak nyitva, a módosítások listájával", (await page.locator("#out-dlg[open]").count()) === 1 && /55/.test((await page.locator("#out-dlg-b").textContent()) ?? ""));
+  await Promise.all([page.waitForNavigation({ timeout: 30_000 }), page.click("#out-save")]);
+  await page.waitForLoadState("networkidle");
+  const huDisp1 = await db.selectFrom("country").select(["daily_quota", "dispatch_sites"]).where("iso2", "=", "HU").executeTakeFirstOrThrow();
+  check("mentés → a sor: napi keret 55, a modern kör előrébb", huDisp1.daily_quota === 55 && JSON.stringify(huDisp1.dispatch_sites) === JSON.stringify(["no_site", "modern", "outdated", "unclassified"]), JSON.stringify(huDisp1));
+  check("a lapon a mentés visszajelzése", /mentve/.test((await page.locator(".cty-notice--ok").textContent()) ?? ""));
+  // A wrong form: no weekday → the save is refused (server too), the row unchanged.
+  const bad = await page.request.post(`${BASE}/countries/dispatch`, {
+    form: { iso: "HU", minOwnPhotos: "5", photoMode: "own", sites: "no_site", channels: "email", dailyQuota: "55", windowFrom: "8", windowTo: "17", nonOpenerDays: "14", nonOpenerCap: "0", rule_noMailNoSend: "1", approval: "owner" },
+    maxRedirects: 0,
+  });
+  const huDisp2 = await db.selectFrom("country").select(["send_weekdays"]).where("iso2", "=", "HU").executeTakeFirstOrThrow();
+  check("nap nélküli kézi POST → elutasítva, a sor változatlan", /hiba/.test(decodeURIComponent(bad.headers()["location"] ?? "")) && huDisp2.send_weekdays === huDisp0.send_weekdays);
+  const off = await page.request.post(`${BASE}/countries/dispatch`, {
+    form: { iso: "HU", minOwnPhotos: "5", photoMode: "own", sites: "no_site", channels: "email", weekdays: "1", dailyQuota: "55", windowFrom: "8", windowTo: "17", nonOpenerDays: "14", nonOpenerCap: "0", approval: "owner" },
+    maxRedirects: 0,
+  });
+  check("az „e-mail nélkül nem küldünk” szabály nem kapcsolható ki (szerver)", /hiba/.test(decodeURIComponent(off.headers()["location"] ?? "")));
+  await db.updateTable("country").set({ daily_quota: huDisp0.daily_quota, dispatch_sites: JSON.stringify(huDisp0.dispatch_sites) as never }).where("iso2", "=", "HU").execute();
+  await refreshCountries();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE}/countries?iso=HU&tab=out`, { waitUntil: "networkidle" });
+  check("mobilon a hat szakasz egymás alatt, a sáv rejtve", (await page.locator('[id^="out-"].hub-card').count()) === 6 && !(await page.locator("#out-bar").isVisible()));
   await page.setViewportSize({ width: 1280, height: 900 });
 
   console.log("\n⑥ JS-hibák");

@@ -23,6 +23,7 @@
 //    a guessed box).
 import { sql } from "kysely";
 import { db } from "../db/client.js";
+import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import { countryLexicon } from "../countryLexicon.js";
 import { countryConfig } from "../country.js";
 import { marketGate } from "../markets.js";
@@ -275,9 +276,8 @@ export interface LaunchStatus {
   readonly steps: readonly LaunchStep[];
 }
 
-// A lead's country: its own raw.country, else its scrape area's (src/country.ts countryOf, as SQL).
-export const LEAD_CC = sql<string>`upper(coalesce(nullif(trim(l.raw->>'country'),''),
-  (select sd.country from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id where sr.id = l.scrape_run_id)))`;
+// A lead's country: its own raw.country, else its scrape area's (src/db/leadCountrySql.ts).
+export const LEAD_CC = LEAD_COUNTRY_SQL;
 
 /** The launch status of one country (read-only). */
 export async function marketLaunchStatus(iso: string): Promise<LaunchStatus> {

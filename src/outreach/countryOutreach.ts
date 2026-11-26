@@ -10,11 +10,12 @@
 //     whose country has no usable mobile channel is HELD with a visible reason, never moved to a
 //     bare SMS (owner rule: „MMS helyett SMS TILOS”), never sent from the Hungarian modem SIM as
 //     an international MMS (docs/mms-send.md: the modem is one Hungarian SIM, ~90 s per message);
-//   · the window — Mon–Fri, in the lead's zone, not on the row's public holidays, between the
-//     hours of the row's send window (send_window_from/to, local time) INTERSECTED with the
-//     owner's MOCK_OUTREACH_WINDOW (ADR-0461: the owner's 8–17 stays the ceiling; a row can only
-//     narrow it — HU's 8–20 contains it, so HU is unchanged); an unknown country cannot be
-//     scheduled (fail closed);
+//   · the window — the row's weekdays (send_weekdays, Mon–Fri by default), in the lead's zone, not
+//     on the row's public holidays (skip_holidays), between the hours of the row's send window
+//     (send_window_from/to, local time). „Országok / Árazás” 4. fázis (tulaj 2026-11-26, D13): the
+//     row is the ONLY window — the code's MOCK_OUTREACH_WINDOW intersection is gone; migration 0155
+//     wrote the old intersection into every row (HU 8–20 → 8–17), so nothing moved. An unknown
+//     country cannot be scheduled (fail closed);
 //   · the language — the country's default language and nothing else (owner 2026-11-17); a pack
 //     with a single missing outreach string HOLDS the whole outreach („Bábelre vár”).
 //
@@ -85,27 +86,32 @@ export function anyMobileChannel(cfg: CountryConfig | null): boolean {
 
 /**
  * The local hours a cold outreach to the country may start in: the row's send window
- * (send_window_from/to) ∩ the owner's MOCK_OUTREACH_WINDOW. The row narrows, never widens the
- * owner's rule. An empty intersection (from ≥ to) = never.
+ * (send_window_from/to). From ≥ to = never.
  */
 export function outreachHoursOf(cfg: Pick<CountryConfig, "sendWindowFrom" | "sendWindowTo">): WindowHours {
-  const rowFrom = Number.isInteger(cfg.sendWindowFrom) ? cfg.sendWindowFrom : MOCK_OUTREACH_WINDOW.fromHour;
-  const rowTo = Number.isInteger(cfg.sendWindowTo) ? cfg.sendWindowTo : MOCK_OUTREACH_WINDOW.toHour;
+  // The row alone (0155, D13). A row without numbers falls back to the old owner's hours (fail-safe, never wider).
   return {
-    fromHour: Math.max(MOCK_OUTREACH_WINDOW.fromHour, rowFrom),
-    toHour: Math.min(MOCK_OUTREACH_WINDOW.toHour, rowTo),
+    fromHour: Number.isInteger(cfg.sendWindowFrom) ? cfg.sendWindowFrom : MOCK_OUTREACH_WINDOW.fromHour,
+    toHour: Number.isInteger(cfg.sendWindowTo) ? cfg.sendWindowTo : MOCK_OUTREACH_WINDOW.toHour,
   };
 }
 
+/** The clock rules of a cold outreach: the row's zone and holidays, plus its weekdays and holiday switch (0155). */
+export function outreachClockOf(cfg: CountryConfig): CountryConfig & { readonly weekdays: number; readonly skipHolidays: boolean } {
+  return { ...cfg, weekdays: cfg.dispatch.weekdays, skipHolidays: cfg.dispatch.skipHolidays };
+}
+
 /**
- * The HU row's clock IS the Budapest-only window: same zone, no holidays (ADR-0455 ⑩), and a
- * send window that does not narrow the owner's hours (HU row: 8–20 ⊇ 8–16/17).
+ * The HU row's clock IS the Budapest-only window: same zone, no holidays (ADR-0455 ⑩), Mon–Fri, and
+ * exactly the old owner's hours (HU row since 0155: 8–17) — then the Budapest sentence is kept byte
+ * for byte. Any other row (or HU set otherwise on the „Kiküldés” tab) reads its own row.
  */
-function isBudapestClock(cfg: Pick<CountryConfig, "timeZone" | "publicHolidays" | "sendWindowFrom" | "sendWindowTo">): boolean {
+function isBudapestClock(cfg: CountryConfig): boolean {
   const h = outreachHoursOf(cfg);
   return (
     cfg.timeZone === SEND_WINDOW_TZ &&
     cfg.publicHolidays.length === 0 &&
+    cfg.dispatch.weekdays === 31 &&
     h.fromHour === MOCK_OUTREACH_WINDOW.fromHour &&
     h.toHour === MOCK_OUTREACH_WINDOW.toHour
   );
@@ -113,7 +119,7 @@ function isBudapestClock(cfg: Pick<CountryConfig, "timeZone" | "publicHolidays" 
 
 /** Is the mock-outreach window open at `now` in the lead's zone, on its calendar, in its hours? */
 export function outreachWindowOpenIn(now: Date, cfg: CountryConfig | null): boolean {
-  return !!cfg && answerWindowOpenIn(now, cfg, outreachHoursOf(cfg));
+  return !!cfg && answerWindowOpenIn(now, outreachClockOf(cfg), outreachHoursOf(cfg));
 }
 
 /**
@@ -127,11 +133,13 @@ export function outreachWindowBlocksIn(now: Date, cfg: CountryConfig | null): st
   const hours = outreachHoursOf(cfg);
   const { fromHour, toHour } = hours;
   if (fromHour >= toHour) {
-    return `${cfg.name} küldési ablaka (${cfg.sendWindowFrom}:00–${cfg.sendWindowTo}:00) és a megkeresési ablak (${MOCK_OUTREACH_WINDOW.fromHour}:00–${MOCK_OUTREACH_WINDOW.toHour}:00) nem fedi egymást — a megkeresés nem ütemezhető`; // i18n-exempt: operátori ok, sosem éri el a leadet
+    return `${cfg.name} küldési ablaka (${cfg.sendWindowFrom}:00–${cfg.sendWindowTo}:00) üres — a megkeresés nem ütemezhető`; // i18n-exempt: operátori ok, sosem éri el a leadet
   }
-  if (answerWindowOpenIn(now, cfg, hours)) return null;
+  const clock = outreachClockOf(cfg);
+  if (clock.weekdays === 0) return `${cfg.name} kiküldési napjai közül egy sincs bekapcsolva — a megkeresés nem ütemezhető`; // i18n-exempt: operátori ok, sosem éri el a leadet
+  if (answerWindowOpenIn(now, clock, hours)) return null;
   const hhmm = hhmmIn(now, cfg.timeZone);
-  const next = nextAnswerWindowStartIn(now, cfg, hours);
+  const next = nextAnswerWindowStartIn(now, clock, hours);
   return `mock-megkeresés csak ${cfg.name} munkanapjain ${fromHour}:00–${toHour}:00 (${cfg.timeZone}) között megy ki (ott most ${hhmm}) — legközelebb ${next.toISOString()}`; // i18n-exempt: operátori ok, sosem éri el a leadet
 }
 
@@ -146,19 +154,18 @@ export function babelHoldReason(lang: string, missing: number): string {
 }
 
 /**
- * The daily cap of the automatic dispatch for a country: the HU cap is the operator's
- * `outreach_auto.dailyCap` (today's 40); another country has its own counter, from the
- * operator's per-country override, else the row's daily_quota.
+ * The daily cap of the automatic dispatch for a country: the row's daily_quota („Országok / Árazás”
+ * 4. fázis — migration 0155 wrote today's caps into the rows: HU = the old outreach_auto.dailyCap, any
+ * country's old countryCaps override). The cold RAMP stays global (the sending domain's reputation):
+ * while it runs, `rampCap` lifts the HOME country's cap to the ramp's day ceiling, as before.
  */
 export function dailyCapFor(
   cfg: Pick<CountryConfig, "iso2" | "dailyQuota">,
-  settings: { readonly dailyCap: number; readonly countryCaps?: Readonly<Record<string, number>> },
   homeIso: string,
+  rampCap: number | null = null,
 ): number {
-  if (cfg.iso2 === homeIso) return settings.dailyCap;
-  const own = settings.countryCaps?.[cfg.iso2];
-  if (typeof own === "number" && Number.isInteger(own) && own >= 0) return own;
-  return Number.isInteger(cfg.dailyQuota) && cfg.dailyQuota >= 0 ? cfg.dailyQuota : 0;
+  const own = Number.isInteger(cfg.dailyQuota) && cfg.dailyQuota >= 0 ? cfg.dailyQuota : 0;
+  return cfg.iso2 === homeIso && rampCap != null ? Math.max(own, rampCap) : own;
 }
 
 /**

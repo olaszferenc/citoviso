@@ -31,7 +31,7 @@ import {
 import { APPROVAL_PENDING_NOTE, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
 import { planChainPassed, secondPlanOf } from "../outreach/secondPlan.js";
 import { ownViewHref } from "./prospectPath.js";
-import { cachedRenderGate } from "../outreach/mockRenderGate.js";
+import { cachedRenderGate, stockOkFor } from "../outreach/mockRenderGate.js";
 import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 
 /** The dispatch note of a lead waiting for the owner (the colleague's pass writes it — mockQaReview.ts). */
@@ -118,7 +118,7 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
     const qa = await qaReviewState(r.main_id);
     if (qa.state !== "pass") continue;
     const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", r.main_id).executeTakeFirst();
-    if (cachedRenderGate(a?.inputs, qa.review.mtime)?.verdict !== "pass") continue;
+    if (cachedRenderGate(a?.inputs, qa.review.mtime, await stockOkFor(r.main_id))?.verdict !== "pass") continue;
     // …and its SECOND plan went through the same chain (owner 2026-11-25: „Csak az hagyható jóvá, ahol
     // van második terv is.”) — the very plan the dispatcher attaches (secondPlan.ts).
     const alt = await secondPlanOf(r.lead_id, r.main_id);

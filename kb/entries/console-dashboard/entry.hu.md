@@ -247,7 +247,7 @@ linkre kattintanak a leadek. Öt csempe: E-mail, **„SMS / MMS”**, Viber, Wha
   meg, a sor halványan áll, névsor nélkül — ez nem hiba. A **„Riport ▸ Honnan nyitották”** link a
   kártya fejlécében ugyanide visz. A Riport a kiküldés napja szerint számol, ezért a „Kapta” szám ott
   eltérhet a kártyáétól.
-- **Az „Újrakeresés” csempe** (narancs, **„2. kör”** címkével) a nem-nyitóknak 14 nap után kiment utánkövető levelet
+- **Az „Újrakeresés” csempe** (narancs, **„2. kör”** címkével) a nem-nyitóknak (az ország beállítása szerinti napszám, alapból 14 nap után) kiment utánkövető levelet
   méri, az első körtől külön. A nagy szám alatt: „3 megnyitotta a 40 utánkövető levélből” (ha nem ment ki
   levél: **„nem ment ki”**). **Kapta** = az időszakban kiment utánkövető levél, **megnyitotta** = utána
   bármelyik linkjéről rákattintott. Erre koppintva a **„Riport”** Tölcsér lapja nyílik **„Újrakeresés”**

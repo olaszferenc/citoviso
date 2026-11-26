@@ -86,12 +86,12 @@ const stock = src("src/console/leadStock.ts");
 check("Lead-állomány: „kiküldhető” csak kolléga-jóváhagyott, javított generátorú mock",
   /\$\{MOCK_QA_PASSED_SQL\}/.test(stock) && /\$\{MOCK_CURRENT_GENERATOR_SQL\}/.test(stock));
 
-// ④ (owner 2026-11-25): <5 own photos go out only once the town library is ready AND the owner opened it —
-// the town-pick branch sits behind the app_setting switch, default OFF (absent row = closed).
+// ④ (owner 2026-11-25): <N own photos go out only once the town library is ready AND the owner opened it —
+// since 0155 the town-pick branch sits behind the lead's COUNTRY ROW switch (dispatch_photo_mode, default 'own' = closed).
 const photoGateSrc = src("src/outreach/mockPhotoGate.ts");
-const townBranch = /export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`\(\s*exists \(select 1 from app_setting s where s\.key = \$\{TOWN_PHOTO_DISPATCH_KEY\} and s\.value = 'on'\)\s*and /.test(photoGateSrc);
-check("KI kapcsolónál a <5 képes ág zárva (app_setting town_photo_dispatch, alapból ki)",
-  townBranch && /TOWN_PHOTO_DISPATCH_KEY = "town_photo_dispatch"/.test(photoGateSrc) && /else \$\{MOCK_TOWN_PICK_OK_SQL\} end/.test(photoGateSrc));
+const townBranch = /export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`\(\s*\$\{LEAD_TOWN_MODE_SQL\}\s*and /.test(photoGateSrc);
+check("KI kapcsolónál a <N képes ág zárva (az ország sora: dispatch_photo_mode, alapból 'own')",
+  townBranch && /c\.dispatch_photo_mode = 'own_town'/.test(photoGateSrc) && /else \$\{MOCK_TOWN_PICK_OK_SQL\} end/.test(photoGateSrc));
 
 // ── ② the allow-list ──
 const K = (kind: PhotoKind["kind"], label: string, extra: Partial<PhotoKind> = {}): PhotoKind => ({

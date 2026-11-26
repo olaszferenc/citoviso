@@ -14,6 +14,7 @@ import { formatNumber } from "../text/money.js";
 import type { CountryOverview, CountryOverviewRow, CountryStatusKey, OutreachInfo, RunState } from "./countryData.js";
 import { COUNTRY_CSS, editorOverlay, editorScript, gateBlock, ICON, type CountryEditor } from "./countryViews.js";
 import { consoleLang } from "./i18nCtx.js";
+import { jsonForScript } from "../text/jsonForScript.js";
 import { esc, helpLink, layout } from "./views.js";
 
 export type HubTab = "country" | "price" | "out";
@@ -281,8 +282,8 @@ export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: Outr
     [T(lang, "Időzóna"), d.timeZone || "—"],
     [T(lang, "Hívószám"), d.dialCode ? `+${d.dialCode}` : "—"],
     [T(lang, "Fizetés"), `${d.paymentProvider}${wallet ? ` · ${wallet.detail}` : ""}`],
-    [T(lang, "Csatorna"), out ? out.channels.filter((c) => c.live).map((c) => c.id).join(", ") || "—" : "—"],
-    [T(lang, "Kiküldési ablak"), out ? `${out.hours.fromHour}:00–${out.hours.toHour}:00 (${out.timeZone})` : "—"],
+    [T(lang, "Csatorna"), out ? out.draft.channels.join(", ") || "—" : "—"],
+    [T(lang, "Kiküldési ablak"), out ? `${out.draft.sendWindowFrom}:00–${out.draft.sendWindowTo}:00 (${out.cfg.timeZone})` : "—"],
     [T(lang, "Napi keret"), n(row.dailyCap)],
     [T(lang, "Lead / előfizető"), `${n(row.leads)} / ${n(row.subsActive)}${row.subsFrozen ? ` (${T(lang, "+{n} szünetel", { n: row.subsFrozen })})` : ""}`],
   ];
@@ -297,9 +298,9 @@ export function countryTab(row: CountryOverviewRow, ed: CountryEditor, out: Outr
     <ol class="cty-rd" id="hub-launch">${list}</ol></div>`;
 }
 
-// ── „Kiküldés” tab (read-only in phase 1) ──────────────────────────────────────────────────────
+// ── „Kiküldés” tab (4. fázis: editable — POST /countries/dispatch, live check /countries/dispatch/check) ──
 function decides(lang: string, today: string, decided = false): string {
-  return `<p class="hub-dec"><b>${esc(T(lang, "Ma dönt:"))}</b> ${esc(today)} <span class="cty-tag">${esc(T(lang, "országonkénti beállítás lesz"))}</span>${decided ? ` <span class="cty-tag cty-tag--ok">${esc(T(lang, "döntve"))}</span>` : ""}</p>`;
+  return `<p class="hub-dec"><b>${esc(T(lang, "Korábban döntött:"))}</b> ${esc(today)} <span class="cty-tag">${esc(T(lang, "most országonkénti beállítás"))}</span>${decided ? ` <span class="cty-tag cty-tag--ok">${esc(T(lang, "döntve"))}</span>` : ""}</p>`;
 }
 
 function chName(lang: string, id: string): string {
@@ -313,72 +314,186 @@ function chName(lang: string, id: string): string {
   }
 }
 
+function siteName(lang: string, id: string): string {
+  switch (id) {
+    case "no_site": return T(lang, "nincs honlap");
+    case "outdated": return T(lang, "elavult honlap");
+    case "modern": return T(lang, "modern honlap");
+    default: return T(lang, "besorolatlan");
+  }
+}
+
+function ruleName(lang: string, k: string): string {
+  switch (k) {
+    case "twoMocks": return T(lang, "két mock saját képpel vagy településképpel");
+    case "townNoMms": return T(lang, "településképes mock MMS-ben nem megy");
+    case "emailOnly": return T(lang, "akinek van e-mailje, csak e-mailt kap");
+    case "uncheckedEmail": return T(lang, "ellenőrizetlen mobilú lead e-mailben mehet");
+    default: return T(lang, "e-mail cím nélkül nem küldünk");
+  }
+}
+
+const ARROWS = (lang: string, name: string): string =>
+  `<span class="hub-ord"><button type="button" class="cty-btn cty-btn--sm" data-up aria-label="${esc(T(lang, "{v} feljebb", { v: name }))}">↑</button><button type="button" class="cty-btn cty-btn--sm" data-down aria-label="${esc(T(lang, "{v} lejjebb", { v: name }))}">↓</button></span>`;
+
 export function outreachTab(row: CountryOverviewRow, o: OutreachInfo): string {
   const lang = consoleLang();
-  const total = o.eligibleOwn + (o.photoMode === "town" ? o.eligibleFew : 0);
-  const days = o.dailyCap > 0 ? Math.ceil(total / o.dailyCap) : null;
-  const kpi = (v: string, l: string): string => `<div class="hub-kpi"><b>${v}</b><span>${esc(l)}</span></div>`;
-  const mobileLive = o.channels.some((c) => c.live && c.id !== "email");
-  const radio = (mode: "own" | "town", label: string): string =>
-    `<label class="hub-radio"><input type="radio" name="out-mode" value="${mode}" disabled${o.photoMode === mode ? " checked" : ""}> <span>${esc(label)}</span></label>`;
-  const capWhy =
-    o.capSource === "setting"
-      ? T(lang, "globális beállítás (az automata kiküldés napi kerete, a hazai piacé)")
-      : o.capSource === "override"
-        ? T(lang, "globális beállítás (az országra külön megadott keret)")
-        : T(lang, "az ország sora (napi kvóta)");
-  const rules = [
-    T(lang, "két mock saját képpel vagy településképpel"),
-    T(lang, "településképes mock MMS-ben nem megy"),
-    T(lang, "akinek van e-mailje, csak e-mailt kap"),
-    T(lang, "ellenőrizetlen mobilú lead e-mailben mehet"),
-    T(lang, "e-mail cím nélkül nem küldünk"),
-  ];
-  return `<p class="cty-notice cty-notice--info" role="status">${esc(T(lang, "Ez a fül egyelőre csak olvasható: a mai valós működést mutatja, és hogy ma mi dönt róla. A szerkesztés a következő lépésben jön."))}</p>
+  const d = o.draft;
+  const iso = o.iso;
+  const chk = (on: boolean): string => (on ? " checked" : "");
+  const kpi = (id: string, v: string, l: string): string => `<div class="hub-kpi" id="${id}"><b>${v}</b><span>${esc(l)}</span></div>`;
+  const days = d.dailyQuota > 0 ? Math.ceil(o.count.total / d.dailyQuota) : null;
+  const sitesOrdered = [...d.sites, ...(["no_site", "outdated", "modern", "unclassified"] as const).filter((x) => !d.sites.includes(x))];
+  const chOrdered = [...d.channels, ...["email", "sms", "mms", "viber", "whatsapp"].filter((c) => !d.channels.includes(c))];
+  const wdNames = [T(lang, "H"), T(lang, "K"), T(lang, "Sze"), T(lang, "Cs"), T(lang, "P"), T(lang, "Szo"), T(lang, "V")];
+  const radio = (mode: "own" | "own_town", text: string): string =>
+    `<label class="hub-radio"><input type="radio" name="photoMode" value="${mode}"${chk(d.photoMode === mode)}> <span>${text}</span></label>`;
+  const nTag = `<b data-n>${d.minOwnPhotos}</b>`;
+  const radioText = (key: string): string => esc(T(lang, key, { n: "{n}" })).replace("{n}", nTag);
+  const err = (k: string): string => `<p class="cty-f__e" role="alert" data-err="${k}"></p>`;
+  const body = `<form id="out-form" method="post" action="/countries/dispatch" novalidate>
+  <input type="hidden" name="iso" value="${esc(iso)}">
+  <p class="cty-small cty-mut">${esc(T(lang, "Minden tétel ennek az országnak a saját beállítása; az alapérték a mai valós működés. Mentés előtt összesítő mutatja, mi változik és hány leadet érint."))}</p>
   <div class="hub-kpis" id="out-sum">
-    ${kpi(n(total), T(lang, "lead felel meg most"))}
-    ${kpi(n(o.dailyCap), T(lang, "megkeresés naponta"))}
-    ${kpi(esc(o.firstDay ?? "—"), o.windowOpenNow ? T(lang, "első küldési nap (az ablak most nyitva)") : T(lang, "első küldési nap"))}
-    ${kpi(days == null ? "—" : n(days), T(lang, "küldési nap alatt fogy el"))}
+    ${kpi("out-k-total", n(o.count.total), T(lang, "lead felel meg (holnaptól)"))}
+    ${kpi("out-k-day", n(o.dailyCap), T(lang, "megkeresés naponta"))}
+    ${kpi("out-k-first", esc(o.firstDay ?? "—"), o.windowOpenNow ? T(lang, "első küldési nap (az ablak most nyitva)") : T(lang, "első küldési nap"))}
+    ${kpi("out-k-days", days == null ? "—" : n(days), T(lang, "küldési nap alatt fogy el"))}
   </div>
-  <p class="cty-small cty-mut">${esc(T(lang, "A szám a még meg nem keresett, nem tiltott leadekből jön. A mock-, a render- és a minőségi kapu ezen felül szűr, ezért a ténylegesen kimenő szám kisebb lehet."))}</p>
+  <p class="cty-small cty-mut">${esc(T(lang, "A szám a még meg nem keresett, nem tiltott, e-mail címes leadekből jön. A mock-, a render- és a minőségi kapu ezen felül szűr, ezért a ténylegesen kimenő szám kisebb lehet."))}</p>
   ${o.dispatchOn ? "" : `<p class="cty-notice cty-notice--bad">${esc(T(lang, "Az automata kiküldés főkapcsolója ki van kapcsolva — most egyik országban sem megy ki megkeresés."))}</p>`}
   <div class="hub-out">
   <div class="cty-panel hub-card" id="out-1"><h3>${esc(T(lang, "1. Milyen lead mehet"))}</h3>
+    <label class="hub-inl">${esc(T(lang, "Legalább ennyi saját kép"))} <input type="number" name="minOwnPhotos" min="1" max="20" value="${d.minOwnPhotos}" class="hub-num-in"></label>${err("minOwnPhotos")}
     <div class="hub-radios">
-      ${radio("own", T(lang, "Csak saját képes — legalább {n} saját kép; kevesebb képes lead nem megy ki", { n: o.minOwn }))}
-      ${radio("town", T(lang, "Saját képes (legalább {n}) + kevés képes is, településképes nyitóképpel", { n: o.minOwn }))}
+      ${radio("own", radioText("Csak saját képes — legalább {n} saját kép; kevesebb képes lead nem megy ki"))}
+      ${radio("own_town", radioText("Saját képes (legalább {n}) + kevés képes is, településképes nyitóképpel"))}
     </div>
-    <p class="cty-small">${esc(T(lang, "ebből saját képpel: {own} · településképpel: {town}", { own: n(o.eligibleOwn), town: n(o.photoMode === "town" ? o.eligibleFew : 0) }))}</p>
-    ${decides(lang, T(lang, "a kód ({n} saját kép) és a globális „településképes kiküldés” kapcsoló", { n: o.minOwn }))}
-    <dl class="cty-facts"><dt>${esc(T(lang, "MINTA-jelölt szoba- és galériakép"))}</dt><dd>${esc(T(lang, "mehet (6 saját kép alatt)"))}</dd>
-      <dt>${esc(T(lang, "Honlap szerinti sorrend"))}</dt><dd>${esc(T(lang, "nincs honlap → elavult → modern → besorolatlan; az e-mailesek elöl"))}</dd></dl>
-    ${decides(lang, T(lang, "a kód (render-kapu, kiküldési sorrend)"))}</div>
+    <p class="cty-small" id="out-split">${esc(T(lang, "ebből saját képpel: {own} · településképpel: {town}", { own: n(o.count.own), town: n(o.count.town) }))}</p>
+    <label class="hub-chk"><input type="checkbox" name="stockOk" value="1"${chk(d.stockOk)}> ${esc(T(lang, "MINTA-jelölt szoba- és galériakép mehet (kevés saját képnél)"))}</label>
+    <p class="hub-sub">${esc(T(lang, "Honlap szerinti kör, sorrendben (a ki nem pipált nem megy ki):"))}</p>
+    <ol class="hub-ordlist" data-order="sites">${sitesOrdered.map((x) => `<li><label class="hub-chk"><input type="checkbox" name="sites" value="${x}"${chk(d.sites.includes(x))}> ${esc(siteName(lang, x))}</label>${ARROWS(lang, siteName(lang, x))}</li>`).join("")}</ol>${err("sites")}
+    ${decides(lang, T(lang, "a kód (5 saját kép, kiküldési sorrend, render-kapu) és a globális „településképes kiküldés” kapcsoló"))}</div>
   <div class="cty-panel hub-card" id="out-2"><h3>${esc(T(lang, "2. Csatornák sorrendben"))}</h3>
-    <ol class="hub-ch">${o.channels.map((c) => `<li class="${c.live ? "" : "hub-off"}">${esc(chName(lang, c.id))}${c.live ? "" : ` <span class="cty-tag">${esc(T(lang, "nem él"))}</span>`}</li>`).join("")}</ol>
-    ${mobileLive ? `<p class="cty-notice cty-notice--warn">${esc(T(lang, "Mobilcsatorna be van kapcsolva, de az „e-mail cím nélkül nem küldünk” szabály él — mobilon nem indul megkeresés."))}</p>` : ""}
-    ${decides(lang, T(lang, "az ország sora (csatornák)"))}</div>
+    <ol class="hub-ordlist" data-order="channels">${chOrdered.map((c) => {
+      const live = o.cfg.outreachChannels.includes(c);
+      // The e-mail is locked on (the dispatcher sends e-mail only, owner 2026-11-20): shown checked, sent hidden.
+      if (c === "email") return `<li><label class="hub-chk"><input type="checkbox" checked disabled> ${esc(chName(lang, c))}</label><input type="hidden" name="channels" value="email"> <span class="cty-tag">${esc(T(lang, "mindig be"))}</span>${ARROWS(lang, chName(lang, c))}</li>`;
+      return `<li class="${live ? "" : "hub-off"}"><label class="hub-chk"><input type="checkbox" name="channels" value="${c}"${chk(d.channels.includes(c))}${live ? "" : " disabled"}> ${esc(chName(lang, c))}</label>${live ? ARROWS(lang, chName(lang, c)) : ` <span class="cty-tag">${esc(T(lang, "nem él"))}</span>`}</li>`;
+    }).join("")}</ol>${err("channels")}
+    <p class="cty-notice cty-notice--warn" id="out-mobwarn"${d.channels.some((c) => c !== "email") ? "" : " hidden"}>${esc(T(lang, "Mobilcsatorna be van kapcsolva, de az „e-mail cím nélkül nem küldünk” szabály él — mobilon nem indul megkeresés."))}</p>
+    ${decides(lang, T(lang, "az ország sora (csatornák) és a tulaj 11-20-i szabálya: csak e-mail"))}</div>
   <div class="cty-panel hub-card" id="out-3"><h3>${esc(T(lang, "3. Napi keret"))}</h3>
-    <p class="hub-big"><b>${n(o.dailyCap)}</b> ${esc(T(lang, "megkeresés az ország napján · ma eddig {n}", { n: n(o.sentToday) }))}</p>
-    ${o.ramp ? `<p class="cty-small">${esc(T(lang, "Felfutás él: ma legfeljebb {n} megkeresés megy ki az összes országban együtt.", { n: n(o.ramp.capToday) }))}</p>` : ""}
-    ${decides(lang, capWhy)}</div>
+    <label class="hub-inl"><input type="number" name="dailyQuota" min="0" max="5000" value="${d.dailyQuota}" class="hub-num-in"> ${esc(T(lang, "megkeresés az ország napján · ma eddig {n}", { n: n(o.sentToday) }))}</label>${err("dailyQuota")}
+    ${o.ramp ? `<p class="cty-small">${esc(T(lang, "Felfutás él: ma legfeljebb {n} megkeresés megy ki az összes országban együtt, és a hazai keret eddig emelkedik.", { n: n(o.ramp.capToday) }))}</p>` : ""}
+    ${decides(lang, row.entry.home ? T(lang, "globális beállítás (az automata kiküldés napi kerete)") : T(lang, "az ország sora (napi kvóta)"))}</div>
   <div class="cty-panel hub-card" id="out-4"><h3>${esc(T(lang, "4. Jóváhagyás"))}</h3>
-    <p class="hub-big"><b>${esc(T(lang, "Automata"))}</b></p>
-    <ul class="hub-rules">${rules.map((r) => `<li>${ICON.check} ${esc(r)}</li>`).join("")}</ul>
-    ${decides(lang, T(lang, "az éles gép jóváhagyó szkriptje (auto-approve.mts, a fejlesztőgép ütemezője 20 percenként, hétköznap) — a pipálható szabálylista váltja ki"), true)}</div>
+    <div class="hub-radios">
+      <label class="hub-radio"><input type="radio" name="approval" value="owner"${chk(d.approval === "owner")}> <span><b>${esc(T(lang, "Tulaj-jóváhagyás"))}</b> — ${esc(T(lang, "minden levél a Jóváhagyás lapon vár a „Mehet”-re"))}</span></label>
+      <label class="hub-radio"><input type="radio" name="approval" value="auto"${chk(d.approval === "auto")}> <span><b>${esc(T(lang, "Automata"))}</b> — ${esc(T(lang, "a gép hagyja jóvá, ha az alábbi feltételek teljesülnek"))}</span></label>
+    </div>
+    <ul class="hub-rules">${(["twoMocks", "townNoMms", "emailOnly", "uncheckedEmail", "noMailNoSend"] as const).map((k) =>
+      k === "noMailNoSend"
+        ? `<li><label class="hub-chk"><input type="checkbox" checked disabled> ${esc(ruleName(lang, k))}</label><input type="hidden" name="rule_noMailNoSend" value="1"> <span class="cty-tag">${esc(T(lang, "a kiküldő tartja"))}</span></li>`
+        : `<li><label class="hub-chk"><input type="checkbox" name="rule_${k}" value="1"${chk(d.rules[k])}> ${esc(ruleName(lang, k))}</label></li>`,
+    ).join("")}</ul>${err("rules")}
+    <p class="cty-small cty-mut">${esc(o.autoApproveOn
+      ? T(lang, "Az automata jóváhagyás a kiküldő ütemében fut (20 percenként).")
+      : T(lang, "Az automata jóváhagyás a kiküldő ütemében fut; az átállásig ki van kapcsolva, addig az „Automata” beállítás sem hagy jóvá semmit."))}</p>
+    ${decides(lang, T(lang, "az éles gép jóváhagyó szkriptje (auto-approve.mts, a fejlesztőgép ütemezője) — a pipálható szabálylista váltja ki; tulaj 2026-11-26: most minden országban a tulaj hagy jóvá"), true)}</div>
   <div class="cty-panel hub-card" id="out-5"><h3>${esc(T(lang, "5. Időkeret"))}</h3>
-    <dl class="cty-facts"><dt>${esc(T(lang, "Napok"))}</dt><dd>${esc(T(lang, "hétfő–péntek"))}</dd>
-      <dt>${esc(T(lang, "Órák"))}</dt><dd>${esc(`${o.hours.fromHour}:00–${o.hours.toHour}:00 (${o.timeZone})`)}</dd>
-      <dt>${esc(T(lang, "Ünnepnap"))}</dt><dd>${esc(o.holidays ? T(lang, "az ország {n} ünnepnapján nem küldünk", { n: o.holidays }) : T(lang, "nincs felvett ünnepnap"))}</dd></dl>
-    ${decides(lang, T(lang, "a kód ({cf}–{ct} óra) és az ország sora ({rf}–{rt} óra) metszete; a napok a kódban", { cf: o.codeHours.fromHour, ct: o.codeHours.toHour, rf: o.rowHours.fromHour, rt: o.rowHours.toHour }), true)}</div>
+    <div class="hub-wd">${wdNames.map((nm, i) => `<label class="hub-chk hub-chk--day"><input type="checkbox" name="weekdays" value="${1 << i}"${chk((d.weekdays & (1 << i)) !== 0)}> ${esc(nm)}</label>`).join("")}</div>${err("weekdays")}
+    <label class="hub-inl">${esc(T(lang, "Órák"))} <input type="number" name="windowFrom" min="0" max="23" value="${d.sendWindowFrom}" class="hub-num-in"> – <input type="number" name="windowTo" min="1" max="24" value="${d.sendWindowTo}" class="hub-num-in"> ${esc(T(lang, "({tz} szerint)", { tz: o.cfg.timeZone }))}</label>${err("window")}
+    <label class="hub-chk"><input type="checkbox" name="skipHolidays" value="1"${chk(d.skipHolidays)}> ${esc(o.cfg.publicHolidays.length ? T(lang, "az ország {n} ünnepnapján nem küldünk", { n: o.cfg.publicHolidays.length }) : T(lang, "az ország ünnepnapjain nem küldünk (nincs felvett ünnepnap)"))}</label>
+    ${decides(lang, T(lang, "a kód (8–17 óra, hétfő–péntek) és az ország sora — a kódba égetett 8–17 megszűnt"), true)}</div>
   <div class="cty-panel hub-card" id="out-6"><h3>${esc(T(lang, "6. Utánkövetés"))}</h3>
-    <dl class="cty-facts"><dt>${esc(T(lang, "Nem-nyitó levél"))}</dt><dd>${esc(o.nonOpener.dailyCap > 0
-      ? T(lang, "{d} nap után, 1 levél, napi {n}", { d: o.nonOpener.days, n: n(o.nonOpener.dailyCap) })
-      : T(lang, "{d} nap után, 1 levél — szünetel (a napi keret 0)", { d: o.nonOpener.days }))}</dd>
-      <dt>${esc(T(lang, "Eszkalációs ajánlat e-mailben"))}</dt><dd>${esc(o.escalationFollowup ? T(lang, "be") : T(lang, "ki"))}</dd></dl>
-    ${decides(lang, T(lang, "a kód ({d} nap) és két globális beállítás (nem-nyitó napi keret, eszkalációs levél kapcsolója)", { d: o.nonOpener.days }), true)}</div>
-  </div>`;
+    <label class="hub-chk"><input type="checkbox" name="nonOpenerOn" value="1"${chk(d.nonOpener.on)}> ${esc(T(lang, "Nem-nyitó levél"))}</label>
+    <label class="hub-inl"><input type="number" name="nonOpenerDays" min="1" max="90" value="${d.nonOpener.days}" class="hub-num-in"> ${esc(T(lang, "nap után, 1 levél, napi"))} <input type="number" name="nonOpenerCap" min="0" max="5000" value="${d.nonOpener.dailyCap}" class="hub-num-in"></label>${err("nonOpener")}
+    <p class="cty-notice cty-notice--warn" id="out-nowarn"${d.nonOpener.on && d.nonOpener.dailyCap === 0 ? "" : " hidden"}>${esc(T(lang, "A nem-nyitó levél be van kapcsolva, de a napi kerete 0 — így egy sem megy ki."))}</p>
+    <label class="hub-chk"><input type="checkbox" name="escalationFollowup" value="1"${chk(d.escalationFollowup)}> ${esc(T(lang, "Eszkalációs ajánlat e-mailben"))}</label>
+    ${decides(lang, T(lang, "a kód (14 nap) és két globális beállítás (nem-nyitó napi keret, eszkalációs levél kapcsolója)"), true)}</div>
+  </div>
+  <div class="hub-savebar" id="out-bar" hidden><span id="out-dirty"></span>
+    <a class="cty-btn cty-btn--sm ghost" href="${esc(`/countries?iso=${encodeURIComponent(iso)}&tab=out`)}">${esc(T(lang, "Visszaállítás"))}</a>
+    <button type="button" class="cty-btn cty-btn--primary ghost" id="out-review">${esc(T(lang, "Mentés…"))}</button>
+    <noscript><button type="submit" class="cty-btn cty-btn--primary ghost">${esc(T(lang, "Mentés"))}</button></noscript></div>
+  <dialog class="hub-dlg" id="out-dlg" aria-labelledby="out-dlg-h"><h3 id="out-dlg-h">${esc(T(lang, "Kiküldés — mentés előtt"))}</h3>
+    <div id="out-dlg-b"></div>
+    <div class="hub-dlg__f"><button type="button" class="cty-btn cty-btn--sm ghost" id="out-dlg-x">${esc(T(lang, "Vissza"))}</button>
+      <button type="submit" class="cty-btn cty-btn--primary ghost" id="out-save">${esc(T(lang, "Mentés"))}</button></div></dialog>
+  </form>
+  <script type="application/json" id="out-cfg">${jsonForScript({
+    dirty: T(lang, "{n} módosítás — még nincs mentve"),
+    split: T(lang, "ebből saját képpel: {own} · településképpel: {town}"),
+    nowThen: T(lang, "{now} lead felel meg most → {next} lead holnaptól"),
+    perDay: T(lang, "naponta {n} megkeresés"),
+    first: T(lang, "első küldési nap: {d}"),
+    lasts: T(lang, "az állomány {n} küldési nap alatt fogy el"),
+    changes: T(lang, "Módosítások"),
+    nowCol: T(lang, "Most"),
+    newCol: T(lang, "Új"),
+    none: T(lang, "Nincs módosítás."),
+    errs: T(lang, "Javítandó mező van — nem menthető."),
+    gates: T(lang, "A mock-, a render- és a minőségi kapu ezen felül szűr."),
+  })}</script>
+  <script>${OUT_JS}</script>`;
+  return body;
 }
+
+// The tab's script: ordering, the live check (the server computes the count and the changes), the dialog.
+const OUT_JS = `(function(){
+"use strict";
+var f=document.getElementById("out-form");if(!f)return;
+var cfg=JSON.parse(document.getElementById("out-cfg").textContent||"{}");
+var bar=document.getElementById("out-bar"),dlg=document.getElementById("out-dlg"),timer=null,seq=0,last=null;
+var start=new URLSearchParams(new FormData(f)).toString();
+function esc(t){var d=document.createElement("div");d.textContent=String(t);return d.innerHTML;}
+function fmt(s,o){return s.replace(/\\{(\\w+)\\}/g,function(_,k){return o[k];});}
+function num(x){return Number(x).toLocaleString("hu-HU");}
+function check(){
+  var my=++seq;
+  fetch("/countries/dispatch/check",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams(new FormData(f)).toString(),credentials:"same-origin"})
+   .then(function(r){return r.ok?r.json():null;}).then(function(j){
+    if(!j||my!==seq)return;last=j;
+    Array.prototype.forEach.call(f.querySelectorAll("[data-err]"),function(p){p.textContent=(j.errors||{})[p.getAttribute("data-err")]||"";});
+    document.getElementById("out-k-total").querySelector("b").textContent=num(j.count.total);
+    document.getElementById("out-k-day").querySelector("b").textContent=num(j.dailyCap);
+    document.getElementById("out-k-first").querySelector("b").textContent=j.firstDay||"\\u2014";
+    document.getElementById("out-k-days").querySelector("b").textContent=j.days==null?"\\u2014":num(j.days);
+    document.getElementById("out-split").textContent=fmt(cfg.split,{own:num(j.count.own),town:num(j.count.town)});
+    var n=(j.changes||[]).length;bar.hidden=n===0&&new URLSearchParams(new FormData(f)).toString()===start;
+    document.getElementById("out-dirty").textContent=fmt(cfg.dirty,{n:n});
+  }).catch(function(){});
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(check,250);
+  var m=f.querySelector('[name="minOwnPhotos"]').value;Array.prototype.forEach.call(f.querySelectorAll("[data-n]"),function(b){b.textContent=m;});
+  var mob=Array.prototype.some.call(f.querySelectorAll('[name="channels"]:checked'),function(c){return c.value!=="email";});
+  document.getElementById("out-mobwarn").hidden=!mob;
+  document.getElementById("out-nowarn").hidden=!(f.querySelector('[name="nonOpenerOn"]').checked&&Number(f.querySelector('[name="nonOpenerCap"]').value)===0);
+}
+f.addEventListener("input",schedule);f.addEventListener("change",schedule);
+f.addEventListener("click",function(ev){
+  var b=ev.target.closest("[data-up],[data-down]");if(!b)return;ev.preventDefault();
+  var li=b.closest("li"),ul=li.parentNode;
+  if(b.hasAttribute("data-up")&&li.previousElementSibling)ul.insertBefore(li,li.previousElementSibling);
+  else if(b.hasAttribute("data-down")&&li.nextElementSibling)ul.insertBefore(li.nextElementSibling,li);
+  schedule();
+});
+document.getElementById("out-review").addEventListener("click",function(){
+  var j=last;var b=document.getElementById("out-dlg-b");
+  if(!j){check();return;}
+  var errs=Object.keys(j.errors||{}).length;
+  var h='<ul class="hub-dlg__k"><li>'+esc(fmt(cfg.nowThen,{now:num(j.countNow.total),next:num(j.count.total)}))+'</li><li>'+esc(fmt(cfg.split,{own:num(j.count.own),town:num(j.count.town)}))+'</li><li>'+esc(fmt(cfg.perDay,{n:num(j.dailyCap)}))+'</li><li>'+esc(fmt(cfg.first,{d:j.firstDay||"\\u2014"}))+'</li><li>'+esc(fmt(cfg.lasts,{n:j.days==null?"\\u2014":num(j.days)}))+'</li></ul><p class="cty-small cty-mut">'+esc(cfg.gates)+'</p>';
+  h+='<h4>'+esc(cfg.changes)+'</h4>';
+  h+=(j.changes||[]).length?'<table class="hub-dlg__t"><thead><tr><th></th><th>'+esc(cfg.nowCol)+'</th><th>'+esc(cfg.newCol)+'</th></tr></thead><tbody>'+j.changes.map(function(c){return "<tr><td>"+esc(c.label)+"</td><td>"+esc(c.from)+"</td><td><b>"+esc(c.to)+"</b></td></tr>";}).join("")+"</tbody></table>":"<p>"+esc(cfg.none)+"</p>";
+  if(errs)h+='<p class="cty-notice cty-notice--bad">'+esc(cfg.errs)+'</p>';
+  b.innerHTML=h;document.getElementById("out-save").disabled=errs>0||!(j.changes||[]).length;
+  if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","");
+});
+document.getElementById("out-dlg-x").addEventListener("click",function(){if(dlg.close)dlg.close();else dlg.removeAttribute("open");});
+f.addEventListener("submit",function(){start=new URLSearchParams(new FormData(f)).toString();});
+window.addEventListener("beforeunload",function(ev){if(!bar.hidden){ev.preventDefault();ev.returnValue="";}});
+})();`;
 
 // ── page style: tokens only (ADR-0021 ①) ───────────────────────────────────────────────────────
 const HUB_CSS = `
@@ -432,6 +547,27 @@ const HUB_CSS = `
 .hub-big{margin:0 0 6px;font-size:13.5px} .hub-big b{font:700 18px var(--citui-font-display)}
 .cty-notice--info{background:var(--citui-accent-soft);color:var(--citui-ink);font-weight:500}
 .cty-notice--warn{background:color-mix(in srgb,var(--citui-warn) 18%,var(--citui-panel));color:var(--citui-warn-ink);font-weight:500}
+.hub-inl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;margin:4px 0}
+.hub-num-in{width:72px;padding:5px 8px;border:1px solid var(--citui-line-strong);border-radius:var(--citui-radius-sm);background:var(--citui-field);color:var(--citui-ink)}
+.hub-chk{display:inline-flex;gap:8px;align-items:center;font-size:13.5px;margin:3px 0}
+.hub-chk--day{margin-right:6px}
+.hub-wd{display:flex;flex-wrap:wrap;gap:2px 4px;margin:0 0 6px}
+.hub-sub{font-size:12.5px;color:var(--citui-muted);margin:10px 0 4px}
+.hub-ordlist{margin:0;padding-left:22px;font-size:13.5px}
+.hub-ordlist li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 0}
+.hub-ord{display:inline-flex;gap:4px}
+.hub-ord .cty-btn{min-width:30px;padding:2px 6px}
+.hub-savebar{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;margin:12px 0 0;padding:10px 14px;background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:var(--citui-radius);box-shadow:var(--citui-shadow-sm)}
+.hub-savebar[hidden]{display:none}
+.hub-savebar #out-dirty{margin-right:auto;font-weight:600;font-size:13.5px}
+.hub-dlg{max-width:min(640px,94vw);border:1px solid var(--citui-line);border-radius:var(--citui-radius);padding:16px 18px;background:var(--citui-panel);color:var(--citui-ink)}
+.hub-dlg::backdrop{background:color-mix(in srgb,var(--citui-navy-950) 45%,transparent)}
+.hub-dlg h3{margin:0 0 8px;font:600 16px var(--citui-font-display)}
+.hub-dlg h4{margin:12px 0 6px;font-size:13.5px}
+.hub-dlg__k{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6}
+.hub-dlg__t{width:100%;border-collapse:collapse;font-size:13px}
+.hub-dlg__t th,.hub-dlg__t td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--citui-line)}
+.hub-dlg__f{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 @container cty (max-width:760px){
   .hub-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hub-two,.hub-out{grid-template-columns:minmax(0,1fr)}

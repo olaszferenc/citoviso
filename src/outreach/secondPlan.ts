@@ -11,7 +11,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { DEPTH_TEMPLATES } from "../generator/depthArm.js";
 import { MOCK_CURRENT_GENERATOR_SQL } from "./mockPhotoGate.js";
-import { cachedRenderGate } from "./mockRenderGate.js";
+import { cachedRenderGate, stockOkFor } from "./mockRenderGate.js";
 import { qaReviewState } from "./mockQaReview.js";
 
 export interface SecondPlan {
@@ -57,7 +57,7 @@ export async function planChainPassed(plan: SecondPlan | null): Promise<boolean>
   if (qa.state !== "pass") return false;
   const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", plan.id).executeTakeFirst();
   const mtime = await mtimeOf(plan.path);
-  return mtime != null && cachedRenderGate(a?.inputs, mtime)?.verdict === "pass";
+  return mtime != null && cachedRenderGate(a?.inputs, mtime, await stockOkFor(plan.id))?.verdict === "pass";
 }
 
 /** Operator-facing reason the letter may not go out for want of its second plan; null when it passed. */

@@ -59,6 +59,80 @@ export interface CountryConfig {
   // Megkeresés (0139): public holidays — "MM-DD" (every year) or "YYYY-MM-DD" (that day
   // only). The answer to a reply does not go out on them (src/crm/countryClock.ts).
   readonly publicHolidays: readonly string[];
+  // Kiküldés (0155, „Országok / Árazás” 4. fázis): the dispatch rules — countryDispatch.ts reads them.
+  readonly dispatch: CountryDispatch;
+}
+
+/** The dispatch rules of a country (0155). Defaults = the behaviour before the columns existed. */
+export interface CountryDispatch {
+  /** At least this many of the lodging's own photos for the ≥N branch. */
+  readonly minOwnPhotos: number;
+  /** own = only ≥N own photos go; own_town = fewer go too, with the current town pick. */
+  readonly photoMode: "own" | "own_town";
+  /** A MINTA-marked stock picture may stand in a gallery / room slot. */
+  readonly stockOk: boolean;
+  /** The site classes that may go, in claim order (no_site · outdated · modern · unclassified). */
+  readonly sites: readonly DispatchSite[];
+  /** The enabled channels in order (⊆ outreachChannels). */
+  readonly channels: readonly string[];
+  /** auto = the dispatch tick approves by the rules; owner = only the owner's „Mehet” on /jovahagyas. */
+  readonly approval: "auto" | "owner";
+  readonly rules: DispatchRules;
+  /** Weekday bits: Mon=1 Tue=2 Wed=4 Thu=8 Fri=16 Sat=32 Sun=64. */
+  readonly weekdays: number;
+  readonly skipHolidays: boolean;
+  readonly nonOpener: { readonly on: boolean; readonly days: number; readonly count: number; readonly dailyCap: number };
+  readonly escalationFollowup: boolean;
+}
+
+export const DISPATCH_SITES = ["no_site", "outdated", "modern", "unclassified"] as const;
+export type DispatchSite = (typeof DISPATCH_SITES)[number];
+export const DISPATCH_RULE_KEYS = ["twoMocks", "townNoMms", "emailOnly", "uncheckedEmail", "noMailNoSend"] as const;
+export type DispatchRules = Readonly<Record<(typeof DISPATCH_RULE_KEYS)[number], boolean>>;
+/** Mon–Fri. */
+export const WEEKDAYS_MON_FRI = 31;
+
+/** The dispatch defaults — the code's behaviour before 0155 (also what a row without the columns reads). */
+export const DISPATCH_DEFAULTS: CountryDispatch = {
+  minOwnPhotos: 5,
+  photoMode: "own",
+  stockOk: true,
+  sites: DISPATCH_SITES,
+  channels: ["email"],
+  approval: "owner",
+  rules: { twoMocks: true, townNoMms: true, emailOnly: true, uncheckedEmail: true, noMailNoSend: true },
+  weekdays: WEEKDAYS_MON_FRI,
+  skipHolidays: true,
+  nonOpener: { on: false, days: 14, count: 1, dailyCap: 0 },
+  escalationFollowup: false,
+};
+
+function dispatchOf(r: Record<string, unknown>): CountryDispatch {
+  const d = DISPATCH_DEFAULTS;
+  const int = (v: unknown, def: number): number => (v === undefined || v === null || !Number.isFinite(Number(v)) ? def : Number(v));
+  const bool = (v: unknown, def: boolean): boolean => (typeof v === "boolean" ? v : def);
+  const sites = Array.isArray(r.dispatch_sites)
+    ? r.dispatch_sites.filter((x): x is DispatchSite => (DISPATCH_SITES as readonly string[]).includes(x as string))
+    : d.sites;
+  const rulesRaw = (r.dispatch_rules && typeof r.dispatch_rules === "object" ? r.dispatch_rules : {}) as Record<string, unknown>;
+  return {
+    minOwnPhotos: int(r.dispatch_min_own_photos, d.minOwnPhotos),
+    photoMode: r.dispatch_photo_mode === "own_town" ? "own_town" : r.dispatch_photo_mode === "own" ? "own" : d.photoMode,
+    stockOk: bool(r.dispatch_stock_ok, d.stockOk),
+    sites,
+    channels: Array.isArray(r.dispatch_channels) ? strList(r.dispatch_channels) : d.channels,
+    approval: r.dispatch_approval === "auto" ? "auto" : r.dispatch_approval === "owner" ? "owner" : d.approval,
+    rules: Object.fromEntries(DISPATCH_RULE_KEYS.map((k) => [k, bool(rulesRaw[k], d.rules[k])])) as DispatchRules,
+    weekdays: int(r.send_weekdays, d.weekdays),
+    skipHolidays: bool(r.skip_holidays, d.skipHolidays),
+    nonOpener: {
+      on: bool(r.nonopener_on, d.nonOpener.on),
+      days: int(r.nonopener_days, d.nonOpener.days),
+      count: int(r.nonopener_count, d.nonOpener.count),
+      dailyCap: int(r.nonopener_daily_cap, d.nonOpener.dailyCap),
+    },
+    escalationFollowup: bool(r.escalation_followup, d.escalationFollowup),
+  };
 }
 
 /** The columns, in the order the snapshot query and the kysely refresh both read them. */
@@ -111,6 +185,7 @@ function toConfig(r: Row): CountryConfig {
     paymentProvider: String(r.payment_provider),
     touristTaxModel: r.tourist_tax_model === "hu" ? "hu" : "none",
     publicHolidays: strList(r.public_holidays).filter((d) => /^(?:\d{4}-)?\d{2}-\d{2}$/.test(d)),
+    dispatch: dispatchOf(r as Record<string, unknown>),
   };
 }
 
@@ -138,7 +213,8 @@ function install(rows: readonly Row[]): void {
   const client = new pg.Client(poolConfig());
   try {
     await client.connect();
-    const res = await client.query<Row>(`SELECT ${COLUMNS.join(", ")} FROM country`);
+    // SELECT *: the 0155 dispatch columns are optional (a DB before the migration reads DISPATCH_DEFAULTS).
+    const res = await client.query<Row>(`SELECT * FROM country`);
     install(res.rows);
   } catch (err) {
     // Loud and fatal: a process that cannot see the country layer must not quietly run
@@ -151,7 +227,7 @@ function install(rows: readonly Row[]): void {
 
 /** Re-read the table now (the console's save, a test that inserted a row). */
 export async function refreshCountries(): Promise<void> {
-  const rows = await db.selectFrom("country").select([...COLUMNS]).execute();
+  const rows = await db.selectFrom("country").selectAll().execute();
   install(rows as unknown as Row[]);
 }
 

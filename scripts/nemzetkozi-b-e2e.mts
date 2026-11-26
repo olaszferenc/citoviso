@@ -142,7 +142,7 @@ try {
   const { enqueueDispatch, runDispatchTick, setAutoDispatchSettings } = await import("../src/outreach/autoDispatch.js");
   await db.deleteFrom("outreach_dispatch").where("lead_id", "=", w.leadId).execute();
   await db.insertInto("outreach_dispatch").values({ lead_id: w.leadId, artifact_id: art.mock_artifact_id, queued_by: "e2e" } as never).execute();
-  await setAutoDispatchSettings({ enabled: true, dailyCap: 40 });
+  await setAutoDispatchSettings({ enabled: true });
   const tick = await runDispatchTick(MON, { force: true });
   check("kiküldési sor: kihagyva (válaszolt / tiltott)", tick.kind === "done" && tick.status === "skipped", JSON.stringify(tick));
   void enqueueDispatch;

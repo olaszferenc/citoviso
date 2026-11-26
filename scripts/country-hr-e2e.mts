@@ -236,7 +236,9 @@ try {
 
   // ── ⑥ mobile-only ───────────────────────────────────────────────────────────────────────
   console.log("⑥ csak-mobilos HR lead: TARTVA");
-  const artM = await db.insertInto("mock_artifact").values({ lead_id: hrMob, status: "approved", inputs: { review: { verdict: "pass" } } } as never).returning("id").executeTakeFirstOrThrow();
+  // On one of the owner's templates (ADR-0423's retired-template gate comes first and would answer otherwise —
+  // this step measures the COUNTRY's mobile gate).
+  const artM = await db.insertInto("mock_artifact").values({ lead_id: hrMob, status: "approved", inputs: { review: { verdict: "pass" }, recipe: { template: "wordmark-grow" }, siteData: {} } } as never).returning("id").executeTakeFirstOrThrow();
   const pM = await db.insertInto("prospect").values({ lead_id: hrMob, token: `hre2em${Date.now().toString(36)}`, mock_artifact_id: artM.id, contact_email: null } as never)
     .returning("id").executeTakeFirstOrThrow();
   const gM = await mobileOutreachGates(pM.id);

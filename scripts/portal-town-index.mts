@@ -5,7 +5,7 @@
 //   npx tsx scripts/portal-town-index.mts <leadId> … [--dry-run]
 //
 // Takes the run's no_site / outdated leads that have FEWER than 5 own photos (the dispatch floor,
-// autoDispatch.DISPATCH_MIN_OWN_PHOTOS) — --all takes every one — asks the town index for candidate
+// mockPhotoGate.DEFAULT_MIN_OWN_PHOTOS — a country row may set its own) — --all takes every one — asks the town index for candidate
 // listings, and hands them to attachPhotoLinks: the entity-match gate, the photo filters and the
 // provenance stay the reader's. --dry-run only lists the candidates (reads the town pages, writes nothing).
 // A lead whose country lexicon has no `portalTownIndexes` (HU) is skipped.
@@ -13,7 +13,7 @@ import { db } from "../src/db/client.js";
 import { refreshCountries } from "../src/country.js";
 import { attachPhotoLinks } from "../src/scraper/attachPhotoLinks.js";
 import { townIndexCandidates } from "../src/scraper/sources/portals/townIndex.js";
-import { DISPATCH_MIN_OWN_PHOTOS } from "../src/outreach/autoDispatch.js";
+import { DEFAULT_MIN_OWN_PHOTOS } from "../src/outreach/mockPhotoGate.js";
 
 const args = process.argv.slice(2);
 const dry = args.includes("--dry-run");
@@ -39,7 +39,7 @@ const own = (m: Record<string, unknown> | undefined): number =>
 const tally = { leads: rows.length, skippedEnough: 0, noCandidate: 0, candidates: 0, attached: 0, photos: 0, rejected: 0 };
 for (const r of rows) {
   const raw = (typeof r.raw === "string" ? JSON.parse(r.raw) : r.raw) as Raw;
-  if (!all && own(raw.material) >= DISPATCH_MIN_OWN_PHOTOS) {
+  if (!all && own(raw.material) >= DEFAULT_MIN_OWN_PHOTOS) {
     tally.skippedEnough++;
     continue;
   }

@@ -14,7 +14,7 @@ import { sql } from "kysely";
 import { db } from "../src/db/client.js";
 import { townVerdict, TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION, type TownPick, type TownScores } from "../src/media/townPick.js";
 import { shareTownSet, townKey, townName, type TownPhotoSetRow } from "../src/media/townPhotoSet.js";
-import { DISPATCH_PHOTOS_OK_SQL, MOCK_TOWN_PICK_OK_SQL, TOWN_PHOTO_DISPATCH_KEY } from "../src/outreach/mockPhotoGate.js";
+import { DISPATCH_PHOTOS_OK_SQL, MOCK_TOWN_PICK_OK_SQL } from "../src/outreach/mockPhotoGate.js";
 
 let failed = 0;
 function check(label: string, ok: boolean): void {
@@ -71,11 +71,12 @@ const few = mock({ photos: [{ url: "o1" }, { url: "o2" }], townGallery: [{ url: 
 const five = mock({ photos: [1, 2, 3, 4, 5].map((i) => ({ url: `o${i}` })) });
 const ok = async (inputs: string, leadPhotos: number, on: boolean): Promise<boolean> =>
   db.transaction().execute(async (trx) => {
-    await sql`delete from app_setting where key = ${TOWN_PHOTO_DISPATCH_KEY}`.execute(trx);
-    if (on) await sql`insert into app_setting (key, value) values (${TOWN_PHOTO_DISPATCH_KEY}, 'on')`.execute(trx);
+    // 0155: the switch is the lead's country row (dispatch_photo_mode) — set inside the rolled-back transaction.
+    await sql`update country set dispatch_photo_mode = ${on ? "own_town" : "own"}, dispatch_min_own_photos = 5 where iso2 = 'HU'`.execute(trx);
     const r = await sql<{ ok: boolean }>`
       select ${DISPATCH_PHOTOS_OK_SQL} as ok
-        from (select jsonb_build_object('material', jsonb_build_object('placesPhotos', ${leadPhotos}::int)) as raw) l,
+        from (select jsonb_build_object('country', 'HU', 'material', jsonb_build_object('placesPhotos', ${leadPhotos}::int)) as raw,
+                     null::uuid as scrape_run_id) l,
              (select ${inputs}::jsonb as inputs) a`.execute(trx);
     const v = Boolean(r.rows[0]?.ok);
     throw Object.assign(new Error("rollback"), { v });
@@ -85,7 +86,8 @@ check("BE kapcsolónál a kép nélküli mock aktuális választással mehet", a
 check("BE kapcsolónál a régi (bélyeg nélküli) településkép nem mehet", !(await ok(old, 0, true)));
 check("BE kapcsolónál a kevés képes mock a helyi galéria bélyegével mehet", await ok(few, 2, true));
 check("≥5 saját képes lead: a régi szabály (5 kép, nincs településkép) — kapcsolótól függetlenül", (await ok(five, 7, false)) && !(await ok(cur, 7, true)));
-check("a kapcsoló kulcsa a kapu SQL-jében van", src("src/outreach/mockPhotoGate.ts").includes("TOWN_PHOTO_DISPATCH_KEY") && /town_photo_dispatch/.test(String(TOWN_PHOTO_DISPATCH_KEY)));
+check("a kapcsoló az ország sorában él (0155), a régi globális kulcs nincs a kapuban",
+  src("src/outreach/mockPhotoGate.ts").includes("dispatch_photo_mode = 'own_town'") && !src("src/outreach/mockPhotoGate.ts").includes("app_setting"));
 void MOCK_TOWN_PICK_OK_SQL;
 
 // ── ④ the render gate wiring ──

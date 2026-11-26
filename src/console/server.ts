@@ -2456,6 +2456,66 @@ async function handle(
     }
     return send(res, 200, hubCountryPage({ row, tab, notice, editor, editorOpen: rawStep !== null, tabHtml }));
   }
+  // POST /contact-checked — „Országok / Árazás” 4. fázis (0155): the contact chain marks the leads whose
+  // mobile presence it checked (lead.contact_checked_at) — the same console path it writes the leads'
+  // data on (operator login + the origin guard), instead of the done-files the Debian cron uploaded as
+  // /opt/citoviso/checked-ids.txt. Body: ids=<uuid>[,\n…] (form). Idempotent; answers JSON {marked, given}.
+  if (method === "POST" && path === "/contact-checked") {
+    const op = await currentOperator(req);
+    if (!op) return send(res, 401, JSON.stringify({ error: "login" }), "application/json");
+    const form = await readBody(req);
+    const ids = (form.get("ids") ?? "").split(/[\s,]+/).filter((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x));
+    if (ids.length > 20_000) return send(res, 413, JSON.stringify({ error: "too many ids (max 20000)" }), "application/json");
+    const { markContactChecked } = await import("../outreach/autoApprove.js");
+    const marked = await markContactChecked(ids);
+    console.log(`[console] contact-checked: ${marked}/${ids.length} új jel — ${op.username}`); // i18n-exempt: operátori napló
+    return send(res, 200, JSON.stringify({ marked, given: ids.length }), "application/json");
+  }
+  // POST /countries/dispatch/check · POST /countries/dispatch — „Országok / Árazás” 4. fázis (0155): the
+  // „Kiküldés” tab. The check answers the draft's errors, the count of the qualifying leads (now and under
+  // the draft), the day's numbers and the changes „Most → Új” (JSON, writes nothing); the save validates
+  // again with the same rules (countryDispatch.ts) and writes the row — nothing on an error.
+  if (method === "POST" && (path === "/countries/dispatch/check" || path === "/countries/dispatch")) {
+    const op = await currentOperator(req);
+    if (!op) return path.endsWith("/check") ? send(res, 401, JSON.stringify({ error: "login" }), "application/json") : redirect(res, "/login");
+    const lang = consoleLang();
+    const form = await readBody(req);
+    const iso = (form.get("iso") ?? "").trim().toUpperCase();
+    const { storedDispatch, draftFromDispatchForm, validateDispatch, countEligible, dispatchChanges, saveDispatch } = await import("../countryDispatch.js");
+    const stored = /^[A-Z]{2}$/.test(iso) ? await storedDispatch(iso) : null;
+    if (!stored) return path.endsWith("/check") ? send(res, 404, JSON.stringify({ error: "country" }), "application/json") : redirect(res, "/countries");
+    const draft = draftFromDispatchForm(form, stored.draft);
+    const errors = validateDispatch(draft, stored.cfg, lang);
+    const back = (msg: string): void => redirect(res, `/countries?iso=${encodeURIComponent(iso)}&tab=out&mk=${encodeURIComponent(msg)}`);
+    if (path.endsWith("/check")) {
+      const { firstSendDay } = await import("./countryData.js");
+      const [count, countNow] = await Promise.all([countEligible(iso, draft), countEligible(iso, stored.draft)]);
+      const { dispatchStatus } = await import("../outreach/autoDispatch.js");
+      const ds = await dispatchStatus();
+      const home = iso === "HU";
+      const dailyCap = home && ds.ramp ? Math.max(draft.dailyQuota, ds.ramp.capToday) : draft.dailyQuota;
+      return send(
+        res,
+        200,
+        JSON.stringify({
+          errors,
+          count,
+          countNow,
+          dailyCap,
+          days: dailyCap > 0 ? Math.ceil(count.total / dailyCap) : null,
+          firstDay: firstSendDay(new Date(), stored.cfg, draft),
+          changes: dispatchChanges(stored.draft, draft, lang),
+        }),
+        "application/json",
+      );
+    }
+    if (Object.keys(errors).length) return back(`hiba:${T(lang, "Nem mentettem: {why}", { why: Object.values(errors).join(" · ") })}`);
+    const changes = dispatchChanges(stored.draft, draft, lang);
+    if (!changes.length) return back(`ok:${T(lang, "Nem volt módosítás.")}`);
+    await saveDispatch(iso, draft);
+    console.log(`[console] kiküldés-beállítás mentve: ${iso} — ${op.username}: ${changes.map((c) => `${c.label} ${c.from}→${c.to}`).join("; ")}`); // i18n-exempt: operátori napló
+    return back(`ok:${T(lang, "{iso} kiküldési beállításai mentve ({n} módosítás).", { iso, n: changes.length })}`);
+  }
   // POST /countries/check — the live check of the open editor: the unsaved form → field
   // errors + the re-rendered readiness fragments (JSON). Writes nothing.
   if (method === "POST" && path === "/countries/check") {

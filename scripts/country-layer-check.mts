@@ -75,8 +75,7 @@ import {
   resolveCountryCode,
 } from "../src/country.js";
 import { DEFAULT_LANG, langForCountry } from "../src/i18n/lang.js";
-import { SEND_WINDOW } from "../src/sms/sendWindow.js";
-import { DEFAULT_DAILY_CAP } from "../src/outreach/autoDispatch.js";
+import { MOCK_OUTREACH_WINDOW } from "../src/sms/sendWindow.js";
 import { scoutKeywords, scoutTileLonDeg, SCOUT_TILE_LON_DEG } from "../src/scout/rules.js";
 import { osmAreaForRegion } from "../src/scraper/regions.js";
 import { discoveryAreas, discoveryRegionId, discoveryStart, orderFromStart } from "../src/scout/discoveryAreas.js";
@@ -122,6 +121,12 @@ if (hu) {
       check(`HU.${k} lista`, Array.isArray(v), JSON.stringify(v));
       continue;
     }
+    // 0155: the dispatch rules are one object of mixed values (numbers, booleans, lists) — read from the row.
+    if (k === "dispatch") {
+      const dsp = v as { minOwnPhotos?: unknown; sites?: unknown; channels?: unknown } | null;
+      check("HU.dispatch a sorból (szám, kör, csatorna)", !!dsp && Number.isInteger(dsp.minOwnPhotos) && Array.isArray(dsp.sites) && Array.isArray(dsp.channels), JSON.stringify(v));
+      continue;
+    }
     const filled =
       typeof v === "string" ? v.trim().length > 0
       : typeof v === "number" ? Number.isFinite(v)
@@ -143,9 +148,11 @@ if (hu) {
   check("HU.defaultLang = DEFAULT_LANG", hu.defaultLang === DEFAULT_LANG, hu.defaultLang);
   check("HU.timeZone = APP_TZ = COUNTRY_DEFAULT_TIME_ZONE.HU", hu.timeZone === APP_TZ && hu.timeZone === COUNTRY_DEFAULT_TIME_ZONE[HOME]);
   check("defaultTimeZoneForCountry(HU) a sorból", defaultTimeZoneForCountry(HOME) === hu.timeZone);
-  check("HU.sendWindow = SEND_WINDOW", hu.sendWindowFrom === SEND_WINDOW.fromHour && hu.sendWindowTo === SEND_WINDOW.toHour,
-    `${hu.sendWindowFrom}–${hu.sendWindowTo} vs ${SEND_WINDOW.fromHour}–${SEND_WINDOW.toHour}`);
-  check("HU.dailyQuota = DEFAULT_DAILY_CAP", hu.dailyQuota === DEFAULT_DAILY_CAP, `${hu.dailyQuota} vs ${DEFAULT_DAILY_CAP}`);
+  // 0155 („Országok / Árazás” 4. fázis): the row IS the cold window — the migration wrote the old
+  // intersection (8–20 ∩ the owner's 8–17) into it; and the row's daily_quota is the HU cap.
+  check("HU.sendWindow = a régi megkeresési ablak (0155: a sor az egyetlen ablak)", hu.sendWindowFrom === MOCK_OUTREACH_WINDOW.fromHour && hu.sendWindowTo === MOCK_OUTREACH_WINDOW.toHour,
+    `${hu.sendWindowFrom}–${hu.sendWindowTo} vs ${MOCK_OUTREACH_WINDOW.fromHour}–${MOCK_OUTREACH_WINDOW.toHour}`);
+  check("HU.dailyQuota egész ≥ 0 (0155: a sor a hazai napi keret)", Number.isInteger(hu.dailyQuota) && hu.dailyQuota >= 0, String(hu.dailyQuota));
   // The worksheet reads the row now (scoutKeywords); the stored HU tiles' `kw` keys are these
   // six strings — the guard's own frozen copy, so the row can never silently rename a column.
   const HU_TILE_KW_KEYS = ["szállás", "hotel", "panzió", "apartman", "vendégház", "kemping"];
@@ -693,7 +700,7 @@ SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file}
   check("hiányzó nyelvi csomag = TARTVA „Bábelre vár” (levél, mobil)", /babelHoldReason\(d\.lang, missing\)/.test(batch) && /babelHoldReason\(d\.lang, missing\)/.test(sms));
   check(
     "a kvóta országonként (saját nap, saját számláló), a sor az országot nézi",
-    /dailyCapFor\(cfg, settings, DISPATCH_HOME_COUNTRY\)/.test(auto) && /countryOfLeads\(rows\.map/.test(auto) && /country: known\?\.iso2 \?\? iso/.test(auto),
+    /dailyCapFor\(cfg, DISPATCH_HOME_COUNTRY, rampCap\)/.test(auto) && /countryOfLeads\(rows\.map/.test(auto) && /country: known\?\.iso2 \?\? iso/.test(auto),
   );
   check(
     "a megkeresés nyelve az ország nyelve, a render a magyar fallbackjeit hordozza, az ellenőrző méri",
@@ -723,7 +730,7 @@ SEND_ALLOW.forEach((a, i) => check(`ALLOW él (különben törlendő): ${a.file}
       return (old && isHuMobileE164(old) ? old : null) !== leadMobileIn(x, hu);
     });
     check("a HU-sor mobil-ítélete = a régi normalizePhone + isHuMobileE164", diff.length === 0, diff.join(", "));
-    check("a HU-kvóta a beállított napi plafon (ma 40)", dailyCapFor(hu, { dailyCap: 40 }, HOME) === 40 && dailyCapFor(hu, { dailyCap: 7, countryCaps: { HU: 99 } }, HOME) === 7);
+    check("a HU-kvóta a sor napi kvótája; a felfutás csak felfelé emeli (0155)", dailyCapFor({ ...hu, dailyQuota: 100 }, HOME) === 100 && dailyCapFor({ ...hu, dailyQuota: 100 }, HOME, 300) === 300 && dailyCapFor({ ...hu, dailyQuota: 100 }, HOME, 50) === 100 && dailyCapFor({ ...hu, iso2: "HR", dailyQuota: 20 }, HOME, 300) === 20);
   }
   check("ismeretlen ország: nincs ablak, nincs mobil-pár", outreachWindowBlocksIn(new Date(), null) !== null && modemPairBlocks(null) !== null);
   check("bolgár/görög SMS nem hajlik GSM-7-re, a cseh igen", !gsm7FoldableLang("bg") && !gsm7FoldableLang("el") && gsm7FoldableLang("cs") && gsm7FoldableLang("hu"));
@@ -1050,7 +1057,7 @@ console.log("\n⑬ NEMZETKÖZI B — utánkövetés, válasz, elutasító (2026-
   const cmp = src("src/outreach/trialCampaign.ts");
   const sms = src("src/outreach/sendOutreachSms.ts");
   check("az utánkövetők a LEAD órájával (eszkalációs, nem-nyitó, viselkedés, próba)",
-    /followupWindowBlocksIn\(now, await leadCountryCfg\(/.test(esc) && /mockWindowBlocksIn\(deps\.now \?\? new Date\(\), await leadCountryCfg\(c\.leadId\)\)/.test(non) &&
+    /const leadCfg = await leadCountryCfg\(p!\.lead_id\)[\s\S]{0,400}followupWindowBlocksIn\(now, leadCfg,/.test(esc) && /mockWindowBlocksIn\(deps\.now \?\? new Date\(\), await leadCountryCfg\(c\.leadId\)\)/.test(non) &&
       /behaviorWindowBlocksIn\(now, await leadCountryCfg\(c\.leadId\)\)/.test(beh) && /trialDayOf\(now, started, cfg\?\.timeZone\)/.test(tri) && /mockWindowBlocksIn\(now, cfg\)/.test(tri));
   check("védőháló: minden küldő nézi a lead.contact_block_at-ot (eszkalációs, nem-nyitó, viselkedés, próba-kampány, hideg mobil, szám-szintű tiltás, próba-eszkaláció)",
     /p\?\.contact_block_at/.test(esc) && /lead\.contact_block_at \|\|/.test(non) && /lead\.contact_block_at \|\|/.test(beh) && /lead\.contact_block_at \|\|/.test(cmp) &&

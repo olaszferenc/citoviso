@@ -8,7 +8,8 @@
 //   tsx scripts/outreach-dispatch.mts requeue <leadId> --by=<name>
 //   tsx scripts/outreach-dispatch.mts cancel <leadId> --by=<name> --reason="…"
 //   tsx scripts/outreach-dispatch.mts on|off
-//   tsx scripts/outreach-dispatch.mts cap <n> [--country=CZ]          # HU (home) cap, or one country's own cap (ADR-0437/3-5)
+//   tsx scripts/outreach-dispatch.mts cap <n> [--country=CZ]          # the country row's daily_quota (HU by default; 0155)
+//   tsx scripts/outreach-dispatch.mts auto-approve dry|on|off          # 0155: the tick's automatic approval (autoApprove.ts)
 //   tsx scripts/outreach-dispatch.mts ramp <startCap> [--growth=30] [--max=3000] [--start=YYYY-MM-DD]
 //        the cold lane's ramp (coldRamp.ts): the day's total climbs from startCap by growth% per
 //        working day up to max; each firing sends its even share; the brake judges yesterday
@@ -227,22 +228,36 @@ async function main(): Promise<void> {
       console.log((await cancelDispatch(leadId, needBy(), reason)) ? "OK visszavonva" : "nincs várakozó/tartott sora");
       return;
     }
+    case "auto-approve": {
+      // 0155: the dispatch tick's automatic approval (autoApprove.ts). `dry` lists what it would approve now;
+      // `on` / `off` flip outreach_auto.autoApprove. ⛔ `on` only after the Debian crontab's old auto-approve
+      // line is commented out (the cutover step) — the two together approve twice.
+      const sub = pos[0];
+      if (sub === "on" || sub === "off") {
+        console.log(JSON.stringify(await setAutoDispatchSettings({ autoApprove: sub === "on" })));
+        return;
+      }
+      if (sub !== "dry") throw new Error("auto-approve dry|on|off");
+      const { runAutoApprove } = await import("../src/outreach/autoApprove.js");
+      const r = await runAutoApprove({ go: false });
+      console.log(`pending=${r.pending} pick=${r.picks.length} ${JSON.stringify(r.by)} owner=${r.ownerLeft} dry`);
+      for (const p of r.picks) console.log(`  ${p.item.leadId}  ${p.key}  ${p.item.country}  ${p.item.name}`);
+      return;
+    }
     case "on":
     case "off": {
       console.log(JSON.stringify(await setAutoDispatchSettings({ enabled: cmd === "on" })));
       return;
     }
     case "cap": {
+      // „Országok / Árazás” 4. fázis (0155): the cap is the country row's daily_quota (the Kiküldés tab writes the same).
       const n = Number(pos[0]);
       if (!Number.isInteger(n) || n < 0) throw new Error("cap <egész szám ≥ 0> [--country=XX]");
-      const cc = opt("country")?.trim().toUpperCase();
-      if (cc && cc !== DISPATCH_HOME_COUNTRY) {
-        if (!/^[A-Z]{2}$/.test(cc)) throw new Error("--country=<ISO-2>");
-        const cur = await getAutoDispatchSettings();
-        console.log(JSON.stringify(await setAutoDispatchSettings({ countryCaps: { ...(cur.countryCaps ?? {}), [cc]: n } })));
-      } else {
-        console.log(JSON.stringify(await setAutoDispatchSettings({ dailyCap: n })));
-      }
+      const cc = (opt("country")?.trim().toUpperCase() || DISPATCH_HOME_COUNTRY);
+      if (!/^[A-Z]{2}$/.test(cc)) throw new Error("--country=<ISO-2>");
+      const r = await db.updateTable("country").set({ daily_quota: n }).where("iso2", "=", cc).executeTakeFirst();
+      if (!Number(r.numUpdatedRows)) throw new Error(`nincs ${cc} ország-sor`);
+      console.log(`OK ${cc} napi keret = ${n}`);
       return;
     }
     case "list": {

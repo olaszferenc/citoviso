@@ -32,14 +32,12 @@
 
 import { config } from "../src/config.js";
 import { db } from "../src/db/client.js";
-import { getSetting, setSetting } from "../src/console/appSettings.js";
 import { foldFollowupCell } from "../src/console/openChannels.js";
 import { attributeOpen, loadProspectFacts, reportPeriod } from "../src/console/reportData.js";
 import { nonOpenerHtmlFor, renderNonOpenerLetter, type NonOpenerLetter, type NonOpenerLetterInput } from "../src/email/nonOpenerEmail.js";
 import type { EmailMessage, EmailSender } from "../src/email/sender.js";
 import { prepareMailLang } from "../src/i18n/mail.js";
 import {
-  NONOPENER_DAILY_CAP_KEY,
   listNonOpenerCandidates,
   runNonOpenerFollowups,
   sendNonOpenerFollowup,
@@ -198,9 +196,16 @@ class Recorder implements EmailSender {
   }
 }
 
-const savedCap = SELF_TEST ? null : await getSetting(NONOPENER_DAILY_CAP_KEY);
+// 0155: the switch, delay and cap are the HU ROW's (nonopener_on / _days / _daily_cap) — set for the walk, restored after.
+const { refreshCountries } = await import("../src/country.js");
+const savedHu = SELF_TEST ? null : await db.selectFrom("country").select(["nonopener_on", "nonopener_days", "nonopener_daily_cap"]).where("iso2", "=", "HU").executeTakeFirst();
+const setHuNonOpener = async (v: { nonopener_on: boolean; nonopener_days: number; nonopener_daily_cap: number }): Promise<void> => {
+  await db.updateTable("country").set({ nonopener_on: v.nonopener_on, nonopener_days: v.nonopener_days, nonopener_daily_cap: v.nonopener_daily_cap }).where("iso2", "=", "HU").execute();
+  await refreshCountries();
+};
 if (!SELF_TEST) {
   try {
+    await setHuNonOpener({ nonopener_on: true, nonopener_days: 14, nonopener_daily_cap: 40 });
     const def = await db
       .insertInto("scraper_definition")
       .values({ label: `_nonopenercheck_${stamp}`, country: "HU", region: "_test", industry: "accommodation", sources: JSON.stringify(["osm"]) })
@@ -301,14 +306,14 @@ if (!SELF_TEST) {
       check("⑤ újrakeresés: levél nélküli lead nincs a körben", others.length === 0, String(others.length));
     }
 
-    await setSetting(NONOPENER_DAILY_CAP_KEY, "0");
+    await setHuNonOpener({ nonopener_on: true, nonopener_days: 14, nonopener_daily_cap: 0 });
     const capped = await runNonOpenerFollowups(WEEKDAY, base);
-    check("③ napi keret 0 → a tick semmit nem küld", capped.sent === 0 && !!capped.deferred, JSON.stringify(capped));
+    // 0155: the cap is the lead's country row's — a HU cap of 0 sends no HU letter (other countries may still have room).
+    check("③ napi keret 0 (HU sor) → a tick egy HU levelet sem küld", capped.sent === 0, JSON.stringify(capped));
     const closed = await runNonOpenerFollowups(SATURDAY, base);
     check("③ hétvégén a tick semmit nem kérdez le", closed.sent === 0 && !!closed.deferred);
   } finally {
-    if (savedCap === null) await db.deleteFrom("app_setting").where("key", "=", NONOPENER_DAILY_CAP_KEY).execute();
-    else await setSetting(NONOPENER_DAILY_CAP_KEY, savedCap);
+    if (savedHu) await setHuNonOpener(savedHu);
     for (const p of prospects) {
       await db.deleteFrom("mock_view").where("prospect_id", "=", p).execute();
       await db.deleteFrom("mms_outbox").where("prospect_id", "=", p).execute();

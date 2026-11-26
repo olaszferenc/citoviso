@@ -9,7 +9,7 @@ import { db } from "../src/db/client.js";
 import {
   NONOPENER_EXCLUSION_LABEL,
   listNonOpenerCandidates,
-  nonOpenerDailyCap,
+  nonOpenerDailyCapOf,
   sendNonOpenerFollowup,
   type NonOpenerExclusion,
 } from "../src/outreach/nonOpenerFollowup.js";
@@ -19,7 +19,7 @@ try {
   const ok = list.filter((c) => !c.excluded);
   const counts = new Map<NonOpenerExclusion, number>();
   for (const c of list) if (c.excluded) counts.set(c.excluded, (counts.get(c.excluded) ?? 0) + 1);
-  console.log(`e-mailt kapott lead: ${list.length} · utánkövető-célpont most: ${ok.length} · napi keret: ${await nonOpenerDailyCap()}`);
+  console.log(`e-mailt kapott lead: ${list.length} · utánkövető-célpont most: ${ok.length} · napi keret (HU sor): ${nonOpenerDailyCapOf("HU")}`);
   for (const [k, n] of [...counts.entries()].sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(5)}  ${NONOPENER_EXCLUSION_LABEL[k]}`);
   console.log("\nkövetkezők (sorrendben):");
   for (const c of ok.slice(0, 20)) {

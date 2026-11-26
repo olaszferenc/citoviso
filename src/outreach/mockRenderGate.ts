@@ -39,6 +39,7 @@ import { chromium } from "playwright-core";
 import sharp from "sharp";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
+import { countryConfigSync, countryOfLead } from "../country.js";
 import { isSamePicture, sizelessPhotoKey } from "../engine/samePicture.js";
 import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
@@ -101,6 +102,8 @@ export interface RenderGateResult {
   readonly findings: readonly RenderFinding[];
   /** Visible photo slots measured (for the report). */
   readonly slots: number;
+  /** 0155: the country rule the verdict was judged by (dispatch_stock_ok); absent = true (older verdicts). */
+  readonly stockOk?: boolean;
 }
 
 interface Slot {
@@ -229,7 +232,12 @@ async function townJudgeBytes(url: string, pageBytes: Buffer): Promise<Buffer> {
  * Render one mock HTML file like a phone and judge it. Pure of the DB except for reading the
  * cached vision verdicts (no paid call). Throws only on a launch failure.
  */
-export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery: [] }): Promise<Omit<RenderGateResult, "mtime" | "at" | "version">> {
+export async function auditMockFile(
+  mockAbs: string,
+  town: TownUrls = { gallery: [] },
+  /** 0155: the lead's country row's dispatch_stock_ok — false = a marked sample in a gallery / room slot fails too. */
+  opts: { readonly stockOk?: boolean } = {},
+): Promise<Omit<RenderGateResult, "mtime" | "at" | "version">> {
   const isTown = (u: string): boolean => (town.hero != null && sizelessPhotoKey(u) === sizelessPhotoKey(town.hero)) || town.gallery.some((g) => sizelessPhotoKey(g) === sizelessPhotoKey(u));
   const photos = createPhotoCache();
   const bodies = new Map<string, Buffer>();
@@ -534,6 +542,7 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
     if (sl.u === heroSlotUrl) continue; // reported above
     if (!SAMPLE_MODULES.has(sl.mod)) findings.push({ code: "stock", detail: `mintakép nem galéria- / szobahelyen (${sl.mod}): ${fileOf(sl.u)}` });
     else if (!sl.sample) findings.push({ code: "stock", detail: `jelöletlen mintakép („MINTA” nélkül): ${fileOf(sl.u)}` });
+    else if (opts.stockOk === false) findings.push({ code: "stock", detail: `mintakép az ország szabálya szerint nem mehet (galéria- / szobahely): ${fileOf(sl.u)}` });
   }
 
   if (measure.scrollWidth > measure.innerWidth + 1) {
@@ -556,9 +565,17 @@ export async function auditMockFile(mockAbs: string, town: TownUrls = { gallery:
 }
 
 /** The cached verdict if it belongs to the current file and rule version. */
-export function cachedRenderGate(inputs: unknown, mtime: number): RenderGateResult | null {
+export function cachedRenderGate(inputs: unknown, mtime: number, stockOk = true): RenderGateResult | null {
   const g = (inputs as { renderGate?: RenderGateResult } | null)?.renderGate;
-  return g && g.version === RENDER_GATE_VERSION && g.mtime === mtime ? g : null;
+  // 0155: a verdict judged under another stock rule of the country is stale.
+  return g && g.version === RENDER_GATE_VERSION && g.mtime === mtime && (g.stockOk ?? true) === stockOk ? g : null;
+}
+
+/** The lead's country row's dispatch_stock_ok for an artifact (default true — the old fixed rule). */
+export async function stockOkFor(artifactId: string): Promise<boolean> {
+  const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
+  if (!a?.lead_id) return true;
+  return countryConfigSync(await countryOfLead(a.lead_id))?.dispatch.stockOk ?? true;
 }
 
 /**
@@ -578,7 +595,8 @@ export async function renderGateFor(artifactId: string): Promise<RenderGateResul
   } catch {
     return { version: RENDER_GATE_VERSION, mtime: 0, at: now, verdict: "fail", slots: 0, findings: [{ code: "render", detail: "a mock fájlja hiányzik" }] };
   }
-  const cached = cachedRenderGate(a.inputs, mtime);
+  const stockOk = await stockOkFor(artifactId);
+  const cached = cachedRenderGate(a.inputs, mtime, stockOk);
   if (cached) return cached;
   let result: RenderGateResult;
   try {
@@ -588,8 +606,8 @@ export async function renderGateFor(artifactId: string): Promise<RenderGateResul
       ...(sd?.townPhoto?.pick?.tier ? { heroTier: sd.townPhoto.pick.tier } : {}),
       gallery: (sd?.townGallery ?? []).map((t) => t.url).filter((u): u is string => typeof u === "string"),
     };
-    const r = await auditMockFile(mockAbs, town);
-    result = { version: RENDER_GATE_VERSION, mtime, at: now, ...r };
+    const r = await auditMockFile(mockAbs, town, { stockOk });
+    result = { version: RENDER_GATE_VERSION, mtime, at: now, ...r, ...(stockOk ? {} : { stockOk }) };
   } catch (e) {
     // Not stored: a crashed browser is our gap, the next send attempt renders again.
     return {

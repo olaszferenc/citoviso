@@ -12,13 +12,9 @@ import { paymentProviderIds } from "../payment/providers.js";
 import { loadPricing, pricingRegions, regionPriceGaps } from "../pricing.js";
 import { db } from "../db/client.js";
 import { DISPATCH_HOME_COUNTRY, dispatchStatus } from "../outreach/autoDispatch.js";
-import { outreachHoursOf, outreachWindowOpenIn } from "../outreach/countryOutreach.js";
-import { escalationFollowupEnabled } from "../outreach/escalationFollowup.js";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, TOWN_PHOTO_DISPATCH_KEY } from "../outreach/mockPhotoGate.js";
-import { NONOPENER_FOLLOWUP_DAYS, nonOpenerDailyCap } from "../outreach/nonOpenerFollowup.js";
-import { LEAD_CC, marketLaunchStatus, type LaunchStatus } from "../scout/discoveryAreas.js";
-import { MOCK_OUTREACH_WINDOW } from "../sms/sendWindow.js";
-import { getSetting } from "./appSettings.js";
+import { countEligible, draftOfConfig, type DispatchCount, type DispatchDraft } from "../countryDispatch.js";
+import { outreachWindowOpenIn } from "../outreach/countryOutreach.js";
+import { marketLaunchStatus, type LaunchStatus } from "../scout/discoveryAreas.js";
 import type { CountryEditor, CountryListEntry, CountryMarketInfo, CountryStep, CountrySub } from "./countryViews.js";
 
 const order = (a: string, b: string): number => (a === HOME_MARKET ? -1 : b === HOME_MARKET ? 1 : a.localeCompare(b));
@@ -217,38 +213,32 @@ export function countriesOfRegion(region: string): string[] {
     .sort(order);
 }
 
-// ── the „Kiküldés” tab (read-only in phase 1): today's values and WHAT decides them ──────────────
+// ── the „Kiküldés” tab (4. fázis: editable; the row's values, the count, the live state) ─────────
 export interface OutreachInfo {
   readonly iso: string;
-  /** The <5-photo branch (town_photo_dispatch = 'on') → (b), else (a). */
-  readonly photoMode: "own" | "town";
-  readonly minOwn: number;
-  /** Not yet contacted, not blocked leads of the country by own-photo count. */
-  readonly eligibleOwn: number;
-  readonly eligibleFew: number;
-  /** The channels in the row's order, then the rest („nem él”). */
-  readonly channels: readonly { readonly id: string; readonly live: boolean }[];
+  readonly cfg: CountryConfig;
+  /** The row's dispatch rules + quota + window (what the form starts from). */
+  readonly draft: DispatchDraft;
+  /** The leads that qualify under the stored rules now. */
+  readonly count: DispatchCount;
+  /** The automatic dispatch's master switch (outreach_auto.enabled). */
   readonly dispatchOn: boolean;
+  /** The tick's automatic approval switch (outreach_auto.autoApprove — the cutover turns it on). */
+  readonly autoApproveOn: boolean;
+  /** The day's effective cap (the ramp lifts the home market's). */
   readonly dailyCap: number;
-  readonly capSource: "setting" | "override" | "row";
   readonly ramp: { readonly capToday: number } | null;
   readonly sentToday: number;
-  readonly hours: { readonly fromHour: number; readonly toHour: number };
-  readonly rowHours: { readonly fromHour: number; readonly toHour: number };
-  readonly codeHours: { readonly fromHour: number; readonly toHour: number };
-  readonly timeZone: string;
-  readonly holidays: number;
   readonly windowOpenNow: boolean;
   /** The first local day (YYYY-MM-DD) a send may start from now on. */
   readonly firstDay: string | null;
-  readonly nonOpener: { readonly days: number; readonly dailyCap: number };
-  readonly escalationFollowup: boolean;
 }
 
-const WEEKDAY = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+const WD_BIT: Readonly<Record<string, number>> = { Mon: 1, Tue: 2, Wed: 4, Thu: 8, Fri: 16, Sat: 32, Sun: 64 };
 
-/** The first local working day (Mon–Fri, not a row holiday) whose window is still ahead. */
-function firstSendDay(now: Date, cfg: CountryConfig, toHour: number): string | null {
+/** The first local day on the row's weekdays (not a holiday when they are skipped) whose window is still ahead. */
+export function firstSendDay(now: Date, cfg: CountryConfig, d: Pick<DispatchDraft, "weekdays" | "skipHolidays" | "sendWindowFrom" | "sendWindowTo">): string | null {
+  if (d.sendWindowFrom >= d.sendWindowTo || !d.weekdays) return null;
   for (let i = 0; i < 21; i++) {
     const t = new Date(now.getTime() + i * 86_400_000);
     const parts = Object.fromEntries(
@@ -257,9 +247,9 @@ function firstSendDay(now: Date, cfg: CountryConfig, toHour: number): string | n
         .map((p) => [p.type, p.value]),
     );
     const ymd = `${parts.year}-${parts.month}-${parts.day}`;
-    if (!WEEKDAY.has(String(parts.weekday))) continue;
-    if (cfg.publicHolidays.includes(ymd) || cfg.publicHolidays.includes(ymd.slice(5))) continue;
-    if (i === 0 && Number(parts.hour) >= toHour) continue;
+    if (!(d.weekdays & (WD_BIT[String(parts.weekday)] ?? 0))) continue;
+    if (d.skipHolidays && (cfg.publicHolidays.includes(ymd) || cfg.publicHolidays.includes(ymd.slice(5)))) continue;
+    if (i === 0 && Number(parts.hour) >= d.sendWindowTo) continue;
     return ymd;
   }
   return null;
@@ -270,40 +260,19 @@ export async function outreachInfo(iso: string, now: Date = new Date()): Promise
   if (!cfg) return null;
   const ds = await dispatchStatus();
   const day = ds.byCountry.find((b) => b.country === cfg.iso2);
-  const town = (await getSetting(TOWN_PHOTO_DISPATCH_KEY)) === "on";
-  const c = await sql<{ own: string; few: string }>`
-    select count(*) filter (where ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}) as own,
-           count(*) filter (where ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}) as few
-      from lead l
-     where ${LEAD_CC} = ${cfg.iso2}
-       and l.contact_block_at is null
-       and l.lifecycle_status not in ('disqualified','terminated')
-       and not exists (select 1 from prospect p where p.lead_id = l.id
-             and (p.email_sent_at is not null or p.sms_sent_at is not null or p.mms_sent_at is not null))`.execute(db);
-  const hours = outreachHoursOf(cfg);
-  const capSource: OutreachInfo["capSource"] =
-    cfg.iso2 === DISPATCH_HOME_COUNTRY ? "setting" : typeof ds.settings.countryCaps?.[cfg.iso2] === "number" ? "override" : "row";
-  const live = cfg.outreachChannels.filter((ch) => (COUNTRY_CHANNELS as readonly string[]).includes(ch));
+  const draft = draftOfConfig(cfg);
+  const home = cfg.iso2 === DISPATCH_HOME_COUNTRY;
   return {
     iso: cfg.iso2,
-    photoMode: town ? "town" : "own",
-    minOwn: DISPATCH_MIN_OWN_PHOTOS,
-    eligibleOwn: Number(c.rows[0]?.own ?? 0),
-    eligibleFew: Number(c.rows[0]?.few ?? 0),
-    channels: [...live.map((id) => ({ id, live: true })), ...COUNTRY_CHANNELS.filter((ch) => !live.includes(ch)).map((id) => ({ id, live: false }))],
+    cfg,
+    draft,
+    count: await countEligible(cfg.iso2, draft),
     dispatchOn: ds.settings.enabled,
-    dailyCap: day?.cap ?? 0,
-    capSource,
-    ramp: cfg.iso2 === DISPATCH_HOME_COUNTRY && ds.ramp ? { capToday: ds.ramp.capToday } : null,
+    autoApproveOn: ds.settings.autoApprove === true,
+    dailyCap: home && ds.ramp ? Math.max(draft.dailyQuota, ds.ramp.capToday) : draft.dailyQuota,
+    ramp: home && ds.ramp ? { capToday: ds.ramp.capToday } : null,
     sentToday: day?.sentToday ?? 0,
-    hours,
-    rowHours: { fromHour: cfg.sendWindowFrom, toHour: cfg.sendWindowTo },
-    codeHours: { fromHour: MOCK_OUTREACH_WINDOW.fromHour, toHour: MOCK_OUTREACH_WINDOW.toHour },
-    timeZone: cfg.timeZone,
-    holidays: cfg.publicHolidays.length,
     windowOpenNow: outreachWindowOpenIn(now, cfg),
-    firstDay: hours.fromHour < hours.toHour ? firstSendDay(now, cfg, hours.toHour) : null,
-    nonOpener: { days: NONOPENER_FOLLOWUP_DAYS, dailyCap: await nonOpenerDailyCap() },
-    escalationFollowup: await escalationFollowupEnabled(),
+    firstDay: firstSendDay(now, cfg, draft),
   };
 }

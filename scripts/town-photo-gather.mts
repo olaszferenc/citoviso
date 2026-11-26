@@ -18,7 +18,7 @@ import { langForCountry } from "../src/i18n/lang.js";
 import { pickTownPhotos, TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION } from "../src/media/townPick.js";
 import { townKey, townName, townSetUpsertSql, townSetValues } from "../src/media/townPhotoSet.js";
 import { CLOSED_NAME_SQL_PATTERN } from "../src/scraper/closedPlace.js";
-import { DISPATCH_MIN_OWN_PHOTOS } from "../src/outreach/mockPhotoGate.js";
+import { DEFAULT_MIN_OWN_PHOTOS } from "../src/outreach/mockPhotoGate.js";
 
 const DB = String(process.env.CIT_DB ?? "").trim().toLowerCase();
 if (DB !== "prod" && DB !== "dev") {
@@ -75,7 +75,7 @@ try {
          and l.lifecycle_status not in ('disqualified', 'terminated')
          and coalesce(l.raw->>'city', '') <> ''
          and l.name !~* ${dq(CLOSED_NAME_SQL_PATTERN)}
-         and ${OWN_PHOTOS} < ${DISPATCH_MIN_OWN_PHOTOS}
+         and ${OWN_PHOTOS} < ${DEFAULT_MIN_OWN_PHOTOS}
          ${ids.length ? `and l.id in (${ids.map((i) => `'${i}'`).join(",")})` : ""}
     ) x;`).trim() || "[]",
   ) as LeadRow[];

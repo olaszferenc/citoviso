@@ -12,7 +12,6 @@
 // the page it links to must not disagree (§I).
 
 import { db } from "../db/client.js";
-import { getSetting } from "../console/appSettings.js";
 import {
   claimFollowup,
   escalationFollowupsDue,
@@ -37,7 +36,7 @@ import { T } from "../i18n/mail.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { collectFallbacks } from "../i18n/packs.js";
 import { foreignEscalationSentence } from "./foreignPrice.js";
-import { allCountriesSync } from "../country.js";
+import { allCountriesSync, countryConfigSync } from "../country.js";
 import { followupWindowBlocksIn, leadCountryCfg } from "./leadClock.js";
 
 export interface FollowupRunResult {
@@ -80,15 +79,13 @@ export function deadlineText(d: Date, lang: string): string {
  * `onlyProspects` are for the guard only: the dev DB is shared, and a guard run must
  * neither mail nor claim another thread's offers. Product code passes neither.
  */
-export const ESCALATION_FOLLOWUP_KEY = "escalation_followup";
-
-export async function escalationFollowupEnabled(): Promise<boolean> {
-  try {
-    const raw = await getSetting(ESCALATION_FOLLOWUP_KEY);
-    return !raw || (JSON.parse(raw) as { enabled?: unknown } | null)?.enabled !== false;
-  } catch {
-    return true;
-  }
+/**
+ * Owner 2026-11-18 („az újramegkereső email se menjen ki”): the stop switch of this follow-up LETTER (the
+ * on-page offer keeps running). „Országok / Árazás” 4. fázis (0155): the switch is the lead's COUNTRY ROW's
+ * escalation_followup — the old global app_setting 'escalation_followup' was written into every row.
+ */
+export function escalationFollowupOn(country: string | null): boolean {
+  return countryConfigSync(country)?.dispatch.escalationFollowup ?? false;
 }
 
 export async function sendEscalationFollowups(
@@ -102,10 +99,8 @@ export async function sendEscalationFollowups(
   if (allCountriesSync().every((c) => followupWindowBlocksIn(now, c, followupWindowBlocks) !== null)) {
     return { sent: 0, skipped: 0, deferred: homeBlocked ?? "egyik ország emlékeztető-ablaka sincs nyitva" }; // i18n-exempt: operátori napló
   }
-  // Owner 2026-11-18 („az újramegkereső email se menjen ki”): a stop switch, app_setting
-  // 'escalation_followup' = {"enabled":false}. Missing / unreadable = ON (the row predates it).
-  // It stops only this follow-up LETTER — the on-page offer keeps running.
-  if (!(await escalationFollowupEnabled())) return { sent: 0, skipped: 0, deferred: "kikapcsolva (escalation_followup)" };
+  // 0155: no country lets the letter go → nothing is read.
+  if (allCountriesSync().every((c) => !c.dispatch.escalationFollowup)) return { sent: 0, skipped: 0, deferred: "kikapcsolva (minden országban: escalation_followup)" }; // i18n-exempt: operátori napló
   const sender = opts.sender ?? getEmailSender();
   const due = (await escalationFollowupsDue(now)).filter(
     (f) => !opts.onlyProspects || opts.onlyProspects.has(f.prospectId),
@@ -129,7 +124,13 @@ export async function sendEscalationFollowups(
     }
     // The lead's own window (zone, holidays); no country row → not sent (fail closed). A due
     // reminder outside its window is left unclaimed: the next hourly run inside it sends it.
-    if (followupWindowBlocksIn(now, await leadCountryCfg(p!.lead_id), followupWindowBlocks)) {
+    const leadCfg = await leadCountryCfg(p!.lead_id);
+    // 0155: the lead's country switched the letter off (Kiküldés tab) → left unclaimed.
+    if (!leadCfg?.dispatch.escalationFollowup) {
+      skipped++;
+      continue;
+    }
+    if (followupWindowBlocksIn(now, leadCfg, followupWindowBlocks)) {
       skipped++;
       continue;
     }

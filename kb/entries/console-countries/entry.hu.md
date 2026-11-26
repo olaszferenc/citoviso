@@ -53,15 +53,53 @@ még nincs sora, az is ott áll a táblázat alatt; rákattintva felveheted.
 - **„Árazás”**: az ország ársora. Ugyanaz az űrlap, ami korábban az „Árazás és értékesítés” lapon
   volt (csomagok, modulok, alapdíj, saját domain, ajánlatok és próba); a részleteit külön súgó írja le.
   Ha több ország ugyanazt az ársort használja, a fül kiírja, melyek, mert a módosítás náluk is érvényes.
-- **„Kiküldés”**: hogyan megy ki ma a megkeresés ebben az országban. Ez a fül egyelőre **csak
-  olvasható**. Felül négy szám: hány lead felel meg most, naponta hány megkeresés megy, melyik az
-  első küldési nap, és hány küldési nap alatt fogy el az állomány. Alatta hat szakasz: **„1. Milyen
-  lead mehet”**, **„2. Csatornák sorrendben”**, **„3. Napi keret”**, **„4. Jóváhagyás”**,
-  **„5. Időkeret”**, **„6. Utánkövetés”**. Mindegyik alatt ott áll, mi dönt róla ma (a kód, egy
-  globális beállítás vagy az ország sora). A **„döntve”** jel azt mutatja, amiről a tulaj már
-  döntött: ezek országonkénti beállítások lesznek.
+- **„Kiküldés”**: hogyan megy ki a megkeresés ebben az országban — itt **állítod** országonként. Az
+  alapérték a korábbi működés, tehát amíg nem nyúlsz hozzá, semmi nem változik. Részletesen lent, a
+  „Kiküldés fül” résznél.
 
 ![Képernyőkép: egy ország „Ország” füle telefonon — az „Alapadatok” doboz](assets/hu/open-step.png)
+
+## A Kiküldés fül
+
+Felül négy szám: **„lead felel meg (holnaptól)”** (a még meg nem keresett, nem tiltott, e-mail címes
+leadek, a mostani beállítással), **„megkeresés naponta”**, **„első küldési nap”** és **„küldési nap alatt
+fogy el”**. Amit átírsz, azt a számok azonnal követik. A mock-, a render- és a minőségi kapu ezen felül
+szűr, ezért a ténylegesen kimenő szám kisebb lehet.
+
+Alatta hat szakasz:
+
+1. **„Milyen lead mehet”**: a **„Legalább ennyi saját kép”** szám, és egy választó: **csak saját képes**
+   (a kevesebb képes lead nem megy ki), vagy **saját képes + kevés képes is, településképes
+   nyitóképpel**. Alatta látod a bontást: *„ebből saját képpel: … · településképpel: …”*. Itt dől el az is,
+   hogy a MINTA-jelölt szoba- és galériakép mehet-e, és hogy a honlap szerinti körök (nincs honlap,
+   elavult, modern, besorolatlan) milyen sorrendben menjenek. A sorrendet a ↑ ↓ gombokkal állítod; a ki
+   nem pipált kör nem megy ki.
+2. **„Csatornák sorrendben”**: csak az az ország adataiban élő csatorna kapcsolható be, a többi
+   **„nem él”**. Az e-mail be van zárva, nem vehető ki: a kiküldő ma csak e-mailt küld. Egy bekapcsolt
+   SMS, MMS, Viber vagy WhatsApp ma **semmit nem küld**, mert az „e-mail cím nélkül nem küldünk” szabály
+   él. A lap ezt sárgán ki is írja, amint egy mobilcsatornát bepipálsz.
+3. **„Napi keret”**: hány megkeresés megy ki naponta az ország saját napján. Ha a felfutás él, a
+   hazai keret a felfutás napi plafonjáig emelkedik, és ezt a szakasz ki is írja.
+4. **„Jóváhagyás”**: **„Tulaj-jóváhagyás”** (minden levél a Jóváhagyás lapon vár a „Mehet”-re), vagy
+   **„Automata”** (a gép hagyja jóvá, ha a pipált feltételek teljesülnek). Az alapérték minden
+   országban a tulaj-jóváhagyás. Az **„e-mail cím nélkül nem küldünk”** feltétel nem vehető ki: ezt a
+   kiküldő maga tartja. ⚠️ Az „Automata” csak akkor hagy jóvá bármit, ha az automata jóváhagyás
+   főkapcsolója be van kapcsolva (a kiküldő ütemében fut, 20 percenként). Ezt nem ezen a lapon kapcsolják,
+   hanem az élesítéskor, egyszer, minden országra. Amíg ki van kapcsolva, a szakasz alja ezt kiírja
+   (*„… addig az »Automata« beállítás sem hagy jóvá semmit”*), és minden levél a Jóváhagyás lapon vár.
+5. **„Időkeret”**: a hét napjai, az órák az ország időzónájában, és hogy az ünnepnapokon szünet van-e.
+6. **„Utánkövetés”**: a **„Nem-nyitó levél”** be-ki kapcsolója, hány nap után megy, és a napi kerete.
+   Ha be van kapcsolva, de a kerete 0, a lap figyelmeztet, mert így egy sem megy ki. Itt kapcsolod az
+   **„Eszkalációs ajánlat e-mailben”** levelet is.
+
+Minden szakasz alján ott áll, mi döntött róla korábban (a kód vagy egy globális beállítás). A
+**„döntve”** jel azt mutatja, amiről a tulaj már döntött. Ha módosítasz, alul megjelenik egy sáv:
+*„… módosítás — még nincs mentve”*, mellette a **„Visszaállítás”** és a **„Mentés…”** gomb. A
+„Mentés…” előbb egy összesítőt nyit: hány lead felel meg most és holnaptól, naponta hány megkeresés
+megy, mikor az első küldési nap, és a módosítások listája (*Most → Új*). Csak ott, a **„Mentés”**
+gombbal kerül a beállítás az országra. Hibás mezőnél (például ha egy nap sincs bepipálva) a lap nem ment.
+
+![Képernyőkép: a Kiküldés fül telefonon — felül a négy szám és az első szakasz, alatta (görgetve) a többi öt](assets/hu/out-tab.png)
 
 ## Új ország felvétele
 

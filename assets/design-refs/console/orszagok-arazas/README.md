@@ -91,7 +91,7 @@ Képek:
        - ellenőrizetlen mobilú lead e-mailben mehet;
        - e-mail cím nélkül nem küldünk.
 
-       Alapérték minden országban **Automata**. HR is az, a tulaj szavával 2026-11-26: „lófaszt én hagyom jóvá”. A felület jelzi az ellentmondást: ha egy mobilcsatorna be van kapcsolva, de az „e-mail nélkül nem küldünk” feltétel él, a mobilcsatorna nem indul.
+       Alapérték minden országban **Tulaj-jóváhagyás** (a tulaj döntése 2026-11-26, a 4. fázis indulásakor: „B” — most minden országban ő hagy jóvá, de országonként beállítható maradjon). A fülön egy kattintással **Automatára** állítható. A korábbi „HR is Automata” (2026-11-26 reggel) ezzel felülírva. A felület jelzi az ellentmondást: ha egy mobilcsatorna be van kapcsolva, de az „e-mail nélkül nem küldünk” feltétel él, a mobilcsatorna nem indul.
     5. **Időkeret:**
        - hétnapok (H–V kapcsolók);
        - órák ettől–eddig, az ország időzónájában;

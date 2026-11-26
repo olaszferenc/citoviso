@@ -9,7 +9,7 @@
 // the clock code (src/crm/countryClock.ts) formats with.
 //
 // Pure: no database, no I/O. Messages are Hungarian SOURCE strings through T() (console text).
-import type { CountryConfig } from "./country.js";
+import { countryConfigSync, DISPATCH_DEFAULTS, type CountryConfig } from "./country.js";
 import { T } from "./i18n/mail.js";
 import { minorDigits } from "./text/money.js";
 
@@ -359,6 +359,8 @@ export function draftAsConfig(r: CountryDraft): CountryConfig {
     paymentProvider: r.paymentProvider,
     touristTaxModel: r.touristTaxModel === "hu" ? "hu" : "none",
     publicHolidays: r.publicHolidays,
+    // 0155: the „Adatok” editor does not edit the dispatch rules — the stored row's (or the defaults).
+    dispatch: countryConfigSync(r.iso2)?.dispatch ?? DISPATCH_DEFAULTS,
   };
 }
 

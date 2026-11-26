@@ -1068,7 +1068,7 @@ function outDefaults(c) {
     channels: ["email","sms","mms","viber","whatsapp"].map(id => ({ id, live: rowCh.includes(id), on: id === "email" && rowCh.includes(id) })),
     quota: hu ? 100 : hr ? 20 : c.quota,
     ramp: hu,
-    approval: "auto", // owner 2026-11-26: „lófaszt én hagyom jóvá” — HR too
+    approval: "owner", // owner 2026-11-26 (4. fázis, „B”): the owner approves in every country; one click → Automata
     rules: { twoMocks:true, townNoMms:true, emailOnly:true, uncheckedEmail:true, noMailNoSend:true },
     days: [1,1,1,1,1,0,0], from: 8, to: 17, holidays: true, tz: c.tz,
     nonOpener: { on:false, days:14, count:1, cap:0 }, escalation: false
@@ -1081,7 +1081,7 @@ const SRC = {
   sites: ["kód", "autoDispatch.ts DISPATCH_PRIORITY: mind mehet, sorrend: nincs honlap → elavult → modern → besorolatlan, azon belül az e-mailes előre (tulaj 10-27, 11-17)"],
   channels: ["sor + éles szkript", "country.outreach_channels a lehetőség; tulaj 11-20: „e-mail cím nélkül nem küldünk, SMS/MMS nem megy” → ma csak e-mail"],
   quota: ["globális beállítás / sor", "HU: app_setting outreach_auto.dailyCap 100 + felfutás (a sor 40-e nem számít); más ország: country.daily_quota"],
-  approval: ["éles szkript", "/opt/citoviso/auto-approve.mts — égetett szabályok, tulaj 11-11 … 11-20; HR is automata (tulaj 11-26), a market-sor régi „tulaj-jóváhagyással” jegyzete elavult"],
+  approval: ["éles szkript", "/opt/citoviso/auto-approve.mts — égetett szabályok, tulaj 11-11 … 11-20; 2026-11-26 délelőtt kikapcsolva, azóta minden levél a tulaj elé kerül (tulaj döntése: „B”)"],
   window: ["sor + kód", "country.send_window_from/to ∩ a kódba égetett 8–17 (MOCK_OUTREACH_WINDOW); munkanap + country.public_holidays, a sor időzónájában"],
   follow: ["kód + globális beállítás", "nonOpenerFollowup.ts: 14 nap (NONOPENER_FOLLOWUP_DAYS), 1 levél (egyszeri, kódban); napi keret app_setting nonopener_followup_daily_cap = 0 → ma KI; eszkalációs utánkövetés: escalation_followup KI (tulaj 11-18)"]
 };

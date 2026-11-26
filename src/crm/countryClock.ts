@@ -16,7 +16,16 @@ import { SMS_QUIET_FROM_HOUR, SMS_QUIET_TO_HOUR } from "../console/smsQuietHours
 import { addIsoDays, isoDayIn, midnightIn, minutesIn } from "../text/zoneTime.js";
 import type { CountryConfig } from "../country.js";
 
-export type ClockRules = Pick<CountryConfig, "timeZone" | "publicHolidays">;
+export type ClockRules = Pick<CountryConfig, "timeZone" | "publicHolidays"> & {
+  /** 0155 (cold outreach only — countryOutreach.ts passes the row's dispatch rules): weekday bits
+   *  Mon=1 … Sun=64; absent = Mon–Fri (the answer window and every older caller). */
+  readonly weekdays?: number;
+  /** 0155: false = the row's public holidays do not shut the window; absent = they do. */
+  readonly skipHolidays?: boolean;
+};
+
+/** Bit of a weekday (0 = Sunday … 6 = Saturday) in the Mon=1 … Sun=64 mask. */
+const WEEKDAY_BIT = [64, 1, 2, 4, 8, 16, 32] as const;
 
 /** The local hours of a window (from inclusive, to exclusive). Default: MOCK_OUTREACH_WINDOW. */
 export interface WindowHours {
@@ -34,10 +43,12 @@ export function isHolidayDay(isoDay: string, holidays: readonly string[]): boole
   return holidays.includes(isoDay) || holidays.includes(isoDay.slice(5));
 }
 
-/** Is `isoDay` a working day of the row: Mon–Fri and not a public holiday? */
+/** Is `isoDay` a working day of the row: one of its weekdays (Mon–Fri unless given) and not a public holiday? */
 export function isWorkingDay(isoDay: string, rules: ClockRules): boolean {
   const wd = weekdayOfIsoDay(isoDay);
-  return wd !== 0 && wd !== 6 && !isHolidayDay(isoDay, rules.publicHolidays);
+  const mask = rules.weekdays ?? 31;
+  if ((mask & WEEKDAY_BIT[wd]!) === 0) return false;
+  return rules.skipHolidays === false || !isHolidayDay(isoDay, rules.publicHolidays);
 }
 
 /**

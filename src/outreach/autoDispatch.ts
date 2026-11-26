@@ -36,29 +36,38 @@ import { isAllowlistedTestNumber } from "./sendOutreachSms.js";
 import { ownerTestPhoneExempt } from "./ownerTestPhone.js";
 import { normalizePhoneIn } from "../text/phoneCountry.js";
 import { allCountriesSync, countryConfigSync, countryOf, countryOfLeads, type CountryConfig } from "../country.js";
+import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import type { QualifiedLead } from "../scraper/types.js";
 import { applyColdBrake, parseColdRamp, rampCapOn, type ColdRamp } from "./coldRamp.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { ensureDailyPlan } from "./experiment.js";
 import { retiredTemplateReason } from "./templateGate.js";
 
+/** The site class of a lead (alias `l`): no_site · outdated · modern · unclassified (ADR-0409). */
+export const LEAD_SITE_CLASS_SQL = sql<string>`(case
+    when l.qualification = 'no_site' or l.raw->>'websiteStatus' in ('none', 'portal_only') then 'no_site'
+    when l.qualification = 'outdated' then 'outdated'
+    when l.qualification = 'modern' then 'modern'
+    else 'unclassified'
+  end)`;
+
+/** The site class's place in the lead's country row's dispatch_sites (0-based), or NULL = not picked (alias `l`). */
+const SITE_RANK_SQL = sql<number | null>`(
+  select (e.ord - 1)::int from country c, jsonb_array_elements_text(c.dispatch_sites) with ordinality e(v, ord)
+   where c.iso2 = ${LEAD_COUNTRY_SQL} and e.v = ${LEAD_SITE_CLASS_SQL} limit 1)`;
+
 /**
  * ADR-0409 — the queue's ORDER (owner, 2026-10-27: „a honlap nélküliek mennek elsőként, és ha
- * elfogytak, jöhetnek a többiek”). A claim takes the best-placed lead first:
- *   0 — no own site (lead.qualification no_site, or raw.websiteStatus none / portal_only),
- *   1 — an outdated own site, 2 — a modern own site, 3 — not classified;
+ * elfogytak, jöhetnek a többiek”). „Országok / Árazás” 4. fázis (0155): the order of the site classes is
+ * the lead's COUNTRY ROW's dispatch_sites (backfilled no_site → outdated → modern → unclassified, the old
+ * fixed ranks 0–3); a class the row does not list is not claimed at all (DISPATCH_SITE_OK).
  * owner 2026-11-17 („Haladjunk azokkal, akiknek van e-mail-címük, de nincs honlapjuk. Aztán WhatsApp,
  * ahol nincs e-mail nincs honlap”): within a site rank a lead WITH an e-mail address (raw.email or
  * raw.otherEmails) goes before one without; within that the oldest queued row. A subquery, not a
  * join: the FOR UPDATE SKIP LOCKED claim keeps locking the dispatch row alone.
  */
 export const DISPATCH_PRIORITY = sql<number>`(
-  select (case
-    when l.qualification = 'no_site' or l.raw->>'websiteStatus' in ('none', 'portal_only') then 0
-    when l.qualification = 'outdated' then 1
-    when l.qualification = 'modern' then 2
-    else 3
-  end) * 2 + (case
+  select coalesce(${SITE_RANK_SQL}, 99) * 2 + (case
     when btrim(coalesce(l.raw->>'email', '')) <> '' then 0
     when jsonb_typeof(l.raw->'otherEmails') = 'array' and exists (
       select 1 from jsonb_array_elements_text(l.raw->'otherEmails') e where btrim(e) <> ''
@@ -68,21 +77,27 @@ export const DISPATCH_PRIORITY = sql<number>`(
   from lead l where l.id = outreach_dispatch.lead_id
 )`;
 
+/** 0155: the lead's site class is one its country row picks (dispatch_sites) — else the row stays queued. */
+export const DISPATCH_SITE_OK = sql<boolean>`exists (
+  select 1 from lead l where l.id = outreach_dispatch.lead_id and ${SITE_RANK_SQL} is not null)`;
+
 export const AUTO_SETTING_KEY = "outreach_auto";
-export const DEFAULT_DAILY_CAP = 40;
 /**
- * ORSZÁG-RÉTEG 3/5: the country whose cap is `dailyCap` (the operator's 40) — the home market.
- * Every other country counts on its own (countryCaps, else its row's daily_quota).
+ * ORSZÁG-RÉTEG 3/5: the home market — while the cold ramp runs, its cap is lifted to the ramp's day
+ * ceiling (dailyCapFor). „Országok / Árazás” 4. fázis (0155): every country's cap is its row's
+ * daily_quota — the old outreach_auto.dailyCap / .countryCaps were written into the rows and are not read.
  */
 export const DISPATCH_HOME_COUNTRY = "HU";
 
 export interface AutoDispatchSettings {
   /** Master switch — false = the timer sends nothing (the queue keeps filling). */
   readonly enabled: boolean;
-  /** Leads contacted per Budapest day by the timer for the HOME country (e-mail and/or pair counts as one). */
-  readonly dailyCap: number;
-  /** ORSZÁG-RÉTEG 3/5: per-country caps (ISO-2 → leads per that country's day); absent = the row's daily_quota. */
-  readonly countryCaps?: Readonly<Record<string, number>>;
+  /**
+   * 0155: the dispatch tick's automatic approval (autoApprove.ts) — off by default. On, it decides the
+   * countries whose dispatch_approval is 'auto' (by their rules) before each send; 'owner' countries wait
+   * for the owner's „Mehet”. ⛔ Never on together with the old Debian-cron auto-approve.mts (double approval).
+   */
+  readonly autoApprove?: boolean;
   /**
    * The cold lane's ramp (coldRamp.ts, owner 2026-11-18): while set, the day's TOTAL (all countries)
    * is bounded by the ramp's cap, the home country's cap is lifted to it, each timer firing sends
@@ -98,25 +113,28 @@ export async function getAutoDispatchSettings(): Promise<AutoDispatchSettings> {
     parsed = raw ? (JSON.parse(raw) as Partial<AutoDispatchSettings>) : {};
   } catch {
     // A broken value must not send: treat it as "off".
-    return { enabled: false, dailyCap: DEFAULT_DAILY_CAP };
+    return { enabled: false };
   }
-  const cap = Number(parsed.dailyCap);
-  const caps = Object.entries((parsed.countryCaps ?? {}) as Record<string, unknown>).filter(
-    (e): e is [string, number] => /^[A-Z]{2}$/.test(e[0]) && Number.isInteger(e[1]) && (e[1] as number) >= 0,
-  );
   const ramp = parseColdRamp(parsed.ramp);
   return {
     enabled: parsed.enabled === true,
-    dailyCap: Number.isInteger(cap) && cap >= 0 ? cap : DEFAULT_DAILY_CAP,
-    ...(caps.length ? { countryCaps: Object.fromEntries(caps) } : {}),
+    ...(parsed.autoApprove === true ? { autoApprove: true } : {}),
     ...(ramp ? { ramp } : {}),
   };
 }
 
 export async function setAutoDispatchSettings(next: Partial<AutoDispatchSettings>): Promise<AutoDispatchSettings> {
+  // The stored object keeps the keys this code no longer reads (the old dailyCap / countryCaps — a
+  // rollback before 0155 finds them where they were).
+  let stored: Record<string, unknown> = {};
+  try {
+    stored = JSON.parse((await getSetting(AUTO_SETTING_KEY)) ?? "{}") as Record<string, unknown>;
+  } catch {
+    stored = {};
+  }
   const cur = await getAutoDispatchSettings();
   const merged = { ...cur, ...next };
-  await setSetting(AUTO_SETTING_KEY, JSON.stringify(merged));
+  await setSetting(AUTO_SETTING_KEY, JSON.stringify({ ...stored, ...merged }));
   return merged;
 }
 
@@ -362,11 +380,9 @@ async function openCountries(
   const open = new Set<string>();
   let homeWindow: string | null = null;
   let homeCap: { sent: number; cap: number } | null = null;
-  // The ramp governs the home market's cap (the operator's static 40 would stall the climb);
+  // The ramp governs the home market's cap (the row's static quota would stall the climb);
   // the day's total stays bounded by the ramp in runDispatchTick.
-  const capSettings = settings.ramp
-    ? { ...settings, dailyCap: Math.max(settings.dailyCap, rampCapOn(settings.ramp, budapestIsoDay(now))) }
-    : settings;
+  const rampCap = settings.ramp ? rampCapOn(settings.ramp, budapestIsoDay(now)) : null;
   for (const cfg of allCountriesSync()) {
     const home = cfg.iso2 === DISPATCH_HOME_COUNTRY;
     const w = outreachWindowBlocksIn(now, cfg);
@@ -374,7 +390,7 @@ async function openCountries(
       if (home) homeWindow = w;
       continue;
     }
-    const cap = dailyCapFor(cfg, capSettings, DISPATCH_HOME_COUNTRY);
+    const cap = dailyCapFor(cfg, DISPATCH_HOME_COUNTRY, rampCap);
     const sent = await sentTodayIn(cfg);
     if (sent >= cap) {
       if (home) homeCap = { sent, cap };
@@ -392,10 +408,6 @@ const CLAIM_SCAN = 500;
  * One tick: at most ONE lead. `force` skips only the master switch (for a supervised first
  * run); the window and the cap always hold.
  */
-/** Owner 2026-11-23 („csak azoknak akiknek min 5 saját képük van”, again „csak a sok minőségi
- *  képpel ellátott leadek”): the automatic dispatch takes only leads with at least this many OWN
- *  photos (Places + portal + own website — the same sum as the console's lead stock, leadStock.ts). */
-export { DISPATCH_MIN_OWN_PHOTOS } from "./mockPhotoGate.js";
 
 export async function runDispatchTick(now: Date, opts: { force?: boolean } = {}): Promise<TickOutcome> {
   // A tick that died mid-send leaves `sending`: it may or may not have sent, so a person
@@ -408,6 +420,12 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
     .execute();
 
   let settings = await getAutoDispatchSettings();
+  // 0155: the automatic approval (autoApprove.ts — replaces the Debian-cron auto-approve.mts) runs on this
+  // timer, before the master switch: like the cron, it decides even while the sending is off. Off by default.
+  if (settings.autoApprove) {
+    const { autoApproveIfDue } = await import("./autoApprove.js");
+    await autoApproveIfDue(now).catch((e) => console.error(`[auto-approve] hiba: ${(e as Error).message}`)); // i18n-exempt: operátori napló
+  }
   if (!settings.enabled && !opts.force) return { kind: "off" };
   if (settings.ramp) {
     // The brake first (once a day, before the first send), then the day's total against the ramp.
@@ -429,7 +447,7 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   // KÍSÉRLET-MOTOR (experiment.ts): the day's split of the cap among the enabled variants — the
   // guard runs and the split is computed on the first tick of the day; later ticks refresh the cap.
   // A failure never stops the send (the letter then goes out as the control).
-  await ensureDailyPlan(now, settings.ramp ? rampCapOn(settings.ramp, budapestIsoDay(now)) : settings.dailyCap).catch((e) =>
+  await ensureDailyPlan(now, settings.ramp ? rampCapOn(settings.ramp, budapestIsoDay(now)) : dailyCapFor(countryConfigSync(DISPATCH_HOME_COUNTRY) ?? { iso2: DISPATCH_HOME_COUNTRY, dailyQuota: 0 }, DISPATCH_HOME_COUNTRY)).catch((e) =>
     console.error(`[experiment] napi osztás hiba: ${(e as Error).message}`),
   );
 
@@ -442,13 +460,15 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .selectFrom("outreach_dispatch")
       .select(["id", "lead_id", "artifact_id", "note"])
       .where("status", "=", "queued")
-      // Owner 2026-11-23: only leads with at least DISPATCH_MIN_OWN_PHOTOS own photos go out, and the
+      // Owner 2026-11-23: only leads with at least their country's minimum own photos (0155) go out, and the
       // mock that goes out actually shows them (2026-11-24); since 2026-11-25 (ADR-0479) a lead with
       // fewer goes too when its mock carries the CURRENT town pick (mockPhotoGate.DISPATCH_PHOTOS_OK_SQL).
       // The rest stay QUEUED, untouched, for a rerender (no hold churn, no lost place).
       .where(sql<boolean>`exists (select 1 from lead l, mock_artifact a where l.id = outreach_dispatch.lead_id and a.id = outreach_dispatch.artifact_id and ${DISPATCH_PHOTOS_OK_SQL} and ${MOCK_CURRENT_GENERATOR_SQL})`)
       // …and the quality colleague passed it (owner 2026-11-25, mockQaReview.ts) — else it stays queued for the look.
       .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_QA_PASSED_SQL} and ${MOCK_OWNER_APPROVED_SQL})`)
+      // 0155: only the site classes the lead's country row picks (dispatch_sites).
+      .where(DISPATCH_SITE_OK)
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(CLAIM_SCAN)
@@ -510,10 +530,6 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
   return { kind: "done", leadId: claimed.lead_id, status: result.status, note: result.note };
 }
 
-/** Owner 2026-11-12 („122 mehet”): app_setting of lead ids allowed e-mail before the presence check.
- *  Since 2026-11-16 no e-mail lead waits for the check, so the dispatcher no longer reads it; the
- *  auto-approve script still writes it. */
-export const EMAIL_UNCHECKED_OK_KEY = "email_unchecked_ok";
 
 /**
  * Owner rule 2026-11-16 („mehet ki whatsappon … de csak olyan ahol nincs email”, then „2: igen” to
@@ -687,7 +703,7 @@ export async function dispatchStatus(): Promise<DispatchStatus> {
   const settings = await getAutoDispatchSettings();
   const byCountry: { country: string; sentToday: number; cap: number }[] = [];
   for (const cfg of allCountriesSync()) {
-    byCountry.push({ country: cfg.iso2, sentToday: await sentTodayIn(cfg), cap: dailyCapFor(cfg, settings, DISPATCH_HOME_COUNTRY) });
+    byCountry.push({ country: cfg.iso2, sentToday: await sentTodayIn(cfg), cap: dailyCapFor(cfg, DISPATCH_HOME_COUNTRY) });
   }
   const sent = await sentToday();
   return {

@@ -91,6 +91,8 @@ export interface LeadTable {
    * messages and reply-answers alike). Deliberately NOT „has replied” — paying customers reply too.
    */
   contact_block_at: Timestamp | null;
+  /** 0155: the contact chain checked this lead's mobile presence (replaces /opt/citoviso/checked-ids.txt). */
+  contact_checked_at: Generated<Timestamp | null>;
   contact_block_reason: string | null;
   contact_block_by: string | null;
 }
@@ -958,6 +960,21 @@ export interface CountryTable {
   tourist_tax_model: Generated<string>;
   /** 0139: public holidays, "MM-DD" (every year) | "YYYY-MM-DD" (once); the reply-answer window is shut on them. */
   public_holidays: Generated<string[]>;
+  /** 0155 („Országok / Árazás” 4. fázis): the dispatch rules of the country (today's values as defaults). */
+  dispatch_min_own_photos: Generated<number>;
+  dispatch_photo_mode: Generated<string>;
+  dispatch_stock_ok: Generated<boolean>;
+  dispatch_sites: Generated<JSONColumnType<string[]>>;
+  dispatch_channels: Generated<JSONColumnType<string[]>>;
+  dispatch_approval: Generated<string>;
+  dispatch_rules: Generated<JSONColumnType<Record<string, boolean>>>;
+  send_weekdays: Generated<number>;
+  skip_holidays: Generated<boolean>;
+  nonopener_on: Generated<boolean>;
+  nonopener_days: Generated<number>;
+  nonopener_count: Generated<number>;
+  nonopener_daily_cap: Generated<number>;
+  escalation_followup: Generated<boolean>;
   updated_at: Generated<Date>;
 }
 

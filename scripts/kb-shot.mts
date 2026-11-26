@@ -2756,16 +2756,28 @@ await shootConsole(
     dirty: false, home: false, market: noMarket, regions: [{ region: "hu", currency: "HUF", complete: true }, { region: "bg", currency: "EUR", complete: false }],
     providers: ["barion"], now: new Date("2026-11-19T10:00:00Z"),
   };
+  const { DISPATCH_DEFAULTS } = await import("../src/country.js");
+  const bgCfg = { iso2: "BG", name: "Bulgária", timeZone: "Europe/Sofia", outreachChannels: ["email"], publicHolidays: ["01-01", "03-03", "05-01"], dispatch: DISPATCH_DEFAULTS };
   const bgOut = {
-    iso: "BG", photoMode: "own", minOwn: 5, eligibleOwn: 0, eligibleFew: 0,
-    channels: [{ id: "email", live: true }, { id: "sms", live: false }, { id: "mms", live: false }, { id: "viber", live: false }, { id: "whatsapp", live: false }],
-    dispatchOn: true, dailyCap: 40, capSource: "row", ramp: null, sentToday: 0, hours: { fromHour: 8, toHour: 17 }, rowHours: { fromHour: 8, toHour: 17 },
-    codeHours: { fromHour: 8, toHour: 17 }, timeZone: "Europe/Sofia", holidays: 3, windowOpenNow: false, firstDay: "2026-11-20",
-    nonOpener: { days: 14, dailyCap: 0 }, escalationFollowup: false,
+    iso: "BG", cfg: bgCfg, draft: { ...DISPATCH_DEFAULTS, dailyQuota: 40, sendWindowFrom: 8, sendWindowTo: 17 },
+    count: { own: 0, town: 0, total: 0 }, dispatchOn: true, autoApproveOn: false, dailyCap: 40, ramp: null, sentToday: 0,
+    windowOpenNow: false, firstDay: "2026-11-20",
   };
   await shootConsole(
     hubCountryPage({ row: rows[1], tab: "country", notice: null, editor, editorOpen: false, tabHtml: countryTab(rows[1] as never, editor as never, bgOut as never) } as never),
     conOut("console-countries").replace(/screen\.png$/, "open-step.png"),
+  );
+  // „Országok / Árazás” 4. fázis (0155): the editable „Kiküldés” tab of HU (today's rules as the row holds them).
+  const { outreachTab } = await import("../src/console/countryHub.js");
+  const huCfg = { iso2: "HU", name: "Magyarország", timeZone: "Europe/Budapest", outreachChannels: ["email", "sms", "mms", "viber", "whatsapp"], publicHolidays: [], dispatch: { ...DISPATCH_DEFAULTS, photoMode: "own_town" } };
+  const huOut = {
+    iso: "HU", cfg: huCfg, draft: { ...DISPATCH_DEFAULTS, photoMode: "own_town", dailyQuota: 100, sendWindowFrom: 8, sendWindowTo: 17 },
+    count: { own: 7792, town: 4096, total: 11888 }, dispatchOn: true, autoApproveOn: false, dailyCap: 100, ramp: { capToday: 100 }, sentToday: 3,
+    windowOpenNow: true, firstDay: "2026-11-26",
+  };
+  await shootConsole(
+    hubCountryPage({ row: rows[0], tab: "out", notice: null, editor: { ...editor, iso: "HU", home: true }, editorOpen: false, tabHtml: outreachTab(rows[0] as never, huOut as never) } as never),
+    conOut("console-countries").replace(/screen\.png$/, "out-tab.png"),
   );
 }
 // Test-log journal — rendered from the real FK-000 smoke scenario so the guide

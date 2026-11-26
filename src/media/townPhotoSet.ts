@@ -2,7 +2,7 @@
 // (owner 2026-11-25, approved plan assets/design-refs/console/kepnelkuli-hero/, ADR-0479).
 //
 // ⛔ ONLY FOR E-MAIL LEADS (owner 2026-11-25): a town's pictures are gathered only when the town has
-// at least one lead with an e-mail address and fewer than DISPATCH_MIN_OWN_PHOTOS own photos. A lead
+// at least one lead with an e-mail address and fewer than its country's minimum own photos (0155). A lead
 // without an e-mail never triggers a gathering (it may still use a set another lead's town already has).
 //
 // Who gathers: ONLY the mock generation, just in time (owner 2026-11-25: no backfill, neither top 500 nor
@@ -19,7 +19,7 @@ import { CLOSED_NAME_SQL_PATTERN } from "../scraper/closedPlace.js";
 import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { langForCountry } from "../i18n/lang.js";
 import type { TownPhoto } from "../engine/recipe.js";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL } from "../outreach/mockPhotoGate.js";
+import { LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL } from "../outreach/mockPhotoGate.js";
 import { pickTownPhotos, TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION, type TownPick, type TownPickResult, type TownStyle } from "./townPick.js";
 
 export type TownSetTrigger = "scrape" | "generate" | "backfill" | "chain";
@@ -94,7 +94,7 @@ export async function readTownPhotoSet(country: string, city: string): Promise<T
   return r ? rowOf(r as never) : null;
 }
 
-/** Does any lead of this town have an e-mail and fewer than DISPATCH_MIN_OWN_PHOTOS own photos? */
+/** Does any lead of this town have an e-mail and fewer than its country's minimum own photos? */
 export async function townHasEmailLeadInNeed(country: string, city: string): Promise<boolean> {
   const rows = await sql<{ city: string }>`
     select l.raw->>'city' as city
@@ -104,7 +104,7 @@ export async function townHasEmailLeadInNeed(country: string, city: string): Pro
        and l.name !~* ${CLOSED_NAME_SQL_PATTERN}
        and upper(coalesce(l.raw->>'country', ${country.toUpperCase()})) = ${country.toUpperCase()}
        and l.raw->>'city' ilike ${`%${townName(city)}%`}
-       and ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}
+       and ${LEAD_OWN_PHOTOS_SQL} < ${LEAD_MIN_OWN_PHOTOS_SQL}
      limit 50`.execute(db);
   const key = townKey(city);
   return rows.rows.some((r) => r.city && townKey(r.city) === key);
@@ -227,7 +227,7 @@ export async function townsInNeed(opts: { scrapeRunId?: string; country?: string
        and l.contact_block_at is null
        and l.name !~* ${CLOSED_NAME_SQL_PATTERN}
        and l.lifecycle_status not in ('disqualified', 'terminated')
-       and ${LEAD_OWN_PHOTOS_SQL} < ${DISPATCH_MIN_OWN_PHOTOS}
+       and ${LEAD_OWN_PHOTOS_SQL} < ${LEAD_MIN_OWN_PHOTOS_SQL}
        ${opts.scrapeRunId ? sql`and l.scrape_run_id = ${opts.scrapeRunId}` : sql``}
        ${opts.country ? sql`and upper(l.raw->>'country') = ${opts.country.toUpperCase()}` : sql``}`.execute(db);
   const by = new Map<string, { city: string; country: string; lats: number[]; lons: number[]; leads: number }>();

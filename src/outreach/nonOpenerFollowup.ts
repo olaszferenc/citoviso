@@ -9,7 +9,7 @@
 // cold letter went to), addressed through its LIVE prospect (newest non-archived), and:
 //   · NEVER OPENED: no human view (mock_view, bots excluded) of any of its links, ever;
 //   · its LATEST outreach on any channel (cold mail, SMS / MMS stamp, Viber / WhatsApp / MMS send,
-//     the trial-campaign letter) is at least NONOPENER_FOLLOWUP_DAYS old.
+//     the trial-campaign letter) is at least the country row's nonopener_days old (0155).
 // Who does not (each counted under its own reason in the dry run):
 //   archived · test lead · disqualified / terminated · unsubscribed (any prospect row, or the
 //   address / number suppressed) · ANSWERED anything (outreach_reply — owner 2026-10-26: anyone
@@ -41,7 +41,8 @@ import { getEmailSender, type EmailSender } from "../email/sender.js";
 import { DEFAULT_LANG } from "../i18n/lang.js";
 import { collectFallbacks, missingBuyerPackStrings } from "../i18n/packs.js";
 import { mockOutreachWindowBlocks } from "../sms/sendWindow.js";
-import { allCountriesSync, countryOfLeads } from "../country.js";
+import { allCountriesSync, countryConfigSync, countryOfLeads } from "../country.js";
+import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import { leadCountryCfg, leadPhoneE164, mockWindowBlocksIn } from "./leadClock.js";
 import { buildDraftForProspect } from "./draft.js";
 import { ensureHeroShot } from "./heroShot.js";
@@ -54,13 +55,14 @@ import { isPhoneSuppressed } from "./sendOutreachSms.js";
 import { INACTIVE, sharedContactBlocks } from "./sharedContactGate.js";
 import { artifactBlocks } from "./trialCampaign.js";
 
-/** Days after the LAST outreach (any channel) before the follow-up may go (owner: „2 hét”). */
-export const NONOPENER_FOLLOWUP_DAYS = 14;
+/**
+ * „Országok / Árazás” 4. fázis (0155, tulaj 2026-11-26 D14): the follow-up's switch, its delay (days after
+ * the LAST outreach, owner: „2 hét” = 14) and its daily cap are the lead's COUNTRY ROW's (nonopener_on,
+ * nonopener_days, nonopener_daily_cap); the old code constant and the global app_setting
+ * 'nonopener_followup_daily_cap' were written into every row by the migration. One letter per lead.
+ */
 /** Letters per hourly tick — spreads the day's letters over the window. */
 export const NONOPENER_PER_TICK = 5;
-/** app_setting: letters per Budapest day (a non-negative integer; 0 = paused). */
-export const NONOPENER_DAILY_CAP_KEY = "nonopener_followup_daily_cap";
-export const NONOPENER_DAILY_CAP_DEFAULT = 40;
 
 export type NonOpenerExclusion =
   | "archived"
@@ -74,6 +76,7 @@ export type NonOpenerExclusion =
   | "bought"
   | "opened"
   | "too_recent"
+  | "country_off"
   | "already"
   | "address_changed"
   | "no_address"
@@ -91,7 +94,8 @@ export const NONOPENER_EXCLUSION_LABEL: Record<NonOpenerExclusion, string> = {
   intent: "rendelési szándék", // i18n-exempt: operátori kimenet
   bought: "vásárolt", // i18n-exempt: operátori kimenet
   opened: "megnyitotta a linket", // i18n-exempt: operátori kimenet
-  too_recent: `az utolsó megkeresése ${NONOPENER_FOLLOWUP_DAYS} napnál frissebb`, // i18n-exempt: operátori kimenet
+  too_recent: "az utolsó megkeresése frissebb az ország nem-nyitó késleltetésénél", // i18n-exempt: operátori kimenet
+  country_off: "az országában a nem-nyitó levél ki van kapcsolva (Kiküldés fül)", // i18n-exempt: operátori kimenet
   already: "már megkapta az utánkövető levelet", // i18n-exempt: operátori kimenet
   address_changed: "a cím a hideg levél óta változott", // i18n-exempt: operátori kimenet
   no_address: "nincs hideg levél / cím", // i18n-exempt: operátori kimenet
@@ -108,6 +112,8 @@ export interface NonOpenerCandidate {
   readonly segment: string | null;
   /** The latest outreach on any channel. */
   readonly lastTouch: Date | null;
+  /** The lead's country (ISO-2), whose row's cap the letter counts against. */
+  readonly country: string | null;
   readonly excluded: NonOpenerExclusion | null;
 }
 
@@ -197,7 +203,6 @@ export async function listNonOpenerCandidates(
   const done = await db.selectFrom("nonopener_followup").select(["lead_id", "address_key"]).execute();
   const doneLeads = new Set(done.map((r) => r.lead_id));
   const takenKeys = new Set(done.map((r) => r.address_key));
-  const cutoff = now.getTime() - NONOPENER_FOLLOWUP_DAYS * 86_400_000;
 
   const verdicts: NonOpenerCandidate[] = [];
   const eligible: NonOpenerCandidate[] = [];
@@ -226,7 +231,9 @@ export async function listNonOpenerCandidates(
       addressKey: mailedEmail ? recipientKey(mailedEmail) || null : null,
       segment: live?.segment ?? null,
       lastTouch,
+      country: leadCountry.get(lead.id) ?? null,
     };
+    const nonOpener = countryConfigSync(target.country)?.dispatch.nonOpener ?? null;
     const no = (excluded: NonOpenerExclusion): void => {
       verdicts.push({ ...target, excluded });
     };
@@ -253,7 +260,8 @@ export async function listNonOpenerCandidates(
     if (trials.has(lead.id)) { no("trial"); continue; }
     if (submitted.has(lead.id) || rows.some((p) => p.status === "order_intent" || p.status === "converted")) { no("intent"); continue; }
     if (opened.has(lead.id)) { no("opened"); continue; }
-    if (!lastTouch || lastTouch.getTime() > cutoff) { no("too_recent"); continue; }
+    if (!nonOpener?.on) { no("country_off"); continue; }
+    if (!lastTouch || lastTouch.getTime() > now.getTime() - nonOpener.days * 86_400_000) { no("too_recent"); continue; }
     if (!mailedEmail || !target.addressKey) { no("no_address"); continue; }
     if (liveEmail && recipientKey(liveEmail) !== target.addressKey) { no("address_changed"); continue; }
     if (await ownedSiteForLead(lead.id)) { no("bought"); continue; }
@@ -352,15 +360,20 @@ export async function buildNonOpenerLetterFor(
 // The cap is the follow-up MAILBOX's (one sender, one reputation — like the cold ramp), so it
 // counts on the house day (APP_TZ), whichever country the letters went to.
 // country-layer-check ALLOW: house mailbox day, not a lead's clock.
-async function sentToday(now: Date): Promise<number> {
-  const r = await sql<{ n: string }>`select count(*) as n from nonopener_followup where status = 'sent'
-    and sent_at >= date_trunc('day', ${now}::timestamptz at time zone 'Europe/Budapest') at time zone 'Europe/Budapest'`.execute(db);
-  return Number(r.rows[0]?.n ?? 0);
+/** Letters sent today (Budapest day, as before) per lead country. */
+async function sentTodayByCountry(now: Date): Promise<Map<string, number>> {
+  const r = await sql<{ cc: string | null; n: string }>`select ${LEAD_COUNTRY_SQL} as cc, count(*) as n
+      from nonopener_followup f join lead l on l.id = f.lead_id
+     where f.status = 'sent'
+       and f.sent_at >= date_trunc('day', ${now}::timestamptz at time zone 'Europe/Budapest') at time zone 'Europe/Budapest'
+     group by 1`.execute(db);
+  return new Map(r.rows.map((x) => [String(x.cc ?? ""), Number(x.n)]));
 }
 
-export async function nonOpenerDailyCap(): Promise<number> {
-  const v = await getSetting(NONOPENER_DAILY_CAP_KEY);
-  return v !== null && /^\d+$/.test(v.trim()) ? Number(v.trim()) : NONOPENER_DAILY_CAP_DEFAULT;
+/** The daily cap of the follow-up in a country (its row; no row or switched off = 0). */
+export function nonOpenerDailyCapOf(country: string | null): number {
+  const n = countryConfigSync(country)?.dispatch.nonOpener;
+  return n?.on ? Math.max(0, n.dailyCap) : 0;
 }
 
 /** Send (or dry-run) the follow-up to one candidate, through every gate. */
@@ -456,9 +469,13 @@ export async function runNonOpenerFollowups(now: Date = new Date(), deps: NonOpe
   if (allCountriesSync().every((cfg) => mockWindowBlocksIn(now, cfg) !== null)) {
     return { sent: 0, skipped: 0, eligible: 0, deferred: mockOutreachWindowBlocks(now) ?? "egyik ország megkeresési ablaka sincs nyitva" }; // i18n-exempt: operátori kimenet
   }
-  const cap = await nonOpenerDailyCap();
-  const room = Math.min(NONOPENER_PER_TICK, cap - (await sentToday(now)));
-  if (room <= 0) return { sent: 0, skipped: 0, eligible: 0, deferred: `napi keret (${cap}) elérve` }; // i18n-exempt: operátori kimenet
+  // 0155: each country counts against its own row's cap (Budapest day, as before).
+  const sentBy = await sentTodayByCountry(now);
+  const roomOf = (cc: string | null): number => nonOpenerDailyCapOf(cc) - (sentBy.get(cc ?? "") ?? 0);
+  if (allCountriesSync().every((cfg) => roomOf(cfg.iso2) <= 0)) {
+    return { sent: 0, skipped: 0, eligible: 0, deferred: "a nem-nyitó levél minden országban ki van kapcsolva vagy elérte a napi keretét" }; // i18n-exempt: operátori kimenet
+  }
+  const room = NONOPENER_PER_TICK;
   const list = (await listNonOpenerCandidates({ onlyLeads: deps.onlyLeads, now })).filter((c) => !c.excluded);
   let sent = 0;
   let skipped = 0;
@@ -466,9 +483,12 @@ export async function runNonOpenerFollowups(now: Date = new Date(), deps: NonOpe
   // Bounded walk: a lead skipped for a page problem must not stall the tick, nor make it crawl the whole list.
   for (const c of list.slice(0, room * 4)) {
     if (sent >= room) break;
+    if (roomOf(c.country) <= 0) continue;
     const r = await sendNonOpenerFollowup(c, { ...deps, now });
-    if (r.kind === "sent") sent++;
-    else {
+    if (r.kind === "sent") {
+      sent++;
+      sentBy.set(c.country ?? "", (sentBy.get(c.country ?? "") ?? 0) + 1);
+    } else {
       skipped++;
       reasons.push(`${c.leadName}: ${r.kind === "skipped" ? r.reason : r.detail}`);
     }

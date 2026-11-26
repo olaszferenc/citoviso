@@ -31,7 +31,7 @@ import { getEmailSender } from "../email/sender.js";
 import { tagLink } from "./openVia.js";
 import { markOwnViewLinks } from "../console/prospectPath.js";
 import { sql } from "kysely";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL, MOCK_TOWN_PICK_OK_SQL } from "./mockPhotoGate.js";
+import { LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_OWN_PHOTOS_OK_SQL, MOCK_TOWN_PICK_OK_SQL } from "./mockPhotoGate.js";
 import { recipientKey, recipientKeySql } from "../email/address.js";
 import { db } from "../db/client.js";
 import { sharedContactBlocks } from "./sharedContactGate.js";
@@ -349,8 +349,8 @@ export async function sendOutreachMail(
   // that HAS its own photos never gets a mock without them — every send path, the owner's sample too.
   if (p.artifactId) {
     const photoGate = (
-      await sql<{ leadPhotos: number; mockOk: boolean; mockPhotos: number; mockCurrent: boolean }>`
-        select ${LEAD_OWN_PHOTOS_SQL} as "leadPhotos", ${MOCK_OWN_PHOTOS_OK_SQL} as "mockOk",
+      await sql<{ leadPhotos: number; minOwn: number; mockOk: boolean; mockPhotos: number; mockCurrent: boolean }>`
+        select ${LEAD_OWN_PHOTOS_SQL} as "leadPhotos", ${LEAD_MIN_OWN_PHOTOS_SQL} as "minOwn", ${MOCK_OWN_PHOTOS_OK_SQL} as "mockOk",
                ${MOCK_CURRENT_GENERATOR_SQL} as "mockCurrent",
                case when jsonb_typeof(a.inputs->'siteData'->'photos') = 'array'
                     then jsonb_array_length(a.inputs->'siteData'->'photos') else 0 end as "mockPhotos"
@@ -361,7 +361,7 @@ export async function sendOutreachMail(
     if (photoGate && !photoGate.mockCurrent) {
       return { ...base, outcome: { kind: "skipped", reason: "a mock a 2026-11-23-i generátor-javítás előtt készült — újragenerálandó, így nem mehet ki" } }; // i18n-exempt: operátori ok
     }
-    if (photoGate && Number(photoGate.leadPhotos) >= DISPATCH_MIN_OWN_PHOTOS && !photoGate.mockOk) {
+    if (photoGate && Number(photoGate.leadPhotos) >= Number(photoGate.minOwn) && !photoGate.mockOk) {
       return {
         ...base,
         outcome: {
@@ -376,11 +376,11 @@ export async function sendOutreachMail(
   // never a typographic page.
   if (p.artifactId) {
     const g = (
-      await sql<{ leadPhotos: number; townOk: boolean }>`
-        select ${LEAD_OWN_PHOTOS_SQL} as "leadPhotos", ${MOCK_TOWN_PICK_OK_SQL} as "townOk"
+      await sql<{ leadPhotos: number; minOwn: number; townOk: boolean }>`
+        select ${LEAD_OWN_PHOTOS_SQL} as "leadPhotos", ${LEAD_MIN_OWN_PHOTOS_SQL} as "minOwn", ${MOCK_TOWN_PICK_OK_SQL} as "townOk"
         from lead l, mock_artifact a where l.id = ${p.leadId} and a.id = ${p.artifactId}`.execute(db)
     ).rows[0];
-    if (g && Number(g.leadPhotos) < DISPATCH_MIN_OWN_PHOTOS && !g.townOk) {
+    if (g && Number(g.leadPhotos) < Number(g.minOwn) && !g.townOk) {
       return {
         ...base,
         outcome: {

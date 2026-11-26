@@ -807,8 +807,10 @@ akkor látszik, ha a mock **jóvá van hagyva**, Vera **PASS**-t adott a mostani
 még **nem kapott megkeresést**. Egy kattintás: a lead bekerül a kiküldési sorba — a többit a rendszer
 végzi.
 
-**Mit csinál az automata.** Hétköznap 9 és 16 óra között (budapesti idő) kétpercenként egy leadet
-küld ki a sorból, a legrégebben sorba tettel kezdve, a napi keretig. Ugyanazok az ellenőrzések futnak
+**Mit csinál az automata.** A lead országának küldési napjain és óráiban, az ország idejében (ma
+Magyarországon hétköznap 8–17) kétpercenként egy leadet küld ki a sorból, a honlap szerinti körök
+sorrendjében, azon belül a legrégebben sorba tettel kezdve, az ország napi keretéig. A napokat, az órákat,
+a köröket és a keretet országonként az **Országok / Árazás** lap **„Kiküldés”** fülén állítod. Ugyanazok az ellenőrzések futnak
 le, mint a kézi küldésnél (kép-kapu, jogszerűségi kapu, leiratkozás, egyszeri küldés, Vera-ítélet), és
 ugyanaz megy ki: a levél és — mobilszámnál — a kép+SMS pár. Ha a messenger-út be van kapcsolva,
 a telefon kiküldéskor megnézi, van-e a leadnek Vibere vagy WhatsAppja. Ha van, a kép és a link egy

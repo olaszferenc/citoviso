@@ -48,7 +48,7 @@ import { curateMockPhotos } from "./photoCurate.js";
 import { getHeroPin } from "./heroOverride.js";
 import { GATE_OPENING, gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { townPhotosForMock } from "./townHero.js";
-import { DISPATCH_MIN_OWN_PHOTOS } from "../outreach/mockPhotoGate.js";
+import { DEFAULT_MIN_OWN_PHOTOS } from "../outreach/mockPhotoGate.js";
 import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
@@ -392,7 +392,7 @@ async function generateEngineMockInner(
   // when the town has none yet — ⛔ only for a lead with an e-mail address. Free (Wikimedia + the
   // local CLIP model), never a photo of the lodging, persisted in siteData. None → the typographic hero.
   const town =
-    photos.length < DISPATCH_MIN_OWN_PHOTOS && !opts.archetype
+    photos.length < (countryConfigSync(leadCountry)?.dispatch.minOwnPhotos ?? DEFAULT_MIN_OWN_PHOTOS) && !opts.archetype
       ? await townPhotosForMock({ leadId, city: lead.city, country: leadCountry, lat: lead.lat, lon: lead.lon, email: lead.email, ownPhotos: photos })
       : null;
   const townPhoto = town?.hero ?? null;

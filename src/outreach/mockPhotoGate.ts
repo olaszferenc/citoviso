@@ -4,11 +4,25 @@
 // Zsejka Apartman (60 portal photos) showed the town church three times — the mock had been rendered
 // without the lodging's photos (town photo hero), and the dispatcher counted the LEAD's photos, not
 // the MOCK's. 81 of the 88 queued ≥5-photo leads were in that state. The mailed mock is what counts.
+//
+// „Országok / Árazás” 4. fázis (0155): the threshold and the <N branch are the LEAD's COUNTRY ROW's
+// (country.dispatch_min_own_photos, country.dispatch_photo_mode) — the code's 5 and the global
+// switch were written into every row by the migration and are not read.
 import { sql } from "kysely";
+import { DISPATCH_DEFAULTS } from "../country.js";
+import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import { TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION } from "../media/townPick.js";
 
-/** At least this many of the lodging's own photos (Places + portal + own website). */
-export const DISPATCH_MIN_OWN_PHOTOS = 5;
+/** The fallback minimum for a lead without a country row (such a lead is never sent — fail closed elsewhere). */
+export const DEFAULT_MIN_OWN_PHOTOS = DISPATCH_DEFAULTS.minOwnPhotos;
+
+/** The lead's country row's minimum own photos (alias `l` = lead). */
+export const LEAD_MIN_OWN_PHOTOS_SQL = sql<number>`coalesce(
+  (select c.dispatch_min_own_photos from country c where c.iso2 = ${LEAD_COUNTRY_SQL}), ${DEFAULT_MIN_OWN_PHOTOS})`;
+
+/** The lead's country row lets the <N branch go with the town pick (dispatch_photo_mode = 'own_town'; alias `l`). */
+export const LEAD_TOWN_MODE_SQL = sql<boolean>`exists (
+  select 1 from country c where c.iso2 = ${LEAD_COUNTRY_SQL} and c.dispatch_photo_mode = 'own_town')`;
 
 /** The lead's own-photo count as the scraper measured it — same sum as the console's lead stock
  *  (leadStock.ts). Table alias `l` = lead. */
@@ -17,11 +31,11 @@ export const LEAD_OWN_PHOTOS_SQL = sql<number>`(
   + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end
   + case when jsonb_typeof(l.raw->'material'->'websiteImages') = 'number' then (l.raw->'material'->>'websiteImages')::int else 0 end)`;
 
-/** The mock itself holds at least DISPATCH_MIN_OWN_PHOTOS of the lodging's photos and no town
- *  photo hero. Table alias `a` = mock_artifact. */
+/** The mock itself holds at least the country's minimum of the lodging's photos and no town
+ *  photo hero. Table aliases `a` = mock_artifact, `l` = its lead. */
 export const MOCK_OWN_PHOTOS_OK_SQL = sql<boolean>`(
   jsonb_typeof(a.inputs->'siteData'->'photos') = 'array'
-  and jsonb_array_length(a.inputs->'siteData'->'photos') >= ${DISPATCH_MIN_OWN_PHOTOS}
+  and jsonb_array_length(a.inputs->'siteData'->'photos') >= ${LEAD_MIN_OWN_PHOTOS_SQL}
   and a.inputs->'siteData'->'townPhoto' is null)`;
 
 /** 2026-11-24 (owner: the Zsejka mock was „full plain”, every module thrown in, nothing of the mock
@@ -46,25 +60,24 @@ export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK
        or (coalesce(a.inputs->>'terhatasAt', '') >= '2026-11-26-qafix4' and a.inputs->'qaReview'->>'verdict' = 'pass')))`;
 
 /**
- * THE OWNER'S SWITCH for the <5-photo branch (owner rule 2026-11-25 via cit5980e14c: „amíg a képtár nincs
+ * THE OWNER'S SWITCH for the <N-photo branch (owner rule 2026-11-25 via cit5980e14c: „amíg a képtár nincs
  * kész, <5 saját képes lead nem megy ki” — opened only once the owner has seen the town picture library).
- * app_setting row; absent or anything but 'on' = CLOSED. Not data-driven: a test run on the live DB that
- * fills town_photo_set must not open it by itself.
+ * Since 0155 it is the country row's dispatch_photo_mode ('own_town' = open), set on the „Kiküldés” tab;
+ * the migration copied the old global switch into every row. Not data-driven: a test run that fills
+ * town_photo_set must not open it by itself.
  */
-export const TOWN_PHOTO_DISPATCH_KEY = "town_photo_dispatch";
 
 /**
  * A mock of a lead with NO or FEW own photos (owner 2026-11-25, ADR-0479, plan
  * assets/design-refs/console/kepnelkuli-hero/ ⑩): it may go only with the town's pictures picked by the
  * CURRENT picker version and threshold (media/townPick.ts) — the town photo as the hero, or (a few-photo
  * lead whose own first photo opens the page) the local gallery pictures — and only while the owner's switch
- * (TOWN_PHOTO_DISPATCH_KEY) is 'on'. Fewer than
- * DISPATCH_MIN_OWN_PHOTOS of the lodging's photos in the mock, else it is the ≥5 rule's case.
- * Table alias `a` = mock_artifact.
+ * (the country row's dispatch_photo_mode) is 'own_town'. Fewer than the country's minimum of the
+ * lodging's photos in the mock, else it is the ≥N rule's case. Table aliases `a` = mock_artifact, `l` = its lead.
  */
 export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`(
-  exists (select 1 from app_setting s where s.key = ${TOWN_PHOTO_DISPATCH_KEY} and s.value = 'on')
-  and (case when jsonb_typeof(a.inputs->'siteData'->'photos') = 'array' then jsonb_array_length(a.inputs->'siteData'->'photos') else 0 end) < ${DISPATCH_MIN_OWN_PHOTOS}
+  ${LEAD_TOWN_MODE_SQL}
+  and (case when jsonb_typeof(a.inputs->'siteData'->'photos') = 'array' then jsonb_array_length(a.inputs->'siteData'->'photos') else 0 end) < ${LEAD_MIN_OWN_PHOTOS_SQL}
   and (
     (a.inputs->'siteData'->'townPhoto'->'pick'->>'version' = ${String(TOWN_PICK_VERSION)}
       and a.inputs->'siteData'->'townPhoto'->'pick'->>'threshold' = ${TOWN_PICK_THRESHOLD})
@@ -75,10 +88,10 @@ export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`(
 
 /**
  * THE photo rule of a cold letter, lead + mock together (aliases `l` = lead, `a` = mock_artifact):
- *   · a lead with ≥ DISPATCH_MIN_OWN_PHOTOS own photos → its mock shows ≥ that many and no town photo
+ *   · a lead with ≥ its country's minimum own photos → its mock shows ≥ that many and no town photo
  *     (the 2026-11-24 Zsejka rule, unchanged);
  *   · a lead with fewer → its mock carries the current town pick (MOCK_TOWN_PICK_OK_SQL).
  */
 export const DISPATCH_PHOTOS_OK_SQL = sql<boolean>`(
-  case when ${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS} then ${MOCK_OWN_PHOTOS_OK_SQL}
+  case when ${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} then ${MOCK_OWN_PHOTOS_OK_SQL}
        else ${MOCK_TOWN_PICK_OK_SQL} end)`;

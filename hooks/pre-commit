@@ -2521,6 +2521,12 @@ if [ -f scripts/qa-review-check.mts ]; then
   echo "[pre-commit] qa-review-check (minőségi kolléga minden levél előtt, engedélylistás képszűrő)…"
   npx tsx scripts/qa-review-check.mts
 fi
+# „Országok / Árazás” 4. fázis (0155): the dispatch rules live on the country row — the replaced code
+# constants and global app_setting keys are read nowhere any more, the auto-approve runs in the repo. Static, fast.
+if [ -f scripts/dispatch-settings-check.mts ]; then
+  echo "[pre-commit] dispatch-settings-check (kiküldési szabályok az ország során, a kiváltott értékek sehol)…"
+  npx tsx scripts/dispatch-settings-check.mts
+fi
 # No/few-photo leads: the town-photo verdict, the sharing-out, the owner's dispatch switch (default OFF) and the
 # MINTA rule (owner 2026-11-25, plan kepnelkuli-hero). The gate SQL runs in a rolled-back dev-DB transaction.
 if [ -f scripts/town-photo-check.mts ]; then

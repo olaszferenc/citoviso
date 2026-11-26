@@ -88,6 +88,10 @@ async function view(prospectId: string, startedAt?: Date): Promise<void> {
   await db.insertInto("mock_view").values({ prospect_id: prospectId, ...(startedAt ? { started_at: startedAt } : {}) } as never).execute();
 }
 
+// 0155: the follow-up letter's switch is the country row's — saved here, restored in `finally`.
+const savedEscalation = await db.selectFrom("country").select(["iso2", "escalation_followup"]).execute();
+await db.updateTable("country").set({ escalation_followup: true }).execute();
+await (await import("../src/country.js")).refreshCountries();
 try {
   // ① configured threshold + percent reach the minted row.
   // Every opening counts here (distinctDays off): the two views below happen seconds apart.
@@ -321,16 +325,17 @@ try {
   check("⑨ éjjel (03:00 Budapest): semmi nem megy ki, a futás halasztást jelez", [sent.length, !!night.deferred, await stamp()], [0, true, null]);
 
   // ⑨b Owner 2026-11-18: the stop switch holds the letter even inside the window; switched back, it goes.
+  // 0155: the switch is every country ROW's escalation_followup (restored in the outer finally).
   {
-    const { getSetting, setSetting } = await import("../src/console/appSettings.js");
-    const prev = await getSetting("escalation_followup");
-    await setSetting("escalation_followup", JSON.stringify({ enabled: false }));
+    const { refreshCountries } = await import("../src/country.js");
+    await db.updateTable("country").set({ escalation_followup: false }).execute();
+    await refreshCountries();
     try {
       const off = await sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine });
-      check("⑨b kikapcsolva (escalation_followup): ablakon belül sem megy ki, halasztást jelez", [sent.length, !!off.deferred, await stamp()], [0, true, null]);
+      check("⑨b kikapcsolva (escalation_followup minden ország-soron): ablakon belül sem megy ki, halasztást jelez", [sent.length, !!off.deferred, await stamp()], [0, true, null]);
     } finally {
-      if (prev === null) await db.deleteFrom("app_setting").where("key", "=", "escalation_followup").execute();
-      else await setSetting("escalation_followup", prev);
+      await db.updateTable("country").set({ escalation_followup: true }).execute();
+      await refreshCountries();
     }
   }
 
@@ -359,6 +364,7 @@ try {
   const expired = await mk(-1);
   check("⑨ lejárt ajánlat SOHA nem foglalható", await claimFollowup(expired, new Date()), false);
 } finally {
+  for (const r of savedEscalation) await db.updateTable("country").set({ escalation_followup: r.escalation_followup }).where("iso2", "=", r.iso2).execute();
   overrideEscalationConfigInProcess(null);
   if (made.length) await db.deleteFrom("prospect").where("id", "in", made).execute();
   await db.destroy();
@@ -368,4 +374,4 @@ if (failures > 0) {
   console.error(`\n✗ ESCALATION-CONFIG-CHECK: ${failures} bukott ellenőrzés`);
   process.exit(1);
 }
-console.log("\n✅ ESCALATION-CONFIG-CHECK: minden ellenőrzés zöld (a teszt-sorok törölve, az app_setting sort nem írta)");
+console.log("\n✅ ESCALATION-CONFIG-CHECK: minden ellenőrzés zöld (a teszt-sorok törölve, az ország-sorok kapcsolója visszaállítva)");

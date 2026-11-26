@@ -20,7 +20,7 @@ import { db } from "../db/client.js";
 import type { Photo, Recipe, SiteData } from "../engine/recipe.js";
 import { gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../media/photoKind.js";
-import { DISPATCH_MIN_OWN_PHOTOS, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
+import { LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
 import { APPROVAL_PENDING_NOTE, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
 import { RENDER_GATE_VERSION, renderGateFor } from "../outreach/mockRenderGate.js";
@@ -121,7 +121,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     // Not the rows a person or a rule took out (twins, no contact …): only those waiting for the review chain.
     .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
-    .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
+    .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
     // A half-done offer first (owner 2026-11-26): a lead with one plan already passed by the colleague.
@@ -155,7 +155,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
       .select(["d.lead_id as leadId", "d.artifact_id as mainId"])
       .where("d.status", "in", ["queued", "held"])
       .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
-      .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
+      .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
       .where(MOCK_CURRENT_GENERATOR_SQL)
       .orderBy("d.queued_at")
       .execute();
@@ -182,7 +182,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where("d.status", "in", ["queued", "held"])
     .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
-    .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${DISPATCH_MIN_OWN_PHOTOS}`)
+    .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
     .executeTakeFirst();

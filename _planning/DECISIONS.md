@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-orszagok-arazas-4-fazis-kikuldes-orszagonkent.md) — „Országok / Árazás” 4. fázis: a kiküldés szabályai országonként, az ország során; az auto-approve a repóba költözik
 - [ADR-0486](decisions/0486-az-amenities-modul-felulete-a-mockon-a-nativ.md) — Az amenities modul felülete a mockon a natív „Egy pillantásra” szakasz ikonos tételei
 - [ADR-0485](decisions/0485-a-mainre-csak-a-land-soron-at-push-or-soros.md) — A mainre csak a land-soron át: push-őr + soros hotfix-merge (land-merge.sh)
 - [ADR-0484](decisions/0484-orszagok-arazas-egy-crm-lap-az-orszagoknak-es.md) — „Országok / Árazás”: egy CRM-lap az országoknak és az áraiknak (1. fázis, migráció nélkül)

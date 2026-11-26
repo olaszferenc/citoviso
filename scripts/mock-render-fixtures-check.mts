@@ -22,7 +22,7 @@ import path from "node:path";
 import type { Recipe, SiteData } from "../src/engine/recipe.js";
 import { renderMockMeasured } from "../src/generator/mockLanguage.js";
 import { curateMockPhotos } from "../src/generator/photoCurate.js";
-import { DISPATCH_MIN_OWN_PHOTOS } from "../src/outreach/mockPhotoGate.js";
+import { DEFAULT_MIN_OWN_PHOTOS } from "../src/outreach/mockPhotoGate.js";
 import { gatePhotoOf } from "../src/engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../src/media/photoKind.js";
 import { auditMockFile } from "../src/outreach/mockRenderGate.js";
@@ -69,9 +69,9 @@ try {
       // Fewer good own photos than the send chain asks for → this lead never goes out (the chain's
       // MOCK_OWN_PHOTOS_OK_SQL holds it): not a code failure, said out loud (2026-11-25: bathrooms off
       // the page left Vörösmarty tér with 4).
-      if (c.photos.length < DISPATCH_MIN_OWN_PHOTOS) {
+      if (c.photos.length < DEFAULT_MIN_OWN_PHOTOS) {
         skipped++;
-        console.log(`⏭  ${f.tpl.padEnd(13)} ${f.name}  — ${c.photos.length} jó saját kép marad (< ${DISPATCH_MIN_OWN_PHOTOS}): kiesik a kiküldésből, nem renderelem`);
+        console.log(`⏭  ${f.tpl.padEnd(13)} ${f.name}  — ${c.photos.length} jó saját kép marad (< ${DEFAULT_MIN_OWN_PHOTOS}): kiesik a kiküldésből, nem renderelem`);
         continue;
       }
       if (f.tpl === "gate-opening") {

@@ -135,11 +135,13 @@ leadet mutatja.
   jött. **„Nem eldönthető”**: jel nélküli megnyitás, amely előtt több csatornán is kiment ugyanaz a
   link (pl. e-mail és SMS, vagy Viber és a tartalék MMS+SMS) — ez a sor egyre kevesebb lesz, mert
   az új küldések linkje jelet hordoz (jel nélkül csak a begépelt vagy jel nélkül átmásolt cím jön).
-- **Az utánkövető levél** (nem-nyitóknak): aki e-mailt kapott, de 14 nappal az utolsó megkeresése után
+- **Az utánkövető levél** (nem-nyitóknak): aki e-mailt kapott, de az országában beállított napszám (alapból 14) után az utolsó megkeresése után
   (bármely csatornán) egyik linkjét sem nyitotta meg, egyszer kap még egy levelet, ami a terv képével
   indul, és a feladója egy személynév. Nem kapja meg, aki leiratkozott, válaszolt, próbázik, rendelt vagy
   vásárolt, akinek a kiküldését visszavonták, vagy akinek a terve nincs jóváhagyva. Óránként legfeljebb 5,
-  naponta alapból legfeljebb 40 megy ki, csak hétköznap 8–17. Ha az éles beállításban nincs megadva a feladó
+  naponta legfeljebb az ország napi kerete megy ki, az ország küldési napjain és óráiban. Hogy be van-e kapcsolva,
+  hány nap után megy és mennyi a napi kerete, azt országonként az **Országok / Árazás** lapon, az ország
+  **„Kiküldés”** fülén (**„6. Utánkövetés”**) állítod. Ha az éles beállításban nincs megadva a feladó
   neve, egy sem megy ki. Aki ebből a levélből nyitott, azt a **„Melyik kör?”** váltó **„Újrakeresés”** állásában
   látod, a „Honnan nyitották” táblázat „Utánkövető levél” sorában.
 - **„Kohorsz”**: küldési hetek soronként — a hét kiküldöttjeinek hány százaléka nyitott meg 7,

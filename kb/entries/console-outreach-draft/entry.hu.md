@@ -189,12 +189,12 @@ feliratában), a **„Páros indítása”**, és ha MINDKÉT csatorna küldhet�
 Mindegyik megerősítést kér, és a RENDSZERBŐL küld — nem a saját leveleződ nyílik meg. A
 kapu-ellenőrzések küldéskor a szerveren újra lefutnak.
 
-⚠️ **Mock-megkeresés csak hétköznap 9:00–16:00 (magyar idő) között megy ki** — a tulaj döntése:
-a szállásadó munkaidőben, nem este vagy hétvégén kapja a megkeresést. Ez az e-mailre, a
-**„Páros indítása”** gombra és a hideg SMS-re egyaránt áll. Ablakon kívül a gomb megnyomására a
-rendszer nem küld, hanem kiírja, hogy a mock-megkeresés csak hétköznap 9:00–16:00 (Budapest)
-között megy ki, és hogy **a következő hétköznap 9:00-tól indítható** — akkor nyisd meg újra a
-lapot, és indítsd el.
+⚠️ **Mock-megkeresés csak a lead országának küldési ablakában megy ki** — a tulaj döntése:
+a szállásadó munkaidőben, nem este vagy hétvégén kapja a megkeresést. Az ablakot (napok, órák az ország
+idejében, ünnepnapok) országonként az **Országok / Árazás** lap **„Kiküldés”** fülén (**„5. Időkeret”**)
+állítod; Magyarországon ma hétköznap 8–17. Ez az e-mailre, a **„Páros indítása”** gombra és a hideg
+SMS-re egyaránt áll. Ablakon kívül a gomb megnyomására a rendszer nem küld, hanem kiírja, mikor van az
+ország küldési ablaka, és mikortól indítható legközelebb — akkor nyisd meg újra a lapot, és indítsd el.
 
 ⚠️ **A sáv ZÁRVA indul**, és ezt ki is írja: **„Zárva: a levél végét (leiratkozás + jogalap)
 még nem láttad — görgess végig a levélen.”** Amint a levél végére érsz, a gombok felélednek, és
@@ -215,7 +215,7 @@ A tárolt cím nem változik, csak az összevetés hagyja figyelmen kívül a `+
 
 
 > ℹ️ A kézi küldés mellett van **automata út** is: a lead lapján, a jóváhagyott mock kártyáján a
-> „Kiküldési sorba (automata)” gomb sorba teszi a leadet, és hétköznap 9–16 között a rendszer küldi
+> „Kiküldési sorba (automata)” gomb sorba teszi a leadet, és az ország küldési ablakában a rendszer küldi
 > ki, ugyanezekkel az ellenőrzésekkel (Súgó: lead adatlap → „Kiküldési sor (automata)”).
 
 ## Mit lát a lead, amikor megnyitja a linket
