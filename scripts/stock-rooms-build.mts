@@ -8,9 +8,10 @@
 //   · Wikimedia Commons search (the bulk — measured 2026-11-25: Openverse's Flickr hits were mostly no
 //     room at all, 109 of 1186 passed);
 //   · Openverse (api.openverse.org, anonymous: 200 requests/day) over Flickr and Commons.
-// Only Wikimedia-hosted pictures go on the page (Flickr's CDN refuses a non-browser client). Nothing is
-// downloaded into the repo: the page hot-links the provider's CDN (live.staticflickr.com,
-// upload.wikimedia.org — both made for it) and prints the credit, like the town photo.
+//   · Openverse's Rawpixel source (CC0 staged interiors).
+// Flickr is left out (its CDN refuses a non-browser client; coordinator 2026-11-25: no gate exception).
+// SELF-SERVED: each chosen picture is downloaded once into public/assets/stock/styled/ (≤ 1280 px JPEG) and the
+// page prints its credit (coordinator 2026-11-25: no hot-linked sample picture).
 // JUDGE: the production CLIP vision model (media/photoKind.ts) against stock-rooms-labels.json —
 // the best subject label is a room (bedroom, bathroom, living room, kitchen, terrace, dining), the
 // forbidden subjects (people, text, a lobby, a museum, clutter, a drawing…) stay under 0.25, the
@@ -19,11 +20,13 @@
 // OUTPUT: src/engine/stockRooms.json — per photo the URL, style, room, credit, licence and dHash (the
 // tenant uploader refuses a library picture by it, engine/stock.ts isStockDhash).
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import sharp from "sharp";
 import path from "node:path";
-import { clipImageEmbedding, photoKindAvailable } from "../src/media/photoKind.js";
+import { classifyPhotoBuffer, clipImageEmbedding, photoKindAvailable } from "../src/media/photoKind.js";
 import { dHashFromBuffer } from "../src/generator/photoHash.js";
-import { hashDistance } from "../src/engine/samePicture.js";
+import { hashDistance, NEAR_DUP_BITS } from "../src/engine/samePicture.js";
 import LABELS from "./stock-rooms-labels.json" with { type: "json" };
 
 type Style = "mediterranean" | "alpine" | "rural" | "urban";
@@ -54,7 +57,7 @@ const COMMONS_QUERIES: Record<Style, string[]> = {
   urban: ["hotel room", "apartment interior", "modern bedroom", "loft apartment", "hotel room Budapest", "hotel room Vienna", "studio apartment interior", "modern kitchen interior", "modern bathroom", "serviced apartment", "hotel room Prague", "hotel suite living room", "hotel room Berlin", "hotel room Warsaw", "hotel room London", "hotel room Paris", "design hotel room", "boutique hotel room", "city apartment living room", "modern apartment bathroom", "hotel bathroom", "hotel room Zagreb", "hotel room Bratislava", "apartment kitchen"],
 };
 
-const ROOM_QUOTA: Record<Room, number> = { bedroom: 0.6, bathroom: 0, living: 0.25, kitchen: 0, terrace: 0, dining: 0.15 };
+const ROOM_QUOTA: Record<Room, number> = { bedroom: 0.35, bathroom: 0.15, living: 0.15, kitchen: 0.12, terrace: 0.13, dining: 0.1 };
 
 interface Hit {
   readonly id: string;
@@ -134,6 +137,42 @@ async function collectCommons(): Promise<Hit[]> {
         await sleep(300);
       }
       console.log(`commons ${style} · ${q}: ${hits.size}`);
+    }
+  }
+  const list = [...hits.values()];
+  writeFileSync(file, JSON.stringify(list));
+  return list;
+}
+
+const RAWPIXEL_QUERIES: Record<Style, string[]> = {
+  mediterranean: ["mediterranean bedroom", "white bedroom sea view", "mediterranean bathroom", "mediterranean kitchen", "terrace sea view", "coastal living room"],
+  alpine: ["wooden cabin bedroom", "chalet interior", "rustic wooden bathroom", "cabin kitchen", "mountain view balcony", "cabin living room fireplace"],
+  rural: ["rustic bedroom", "farmhouse bedroom", "rustic bathroom", "farmhouse kitchen", "garden terrace", "cottage living room"],
+  urban: ["modern bedroom interior", "hotel room interior", "modern bathroom interior", "modern kitchen interior", "city balcony", "modern living room interior"],
+};
+
+/** Openverse's Rawpixel source (CC0, downloadable, self-served after the build — coordinator 2026-11-25). */
+async function collectRawpixel(): Promise<Hit[]> {
+  const file = path.join(CACHE, "hits-rawpixel.json");
+  if (existsSync(file)) return JSON.parse(readFileSync(file, "utf8")) as Hit[];
+  const hits = new Map<string, Hit>();
+  for (const [style, qs] of Object.entries(RAWPIXEL_QUERIES) as [Style, string[]][]) {
+    for (const q of qs) {
+      for (let page = 1; page <= 2; page++) {
+        const u = `https://api.openverse.org/v1/images/?${new URLSearchParams({ q, license: "cc0,pdm", source: "rawpixel", page_size: "20", page: String(page), mature: "false" })}`;
+        stats.apiCalls++;
+        const r = await fetch(u, { headers: { "User-Agent": UA } }).catch(() => null);
+        const j: any = r?.ok ? await r.json() : null;
+        for (const x of j?.results ?? []) {
+          const w = Number(x.width) || 0;
+          const h = Number(x.height) || 0;
+          if (!x.url || (w && w < h * 1.25) || hits.has(x.id)) continue;
+          hits.set(x.id, { id: `rp-${x.id}`, style, url: x.url, small: x.url, page: x.foreign_landing_url, author: String(x.creator ?? "").slice(0, 80) || "rawpixel", license: licenseName(x.license, x.license_version), licenseUrl: x.license_url ?? "", w, h });
+        }
+        await sleep(3200);
+        if ((j?.results ?? []).length < 20) break;
+      }
+      console.log(`rawpixel ${style} · ${q}: ${hits.size}`);
     }
   }
   const list = [...hits.values()];
@@ -240,6 +279,7 @@ function judge(h: Hit, emb: Float32Array): Scored | string {
   // Round 2 (2026-11-25, after the eye check of the first build: people, a drawing, a b/w shot, a hotel
   // corridor, luggage on the bed and a village view got through): four yes/no questions, each ≥ 0.6.
   for (const pr of PAIRS) {
+    if (pr.key === "room" && subj[top]!.key === "terrace") continue; // a terrace is outside by definition
     const a = (100 * dot(pr.yesEmbed, emb)) / n;
     const b = (100 * dot(pr.noEmbed, emb)) / n;
     if (1 / (1 + Math.exp(b - a)) < (PAIR_MIN[pr.key] ?? 0.6)) return `pair: ${pr.key}`;
@@ -252,14 +292,15 @@ function judge(h: Hit, emb: Float32Array): Scored | string {
   // check of 2026-11-25 found toilets, hostel wash rooms, dated kitchens and football stadiums („terrace”)
   // among the automatic picks.
   const room = subj[top]!.key as Room;
-  if (room === "bathroom" || room === "kitchen" || room === "terrace") return "room: bathroom/kitchen/terrace (local library)";
+  // Rawpixel's staged interiors (CC0) may give the bathroom, kitchen and terrace too; the Commons picks may not.
+  if (!h.id.startsWith("rp-") && (room === "bathroom" || room === "kitchen" || room === "terrace")) return "room: bathroom/kitchen/terrace (local library)";
   return { ...h, style, room, roomP: p[top]!, styleP: own, q };
 }
 
 async function main(): Promise<void> {
   if (!photoKindAvailable()) throw new Error("no CLIP model (PHOTO_KIND_MODEL_PATH)");
   const t0 = Date.now();
-  const hits = [...(await collect()), ...(await collectCommons())];
+  const hits = [...(await collect()), ...(await collectCommons()), ...(await collectRawpixel())];
   console.log(`candidates: ${hits.length}`);
   const ok: Scored[] = [];
   const why: Record<string, number> = {};
@@ -305,13 +346,15 @@ async function main(): Promise<void> {
   }
   // Wikimedia only on the page: Flickr's CDN refuses a non-browser client (403), so the send gate's
   // render — which fetches with our honest bot UA — would see a broken picture (measured 2026-11-25).
-  for (let i = ok.length - 1; i >= 0; i--) if (!/^https:\/\/(?:upload|thumb)\.wikimedia\.org\//.test(ok[i]!.url)) ok.splice(i, 1);
+  for (let i = ok.length - 1; i >= 0; i--) if (!/^https:\/\/(?:(?:upload|thumb)\.wikimedia\.org|images\.rawpixel\.com)\//.test(ok[i]!.url)) ok.splice(i, 1);
   // Per style: room quotas, best first, one view once.
   const out: Scored[] = [];
   for (const style of Object.keys(QUERIES) as Style[]) {
     const pool = ok.filter((h) => h.style === style).sort((a, b) => 0.5 * b.roomP + 0.3 * b.q + 0.2 * b.styleP - (0.5 * a.roomP + 0.3 * a.q + 0.2 * a.styleP));
     const chosen: Scored[] = [];
-    const twin = (h: Scored) => chosen.some((c) => h.dhash && c.dhash && (hashDistance(h.dhash, c.dhash) ?? 99) <= 8);
+    // One view once — well above the send gate's own near-duplicate bar (samePicture.NEAR_DUP_BITS), since the
+    // gate hashes the page-size file (blind run 2026-11-25: two library shots of one room flagged as „the same”).
+    const twin = (h: Scored) => out.concat(chosen).some((c) => h.dhash && c.dhash && (hashDistance(h.dhash, c.dhash) ?? 99) <= NEAR_DUP_BITS + 6);
     for (const [room, share] of Object.entries(ROOM_QUOTA) as [Room, number][]) {
       for (const h of pool.filter((x) => x.room === room)) {
         if (chosen.filter((c) => c.room === room).length >= Math.round(PER_STYLE * share)) break;
@@ -327,12 +370,60 @@ async function main(): Promise<void> {
     const byRoom = Object.fromEntries(Object.keys(ROOM_QUOTA).map((r) => [r, chosen.filter((c) => c.room === r).length]));
     console.log(style, chosen.length, JSON.stringify(byRoom));
   }
+  // SELF-SERVED (coordinator 2026-11-25: „csak az a kép jó, amit mi letöltünk és magunk szolgálunk ki”): every
+  // chosen picture is fetched once, scaled to ≤ 1280 px, JPEG-encoded and stored under public/assets/stock/styled/.
+  const ROOT = path.resolve("public/assets/stock/styled");
+  // …and never a picture the hand-reviewed local library already holds (a Pexels photo re-uploaded to Commons was the
+  // same as bedroom-rustic-262048 — blind run 2026-11-25).
+  const localManifest = JSON.parse(readFileSync(path.resolve("public/assets/stock/manifest.json"), "utf8")) as { images?: { dhash?: string; sourceDhash?: string }[] };
+  const storedHashes: string[] = (localManifest.images ?? []).flatMap((e) => [e.dhash, e.sourceDhash].filter((x): x is string => Boolean(x)));
+  for (const h of out) {
+    const rel = `styled/${h.style}/${h.room}-${createHash("sha1").update(h.url).digest("hex").slice(0, 12)}.jpg`;
+    const dst = path.resolve("public/assets/stock", rel);
+    if (!existsSync(dst)) {
+      const r = await fetch(h.url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(30000) }).catch(() => null);
+      if (!r?.ok) continue;
+      mkdirSync(path.dirname(dst), { recursive: true });
+      const jpg = await sharp(Buffer.from(await r.arrayBuffer())).rotate().resize({ width: 1280, withoutEnlargement: true }).jpeg({ quality: 78, mozjpeg: true }).toBuffer();
+      // The production lodging filter too (media/photoKind.ts — the one the owners' own photos pass), on the
+      // full picture: surely a lodging picture, no toilet in view (eye check 2026-11-25: an ice bucket close-up,
+      // toilets in sight). A picture it refuses is not stored.
+      const pk = await classifyPhotoBuffer(jpg);
+      if (!pk || pk.kind !== "ok" || (pk.probs["a toilet"] ?? 0) >= 0.1) {
+        console.log(`  photoKind: ${h.room} ${h.url.slice(-40)} → ${pk?.label ?? "?"} ${pk?.why ?? ""}`);
+        continue;
+      }
+      // One view once, measured on the PAGE-SIZE file the send gate hashes (blind run 2026-11-25: two shots of one
+      // room were 18+ bits apart as thumbnails, under 12 as stored files).
+      const dh = await dHashFromBuffer(jpg).catch(() => undefined);
+      if (dh && storedHashes.some((o) => (hashDistance(dh, o) ?? 99) <= NEAR_DUP_BITS + 2)) {
+        console.log(`  ugyanaz a látvány (lapméretben): ${h.room} ${h.url.slice(-40)}`);
+        continue;
+      }
+      if (dh) {
+        storedHashes.push(dh);
+        h.dhash = dh;
+      }
+      writeFileSync(dst, jpg);
+      stats.bytes += jpg.length;
+    } else {
+      const dh = await dHashFromBuffer(readFileSync(dst)).catch(() => undefined);
+      if (dh && storedHashes.some((o) => (hashDistance(dh, o) ?? 99) <= NEAR_DUP_BITS + 2)) continue;
+      if (dh) {
+        storedHashes.push(dh);
+        h.dhash = dh;
+      }
+    }
+    (h as { local?: string }).local = `/assets/stock/${rel}`;
+  }
+  void ROOT;
   const manifest = {
     built: new Date().toISOString().slice(0, 10),
     source: "Openverse (Flickr, Wikimedia Commons) — CC0 / public domain / CC BY / CC BY-SA; hot-linked, credited on the page",
     stats: { ...stats, candidates: hits.length, accepted: ok.length, seconds: Math.round((Date.now() - t0) / 1000), rejected: why },
-    images: out.map((h) => ({
-      url: h.url,
+    images: out.filter((h) => (h as { local?: string }).local).map((h) => ({
+      url: (h as { local?: string }).local!,
+      source: h.url,
       style: h.style,
       room: h.room,
       page: h.page,

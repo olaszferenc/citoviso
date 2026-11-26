@@ -247,7 +247,7 @@ export function sampleRooms(d: SiteData): readonly Room[] {
   // bathroom, terrace / kitchen / living room), each its own sample picture. The names are kinds of
   // space every lodging has or the source signals (stockGalleryCategories), never a count of rooms.
   const ownCount = d.photos.filter((p) => !isStockPhoto(p) && p.url !== d.townPhoto?.url).length;
-  if (d.stock?.cards && ownCount === 0 && d.townGallery?.length && !names && !whole && n === 1) {
+  if (d.stock?.cards && ownCount === 0 && (d.townPhoto || d.townGallery?.length) && !names && !whole && n === 1) {
     const label: Record<CardKind, string> = {
       bedroom: T(d, "Hálószoba"),
       bathroom: T(d, "Fürdőszoba"),
@@ -402,7 +402,7 @@ export function allotPhotos(
   // The stock fill (mock, fewer than six own photos) completes the gallery, never another slot.
   const extra = (d.stock?.gallery ?? []).filter((p) => !usedLocal.has(p.url));
   // The town page carries 5–7 local pictures AND the MINTA rooms (plan kepnelkuli-hero): up to 12 there.
-  const cap = d.townGallery?.length ? Math.max(own.length, opts.maxGallery, 12) : Math.max(own.length, opts.maxGallery);
+  const cap = d.townPhoto || d.townGallery?.length ? Math.max(own.length, opts.maxGallery, 12) : Math.max(own.length, opts.maxGallery);
   const gallery = [...own, ...extra].slice(0, cap);
   return { hero, bandA, bandB, contact, contactAlt, gallery, rows };
 }

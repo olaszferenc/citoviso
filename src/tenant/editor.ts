@@ -12,6 +12,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db } from "../db/client.js";
 import { T } from "../engine/templateKit.js";
+import { isCatalogDefaultText } from "../moduleConfig.js";
 import { langForTenant, prepareRenderLang } from "../i18n/mail.js";
 import { applyLivePhotoPolicy } from "../engine/photoPolicy.js";
 import { isStockPhoto } from "../engine/stock.js";
@@ -616,7 +617,10 @@ export async function moduleContentFor(
       maxNights: Number(b.maxNights ?? 30),
       horizonMonths: Number(b.horizonMonths ?? 12),
       leadTimeDays: Number(b.leadTimeDays ?? 0),
-      ...(b.responseNote ? { responseNote: String(b.responseNote) } : {}),
+      // A note still equal to the catalog default is a catalog key → the site's language.
+      ...(b.responseNote
+        ? { responseNote: isCatalogDefaultText("enquiry", "responseNote", b.responseNote) ? T(L, b.responseNote) : String(b.responseNote) }
+        : {}),
       // ⛔ HÁROM ÁLLAPOT (KB-őr FLAG, 2026-09-14): kitöltetlen → a mező KIMARAD (nem
       // tudjuk); 0 → BENNE MARAD (a tulaj kimondta, hogy nincs IFA); >0 → az összeg.
       // A különbségtétel ITT dől el, nem a renderelőben — így egy új fogyasztó sem

@@ -1998,6 +1998,9 @@ async function serveAdmin(
           : {}),
         // ADR-0067: the settings screens speak the tenant's own site language.
         lang: content?.lang ?? "hu",
+        // NEMZETKÖZI (HR dev-próba 2026-11-25): money units on the generic form (tourist tax).
+        siteCurrency: await siteCurrency(site.id),
+        ...(modules.syncPortals ? { syncPortals: modules.syncPortals } : {}),
         values: cfg.config,
         canRestore,
         priceMonthly: active.priceMonthly,

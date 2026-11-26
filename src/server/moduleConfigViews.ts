@@ -20,10 +20,12 @@
 
 import {
   MODULE_CONFIG_REGISTRY,
+  isCatalogDefaultText,
   type ModuleConfigValues,
   type ModuleField,
 } from "../moduleConfig.js";
 import { currencySign } from "../text/money.js";
+import { BOOKING_DESC_NO_LOCAL_PORTAL } from "../generator/configurator.js";
 import { viewToday, viewZone } from "../tenant/zoneCtx.js";
 import { formatMinor, formatMoney, formatNumber } from "../text/money.js";
 import { getCurrency, HU_PRICING_REGION } from "../pricing.js";
@@ -1138,10 +1140,12 @@ function moduleHeader(
  */
 export const PORTAL_SYNC_UI = true;
 
-/** One declarative field → an input the owner understands. */
-function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
+/** One declarative field → an input the owner understands.
+ *  `moduleId` + `currency` (NEMZETKÖZI, HR dev-próba 2026-11-25): a value still equal to the
+ *  catalog default is shown in the site's language, and a money unit in the site's currency. */
+function renderField(f: ModuleField, value: unknown, lang = "hu", moduleId = "", currency?: string): string {
   const id = `cfg_${f.key}`;
-  const v = value ?? "";
+  const v = isCatalogDefaultText(moduleId, f.key, value) ? T(lang, value) : (value ?? "");
   const label = `<label class="citui-label" for="${id}">${esc(T(lang, f.label))}</label>`;
   // ⛔ ÁLLAPOT-FÜGGŐ EMLÉKEZTETŐ (tulaj kérése, 2026-09-14). A `help` az időtlen
   // szabály; ez azt mondja meg, mit lát a vendég MOST, amíg a mező üres. Üresnek
@@ -1195,7 +1199,7 @@ function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
     return (
       `<div class="citui-field">${label}<span class="mcfg-suffix">` +
       `<input class="citui-input" id="${id}" name="${esc(f.key)}" type="number" inputmode="numeric"${attrs} value="${esc(v)}">` +
-      (f.suffix ? `<span>${esc(T(lang, f.suffix))}</span>` : "") +
+      (f.suffix ? `<span>${esc(fieldSuffix(f, lang, currency))}</span>` : "") +
       `</span>${help}</div>`
     );
   }
@@ -1204,6 +1208,21 @@ function renderField(f: ModuleField, value: unknown, lang = "hu"): string {
   // without `multiple` the browser's type=email validation rejects the comma.
   const multi = f.type === "email" ? " multiple" : "";
   return `<div class="citui-field">${label}<input class="citui-input" id="${id}" name="${esc(f.key)}" type="${type}"${multi}${ph} value="${esc(v)}">${help}</div>`;
+}
+
+/** A module's catalog description, minus the portals the lodging's country is not told about
+ *  (HR dev-próba 2026-11-25: „Szállás.hu” on a Croatian owner's screens). */
+export function moduleDescFor(id: string, publicDesc: string, syncPortals: readonly string[] | undefined): string {
+  return id === "booking" && syncPortals && !syncPortals.includes("Szállás.hu") // i18n-exempt: portal brand name
+    ? BOOKING_DESC_NO_LOCAL_PORTAL
+    : publicDesc;
+}
+
+/** A number field's unit: a money unit follows the site's currency; forint keeps `suffix` as is. */
+function fieldSuffix(f: ModuleField, lang: string, currency: string | undefined): string {
+  const sign = currencySign(currency);
+  if (f.currencySuffix && sign && sign !== "Ft") return `${sign} / ${T(lang, f.currencySuffix)}`; // i18n-exempt: currency sign compare
+  return T(lang, f.suffix ?? "");
 }
 
 /** Day label for the detail card ("szept. 12.") — same shape the Foglalások tab uses. */
@@ -4012,6 +4031,11 @@ export interface ModuleSettingsOpts {
   readonly newUnit?: NewUnitView;
   /** ADR-0067: the site's own language — the settings screens render in it. */
   readonly lang?: string;
+  /** ISO 4217 of the site's room prices (siteCurrency) — money units on the generic form
+   *  (tourist tax) read it; absent = the forint wording a Hungarian site always had. */
+  readonly siteCurrency?: string;
+  /** The lodging country's calendar-sync portals (TenantModuleView.syncPortals); absent = catalog wording. */
+  readonly syncPortals?: readonly string[];
 }
 
 export interface ReviewsEditorData {
@@ -4486,7 +4510,7 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
         `<div class="adm-blk adm-blk--plain">` +
         def.fields
           .map((f) =>
-            renderField(f, opts.values[f.key], lang).replace(
+            renderField(f, opts.values[f.key], lang, moduleId, opts.siteCurrency).replace(
               `id="cfg_${f.key}"`,
               `id="cfg_${f.key}" data-watch="${esc(T(lang, f.label).toLowerCase())}"`,
             ),
@@ -4514,9 +4538,9 @@ export function moduleSettingsSection(moduleId: string, opts: ModuleSettingsOpts
       `<h2>${bespoke ? T(lang, "Szabályok") : esc(T(lang, cat.publicLabel))}</h2></div>` +
       (bespoke
         ? `<p class="adm-lead">${T(lang, "Ezeket ritkán kell módosítani — alapból működnek.")}</p>`
-        : `<p class="adm-lead">${esc(T(lang, cat.publicDesc))}</p>`) +
+        : `<p class="adm-lead">${esc(T(lang, moduleDescFor(cat.id, cat.publicDesc, opts.syncPortals)))}</p>`) +
       `<div class="adm-blk adm-blk--plain">` +
-      def.fields.map((f) => renderField(f, opts.values[f.key], lang)).join("") +
+      def.fields.map((f) => renderField(f, opts.values[f.key], lang, moduleId, opts.siteCurrency)).join("") +
       `</div>` +
       `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px">` +
       `<button class="citui-btn citui-btn--primary" type="submit">${T(lang, "Beállítások mentése")}</button>` +

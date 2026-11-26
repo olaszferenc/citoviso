@@ -14,7 +14,7 @@ import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
 import { MODULE_SLOTS, moduleSectionGroups, wholeBandBlock } from "./moduleSections.js";
 import { esc, galleryPhotos, hasOwnBedroomPhoto, roomsForMock, roomTypeName, sampleRooms, T } from "./templateKit.js";
-import { isStockPhoto, stockGallery, stockHeroBackdrop, stockUrl, styledStockEntry } from "./stock.js";
+import { isStockPhoto, stockGallery, stockHeroBackdrop, stockUrl, styledStockLibrary } from "./stock.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
 import { onePhone } from "../text/phone.js";
@@ -763,7 +763,10 @@ function withStockFill(data: SiteData): SiteData {
   const alt = T(data, "Illusztráció");
   // Plan kepnelkuli-hero ③: the town's LOCAL pictures come first after the own photos, then the MINTA rooms.
   const local = localTownPhotos(data);
-  const gallery = [...local, ...stockGallery(data, !hasOwnBedroomPhoto(data), alt, local.length)];
+  // A town page is one whose hero or gallery is the town's (plan kepnelkuli-hero): it fills up to ~15 pictures
+  // even when the town gave no picture besides its hero (blind run 2026-11-25: 3 pages of 7 pictures).
+  const townPage = Boolean(data.townPhoto) || local.length > 0;
+  const gallery = [...local, ...stockGallery(data, !hasOwnBedroomPhoto(data), alt, local.length, townPage)];
   const backdrop = data.photos.length === 0 ? stockHeroBackdrop(data, alt) : undefined;
   return { ...data, stock: { gallery, cards: true, ...(backdrop ? { backdrop } : {}) } };
 }
@@ -852,9 +855,9 @@ function withPictureCredits(html: string, data: SiteData): string {
       `<li>${esc(townLabel(data, t))} · ${T(data, "Fotó")}: <a href="${esc(t.pageUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(t.author)}</a>, Wikimedia Commons, ${lic(t.license, t.licenseUrl)}</li>`,
     );
   }
-  for (const m of html.matchAll(/https:\/\/(?:upload|thumb)\.wikimedia\.org\/[^"'\s)]+/g)) {
-    const e = styledStockEntry(m[0].replace(/&amp;/g, "&"));
-    if (!e || seen.has(e.url)) continue;
+  // The styled sample rooms on the page (self-served under /assets/stock/styled/, credited by their source).
+  for (const e of styledStockLibrary()) {
+    if (seen.has(e.url) || !html.includes(e.url.replace(/^\//, ""))) continue;
     seen.add(e.url);
     rows.push(
       `<li>${T(data, "Minta")} · ${T(data, "Fotó")}: <a href="${esc(e.page)}" target="_blank" rel="noopener" style="color:inherit">${esc(e.author)}</a>, ${lic(e.license, e.licenseUrl)}</li>`,

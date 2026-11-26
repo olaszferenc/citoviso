@@ -8,6 +8,7 @@
 // trust-critical helpers (resolveRegion / resolveGatedPhotos — the A4 photo gate) so the
 // confidence rule can never drift between the two paths.
 
+import { isClosedPlaceName } from "../scraper/closedPlace.js";
 import { assertTemplateHonoured, FIRST_TEMPLATE_DEFAULT } from "./templatePicks.js";
 import { hungarianBedNote, hungarianRoomName, localRoomName } from "../engine/roomNames.js";
 import { deniedSampleTypes, roomCountContradicted, roomCountInsideApartments, unitKindOf, unitNamesFromProse, wholeLetOnly, wholeLetStated } from "../engine/sampleFromSource.js";
@@ -327,6 +328,8 @@ async function generateEngineMockInner(
   const startedAt = Date.now();
   opts.onStage?.("load");
   const { id: leadId, lead } = loaded;
+  // A closed place gets no mock (scraper/closedPlace.ts, coordinator 2026-11-25: „Prém-malom vendégház Closed”).
+  if (isClosedPlaceName(lead.name)) throw new Error(`A hely megszűnt („${lead.name}”) — mock nem készül`); // i18n-exempt: operátori hiba
   // The region snapshot starts as the built-ins and only the scrape pages refreshed it, so the
   // SAME lead resolved differently before and after someone opened /scrape (measured
   // 2026-10-04: Kerekerdő → "Balaton-Kelet" one day, the fallback the next). Load it here.

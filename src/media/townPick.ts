@@ -24,11 +24,12 @@
 import { dHashFromBuffer } from "../generator/photoHash.js";
 import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { reverseGeocode } from "../scraper/enrichGeo.js";
+import { namesTown } from "../generator/townPhoto.js";
 import { clipImageEmbedding, photoKindAvailable } from "./photoKind.js";
 import LABELS from "./townPickLabels.json" with { type: "json" };
 
 /** Bump when the labels, the rules or the thresholds change: the send gate refuses an older pick. */
-export const TOWN_PICK_VERSION = 3;
+export const TOWN_PICK_VERSION = 5;
 /** The approved threshold variant (owner 2026-11-25: „Laza” + the second round). */
 export const TOWN_PICK_THRESHOLD = "laza";
 const T_MIN = 0.5;
@@ -226,7 +227,7 @@ export async function judgeTownPicture(
   const emb = await clipImageEmbedding(buf);
   if (!emb) return null;
   const scores = scoreTownEmbedding(emb);
-  const reason = townVerdict(scores, tier) ?? (asHero && !heroView(scores) ? "felülnézeti, térképszerű légifotó nem nyitókép" : null);
+  const reason = townVerdict(scores, tier) ?? (asHero && !heroView(scores, tier) ? "a nyitókép-padló alatt (felülnézet, fakó, tető közelről vagy sima vidék)" : null);
   return { ok: reason === null, reason, scores };
 }
 
@@ -323,6 +324,8 @@ interface Cand {
   readonly lat?: number;
   readonly lon?: number;
   readonly quality: boolean;
+  /** The file's (visible) category names, joined — the „does it name the town?” test. */
+  readonly cats: string;
 }
 
 const INFO: Record<string, string> = {
@@ -369,6 +372,7 @@ function toCand(net: Net, p: any, tier: TownTier, origin: string): Cand | null {
     author: author.length > 80 ? `${author.slice(0, 77)}…` : author,
     ...(Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0) ? { lat, lon } : {}),
     quality: (p.categories ?? []).some((c: { title: string }) => QUALITY_CATS.test(c.title)),
+    cats: (p.categories ?? []).map((c: { title: string }) => c.title.replace(/^Category:/, "")).join(" | "),
   };
 }
 
@@ -424,6 +428,33 @@ export async function countryAtPoint(lat: number, lon: number): Promise<string |
   countryMemo.set(key, cc);
   return cc;
 }
+
+/** The settlement a point lies in (Nominatim zoom 14: city / town / village / municipality), ≤ 1 req/s, cached. */
+const settlementMemo = new Map<string, string | null>();
+export async function settlementAtPoint(lat: number, lon: number): Promise<string | null> {
+  const key = `${lat.toFixed(3)}|${lon.toFixed(3)}`;
+  if (settlementMemo.has(key)) return settlementMemo.get(key)!;
+  const wait = lastGeocode + 1100 - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastGeocode = Date.now();
+  let name: string | null = null;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&lat=${lat}&lon=${lon}`, {
+      headers: { "User-Agent": "citoviso-scraper/0.1 (+https://github.com/olaszferenc/citoviso)", Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (r.ok) {
+      const a = ((await r.json()) as { address?: Record<string, string> }).address ?? {};
+      name = a.city ?? a.town ?? a.village ?? a.municipality ?? null;
+    }
+  } catch {
+    name = null;
+  }
+  settlementMemo.set(key, name);
+  return name;
+}
+
+const fold = (x: string): string => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 // ── the style of the place (which sample rooms fit) ───────────────────────────
 
@@ -512,8 +543,29 @@ export function brightBonus(s: TownScores): number {
  * v2: may this picture OPEN the page? A top-down, map-like aerial reads as no townscape (Sopron,
  * 2026-11-25) — it may stay in the gallery; an oblique aerial panorama (Primošten) opens fine.
  */
-export function heroView(s: TownScores): boolean {
-  return (s.x.aerial ?? 1) >= 0.3;
+export function heroView(s: TownScores, tier: TownTier = "town"): boolean {
+  return (s.x.aerial ?? 1) >= 0.3 && heroQuality(s, tier);
+}
+
+/** Plain countryside a hero must not be (v4): its best label is one of these and the town is hardly in it. */
+const PLAIN_LAND = new Set(["a forest landscape", "green meadows and fields", "a wheat field under blue sky", "rolling hills countryside"]);
+
+/**
+ * v4 QUALITY FLOOR for the hero, calibrated on the two blind runs of 2026-11-25 (33 judged heroes, good / weak /
+ * bad): a view at all (view ≥ 0.45 — the railway building of Dunaszekcső was 0.43, the lowest good one 0.46);
+ * not a roof or tower top against the sky (roof ≥ 0.35 — Salomvár 0.34, the lowest good 0.39); not plain
+ * countryside (a forest, a meadow, a wheat field, rolling hills with the town under 0.2 — 11 of the 20 weak
+ * heroes, 1 of the 14 good). Below the floor no hero: the landscape around, the region, else no letter.
+ */
+export function heroQuality(s: TownScores, tier: TownTier = "town"): boolean {
+  if ((s.x.view ?? 1) < 0.45) return false;
+  if ((s.x.roof ?? 1) < 0.35) return false;
+  // v5 dullness floor (3 blind runs, 54 judged heroes): CLIP „bright” under 0.05 — 2 weak, no good one lost.
+  if ((s.x.bright ?? 1) < 0.05) return false;
+  // Plain countryside never stands for the TOWN; as the landscape AROUND or of the region it may — when it is
+  // bright and good (v5, coordinator 2026-11-25: a page must go on with the area's landscape, not a blank hero).
+  if (PLAIN_LAND.has(s.top) && s.town < 0.2) return tier !== "town" && (s.x.bright ?? 1) >= 0.5 && s.q >= 0.6;
+  return true;
 }
 
 /** The hot-link URL at a Wikimedia standard thumbnail width (960 / 1280 / 1920 — 1600 answers 400). */
@@ -592,7 +644,32 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
   c1.push(...(await bySearch(net, `"${t.city}" incategory:"Quality_images"`, "town", "minőségi kép (QI)")));
   await judge(c1, 60);
 
-  const heroCount = () => accepted.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO).length;
+  // v4 THE TOWN'S OWN PICTURE (coordinator 2026-11-25: 4 of 17 HR-checked heroes showed the NEXT village, inside
+  // the 15 km GPS bar): a town-tier picture stays „the town” only when its coordinate falls in the lead's own
+  // settlement (Nominatim, the OSM boundary — country-agnostic), or — without a coordinate — its title or
+  // categories name the town. Else it may only stand as a LANDSCAPE of the area (the fallback rule, „környéke”).
+  for (let i = accepted.length - 1; i >= 0; i--) {
+    const a = accepted[i]!;
+    if (a.c.tier !== "town") continue;
+    let own: boolean;
+    if (a.c.lat !== undefined && a.c.lon !== undefined) {
+      const at = await settlementAtPoint(a.c.lat, a.c.lon);
+      own = at === null ? namesTown(`${a.c.title} | ${a.c.cats}`, t.city) : fold(at) === fold(t.city) || namesTown(at, t.city);
+    } else {
+      own = namesTown(`${a.c.title} | ${a.c.cats}`, t.city);
+    }
+    if (own) continue;
+    const asLand: Cand = { ...a.c, tier: "land" };
+    const why = townVerdict(a.s, "land", a.km);
+    if (why) {
+      net.reject("másik település képe");
+      accepted.splice(i, 1);
+    } else {
+      accepted[i] = { ...a, c: asLand, rank: rankOf(a.s, asLand) };
+    }
+  }
+
+  const heroCount = () => accepted.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier)).length;
 
   // ② the landscape around — ONLY when the town itself gave fewer than HEROES_WANT good heroes (coordinator
   // 2026-11-25, speed: the geosearch rings were ~40 % of a town's time and rarely changed the pick).
@@ -633,10 +710,15 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
       if (!it || claim(it, "P297").length) break; // a whole country is too broad for „the region”
       c3.push(...(await byTitles(net, claim(it, "P18"), "region", `régió ${pid}`)));
       const cat = claim(it, "P373")[0];
-      if (cat) c3.push(...(await bySearch(net, `incategory:"${cat}" filew:>1599 filetype:bitmap`, "region", `régió-kategória ${pid}`, 30)));
+      if (cat) {
+        c3.push(...(await bySearch(net, `incategory:"${cat}" filew:>1599 filetype:bitmap`, "region", `régió-kategória ${pid}`, 30)));
+        // v5: the region's LANDSCAPES across its whole category tree (a village with no picture of its own still
+        // gets its area's best view — coordinator 2026-11-25, Fajsz / Biharugra / Csólyospálos).
+        c3.push(...(await bySearch(net, `deepcat:"${cat}" (landscape OR panorama OR látkép OR táj OR krajolik OR Landschaft) filew:>1599 filetype:bitmap`, "region", `régió-tájkép ${pid}`, 50)));
+      }
     }
     const before3 = accepted.length;
-    await judge(c3, 30);
+    await judge(c3, 60);
     for (let i = accepted.length - 1; i >= before3; i--) {
       const a = accepted[i]!;
       if (a.c.lat === undefined || a.c.lon === undefined) continue; // the region item itself vouches for it
@@ -673,11 +755,11 @@ export async function pickTownPhotos(t: TownPickInput): Promise<TownPickResult> 
     ...(a.km !== undefined ? { km: a.km } : {}),
     bucket: a.s.bucket,
     ...(a.dhash ? { dhash: a.dhash } : {}),
-    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s),
+    heroOk: a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier),
   });
 
   // Heroes: the hero-sized ones, best tier first; a fallback tier only fills when the town has fewer than 3.
-  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s));
+  const heroPool = distinct.filter((a) => a.c.w >= HERO_MIN_W && a.c.w >= a.c.h * HERO_MIN_RATIO && heroView(a.s, a.c.tier));
   const heroes: typeof accepted = [];
   // At most 3 of one kind (5 harbour views of Makarska would make its leads' pages look alike).
   for (const a of heroPool) {
@@ -746,7 +828,7 @@ export async function rescreenTownPicks(
       continue;
     }
     const wasHeroSized = heroes.includes(p) || p.heroOk;
-    kept.push({ p, s, score: p.score + brightBonus(s), hero: wasHeroSized && heroView(s) });
+    kept.push({ p, s, score: p.score + brightBonus(s), hero: wasHeroSized && heroView(s, p.tier) });
     await sleep(100);
   }
   const tierRank: Record<TownTier, number> = { town: 0, land: 1, region: 2 };

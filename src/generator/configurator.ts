@@ -122,7 +122,7 @@ async function configuratorBlock(): Promise<string> {
 
 /** 3/10: the booking module's description where no local portal syncs (HU's publicDesc minus Szállás.hu). */
 const HU_SOURCE = "hu";
-const BOOKING_DESC_NO_LOCAL_PORTAL = T(
+export const BOOKING_DESC_NO_LOCAL_PORTAL = T(
   HU_SOURCE,
   "Foglalási naptár közvetlenül az oldalán: a vendég a szabad napokra foglal, közvetítői jutalék nélkül. Ez lép az időpontkérő űrlap helyére. A naptár összeköthető a Booking.com és az Airbnb naptárával: ami ott foglalt, itt is lezár, és fordítva — az árat a portálon továbbra is Ön állítja.",
 );
@@ -617,15 +617,17 @@ export async function buildManifest(
     ...(opts.ask ? { ask: opts.ask } : {}),
     ...(opts.plans && opts.plans.list.length >= 2 ? { plans: opts.plans } : {}),
     ...(opts.continuation ? { continuation: opts.continuation } : {}),
+    // In the page's language (HR dev-próba 2026-11-25: „FOGLALÁSI IGÉNY / ÉRDEKLŐDÉS KÜLDÉSE”
+    // on a Croatian owner's order preview). The pack is loaded by packForClientAsync above.
     cta: {
       booking: {
-        title: "Foglalás",
-        button: "Szabad időpontok megtekintése",
+        title: T(opts.lang, "Foglalás"),
+        button: T(opts.lang, "Szabad időpontok megtekintése"),
         href: "#cit-booking",
       },
       enquiry: {
-        title: "Foglalási igény",
-        button: "Érdeklődés küldése",
+        title: T(opts.lang, "Foglalási igény"),
+        button: T(opts.lang, "Érdeklődés küldése"),
         href: "#cit-enquiry",
       },
     },

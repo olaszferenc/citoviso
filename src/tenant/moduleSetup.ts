@@ -521,7 +521,7 @@ export function topicLock(ctx: SetupCtx, t: SetupTopic, lang: string): TopicLock
   if (need.length) {
     const req = own!.requires!.find((r) => r.id === need[0])!;
     const names = need.map((id) => moduleName(id, lang));
-    return { why: T(lang, "Ehhez kell: {m}", { m: names.join(", ") }) + " — " + req.why, need };
+    return { why: T(lang, "Ehhez kell: {m}", { m: names.join(", ") }) + " — " + T(lang, req.why), need };
   }
   return null;
 }

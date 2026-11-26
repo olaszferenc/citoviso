@@ -5,6 +5,8 @@
 // re-render/publish — the UI says so honestly rather than implying instant layout change.
 
 import { regionOfTenant } from "../payment/orderRegion.js";
+import { calendarSyncPortals } from "../country.js";
+import { countryOfTenant } from "./siteCountry.js";
 import { budapestIsoDay } from "../text/budapestTime.js";
 import { db } from "../db/client.js";
 import { MODULE_CATALOG, renderableModules, supersederOf, type ModuleGroup } from "../modules.js";
@@ -65,6 +67,12 @@ export interface TenantModuleView {
    * only while some module is on by the trial — the Modulok tab says it per row.
    */
   readonly trialUntil?: string | null;
+  /**
+   * HR dev-próba (2026-11-25): the calendar-sync portals the lodging's country may be told about
+   * (country.ts calendarSyncPortals) — the shop's booking description names only these. Absent =
+   * no country known (a legacy Hungarian tenant): the catalog wording stays as it always was.
+   */
+  readonly syncPortals?: readonly string[];
 }
 
 /** A module the shop cannot offer right now — named, so its absence is explained. */
@@ -313,7 +321,16 @@ export async function getTenantModules(
     const t = await db.selectFrom("free_trial").select("trial_until").where("tenant_id", "=", tenantId).executeTakeFirst();
     if (t?.trial_until) trialUntil = budapestIsoDay(new Date(t.trial_until as unknown as string));
   }
-  return { modules, currency, baseMonthly, totalMonthly, notOrderable, trialUntil };
+  const country = await countryOfTenant(tenantId);
+  return {
+    modules,
+    currency,
+    baseMonthly,
+    totalMonthly,
+    notOrderable,
+    trialUntil,
+    ...(country ? { syncPortals: calendarSyncPortals(country.iso2) } : {}),
+  };
 }
 
 /**

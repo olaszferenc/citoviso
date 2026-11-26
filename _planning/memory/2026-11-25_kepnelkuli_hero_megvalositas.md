@@ -11,14 +11,15 @@ Brief: `~/rc-briefs/kepnelkuli-hero-megvalositas-20261125.md` · koordinátor: `
   - `mockRenderGate` v11: minta csak jelölve, galéria- vagy szobahelyen; település-képek újraítélése a 330 px-es bemeneten; település-oldalon mobilon betöltött hero és legalább 12 kép.
   - A kiküldő út (`sendBatch`, `autoDispatch`, `approvalQueue`, `qa-review`) erre a szabályra állt át.
 - **Őrök:** `scripts/town-photo-check.mts` (pre-commit); a `qa-review-check` új sora: kikapcsolt kapcsolónál a <5 képes ág zárva.
-- **Stílusos szobatár** (`scripts/stock-rooms-build.mts` → `src/engine/stockRooms.json`): 38 kép, csak háló, nappali, étkező. A fürdőt, a konyhát és a teraszt a régi, kézzel átnézett tár adja.
+- **Stílusos szobatár** (`scripts/stock-rooms-build.mts` → `src/engine/stockRooms.json` + `public/assets/stock/styled/`): 53 SAJÁT KISZOLGÁLÁSÚ kép (Commons + Rawpixel CC0), az éles képszűrőn és a régi táron is átszűrve; Flickr nincs (koordinátor: nincs kapu-kivétel).
 
 ## Mérés (dev DB, $0)
 - 52 település (első kör): 49 saját kép, 3 környék, 0 semmi; 65 s/település → gyorsítva 32 s/település (3 párhuzamos, nice).
-- Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. Vak 20 (v3, just-in-time): 7 jó, 7 gyenge, 2 rossz (vasúti épület; egyetlen tető, határeset), 4 lapot a kapu visszatartott (kép nélkül, illetve kevesebb mint 12 kép).
+- Vak 20 (v2): 7 jó, 10 gyenge, 3 rossz. A rosszak közös oka „egyetlen ház, tető vagy szerkezet közelről” → ebből lett a v3-szabály. Vak 20 (v3, just-in-time): 7 jó, 7 gyenge, 2 rossz (vasúti épület; egyetlen tető, határeset), 4 lapot a kapu visszatartott (kép nélkül, illetve kevesebb mint 12 kép). Vak 20 (v4): 7 jó, 6 gyenge, 0 rossz; 5 visszatartva (3 üres nyitókép, 2 címsor-sortörés). Vak 20 (v5): 8 jó, 7 gyenge, 2 rossz, 1 visszatartva — a cél (0 rossz, ≤3 gyenge) még nincs meg.
 
 ## Nyitott
 - A `town_photo_dispatch` kapcsolót a tulaj nyitja. Élesítés csak az ő kérésére.
 - A szobatár bővítése (Pexels: a kereső Cloudflare-ellenőrzést ad, saját böngészőprofilos kolléga kell).
-- A wordmark-grow sablon saját kép nélküli, település-hero-s leadnél megismétli a hero-t; javítani a sablonban kell, addig a kapu elbuktatja.
+- Fakóság-padló a hero-ra (a v4 gyengéinek fele szürke, párás), vak újraméréssel.
+- Openverse Flickr-ág a szobatárhoz: a Flickr CDN szerveroldali letöltésre 403-at ad, a render-kapunak kivétel kellene (döntés).
 - A „gyenge” kategória (fakó, borús, túl sok ég, sima erdő): a jobb jelölt sokszor nincs meg a Commonsban. Új jelölt-forrás kellene (pl. Wikivoyage banner, a szomszéd település nevezetessége), szabályként.

@@ -16,6 +16,7 @@
 // the broken-site repair only probes the domain root.
 // Guard: scripts/scrape-zero-paid-check.mts.
 
+import { isClosedPlaceName } from "./closedPlace.js";
 import { config } from "../config.js";
 import { enrichContact } from "./enrichContact.js";
 import { enrichGeo } from "./enrichGeo.js";
@@ -131,5 +132,6 @@ export async function enrichLeads(
   // upstream; reverse-geocode fills the rest from coordinates; the region's
   // country closes the coordinate-less tail.
   const withGeo = await enrichGeo(enrichContact(withWeb, region), region.country);
-  return withGeo;
+  // A closed place is no lead (scraper/closedPlace.ts, 2026-11-25): its name says so — never contacted.
+  return withGeo.map((l) => (l.isLead && isClosedPlaceName(l.name) ? { ...l, isLead: false } : l));
 }
