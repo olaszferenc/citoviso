@@ -155,8 +155,8 @@ a KÜLDÉS a lap alján, a levél alatt:”** blokk két kártyája már csak az
    idővonal első lépése pedig futó (kék) marad, amíg a relay nem nyugtázza. A kísérő SMS az MMS
    nyugtájakor indul magától. Ha újra megnyomnád, amíg a sor tart, a felső pirula pirosan, „Nem
    küldhető — ” előtaggal írja: „ennél a prospectnél már sorban áll az MMS — a dev gép relay-e
-   küldi”. Az MMS csak **hétköznap 9:00 és 16:00 között** (magyar idő szerint) megy ki — ami
-   ezen kívül áll a sorban, azt a relay visszatartja, és a következő hétköznap 9:00-tól küldi.
+   küldi”. Az MMS csak **hétköznap 8:00 és 17:00 között** (magyar idő szerint) megy ki — ami
+   ezen kívül áll a sorban, azt a relay visszatartja, és a következő hétköznap 8:00-tól küldi.
    Két piros eset az idővonalon:
    - „MMS-hiba (relay): … — semmi nem ment ki, a pár újraindítható” — a modem vagy a
      hálózat háromszor elhasalt; nézd meg a hibaszöveget, és indítsd újra a párost.

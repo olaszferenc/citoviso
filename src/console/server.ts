@@ -2494,20 +2494,17 @@ async function handle(
       const ds = await dispatchStatus();
       const home = iso === "HU";
       const dailyCap = home && ds.ramp ? Math.max(draft.dailyQuota, ds.ramp.capToday) : draft.dailyQuota;
-      return send(
-        res,
-        200,
-        JSON.stringify({
-          errors,
-          count,
-          countNow,
-          dailyCap,
-          days: dailyCap > 0 ? Math.ceil(count.total / dailyCap) : null,
-          firstDay: firstSendDay(new Date(), stored.cfg, draft),
-          changes: dispatchChanges(stored.draft, draft, lang),
-        }),
-        "application/json",
-      );
+      const summary = {
+        errors,
+        count,
+        countNow,
+        dailyCap,
+        days: dailyCap > 0 ? Math.ceil(count.total / dailyCap) : null,
+        firstDay: firstSendDay(new Date(), stored.cfg, draft),
+        changes: dispatchChanges(stored.draft, draft, lang),
+      };
+      const { outSummaryBody } = await import("./countryHub.js");
+      return send(res, 200, JSON.stringify({ ...summary, summaryHtml: outSummaryBody(summary) }), "application/json");
     }
     if (Object.keys(errors).length) return back(`hiba:${T(lang, "Nem mentettem: {why}", { why: Object.values(errors).join(" · ") })}`);
     const changes = dispatchChanges(stored.draft, draft, lang);

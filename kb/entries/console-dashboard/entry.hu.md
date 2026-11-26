@@ -117,8 +117,8 @@ buborék áll: ez még NEM ment ki.
 - **Ha még nincs javaslat**, a buborékban **„készül”** áll, és hogy Poe mióta dolgozik rajta.
   Ha nem vársz rá: **„Megírom magam”** — üres szövegmező. Ha Poe közben leteszi a javaslatát,
   a felület felajánlja (**„Betöltöm a javaslatot”**), de a te szövegedet magától nem írja felül.
-- **Küldés-ablak:** a válasz is csak hétköznap 9 és 16 óra között megy ki, mint a megkeresés.
-  Ablakon kívül az **„Elküldöm”** sorba állítja, és kiírja, mikor indul (például: holnap 9:00).
+- **Küldés-ablak:** a válasz csak a lead országának munkanapjain, 8 és 17 óra között megy ki, az
+  ország idejében. Ablakon kívül az **„Elküldöm”** sorba állítja, és kiírja, mikor indul (például: holnap 8:00).
   A sorban álló választ (**„Válasz a sorban”**) már nem lehet szerkeszteni vagy visszavonni, és
   amíg ott áll, újabb válasz sem küldhető ugyanerre — ezért este, hétvégén küldés előtt olvasd át.
 - **Állapot:** SMS-nél először **„Sorban — a modem-sáv viszi ki”**, amíg a modem ki nem küldi;
@@ -210,7 +210,8 @@ megfelelő képernyőre visz, a sor jobb szélén a képernyő neve:
 ### Messenger-út
 
 A Válaszok-blokk alatt a **„Messenger-út”** blokk mutatja, hogyan megy a megkeresés Viberen és
-WhatsAppon (a gép a telefonról küld: Viber → WhatsApp → MMS + SMS, csak hétköznap 9–16 között; ha a
+WhatsAppon (a gép a magyar telefonról küld: Viber → WhatsApp → MMS + SMS, csak hétköznap 8–17 között,
+budapesti idő szerint — ez a magyar telefon saját ablaka, az országok Kiküldés-beállítása nem érinti; ha a
 WhatsApp szünetel: Viber → MMS + SMS, a csak-WhatsAppos leadek a feloldásig várnak).
 
 - **„Ma kiküldve messengeren”** — a mai Viber- és WhatsApp-megkeresések száma. Napi keret nincs:

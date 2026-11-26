@@ -122,14 +122,17 @@ export async function countEligible(iso: string, d: Pick<DispatchDraft, "minOwnP
 /** The changes of a draft against the stored row, as operator-language lines „Most → Új”. */
 export function dispatchChanges(a: DispatchDraft, b: DispatchDraft, lang = "hu"): { label: string; from: string; to: string }[] {
   const onOff = (v: boolean): string => (v ? T(lang, "be") : T(lang, "ki"));
+  const site = (x: string): string =>
+    x === "no_site" ? T(lang, "nincs honlap") : x === "outdated" ? T(lang, "elavult honlap") : x === "modern" ? T(lang, "modern honlap") : T(lang, "besorolatlan");
+  const chan = (x: string): string => (x === "email" ? T(lang, "E-mail") : x === "whatsapp" ? T(lang, "WhatsApp") : x === "viber" ? T(lang, "Viber") : x.toUpperCase());
   const days = (m: number): string =>
     [T(lang, "H"), T(lang, "K"), T(lang, "Sze"), T(lang, "Cs"), T(lang, "P"), T(lang, "Szo"), T(lang, "V")].filter((_, i) => m & (1 << i)).join(" ") || "—";
   const rows: [string, string, string][] = [
     [T(lang, "Minimum saját kép"), String(a.minOwnPhotos), String(b.minOwnPhotos)],
     [T(lang, "Milyen lead mehet"), a.photoMode === "own" ? T(lang, "csak saját képes") : T(lang, "saját + településképes"), b.photoMode === "own" ? T(lang, "csak saját képes") : T(lang, "saját + településképes")],
     [T(lang, "MINTA-kép galéria-/szobahelyen"), onOff(a.stockOk), onOff(b.stockOk)],
-    [T(lang, "Honlap szerinti kör"), a.sites.join(" → ") || "—", b.sites.join(" → ") || "—"],
-    [T(lang, "Csatornák"), a.channels.join(" → ") || "—", b.channels.join(" → ") || "—"],
+    [T(lang, "Honlap szerinti kör"), a.sites.map(site).join(" → ") || "—", b.sites.map(site).join(" → ") || "—"],
+    [T(lang, "Csatornák"), a.channels.map(chan).join(" → ") || "—", b.channels.map(chan).join(" → ") || "—"],
     [T(lang, "Napi keret"), String(a.dailyQuota), String(b.dailyQuota)],
     [T(lang, "Jóváhagyás"), a.approval === "auto" ? T(lang, "Automata") : T(lang, "Tulaj-jóváhagyás"), b.approval === "auto" ? T(lang, "Automata") : T(lang, "Tulaj-jóváhagyás")],
     ...DISPATCH_RULE_KEYS.map((k): [string, string, string] => [`${T(lang, "Feltétel")}: ${k}`, onOff(a.rules[k]), onOff(b.rules[k])]),

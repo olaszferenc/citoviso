@@ -425,19 +425,36 @@ export function outreachTab(row: CountryOverviewRow, o: OutreachInfo): string {
   <script type="application/json" id="out-cfg">${jsonForScript({
     dirty: T(lang, "{n} módosítás — még nincs mentve"),
     split: T(lang, "ebből saját képpel: {own} · településképpel: {town}"),
-    nowThen: T(lang, "{now} lead felel meg most → {next} lead holnaptól"),
-    perDay: T(lang, "naponta {n} megkeresés"),
-    first: T(lang, "első küldési nap: {d}"),
-    lasts: T(lang, "az állomány {n} küldési nap alatt fogy el"),
-    changes: T(lang, "Módosítások"),
-    nowCol: T(lang, "Most"),
-    newCol: T(lang, "Új"),
-    none: T(lang, "Nincs módosítás."),
-    errs: T(lang, "Javítandó mező van — nem menthető."),
-    gates: T(lang, "A mock-, a render- és a minőségi kapu ezen felül szűr."),
   })}</script>
   <script>${OUT_JS}</script>`;
   return body;
+}
+
+/** The summary dialog's body (server-rendered — the live check returns it, the KB shot renders it). */
+export function outSummaryBody(s: {
+  readonly countNow: { readonly total: number };
+  readonly count: { readonly own: number; readonly town: number; readonly total: number };
+  readonly dailyCap: number;
+  readonly firstDay: string | null;
+  readonly days: number | null;
+  readonly changes: readonly { readonly label: string; readonly from: string; readonly to: string }[];
+  readonly errors: Readonly<Record<string, string>>;
+}): string {
+  const lang = consoleLang();
+  const rows = s.changes.length
+    ? `<table class="hub-dlg__t"><thead><tr><th></th><th>${esc(T(lang, "Most"))}</th><th>${esc(T(lang, "Új"))}</th></tr></thead><tbody>${s.changes
+        .map((c) => `<tr><td>${esc(c.label)}</td><td>${esc(c.from)}</td><td><b>${esc(c.to)}</b></td></tr>`)
+        .join("")}</tbody></table>`
+    : `<p>${esc(T(lang, "Nincs módosítás."))}</p>`;
+  return `<ul class="hub-dlg__k">
+      <li>${esc(T(lang, "{now} lead felel meg most → {next} lead holnaptól", { now: n(s.countNow.total), next: n(s.count.total) }))}</li>
+      <li>${esc(T(lang, "ebből saját képpel: {own} · településképpel: {town}", { own: n(s.count.own), town: n(s.count.town) }))}</li>
+      <li>${esc(T(lang, "naponta {n} megkeresés", { n: n(s.dailyCap) }))}</li>
+      <li>${esc(T(lang, "első küldési nap: {d}", { d: s.firstDay ?? "—" }))}</li>
+      <li>${esc(T(lang, "az állomány {n} küldési nap alatt fogy el", { n: s.days == null ? "—" : n(s.days) }))}</li></ul>
+    <p class="cty-small cty-mut">${esc(T(lang, "A mock-, a render- és a minőségi kapu ezen felül szűr."))}</p>
+    <h4>${esc(T(lang, "Módosítások"))}</h4>${rows}
+    ${Object.keys(s.errors).length ? `<p class="cty-notice cty-notice--bad">${esc(T(lang, "Javítandó mező van — nem menthető."))}</p>` : ""}`;
 }
 
 // The tab's script: ordering, the live check (the server computes the count and the changes), the dialog.
@@ -482,11 +499,7 @@ f.addEventListener("click",function(ev){
 document.getElementById("out-review").addEventListener("click",function(){
   var j=last;var b=document.getElementById("out-dlg-b");
   if(!j){check();return;}
-  var errs=Object.keys(j.errors||{}).length;
-  var h='<ul class="hub-dlg__k"><li>'+esc(fmt(cfg.nowThen,{now:num(j.countNow.total),next:num(j.count.total)}))+'</li><li>'+esc(fmt(cfg.split,{own:num(j.count.own),town:num(j.count.town)}))+'</li><li>'+esc(fmt(cfg.perDay,{n:num(j.dailyCap)}))+'</li><li>'+esc(fmt(cfg.first,{d:j.firstDay||"\\u2014"}))+'</li><li>'+esc(fmt(cfg.lasts,{n:j.days==null?"\\u2014":num(j.days)}))+'</li></ul><p class="cty-small cty-mut">'+esc(cfg.gates)+'</p>';
-  h+='<h4>'+esc(cfg.changes)+'</h4>';
-  h+=(j.changes||[]).length?'<table class="hub-dlg__t"><thead><tr><th></th><th>'+esc(cfg.nowCol)+'</th><th>'+esc(cfg.newCol)+'</th></tr></thead><tbody>'+j.changes.map(function(c){return "<tr><td>"+esc(c.label)+"</td><td>"+esc(c.from)+"</td><td><b>"+esc(c.to)+"</b></td></tr>";}).join("")+"</tbody></table>":"<p>"+esc(cfg.none)+"</p>";
-  if(errs)h+='<p class="cty-notice cty-notice--bad">'+esc(cfg.errs)+'</p>';
+  var errs=Object.keys(j.errors||{}).length;var h=j.summaryHtml||"";
   b.innerHTML=h;document.getElementById("out-save").disabled=errs>0||!(j.changes||[]).length;
   if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","");
 });

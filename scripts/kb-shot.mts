@@ -2775,10 +2775,26 @@ await shootConsole(
     count: { own: 7792, town: 4096, total: 11888 }, dispatchOn: true, autoApproveOn: false, dailyCap: 100, ramp: { capToday: 100 }, sentToday: 3,
     windowOpenNow: true, firstDay: "2026-11-26",
   };
+  // The whole tab (element capture of the form) and the „Mentés…” summary, rendered by the SAME function the
+  // live check returns (outSummaryBody) — sample: the daily cap 100 → 120, the modern class moved up.
   await shootConsole(
     hubCountryPage({ row: rows[0], tab: "out", notice: null, editor: { ...editor, iso: "HU", home: true }, editorOpen: false, tabHtml: outreachTab(rows[0] as never, huOut as never) } as never),
     conOut("console-countries").replace(/screen\.png$/, "out-tab.png"),
+    undefined,
+    "#out-form",
   );
+  const { outSummaryBody } = await import("../src/console/countryHub.js");
+  const sumHtml = outSummaryBody({
+    countNow: { total: 11888 }, count: { own: 7792, town: 4096, total: 11888 }, dailyCap: 120, firstDay: "2026-11-26", days: 100,
+    changes: [
+      { label: "Honlap szerinti kör", from: "nincs honlap → elavult honlap → modern honlap → besorolatlan", to: "nincs honlap → modern honlap → elavult honlap → besorolatlan" },
+      { label: "Napi keret", from: "100", to: "120" },
+    ],
+    errors: {},
+  });
+  const sumPage = hubCountryPage({ row: rows[0], tab: "out", notice: null, editor: { ...editor, iso: "HU", home: true }, editorOpen: false,
+    tabHtml: outreachTab(rows[0] as never, huOut as never).replace('<div id="out-dlg-b"></div>', `<div id="out-dlg-b">${sumHtml}</div>`).replace('<dialog class="hub-dlg" id="out-dlg"', '<dialog open class="hub-dlg" id="out-dlg" style="position:static;margin:12px 0"') } as never);
+  await shootConsole(sumPage, conOut("console-countries").replace(/screen\.png$/, "out-summary.png"), undefined, "#out-dlg");
 }
 // Test-log journal — rendered from the real FK-000 smoke scenario so the guide
 // image regenerates together with the scenario it documents.

@@ -12,7 +12,11 @@ jelenik meg, amelyiknek **mindkét terve** végigment a teljes láncon: a mostan
 (a folyamat a régebbieket magától újragenerálja), legalább 5 saját fotója van, a gépi ellenőrzésen
 átment, és a minőségi kolléga ezt a változatot átnézte és jónak találta. Második terv nélkül
 megkeresés nem megy ki. Ami ezek közül bármelyiken elakadt, az nem kerül ide, és a menüben látható
-szám sem számolja. Megkeresés csak a te jóváhagyásod után megy ki.
+szám sem számolja. Megkeresés csak a te jóváhagyásod után megy ki. Hogy egy országban a te
+jóváhagyásod kell-e, azt országonként az **Országok / Árazás** lapon, az ország **„Kiküldés”** fülén, a
+**„4. Jóváhagyás”** szakaszban állítod: **„Tulaj-jóváhagyás”** esetén az ország leadjei itt várnak a
+**„Mehet”**-re (ma minden országban ez az alapérték), **„Automata”** esetén a gép 20 percenként jóváhagyja a
+feltételeknek megfelelőket (ha az automata jóváhagyás főkapcsolója be van kapcsolva), és azok nem várnak rád.
 
 ## „Jóváhagyásra vár”
 

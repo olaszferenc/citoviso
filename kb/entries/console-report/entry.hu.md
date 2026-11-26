@@ -139,7 +139,8 @@ leadet mutatja.
   (bármely csatornán) egyik linkjét sem nyitotta meg, egyszer kap még egy levelet, ami a terv képével
   indul, és a feladója egy személynév. Nem kapja meg, aki leiratkozott, válaszolt, próbázik, rendelt vagy
   vásárolt, akinek a kiküldését visszavonták, vagy akinek a terve nincs jóváhagyva. Óránként legfeljebb 5,
-  naponta legfeljebb az ország napi kerete megy ki, az ország küldési napjain és óráiban. Hogy be van-e kapcsolva,
+  naponta legfeljebb a nem-nyitó levél SAJÁT napi kerete megy ki (országonként külön, nem azonos a megkeresések
+  napi keretével), az ország küldési napjain és óráiban. Hogy be van-e kapcsolva,
   hány nap után megy és mennyi a napi kerete, azt országonként az **Országok / Árazás** lapon, az ország
   **„Kiküldés”** fülén (**„6. Utánkövetés”**) állítod. Ha az éles beállításban nincs megadva a feladó
   neve, egy sem megy ki. Aki ebből a levélből nyitott, azt a **„Melyik kör?”** váltó **„Újrakeresés”** állásában

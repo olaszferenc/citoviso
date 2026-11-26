@@ -82,8 +82,18 @@ Alatta hat szakasz:
    hazai keret a felfutás napi plafonjáig emelkedik, és ezt a szakasz ki is írja.
 4. **„Jóváhagyás”**: **„Tulaj-jóváhagyás”** (minden levél a Jóváhagyás lapon vár a „Mehet”-re), vagy
    **„Automata”** (a gép hagyja jóvá, ha a pipált feltételek teljesülnek). Az alapérték minden
-   országban a tulaj-jóváhagyás. Az **„e-mail cím nélkül nem küldünk”** feltétel nem vehető ki: ezt a
-   kiküldő maga tartja. ⚠️ Az „Automata” csak akkor hagy jóvá bármit, ha az automata jóváhagyás
+   országban a tulaj-jóváhagyás. Az öt feltétel:
+   - **„két mock saját képpel vagy településképpel”** — csak az mehet, akinek mindkét terve a szállás
+     saját képeivel (vagy a település képével) készült;
+   - **„településképes mock MMS-ben nem megy”** — a település képével készült terv nem mehet képes
+     üzenetben (MMS), csak más csatornán (a tulaj szabálya, 2026-11-12);
+   - **„akinek van e-mailje, csak e-mailt kap”** — e-mail címes leadnek nem megy mobilüzenet;
+   - **„ellenőrizetlen mobilú lead e-mailben mehet”** — ha a mobilszámát még nem ellenőriztük, az
+     e-mail nem vár erre;
+   - **„e-mail cím nélkül nem küldünk”** — e-mail cím nélkül semmi nem megy ki. Ez a feltétel nem vehető ki: ezt a
+     kiküldő maga tartja.
+
+   ⚠️ Az „Automata” csak akkor hagy jóvá bármit, ha az automata jóváhagyás
    főkapcsolója be van kapcsolva (a kiküldő ütemében fut, 20 percenként). Ezt nem ezen a lapon kapcsolják,
    hanem az élesítéskor, egyszer, minden országra. Amíg ki van kapcsolva, a szakasz alja ezt kiírja
    (*„… addig az »Automata« beállítás sem hagy jóvá semmit”*), és minden levél a Jóváhagyás lapon vár.
@@ -94,12 +104,15 @@ Alatta hat szakasz:
 
 Minden szakasz alján ott áll, mi döntött róla korábban (a kód vagy egy globális beállítás). A
 **„döntve”** jel azt mutatja, amiről a tulaj már döntött. Ha módosítasz, alul megjelenik egy sáv:
-*„… módosítás — még nincs mentve”*, mellette a **„Visszaállítás”** és a **„Mentés…”** gomb. A
+*„… módosítás — még nincs mentve”*, mellette a **„Visszaállítás”** (eldobja a még nem mentett
+módosításokat, és a fül a mentett állapotot mutatja újra) és a **„Mentés…”** gomb. A
 „Mentés…” előbb egy összesítőt nyit: hány lead felel meg most és holnaptól, naponta hány megkeresés
 megy, mikor az első küldési nap, és a módosítások listája (*Most → Új*). Csak ott, a **„Mentés”**
 gombbal kerül a beállítás az országra. Hibás mezőnél (például ha egy nap sincs bepipálva) a lap nem ment.
 
-![Képernyőkép: a Kiküldés fül telefonon — felül a négy szám és az első szakasz, alatta (görgetve) a többi öt](assets/hu/out-tab.png)
+![Képernyőkép: a Kiküldés fül telefonon, teljes hosszában — a négy szám és a hat szakasz](assets/hu/out-tab.png)
+
+![Képernyőkép: a „Mentés…” után nyíló összesítő — a számok és a módosítások Most → Új táblája](assets/hu/out-summary.png)
 
 ## Új ország felvétele
 
@@ -147,7 +160,9 @@ Az ország **„Ország”** fülén az **„Adatok szerkesztése”** link nyit
   Portugáliában a **„Fogyasztói vitarendező”** is megjelenik: ha nincs beállítva,
   magánszemélynek nem adható el, cégnek igen — ezért ez sárga, nem zár.
 - **Megkeresés.** **„Csatornák”**, **„Küldési ablak (helyi idő)”**, **„Napi kvóta”** és
-  **„Ünnepnapok”**. Az e-mail csatorna kötelező. Az SMS/MMS a magyar SIM-es modemen megy, ezért
+  **„Ünnepnapok”**. A „Küldési ablak (helyi idő)” és a „Napi kvóta” ugyanaz az érték, amit az ország
+  **„Kiküldés”** fülének **„5. Időkeret”** (órák) és **„3. Napi keret”** szakasza mutat és állít: ha az egyik
+  helyen átírod, a másik helyen is az új érték látszik. Az e-mail csatorna kötelező. Az SMS/MMS a magyar SIM-es modemen megy, ezért
   külföldi számra csak helyi mobil-szolgáltatóval menne: amíg nincs, a csak mobilszámos lead
   TARTVA — a lap ezt sárgán jelzi, nem kérdez rá.
 
