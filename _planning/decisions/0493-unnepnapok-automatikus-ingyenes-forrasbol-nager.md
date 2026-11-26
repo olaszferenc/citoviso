@@ -1,4 +1,4 @@
-## ADR-XXXX — Ünnepnapok automatikus, ingyenes forrásból (Nager.Date), felvételkor és évente, forrás-jelöléssel
+## ADR-0493 — Ünnepnapok automatikus, ingyenes forrásból (Nager.Date), felvételkor és évente, forrás-jelöléssel
 
 - **Dátum:** 2026-11-26
 - **Státusz:** elfogadva (a koordinátor, `cit9b4690e3`, döntése a 2. fázis nyitott pontjára)
