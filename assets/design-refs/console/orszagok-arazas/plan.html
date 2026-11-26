@@ -1,0 +1,1285 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Országok / Árazás — terv (mock)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>/*
+ * Citoviso UI — the central design core ("dizájn-mag").
+ * ADR-0021 ①: ONE source of truth for ALL first-party Citoviso surfaces
+ * (public homepage, login, internal console, tenant-admin chrome).
+ *
+ * SCOPE BOUNDARY: this is the CONTROL-PLANE product brand — ONE stable Citoviso
+ * identity. It is NOT the engine's per-skin `--cit-*` token contract, which themes
+ * GENERATED tenant sites (data plane, variable per skin). Namespace is `--citui-*`
+ * on purpose, to never collide with the engine tokens.
+ *
+ * Design language: navy/cyan brand, Space Grotesk (display) + Inter (text),
+ * dark-gradient heroes, glassy surfaces. Icons are inline SVG (no emoji).
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --citui-navy-950: #0a1f36; /* near-black navy — dark gradient end (sidebar) */
+  --citui-navy-900: #0e2a47; /* deepest navy — hero/footer/CTA base */
+  --citui-navy-800: #16283f; /* brand navy (logo) */
+  --citui-navy-700: #203a59;
+  --citui-cyan-500: #1fb6d6; /* accent cyan */
+  --citui-cyan-400: #35c4e0; /* bright cyan */
+  --citui-cyan-300: #6fd8eb; /* light cyan */
+  --citui-glow-blue: #5081ff; /* decorative aurora glow (hero backgrounds only) */
+  --citui-white:    #ffffff;
+
+  /* Ink / neutrals (light-first) */
+  --citui-ink:         #10243a; /* primary text */
+  --citui-ink-inverse: #eaf3f8; /* text on dark navy surfaces */
+  --citui-muted:       #5a6d82; /* secondary text — ≥4,6:1 on every light fill it sits on (surface-2, ok-soft, field, accent-soft); was #60748b = 4,17–4,48 there (console-dark-scan --light, 2026-09-25) */
+  --citui-surface:     #f6fbfd; /* alt section background */
+  --citui-surface-2:   #eef7fa; /* raised subtle */
+  --citui-line:        rgba(14, 42, 71, 0.12);
+  --citui-line-strong: rgba(14, 42, 71, 0.22);
+
+  /* Semantic (for console / admin status) */
+  --citui-ok:   #2fa96b;
+  --citui-ok-soft: #e7f8ef; /* soft success background (saved pill) */
+  --citui-warn: #d29922;
+  --citui-bad:  #e5484d;
+  --citui-info: var(--citui-cyan-500);
+
+  /* ── SZÖVEG-VÁLTOZAT a jelentés-vivő színekhez (tulajdonosi döntés, 2026-09-15) ──
+     ⛔⛔ MÉRT HIBA: a fenti hue-k JELZÉS-színek (keret, háttér, pötty) — világos
+     háttéren FELIRATNAK viszont olvashatatlanok. Mérve a renderelt konzolon:
+       --citui-ok      #2fa96b → 3,00 (a „Fizetek ▸" és a „Jóváhagyás" gomb, .q-good)
+       --citui-bad     #e5484d → 3,91 (.con button.bad, .pg-head, .q-bad)
+       --citui-warn    #d29922 → 2,52 (.q-mid, „elavult" jelvény)
+       --citui-cyan-500 #1fb6d6 → 2,41 (MINDEN link a konzolon)
+     A 4,5-ös küszöb alatt mind. A HUE VÁLTOZATLAN marad (keret/háttér/akcent), csak a
+     FELIRAT kap sötétebb változatot — így a „színhang" megmarad, és a destruktív gomb
+     nem lesz hangsúlyosabb, mint ma (a tulaj az „A — sötétebb felirat" változatot
+     hagyta jóvá, `assets/design-refs/console/semantic-contrast/`).
+     ⚠️ Az értékek nem tippeltek: minden TÉNYLEGES háttérre megoldva (fehér · felület ·
+     felület-2 · ok-soft · a pill/pg-box színkeverékei), és a legrosszabb eset is
+     TARTALÉKKAL megy át (≥5,3) — egy épphogy-átmenő érték a következő érme-feldobás.
+     ⚠️ A `--citui-muted` SZÁNDÉKOSAN nem változik (tulajdonosi döntés): a 4,42–4,81
+     a küszöb határán van, és a token átütne a tenant-adminra és a vendég-oldalra is.
+     ⚠️ NYITOTT: a `[data-citui-theme="dark"]` hatókör ezeket NEM írja felül. Ma ez
+     ártalmatlan — mérve: a sötét hatókörnek 0 használata van a repóban —, de aki
+     bekapcsolja, annak ezt a négy értéket ki kell mérnie a sötét felületre. */
+  --citui-ok-ink:   #19733f; /* legrosszabb mért: 5,35 (ok-soft pill) */
+  --citui-bad-ink:  #b3262b; /* legrosszabb mért: 5,57 (rejected pill) */
+  --citui-warn-ink: #7d5a12; /* legrosszabb mért: 5,67 (outdated pill) */
+  --citui-link-ink: #10697a; /* legrosszabb mért: 5,81 (felület-2) */
+  /* Text sitting ON a solid --citui-bad fill (danger button, alert head, frozen panel).
+     Light: white on #e5484d → 3,91 (bold labels). The dark scope flips it. */
+  --citui-on-bad: var(--citui-white);
+  --citui-on-ok: var(--citui-white); /* ADR-0429: text/icon ON the ok fill (the check mark) */
+
+  /* Elevation */
+  --citui-shadow-sm: 0 10px 30px rgba(14, 42, 71, 0.08);
+  --citui-shadow-md: 0 24px 60px rgba(14, 42, 71, 0.14);
+
+  /* Radius */
+  --citui-radius-sm:   14px;
+  --citui-radius:      22px;
+  --citui-radius-lg:   32px;
+  --citui-radius-pill: 999px;
+
+  /* Typography */
+  --citui-font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --citui-font-text:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Layout / motion */
+  --citui-container: 1180px;
+  --citui-transition: 220ms ease;
+
+  /* A lap alján FENNTARTOTT sáv, amit a lap aljára rögzített elemeknek ki kell
+     kerülniük (ma: a süti-hozzájárulás sáv, `assets/runtime/cit-consent.css`).
+     Alapból 0 — a honlapon és a jogi lapokon nincs mit kerülni. A mobil
+     tenant-admin viszont saját alsó fül-sávot visel, ezért ott felüldefiniálódik
+     (`citui-admin.css`) — nélküle a sáv MÉRTEN 11 fülből 6-ot eltakart. A GAZDALAP
+     deklarálja, mennyi helyet tart fenn magának; nem a sáv találgat. */
+  --citui-consent-bottom: 0px;
+
+  /* A süti-sáv MÉRT magassága, amíg kinn van — a hozzájárulás-kezelő
+     (`assets/runtime/cit-consent.js`) írja a gyökérre, és a döntés után TÖRLI.
+     Így egy felület fenn tudja tartani a sáv helyét magának (a tenant-admin
+     oldalsávja ezzel emeli a „Kilépés" gombot a sáv fölé) anélkül, hogy bárki
+     egy kitalált magasság-konstanst hordozna. Alapból 0: nincs sáv, nincs foglalás. */
+  --citui-consent-h: 0px;
+
+  /* A kiküldött terv (/p/<token>) alján ülő RÖGZÍTETT réteg MÉRT magassága: a
+     süti-sáv + a sablon saját Foglalás-sávja + a fölé mászó hívó pirula, együtt.
+     A konfigurátor-futó (`assets/runtime/cit-configurator.js`, placeLaunch) írja
+     a gyökérre, mert egyedül ő tudja, meddig kellett felmásznia. A jogi lábléc
+     (`prospectNotice.ts`) ebből tart magának alsó térközt — mérve 2026-09-26,
+     390 px-en 19 sablonból 19-en e nélkül a leiratkozó link a réteg ALATT volt.
+     Alapból 0: pirula nélkül (már megvett oldal, JS nélkül) a süti-sáv magassága
+     a tartalék. */
+  --citui-cfg-clear: 0px;
+
+  /* A tenant-admin MOBIL alsó fül-sávjának MÉRT magassága (a `citui-admin.css`
+     állítja a ≤899px ágon; asztalin nincs alsó sáv, ezért 0). EGY forrás, KÉT
+     fogyasztó: ennyi alsó tartalom-térköz kell, hogy a lap alja ne a fül-sáv alá
+     essen, ÉS ennyivel ül feljebb a süti-sáv. Mérve 390px-en 186px — 11 fül HÁROM
+     sorba tördelve (ADR-0084). ⛔ Ne írd át szabad kézzel: mérd újra. */
+  --citui-admin-bottomnav-h: 0px;
+
+  /* ── Felület-rétegek (ADR-0224, tenant-admin „Linear" nyelv) ──────────────────
+     A `--citui-white` KÉT szerepet vitt: kártya-HÁTTÉR és fehér FELIRAT sötét
+     mezőn. Sötét módban a kettő szétválik — a kártya sötét lesz, a felirat fehér
+     marad —, ezért a HÁTTÉR-szerep saját tokent kap. Világosban az értékek a
+     Linear-terv semleges szürkéi (nem brand-tintált), hogy a szín csak jelentést
+     vigyen; a konzol/honlap ezeket nem használja, tehát változatlan marad. */
+  --citui-bg:     #ffffff; /* the admin page canvas */
+  --citui-panel:  #ffffff; /* card / drawer / dialog / top bar surface */
+  --citui-side:   #fafafa; /* desktop sidebar */
+  --citui-field:  #f6f7f8; /* input background */
+  --citui-hover:  #f2f3f5; /* hover / active row */
+  --citui-accent-ink: #06131b; /* text ON the cyan accent (measured 7,81:1) */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 12%, transparent); /* active row / selected segment */
+
+  /* ── Márka-navy SZÖVEG-szerepben (2026-09-25, konzol sötét módja) ──────────────
+     A `--citui-navy-*` KÉT szerepet vitt: FELÜLET (sávok, gombok) és FELIRAT (alcím,
+     aktív fül, másodlagos gomb, jelvény). Sötét módban a felirat-szerep 1,2:1-re esett
+     a sötét panelen (mérve: scripts/console-dark-scan.mts, 21 lelet 12 képernyőn),
+     ezért a felirat-szerep saját tokent kap. Világosban AZONOS a mai navyval. */
+  --citui-ink-brand:   var(--citui-navy-900);
+  --citui-ink-brand-2: var(--citui-navy-700);
+}
+
+/* Dark surface scope — flips neutrals; brand hues stay.
+   Use on any wrapper (internal console shell, dark hero, etc.). */
+[data-citui-theme="dark"] {
+  --citui-ink:         #e6e9ef;
+  --citui-muted:       #8a93a3;
+  --citui-surface:     #12151c;
+  --citui-surface-2:   #1b1f29;
+  --citui-line:        #262b37;
+  --citui-line-strong: #343a48;
+  /* ADR-0224: a tenant-admin sötét módja. Semleges (nem navy-tintált) sötét
+     rétegek — a Linear-terv sötét képei ezekből készültek. */
+  --citui-bg:     #0f1116;
+  --citui-panel:  #151821;
+  --citui-side:   #12151c;
+  --citui-field:  #1b1f29;
+  --citui-hover:  #1e2330;
+  /* A jelzés-hue-k VILÁGOSABB változata: a világos-módú telített zöld/piros a
+     sötét panelen 2,5–3,5 kontrasztot adna keretként és pöttyként. */
+  --citui-ok:      #3ddc97;
+  --citui-warn:    #f0b35a;
+  --citui-bad:     #ff7b7b;
+  --citui-ok-soft: #14352a;
+  /* ⛔ A négy FELIRAT-token a sötét panelre (#151821) KIMÉRVE (WCAG, ≥ 4,5, tartalékkal;
+     mérés: node-os luminancia-számítás, 2026-09-24):
+       ok-ink   #4fe3a3 → 10,85 · bad-ink #ff8e8e → 8,03 · warn-ink #f5c06b → 10,67 ·
+       link-ink #4fd0ea → 9,74 (a --citui-field #1b1f29 mezőn a legrosszabb: bad-ink 7,46;
+       a --citui-muted #8a93a3 a panelen 5,73). */
+  --citui-ok-ink:   #4fe3a3;
+  --citui-bad-ink:  #ff8e8e;
+  --citui-warn-ink: #f5c06b;
+  --citui-link-ink: #4fd0ea;
+  /* The dark --citui-bad (#ff7b7b) is light: white on it is 2,51, navy is 5,81. */
+  --citui-on-bad: var(--citui-navy-900);
+  --citui-on-ok: var(--citui-navy-900); /* white on the bright dark-mode ok measured ~1,7:1 */
+  --citui-accent-soft: color-mix(in srgb, var(--citui-cyan-500) 16%, transparent);
+  --citui-ink-brand:   var(--citui-ink);
+  --citui-ink-brand-2: color-mix(in srgb, var(--citui-ink) 80%, var(--citui-muted));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. BASE / RESET
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--citui-font-text);
+  color: var(--citui-ink);
+  background: var(--citui-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body.citui-menu-open { overflow: hidden; }
+
+h1, h2, h3, h4 {
+  font-family: var(--citui-font-display);
+  color: var(--citui-ink-brand);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 0.6em;
+}
+
+p { margin: 0 0 1rem; }
+
+a { color: var(--citui-cyan-500); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img, svg { display: block; max-width: 100%; }
+
+button, input, select, textarea { font: inherit; }
+button { border: 0; cursor: pointer; background: none; }
+
+:focus-visible { outline: 2px solid var(--citui-cyan-500); outline-offset: 2px; border-radius: 4px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LAYOUT PRIMITIVES
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-container { width: min(calc(100% - 32px), var(--citui-container)); margin-inline: auto; }
+.citui-container--narrow { --citui-container: 820px; }
+
+.citui-section { padding: 104px 0; }
+.citui-section--alt { background: var(--citui-surface); }
+
+.citui-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin: 0 0 18px;
+  font-size: 0.8rem; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--citui-cyan-500);
+}
+.citui-eyebrow::before { content: ""; width: 28px; height: 2px; border-radius: 999px; background: currentColor; }
+
+.citui-section-heading { max-width: 760px; margin-bottom: 52px; }
+.citui-section-heading h2 {
+  margin: 0 0 18px;
+  font-size: clamp(2.15rem, 5vw, 4rem);
+  line-height: 1.02; letter-spacing: -0.045em;
+}
+.citui-section-heading p { margin: 0; max-width: 690px; font-size: 1.08rem; color: var(--citui-muted); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. COMPONENTS
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Buttons */
+.citui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  /* A label that wraps (a long label on a phone) stays centred too: `justify-content`
+     centres the text box, `text-align` the lines inside it (a <button> does it by default,
+     an <a> does not — Elek FK-016: „Vissza a szállás oldalára” hung left). */
+  text-align: center;
+  min-height: 52px; padding: 0 22px;
+  border-radius: var(--citui-radius-sm);
+  font-family: var(--citui-font-text); font-weight: 800; text-decoration: none;
+  transition: transform var(--citui-transition), box-shadow var(--citui-transition), background var(--citui-transition);
+}
+.citui-btn:hover { transform: translateY(-2px); text-decoration: none; }
+.citui-btn:active { transform: translateY(0); }
+.citui-btn:disabled, .citui-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+.citui-btn--primary {
+  color: var(--citui-navy-900);
+  background: linear-gradient(135deg, var(--citui-cyan-400), #8be8f3);
+  box-shadow: 0 14px 36px rgba(31, 182, 214, 0.3);
+}
+.citui-btn--primary:hover { box-shadow: 0 18px 42px rgba(31, 182, 214, 0.38); }
+
+.citui-btn--secondary { /* glass — for dark backgrounds */
+  color: var(--citui-white);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+.citui-btn--dark {
+  color: var(--citui-white); background: var(--citui-navy-900);
+  box-shadow: 0 14px 34px rgba(14, 42, 71, 0.18);
+}
+.citui-btn--ghost { /* outline — for light app surfaces */
+  color: var(--citui-navy-900); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong);
+}
+.citui-btn--ghost:hover { border-color: var(--citui-navy-900); }
+.citui-btn--sm { min-height: 42px; padding: 0 16px; font-size: 0.9rem; }
+
+.citui-icon { width: 22px; height: 22px; flex: 0 0 auto; }
+
+/* Chip (filled cyan tag — e.g. industry pills) */
+.citui-chip {
+  display: inline-flex; align-items: center;
+  padding: 10px 14px; border-radius: var(--citui-radius-pill);
+  color: var(--citui-navy-900); background: #e3f8fb;
+  border: 1px solid rgba(31, 182, 214, 0.18);
+  font-size: 0.9rem; font-weight: 700;
+}
+
+/* Status pill (outline — console/admin) */
+.citui-pill {
+  display: inline-flex; align-items: center; gap: 0.35em;
+  padding: 0.15rem 0.6rem; border-radius: var(--citui-radius-pill);
+  font-size: 0.78rem; font-weight: 600;
+  border: 1px solid var(--citui-line-strong); color: var(--citui-muted);
+}
+.citui-pill--ok   { color: var(--citui-ok);   border-color: var(--citui-ok); }
+.citui-pill--warn { color: var(--citui-warn); border-color: var(--citui-warn); }
+.citui-pill--bad  { color: var(--citui-bad);  border-color: var(--citui-bad); }
+.citui-pill--info { color: var(--citui-info); border-color: var(--citui-info); }
+
+/* Card + panel */
+.citui-card {
+  padding: 28px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius); background: var(--citui-white);
+  box-shadow: var(--citui-shadow-sm);
+}
+.citui-panel {
+  padding: 16px 18px; border: 1px solid var(--citui-line);
+  border-radius: var(--citui-radius-sm); background: var(--citui-white);
+}
+.citui-panel__label {
+  font-family: var(--citui-font-display); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--citui-muted); margin: 0 0 12px;
+}
+
+/* Forms */
+.citui-field { display: block; margin-bottom: 1rem; }
+.citui-label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--citui-ink); margin-bottom: 0.5rem; }
+.citui-input, .citui-select, .citui-textarea {
+  width: 100%; color: var(--citui-ink); background: var(--citui-white);
+  border: 1px solid var(--citui-line-strong); border-radius: var(--citui-radius-sm);
+  padding: 0.7rem 0.9rem;
+  transition: border-color var(--citui-transition), box-shadow var(--citui-transition);
+}
+.citui-input:focus, .citui-select:focus, .citui-textarea:focus {
+  outline: none; border-color: var(--citui-cyan-500);
+  box-shadow: 0 0 0 3px rgba(31, 182, 214, 0.18);
+}
+.citui-textarea { min-height: 7rem; resize: vertical; }
+.citui-hint { font-size: 0.78rem; color: var(--citui-muted); margin-top: 0.5rem; }
+
+/* Table */
+.citui-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.citui-table th {
+  text-align: left; font-family: var(--citui-font-display);
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--citui-muted); padding: 0.75rem; border-bottom: 1px solid var(--citui-line);
+}
+.citui-table td { padding: 0.75rem; border-bottom: 1px solid var(--citui-line); }
+.citui-table tbody tr:hover td { background: var(--citui-surface-2); }
+
+/* ── Shared chrome: header / nav / brand / footer ── */
+.citui-nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+
+.citui-brand {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--citui-font-display); font-size: 1.32rem; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--citui-white); text-decoration: none;
+}
+.citui-brand:hover { text-decoration: none; }
+.citui-brand__mark { width: 38px; height: 38px; flex: 0 0 auto; }
+.citui-brand--ink { color: var(--citui-navy-900); }
+
+/* The Citoviso lockup "B" (src/ui/brand.ts, ADR-0236): the E4 mark IS the letter C,
+   then "itoviso". Mark = 1.6× the letter size, the word centred on it (the /pay/* ratio
+   the owner approved). Size it with font-size on the lockup. Dark surface → the dark mark
+   + white word; light surface → the light mark + navy word; "themed" follows the theme. */
+.citui-lockup {
+  display: inline-flex; color: var(--citui-navy-900); text-decoration: none;
+  font-family: var(--citui-font-display); font-weight: 700; letter-spacing: -0.01em; line-height: 1;
+  white-space: nowrap;
+}
+.citui-lockup.citui-lockup:hover { text-decoration: none; }
+.citui-lockup--lg { font-size: 1.32rem; } /* header / login size: word 21 px, mark 34 px (= /pay/*) */
+.citui-lockup__row { display: inline-flex; align-items: center; }
+.citui-lockup__mark { height: 1.6em; width: auto; flex: 0 0 auto; margin-right: 0.02em; }
+.citui-lockup__word { line-height: 1; }
+.citui-lockup__word small {
+  display: block; margin-top: 2px; font: 400 11px/1.3 var(--citui-font-text); letter-spacing: 0; color: var(--citui-muted);
+}
+/* ⚠️ Doubled class + :hover: a surface link rule (`.con a` 0,1,1 · `.con a:hover` 0,2,1)
+   otherwise paints the word link-cyan. */
+.citui-lockup.citui-lockup--on-dark, .citui-lockup.citui-lockup--on-dark:hover { color: var(--citui-white); }
+.citui-lockup.citui-lockup--on-light, .citui-lockup.citui-lockup--on-light:hover { color: var(--citui-navy-900); }
+.citui-lockup.citui-lockup--on-themed, .citui-lockup.citui-lockup--on-themed:hover { color: var(--citui-ink-brand); }
+.citui-mark-themed { display: inline-flex; flex: 0 0 auto; }
+.citui-mark-themed svg { height: var(--citui-mark-size, 26px); width: auto; }
+/* Theme switch. ⚠️ Element-qualified on purpose: a sizing rule like `.x svg{display:block}`
+   (0,1,1) beat a bare `.citui-mark--dark{display:none}` and showed BOTH marks. */
+svg.citui-mark--dark { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--light { display: none; }
+[data-citui-theme="dark"] svg.citui-mark--dark { display: block; }
+.citui-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.citui-nav-links { display: flex; align-items: center; gap: 28px; font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.citui-nav-links a { color: inherit; transition: color var(--citui-transition); }
+.citui-nav-links a:hover { color: var(--citui-white); text-decoration: none; }
+
+.citui-nav-actions { display: flex; align-items: center; gap: 12px; }
+.citui-nav-cta {
+  min-height: 44px; display: inline-flex; align-items: center; padding-inline: 18px;
+  border-radius: 12px; color: var(--citui-navy-900); background: var(--citui-cyan-400); font-weight: 800;
+}
+.citui-nav-cta:hover { text-decoration: none; }
+
+.citui-menu-toggle {
+  display: none; width: 44px; height: 44px; border-radius: 12px;
+  color: var(--citui-white); background: rgba(255, 255, 255, 0.08);
+  align-items: center; justify-content: center;
+}
+.citui-menu-toggle svg { width: 24px; height: 24px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   5. REVEAL — progressive enhancement (NO-JS SAFE: content visible by default)
+   Doctrine: no empty band without JS. The hidden state applies ONLY when the
+   `citui-js` class is present on <html> (added by citui.js / inline head snippet).
+   ───────────────────────────────────────────────────────────────────────── */
+.citui-js .citui-reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.citui-js .citui-reveal.citui-visible { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .citui-js .citui-reveal { opacity: 1 !important; transform: none !important; transition: none; }
+  * , *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+</style>
+<style>
+/* Mock-only layout. Colours come from --citui-* tokens only (ADR-0021 ①). */
+*{box-sizing:border-box}
+body{margin:0;background:var(--citui-surface-2);color:var(--citui-ink);font-family:var(--citui-font-text);font-size:14px}
+.ctl{position:sticky;top:0;z-index:50;background:var(--citui-navy-950);color:var(--citui-ink-inverse);display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:8px 14px;font-size:12px}
+.ctl b{font-family:var(--citui-font-display);letter-spacing:.04em}
+.ctl .grp{display:flex;gap:4px;align-items:center}
+.ctl button{font:inherit;border:1px solid color-mix(in srgb,var(--citui-white) 30%,transparent);background:transparent;color:inherit;border-radius:var(--citui-radius-pill);padding:4px 10px;cursor:pointer}
+.ctl button[aria-pressed=true]{background:var(--citui-cyan-500);color:var(--citui-accent-ink);border-color:var(--citui-cyan-500)}
+.ctl .note{opacity:.75}
+.stagewrap{padding:16px;display:flex;justify-content:center}
+.stage{container-type:inline-size;width:100%;max-width:1240px;background:var(--citui-bg);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);min-height:80vh;transition:max-width var(--citui-transition)}
+.stage.m{max-width:390px}
+.top{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--citui-line)}
+.crumb{color:var(--citui-muted);font-size:12px}
+.crumb a{color:var(--citui-link-ink);text-decoration:none;cursor:pointer}
+h1{font-family:var(--citui-font-display);font-size:22px;margin:2px 0 0}
+h2{font-family:var(--citui-font-display);font-size:16px;margin:0}
+h3{font-size:13px;margin:0;color:var(--citui-muted);text-transform:uppercase;letter-spacing:.05em}
+.sp{flex:1}
+.btn{font:inherit;font-weight:600;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);border-radius:10px;padding:8px 14px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.btn.pri{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}
+.btn.go{background:var(--citui-ok);color:var(--citui-on-ok);border-color:var(--citui-ok)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:16px;height:16px}
+.body{padding:16px 20px 28px}
+.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;background:var(--citui-surface)}
+.kpi .v{font-family:var(--citui-font-display);font-size:22px;font-weight:600}
+.kpi .l{color:var(--citui-muted);font-size:12px}
+table.ct{width:100%;border-collapse:collapse}
+.ct th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--citui-muted);text-align:left;font-weight:600;padding:8px;border-bottom:1px solid var(--citui-line-strong);white-space:nowrap}
+.ct td{padding:10px 8px;border-bottom:1px solid var(--citui-line);vertical-align:middle}
+.ct tr.row{cursor:pointer}
+.ct tr.row:hover td{background:var(--citui-hover)}
+.ct td.n{text-align:right;font-variant-numeric:tabular-nums}
+.ct th.n{text-align:right}
+.iso{display:inline-grid;place-items:center;min-width:30px;height:22px;border-radius:6px;background:var(--citui-navy-900);color:var(--citui-white);font-family:var(--citui-font-display);font-size:11px;font-weight:700;margin-right:8px}
+.cname{font-weight:600}
+.pill{display:inline-flex;gap:5px;align-items:center;border-radius:var(--citui-radius-pill);padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.p-ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.p-bad{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad-ink)}
+.p-warn{background:color-mix(in srgb,var(--citui-warn) 16%,transparent);color:var(--citui-warn-ink)}
+.p-run{background:var(--citui-accent-soft);color:var(--citui-link-ink)}
+.p-off{background:var(--citui-field);color:var(--citui-muted)}
+.st{font-weight:700}
+.st.live{color:var(--citui-ok-ink)} .st.launch{color:var(--citui-link-ink)} .st.draft{color:var(--citui-muted)} .st.pause{color:var(--citui-warn-ink)}
+.mini{font-size:12px;color:var(--citui-muted)}
+.cards{display:none}
+.foot{margin-top:12px;font-size:12px;color:var(--citui-muted)}
+.foot a{color:var(--citui-link-ink);cursor:pointer}
+/* country card (mobile) */
+.card{border:1px solid var(--citui-line);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer;background:var(--citui-panel)}
+.card .h{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.card .g{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:13px}
+.card .g span{color:var(--citui-muted)}
+.card .next{margin-top:8px;font-size:12px;padding:6px 8px;border-radius:8px;background:var(--citui-field)}
+/* detail */
+.dhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--citui-line);padding:0 20px}
+.tab{font:inherit;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--citui-muted);cursor:pointer}
+.tab[aria-selected=true]{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+.cols{display:grid;grid-template-columns:320px 1fr;gap:18px}
+.box{border:1px solid var(--citui-line);border-radius:14px;padding:14px;background:var(--citui-panel);margin-bottom:14px}
+.box > .bh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0;font-size:13px}
+dl.kv dt{color:var(--citui-muted)} dl.kv dd{margin:0;font-weight:500}
+.steps{list-style:none;margin:0;padding:0}
+.step{display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--citui-line);align-items:start}
+.step:last-child{border-bottom:0}
+.dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center}
+.dot svg{width:14px;height:14px}
+.d-ok{background:var(--citui-ok);color:var(--citui-on-ok)}
+.d-bad{background:var(--citui-bad);color:var(--citui-on-bad)}
+.d-warn{background:var(--citui-warn);color:var(--citui-navy-900)}
+.d-run{background:var(--citui-cyan-500);color:var(--citui-accent-ink)}
+.d-off{background:var(--citui-field);color:var(--citui-muted);border:1px dashed var(--citui-line-strong)}
+.d-run svg{animation:spin 1.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.step .t{font-weight:600}
+.step .dsc{font-size:13px;color:var(--citui-muted);margin-top:2px}
+.step .who{font-size:12px;margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--citui-field)}
+.step .who b{color:var(--citui-ink)}
+.step.bad .who{background:color-mix(in srgb,var(--citui-bad) 9%,transparent)}
+.sub{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-top:6px;font-size:12px}
+.bar{height:6px;border-radius:3px;background:var(--citui-field);overflow:hidden;margin-top:3px;grid-column:1/-1}
+.bar i{display:block;height:100%;background:var(--citui-ok)}
+.bar.b i{background:var(--citui-cyan-500)}
+.lgd{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--citui-muted)}
+.minta{color:var(--citui-warn-ink);font-weight:700;margin-left:2px}
+/* pricing */
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pkg{border:1px solid var(--citui-line);border-radius:12px;padding:10px;background:var(--citui-surface)}
+.pkg .pn{font-weight:700;font-family:var(--citui-font-display)}
+.pkg ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--citui-muted)}
+table.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt td,.mt th{padding:7px 6px;border-bottom:1px solid var(--citui-line);text-align:left}
+.mt th{font-size:11px;color:var(--citui-muted);text-transform:uppercase}
+.mt td.n,.mt th.n{text-align:right}
+.money{display:inline-flex;align-items:center;gap:4px}
+.money input{width:90px;font:inherit;text-align:right;padding:5px 7px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-field);color:var(--citui-ink)}
+.money input.chg{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.old{font-size:11px;color:var(--citui-muted);text-decoration:line-through;margin-left:4px}
+.savebar{position:sticky;bottom:0;display:none;gap:10px;align-items:center;padding:10px 14px;background:var(--citui-navy-900);color:var(--citui-white);border-radius:12px;margin-top:12px}
+.savebar.on{display:flex;flex-wrap:wrap}
+.glob{font-size:12px;color:var(--citui-muted);border:1px dashed var(--citui-line-strong);border-radius:12px;padding:10px}
+/* dialogs */
+.ov{position:fixed;inset:0;background:color-mix(in srgb,var(--citui-navy-950) 55%,transparent);display:none;align-items:flex-start;justify-content:center;z-index:60;padding:48px 12px;overflow:auto}
+.ov.on{display:flex}
+.dlg{background:var(--citui-panel);border-radius:16px;width:100%;max-width:620px;box-shadow:var(--citui-shadow-md)}
+.stage.m ~ .ov .dlg,.dlg.m{max-width:390px}
+.dlg .dh{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--citui-line)}
+.dlg .db{padding:14px 16px}
+.dlg .df{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--citui-line)}
+.x{border:0;background:none;font-size:20px;cursor:pointer;color:var(--citui-muted)}
+input.q{width:100%;font:inherit;padding:9px 11px;border:1px solid var(--citui-line-strong);border-radius:10px;background:var(--citui-field);color:var(--citui-ink)}
+.clist{max-height:320px;overflow:auto;margin-top:10px;border:1px solid var(--citui-line);border-radius:10px}
+.citem{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--citui-line);cursor:pointer}
+.citem:hover{background:var(--citui-hover)}
+.citem[aria-selected=true]{background:var(--citui-accent-soft)}
+.citem.dis{opacity:.5;cursor:default}
+.wal{margin-top:12px;border-radius:10px;padding:10px 12px;font-size:13px}
+.wal.ok{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.wal.warn{background:color-mix(in srgb,var(--citui-warn) 16%,transparent);color:var(--citui-warn-ink)}
+.wal.bad{background:color-mix(in srgb,var(--citui-bad) 12%,transparent);color:var(--citui-bad-ink)}
+.wal b{display:block;margin-bottom:2px}
+.imp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.imp .kpi .v{font-size:18px}
+table.it{width:100%;border-collapse:collapse;font-size:12px}
+.it td,.it th{padding:5px 4px;border-bottom:1px solid var(--citui-line);text-align:left}
+.it td.n,.it th.n{text-align:right}
+.it th{color:var(--citui-muted);font-weight:600}
+.field{display:grid;gap:4px;margin:10px 0;font-size:13px}
+.field input{font:inherit;padding:7px 9px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-field);color:var(--citui-ink);max-width:200px}
+.err{color:var(--citui-bad-ink);font-size:12px}
+.rule{font-size:12px;padding:8px 10px;border-radius:8px;background:var(--citui-field);margin-top:8px}
+.tscroll{overflow-x:auto;margin:0 -4px}
+.dlg.m .imp{grid-template-columns:1fr}
+.dlg.m .imp .kpi{display:flex;gap:10px;align-items:baseline}
+.dlg.m .it{font-size:11px;white-space:nowrap}
+.src{font-size:11px;color:var(--citui-muted);margin:4px 0 12px;line-height:1.5}
+.src .pill{font-size:10px;padding:1px 7px;margin-right:4px}
+.src .dec{display:block;color:var(--citui-ok-ink);font-weight:600;margin-top:2px}
+.pick{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--citui-line-strong);border-radius:12px;padding:10px 12px;cursor:pointer;font-size:13px;line-height:1.7}
+.opt.on{border-color:var(--citui-cyan-500);background:var(--citui-accent-soft)}
+.opt > input{margin-top:5px}
+.opt input[type=number]{width:56px;font:inherit;padding:2px 6px;border:1px solid var(--citui-line-strong);border-radius:6px;background:var(--citui-field);color:var(--citui-ink)}
+.split{font-size:13px;margin:8px 0 2px}
+.src .will{display:block;color:var(--citui-link-ink);font-weight:600}
+.outsum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.outsum > div{border:1px solid var(--citui-line);border-radius:12px;padding:10px 12px;background:var(--citui-accent-soft)}
+.outsum .v{font-family:var(--citui-font-display);font-size:22px;font-weight:600}
+.outsum .l{font-size:12px;color:var(--citui-muted)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;align-items:start}
+.lab{font-size:12px;color:var(--citui-muted);margin:10px 0 6px;font-weight:600}
+.chks{display:flex;flex-wrap:wrap;gap:6px 14px}
+.chks.col{flex-direction:column}
+.chk{display:flex;gap:6px;align-items:baseline;font-size:13px}
+.chk.big{margin-top:8px;font-weight:500}
+.chlist{list-style:none;margin:0;padding:0;border:1px solid var(--citui-line);border-radius:10px}
+.chrow{display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--citui-line)}
+.chrow:last-child{border-bottom:0}
+.chrow.dead{opacity:.5}
+.chrow .mini{white-space:nowrap;font-size:11px}
+.chrow .ord{width:18px;color:var(--citui-muted);font-variant-numeric:tabular-nums}
+.ib{font:inherit;width:28px;height:28px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);color:var(--citui-ink);border-radius:8px;cursor:pointer}
+.ib:disabled{opacity:.35;cursor:default}
+.seg{display:inline-flex;border:1px solid var(--citui-line-strong);border-radius:10px;overflow:hidden}
+.seg button{font:inherit;font-weight:600;border:0;background:var(--citui-panel);color:var(--citui-muted);padding:7px 14px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--citui-navy-900);color:var(--citui-white)}
+.days{display:flex;gap:4px;flex-wrap:wrap}
+.day input{position:absolute;opacity:0;width:1px;height:1px}
+.day span{display:inline-grid;place-items:center;min-width:38px;height:32px;border:1px solid var(--citui-line-strong);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--citui-muted)}
+.day input:checked + span{background:var(--citui-navy-900);color:var(--citui-white);border-color:var(--citui-navy-900)}
+.day input:focus-visible + span{outline:2px solid var(--citui-cyan-500)}
+.hrs{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.hrs input,.field input[type=number]{width:72px;font:inherit;padding:5px 7px;border:1px solid var(--citui-line-strong);border-radius:8px;background:var(--citui-field);color:var(--citui-ink)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--citui-navy-900);color:var(--citui-white);padding:10px 16px;border-radius:10px;font-size:13px;display:none;z-index:80;max-width:90vw}
+.toast.on{display:block}
+/* ---- narrow container: cards instead of table, single column ---- */
+@container (max-width:720px){
+  .sum{grid-template-columns:1fr 1fr}
+  table.ct{display:none}
+  .cards{display:block}
+  .cols{grid-template-columns:1fr}
+  .pgrid{grid-template-columns:1fr}
+  .top{flex-wrap:wrap;padding:12px 14px}
+  .body{padding:12px 14px 24px}
+  .tabs{padding:0 14px}
+  .hide-m{display:none}
+  .imp{grid-template-columns:1fr}
+  .cols2,.outsum{grid-template-columns:1fr}
+}
+</style></head><body>
+<div class="ctl" role="toolbar" aria-label="Mock-vezérlő">
+  <b>MOCK-VEZÉRLŐ</b>
+  <span class="grp">Méret: <button id="szM" aria-pressed="false">Mobil 390px</button><button id="szD" aria-pressed="true">Asztali</button></span>
+  <span class="note">Adat: dev DB 2026-11-26 (országok, teljesség, árak, leadek, előfizetők). <span class="minta">*</span> = mintaérték, a dev DB-ben nincs mért adat. A sáv nem része a tervnek.</span>
+</div>
+<div class="stagewrap"><div class="stage" id="stage"><div id="view"></div></div>
+<div class="ov" id="ovAdd"><div class="dlg" role="dialog" aria-labelledby="addT">
+  <div class="dh"><h2 id="addT">Új ország felvétele</h2><span class="sp"></span><button class="x" data-close aria-label="Bezárás">×</button></div>
+  <div class="db">
+    <input class="q" id="cq" placeholder="Keresés: ország neve vagy ISO-kód (pl. Ausztria, AT)" autocomplete="off">
+    <div class="clist" id="clist" role="listbox"></div>
+    <div id="cpick"></div>
+  </div>
+  <div class="df"><button class="btn" data-close>Mégse</button><button class="btn pri" id="addGo" disabled>Felvétel</button></div>
+</div></div>
+<div class="ov" id="ovSave"><div class="dlg" role="dialog" aria-labelledby="saveT">
+  <div class="dh"><h2 id="saveT">Árváltozás mentése</h2><span class="sp"></span><button class="x" data-close aria-label="Bezárás">×</button></div>
+  <div class="db" id="saveBody"></div>
+  <div class="df"><button class="btn" data-close>Mégse</button><button class="btn pri" id="saveGo">Ütemezés mentése</button></div>
+</div></div>
+<div class="ov" id="ovOut"><div class="dlg" role="dialog" aria-labelledby="outT">
+  <div class="dh"><h2 id="outT">Kiküldési feltételek mentése</h2><span class="sp"></span><button class="x" data-close aria-label="Bezárás">×</button></div>
+  <div class="db" id="outBody"></div>
+  <div class="df"><button class="btn" data-close>Mégse</button><button class="btn pri" id="outGo">Mentés</button></div>
+</div></div>
+<div class="toast" id="toast" role="status"></div>
+</div>
+<script>
+"use strict";
+// tr(): the later implementation wraps every console string in T()/tr(); here identity.
+const tr = (s, p) => p ? s.replace(/\{(\w+)\}/g, (_, k) => p[k]) : s;
+const TODAY = new Date("2026-11-26T12:00:00+01:00");
+const ICON = {
+  ok:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3.5 8.5l3 3 6-7"/></svg>',
+  bad:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+  warn:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M8 3.5v5.5M8 12v.5"/></svg>',
+  run:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7"/></svg>',
+  off:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="1.5"/></svg>',
+  plus:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>',
+  play:'<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 3l8 5-8 5z"/></svg>',
+  pause:'<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 3h3v10H4zM9 3h3v10H9z"/></svg>',
+  back:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3L5 8l5 5"/></svg>'
+};
+// Barion: docs.barion.com/Supported_currencies (src/payment/providers.ts); wallet = the account's
+// own wallets (dev 2026-11-26: only HUF — countryReadiness "wallet").
+const BARION_ACCEPTS = ["HUF","EUR","USD","CZK"];
+const BARION_WALLETS = ["HUF"];
+// ISO 3166-1 → official ISO 4217 currency (names come from Intl.DisplayNames('hu')).
+const CUR = "AD:EUR AE:AED AF:AFN AG:XCD AL:ALL AM:AMD AO:AOA AR:ARS AT:EUR AU:AUD AZ:AZN BA:BAM BB:BBD BD:BDT BE:EUR BF:XOF BG:EUR BH:BHD BI:BIF BJ:XOF BN:BND BO:BOB BR:BRL BS:BSD BT:BTN BW:BWP BY:BYN BZ:BZD CA:CAD CD:CDF CF:XAF CG:XAF CH:CHF CI:XOF CL:CLP CM:XAF CN:CNY CO:COP CR:CRC CU:CUP CV:CVE CY:EUR CZ:CZK DE:EUR DJ:DJF DK:DKK DM:XCD DO:DOP DZ:DZD EC:USD EE:EUR EG:EGP ER:ERN ES:EUR ET:ETB FI:EUR FJ:FJD FM:USD FR:EUR GA:XAF GB:GBP GD:XCD GE:GEL GH:GHS GM:GMD GN:GNF GQ:XAF GR:EUR GT:GTQ GW:XOF GY:GYD HN:HNL HR:EUR HT:HTG HU:HUF ID:IDR IE:EUR IL:ILS IN:INR IQ:IQD IR:IRR IS:ISK IT:EUR JM:JMD JO:JOD JP:JPY KE:KES KG:KGS KH:KHR KI:AUD KM:KMF KN:XCD KP:KPW KR:KRW KW:KWD KZ:KZT LA:LAK LB:LBP LC:XCD LI:CHF LK:LKR LR:LRD LS:LSL LT:EUR LU:EUR LV:EUR LY:LYD MA:MAD MC:EUR MD:MDL ME:EUR MG:MGA MH:USD MK:MKD ML:XOF MM:MMK MN:MNT MR:MRU MT:EUR MU:MUR MV:MVR MW:MWK MX:MXN MY:MYR MZ:MZN NA:NAD NE:XOF NG:NGN NI:NIO NL:EUR NO:NOK NP:NPR NR:AUD NZ:NZD OM:OMR PA:PAB PE:PEN PG:PGK PH:PHP PK:PKR PL:PLN PT:EUR PW:USD PY:PYG QA:QAR RO:RON RS:RSD RU:RUB RW:RWF SA:SAR SB:SBD SC:SCR SD:SDG SE:SEK SG:SGD SI:EUR SK:EUR SL:SLE SM:EUR SN:XOF SO:SOS SR:SRD SS:SSP ST:STN SV:USD SY:SYP SZ:SZL TD:XAF TG:XOF TH:THB TJ:TJS TL:USD TM:TMT TN:TND TO:TOP TR:TRY TT:TTD TV:AUD TZ:TZS UA:UAH UG:UGX US:USD UY:UYU UZ:UZS VA:EUR VC:XCD VE:VES VN:VND VU:VUV WS:WST XK:EUR YE:YER ZA:ZAR ZM:ZMW ZW:ZWG"
+  .split(" ").map(p => p.split(":"));
+let regionNames, curNames;
+try { regionNames = new Intl.DisplayNames(["hu"], { type: "region" }); curNames = new Intl.DisplayNames(["hu"], { type: "currency" }); } catch { regionNames = { of: c => c }; curNames = { of: c => c }; }
+
+// ---- data: dev DB 2026-11-26 ----
+// HU module prices (module_price, Ft/hó) and base (pricing_config hu: 3900, 2 free months annual).
+const HU_MODS = { amenities:490, booking:990, email:390, gallery:490, hours:290, location:490, poi:490, pricing:490, reviews:690, rooms:690, usp:490, newsletter:490, multilang6:22900, multilang28:30000 };
+const EU_MODS = { amenities:100, booking:200, email:100, gallery:100, hours:100, location:100, poi:100, pricing:100, reviews:200, rooms:200, usp:100, multilang:1300, multilang6:1600, multilang28:2100 };
+const MOD_NAME = { amenities:"Felszereltség", booking:"Foglalás", email:"Saját e-mail", gallery:"Galéria", hours:"Nyitvatartás", location:"Elhelyezkedés", poi:"Környék", pricing:"Árak", reviews:"Vélemények", rooms:"Szobák", usp:"Egyediség", newsletter:"Hírlevél", multilang:"Többnyelvűség", multilang6:"Többnyelvűség (6)", multilang28:"Többnyelvűség (28)" };
+// Real HU subscriptions (status active/frozen, period, current_period_end, billed modules).
+const A9 = ["amenities","booking","gallery","location","poi","pricing","reviews","rooms","usp"];
+const A10 = A9.concat("hours"); const A6 = ["amenities","gallery","location","reviews","rooms","usp"];
+const HU_SUBS = [
+  ["active","annual","2027-09-20",A9],["active","annual","2027-09-21",A9],["active","monthly","2026-12-26",A9],
+  ["active","monthly","2026-12-26",A10],["frozen","monthly","2026-10-28",A10],["active","annual","2027-09-24",A10],
+  ["frozen","monthly","2026-10-28",A10.filter(m=>m!=="amenities")],["frozen","monthly","2026-10-28",A10],
+  ["active","monthly","2026-11-27",A6],["active","monthly","2026-11-27",A9],["frozen","monthly","2026-10-29",A10],
+  ["active","monthly","2026-12-25",A6],["active","monthly","2026-12-20",A6],["active","monthly","2026-12-20",A10]
+].map(([st,per,end,mods],i)=>({id:"T"+(i+1),st,per,end,mods}));
+
+function R(key, state, title, detail, who, extra) { return { key, state, title, detail, who, ...extra }; }
+// The launch list: real countryReadiness items + the pipeline stages (region, scouting, contact, mock, send).
+function euItems(c, o) {
+  const babelPct = o.babelDone === 4262 ? 100 : Math.floor(o.babelDone / 4262 * 1000) / 10;
+  return [
+    R("data","ok","Ország-adatok","minden kötelező mező helyes (nyelv, időzóna, hívószám, végződések, portálok)"),
+    R("region", o.region.state, "Régió-felbontás (megyék, csempék)", o.region.detail, o.region.who),
+    R("babel", babelPct === 100 ? "ok" : (c.status === "draft" ? "warn" : "run"), "Fordítás — Bábel",
+      babelPct === 100 ? `${c.lang}: minden vevő-oldali felirat lefordítva` : `${c.lang}: ${o.babelDone} / 4262 vevő-oldali felirat — Bábelre vár`,
+      babelPct === 100 ? null : "Bábel (fordító munkatárs) a következő körében pótolja — a hiány addig magyar tartalék, ami a kiküldést tartja.",
+      { parts: [["Felület", o.babelDone, 4262], ["Jogi csomag (egység)", o.legal, o.legal], ["Levelek", o.mail[0], o.mail[1], true], ["Súgó", o.kb[0], o.kb[1], true]] }),
+    ...(o.adr ? [R("adr","warn","Fogyasztói vitarendező", `LEGAL_ADR_${c.iso} nincs beállítva — magánszemélynek nem adható el; cégnek igen`, "A jogi csomag pótló köre (gép) — nem zár, csak a magánszemély-utat.")] : []),
+    R("holidays","ok","Ünnepnapok", `${o.hol} nap, 2026 és 2027 lefedve`),
+    R("prices","ok","Ársor", `„${c.region}” ár-régió teljes, ${c.cur} — csomagok, modulok, alapdíj`),
+    R("wallet","bad","Barion-tárca", `nincs ${c.cur} tárca a Barion-fiókban — ${c.cur} fizetés addig nem fogadható`,
+      `Az egyetlen nem gépi lépés: a ${c.cur} tárcát a Barion-fiókban kell megnyitni (pénzügyi döntés). A gép óránként ellenőrzi, és amint megvan, zöldre vált.`),
+    R("channel","warn","Kiküldési csatorna","e-mail — a csak mobilszámos lead TARTVA (nincs helyi mobil-szolgáltató)", "Nem kérdés: a mobilos lead vár, az e-mailes megy."),
+    R("scout", o.scout.state, "Felderítés", o.scout.detail, o.scout.who, o.scout.pct != null ? { pct: o.scout.pct } : {}),
+    R("contact", o.contact.state, "Kontakt", o.contact.detail, o.contact.who),
+    R("mock", o.mock.state, "Mock", o.mock.detail, o.mock.who),
+    R("send", o.send.state, "Kiküldés", o.send.detail, o.send.who)
+  ];
+}
+const WAIT = (what) => ({ state: "off", detail: tr("Indulásra vár"), who: what });
+const COUNTRIES = [
+  { iso:"HU", name:"Magyarország", cur:"HUF", region:"hu", lang:"hu", status:"live", leads:7370, subs:10, frozen:4, quota:100, sentToday:0, scouting:true, sending:true, priceOk:true,
+    since:"2026-09-08", tz:"Europe/Budapest", dial:"+36", window:"8–20", channels:"e-mail, SMS, MMS, Viber, WhatsApp",
+    items:[
+      R("data","ok","Ország-adatok","minden kötelező mező helyes"),
+      R("region","ok","Régió-felbontás (megyék, csempék)","24 régió · 72 csempe · 20 bejárva"),
+      R("babel","ok","Fordítás — Bábel","magyar — a forrásnyelv, nincs mit fordítani",null,{parts:[["Felület",4262,4262],["Jogi csomag (egység)",227,227],["Levelek",1,1],["Súgó",1,1]]}),
+      R("holidays","warn","Ünnepnapok","nincs megadva — ma a válasz csak hétvégén áll","Nem zár (a budapesti óra sosem ismert ünnepnapot, ADR-0455 ⑩). A gép a nyilvános naptárból tölti, ha kéred."),
+      R("prices","ok","Ársor","„hu” ár-régió teljes, HUF"),
+      R("wallet","ok","Barion-tárca","HUF tárca megvan"),
+      R("channel","ok","Kiküldési csatorna","e-mail + SMS, MMS, Viber, WhatsApp"),
+      R("scout","run","Felderítés","20 / 72 csempe bejárva · 7 370 lead","Felderítő munkatárs, folyamatosan",{pct:28}),
+      R("contact","ok","Kontakt","e-mail címmel bíró lead: 20","Neo és a kontaktkereső kollégák, folyamatosan"),
+      R("mock","ok","Mock","368 kész mock"),
+      R("send","ok","Kiküldés","megy — napi keret 100 (felfutással), hétköznap 8–17")
+    ]},
+  { iso:"HR", name:"Horvátország", cur:"EUR", region:"hr", lang:"hr", status:"launch", leads:167, subs:0, frozen:0, quota:20, sentToday:0, scouting:true, sending:false, priceOk:true,
+    since:"2026-11-26", tz:"Europe/Zagreb", dial:"+385", window:"8–17", channels:"e-mail" },
+  { iso:"IT", name:"Olaszország", cur:"EUR", region:"it", lang:"it", status:"draft", leads:0, subs:0, frozen:0, quota:40, sentToday:0, scouting:false, sending:false, priceOk:true, tz:"Europe/Rome", dial:"+39", window:"8–17", channels:"e-mail" },
+  { iso:"ES", name:"Spanyolország", cur:"EUR", region:"es", lang:"es", status:"draft", leads:0, subs:0, frozen:0, quota:40, sentToday:0, scouting:false, sending:false, priceOk:true, tz:"Europe/Madrid", dial:"+34", window:"8–17", channels:"e-mail" },
+  { iso:"FR", name:"Franciaország", cur:"EUR", region:"fr", lang:"fr", status:"draft", leads:0, subs:0, frozen:0, quota:40, sentToday:0, scouting:false, sending:false, priceOk:true, tz:"Europe/Paris", dial:"+33", window:"8–17", channels:"e-mail" },
+  { iso:"PT", name:"Portugália", cur:"EUR", region:"pt", lang:"pt", status:"draft", leads:0, subs:0, frozen:0, quota:40, sentToday:0, scouting:false, sending:false, priceOk:true, tz:"Europe/Lisbon", dial:"+351", window:"8–17", channels:"e-mail" },
+  { iso:"BG", name:"Bulgária", cur:"EUR", region:"bg", lang:"bg", status:"draft", leads:0, subs:0, frozen:0, quota:40, sentToday:0, scouting:false, sending:false, priceOk:true, tz:"Europe/Sofia", dial:"+359", window:"8–17", channels:"e-mail" }
+];
+const EU_OPTS = {
+  HR:{babelDone:4262,legal:227,mail:[9,9],kb:[52,52],hol:17,
+      region:{state:"ok",detail:"3 régió (Isztria, Kvarner, Dalmácia) · 340 csempe"},
+      scout:{state:"run",detail:"0 / 340 csempe bejárva · 167 lead (a régió-kijelöléskor)",who:"Felderítő munkatárs — a nyitott piacon magától indul (SUB „Piacnyitás kézi lépés nélkül”)",pct:0},
+      contact:{state:"run",detail:"kontaktkeresés fut a 167 leaden",who:"Neo és a kontaktkereső kollégák"},
+      mock:{state:"run",detail:"mock készül a kontaktos leadekre",who:"A gép (mock-motor), a minőségi kapuval"},
+      send:{state:"bad",detail:"áll — a Barion-tárca piros, fizetni nem tudna a vevő",who:"Magától indul, amint minden záró tétel zöld. Most a tárca tartja."}},
+  IT:{babelDone:4262,legal:228,mail:[9,9],kb:[52,52],hol:15},
+  ES:{babelDone:4260,legal:228,mail:[9,9],kb:[44,52],hol:11},
+  FR:{babelDone:4260,legal:229,mail:[9,9],kb:[44,52],hol:14,adr:true},
+  PT:{babelDone:4260,legal:231,mail:[9,9],kb:[44,52],hol:16,adr:true},
+  BG:{babelDone:4260,legal:227,mail:[8,9],kb:[30,52],hol:18}
+};
+function draftPipeline(o) {
+  o.region = o.region || WAIT("A gép az indításkor felbontja megyékre és csempékre (OSM-határ → rács).");
+  o.scout = o.scout || WAIT("Felderítő munkatárs, az indítás után magától.");
+  o.contact = o.contact || WAIT("Neo és a kontaktkereső kollégák, a felderített leadeken.");
+  o.mock = o.mock || WAIT("A gép (mock-motor), a kontaktos leadekre.");
+  o.send = o.send || WAIT("Magától indul, amint minden záró tétel zöld.");
+  return o;
+}
+for (const c of COUNTRIES) if (!c.items) c.items = euItems(c, draftPipeline(EU_OPTS[c.iso]));
+
+// ---- state ----
+const S = { view: "list", iso: null, tab: "country", prices: {}, pending: null };
+function minorDigits(cur) { return cur === "HUF" ? 0 : 2; }
+function fmtMoney(minor, cur) {
+  const d = minorDigits(cur); const v = minor / Math.pow(10, d);
+  return v.toLocaleString("hu-HU", { minimumFractionDigits: d, maximumFractionDigits: d }) + (cur === "HUF" ? " Ft" : " €");
+}
+const fmtN = n => n.toLocaleString("hu-HU");
+const fmtD = s => { const d = new Date(s + "T12:00:00"); return d.toLocaleDateString("hu-HU", { year:"numeric", month:"long", day:"numeric" }).replace(/\.$/, ""); };
+const iso10 = d => d.toISOString().slice(0, 10);
+const addDays = (s, n) => { const d = new Date(s + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return iso10(d); };
+function priceState(c) {
+  if (!S.prices[c.iso]) {
+    const mods = c.iso === "HU" ? HU_MODS : EU_MODS;
+    S.prices[c.iso] = { base: c.iso === "HU" ? 3900 : 500, mods: { ...mods }, orig: { base: c.iso === "HU" ? 3900 : 500, mods: { ...mods } } };
+  }
+  return S.prices[c.iso];
+}
+const STATUS = { live:["live","Fut"], launch:["launch","Indulás"], draft:["draft","Felvéve"], pause:["pause","Szünetel"] };
+function statusTxt(c) { const [k, l] = STATUS[c.status]; return `<span class="st ${k}">${tr(l)}</span>`; }
+function yes(b, y, n, warnOnNo) { return b ? `<span class="pill p-ok">${tr(y)}</span>` : `<span class="pill ${warnOnNo ? "p-warn" : "p-off"}">${tr(n)}</span>`; }
+function firstRed(c) { const i = c.items.find(x => x.state === "bad"); return i ? `${i.title}: ${i.detail}` : (c.items.find(x => x.state === "off") ? tr("Indulásra vár — „Indulás” gombbal a gép elkezdi") : tr("Minden záró tétel zöld")); }
+
+// ---- views ----
+function listView() {
+  const tot = COUNTRIES.reduce((a, c) => ({ leads: a.leads + c.leads, subs: a.subs + c.subs, sent: a.sent + c.sentToday, quota: a.quota + (c.sending ? c.quota : 0) }), { leads:0, subs:0, sent:0, quota:0 });
+  const rows = COUNTRIES.map(c => `<tr class="row" data-open="${c.iso}">
+    <td><span class="iso">${c.iso}</span><span class="cname">${c.name}</span></td>
+    <td>${c.cur}</td>
+    <td>${yes(c.priceOk, "kész", "hiányos")}</td>
+    <td>${statusTxt(c)}</td>
+    <td>${yes(c.scouting, "megy", c.status === "draft" ? "nem indult" : "áll", c.status !== "draft")}</td>
+    <td>${c.sending ? `<span class="pill p-ok">${tr("megy")}</span>` : c.status === "draft" ? `<span class="pill p-off">${tr("nem indult")}</span>` : `<span class="pill p-bad">${tr("áll")}</span>`}</td>
+    <td class="n">${fmtN(c.leads)}</td>
+    <td class="n">${fmtN(c.subs)}${c.frozen ? `<div class="mini">+${c.frozen} ${tr("szünetel")}</div>` : ""}</td>
+    <td class="n">${c.sending ? c.quota : "—"}</td>
+    <td class="n">${c.sending ? fmtN(c.sentToday) : "—"}</td>
+  </tr>`).join("");
+  const cards = COUNTRIES.map(c => `<div class="card" data-open="${c.iso}">
+    <div class="h"><span class="iso">${c.iso}</span><span class="cname">${c.name}</span><span class="sp"></span>${statusTxt(c)}</div>
+    <div class="g"><div><span>${tr("Pénznem")}</span> ${c.cur}</div><div><span>${tr("Árazás")}</span> ${c.priceOk ? tr("kész") : tr("hiányos")}</div>
+    <div><span>${tr("Leadgyűjtés")}</span> ${c.scouting ? tr("megy") : tr("nem megy")}</div><div><span>${tr("Kiküldés")}</span> ${c.sending ? tr("megy") : tr("nem megy")}</div>
+    <div><span>${tr("Lead")}</span> ${fmtN(c.leads)}</div><div><span>${tr("Előfizető")}</span> ${fmtN(c.subs)}</div></div>
+    <div class="next">${firstRed(c)}</div></div>`).join("");
+  return `<div class="top"><div><div class="crumb">CRM</div><h1>${tr("Országok / Árazás")}</h1></div><span class="sp"></span>
+    <button class="btn pri" id="addBtn">${ICON.plus}${tr("Új ország")}</button></div>
+  <div class="body">
+    <div class="sum">
+      <div class="kpi"><div class="v">${COUNTRIES.length}</div><div class="l">${tr("felvett ország")} · ${COUNTRIES.filter(c=>c.status==="live").length} ${tr("fut")}, ${COUNTRIES.filter(c=>c.status==="launch").length} ${tr("indul")}</div></div>
+      <div class="kpi"><div class="v">${fmtN(tot.leads)}</div><div class="l">${tr("összes lead")}</div></div>
+      <div class="kpi"><div class="v">${fmtN(tot.subs)}</div><div class="l">${tr("aktív előfizető")}</div></div>
+      <div class="kpi"><div class="v">${fmtN(tot.sent)} / ${fmtN(tot.quota)}</div><div class="l">${tr("ma kiküldve / napi keret")}</div></div>
+    </div>
+    <table class="ct"><thead><tr><th>${tr("Ország")}</th><th>${tr("Pénznem")}</th><th>${tr("Árazás")}</th><th>${tr("Státusz")}</th><th>${tr("Leadgyűjtés")}</th><th>${tr("Kiküldés")}</th><th class="n">${tr("Lead")}</th><th class="n">${tr("Előfizető")}</th><th class="n">${tr("Napi keret")}</th><th class="n">${tr("Ma kiküldve")}</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="cards">${cards}</div>
+    <div class="foot">${tr("Státusz: Felvéve → Indulás (a gép magától végigviszi) → Fut. Szünetel: kézzel megállítva, a leadgyűjtés és a kiküldés áll.")}<br>
+    ${tr("A „Globális · EUR” ársor nem ország: a bejelentkezés nélküli főoldal-látogató árkijelzése.")} <a data-glob>${tr("Szerkesztés")}</a></div>
+  </div>`;
+}
+
+function stepHtml(i) {
+  const cls = { ok:"d-ok", bad:"d-bad", warn:"d-warn", run:"d-run", off:"d-off" }[i.state];
+  const lab = { ok:"kész", bad:"hiányzik", warn:"figyelem", run:"folyamatban", off:"vár" }[i.state];
+  const pcls = { ok:"p-ok", bad:"p-bad", warn:"p-warn", run:"p-run", off:"p-off" }[i.state];
+  let parts = "";
+  if (i.parts) parts = `<div class="sub">${i.parts.map(([n, d, t, minta]) => { const p = t ? Math.round(d / t * 1000) / 10 : 0;
+    return `<span>${tr(n)}${minta ? '<span class="minta">*</span>' : ""}</span><span>${fmtN(d)} / ${fmtN(t)} · ${p}%</span><div class="bar ${p < 100 ? "b" : ""}"><i style="width:${p}%"></i></div>`; }).join("")}</div>`;
+  else if (i.pct != null) parts = `<div class="sub"><span>${tr("bejárt terület")}</span><span>${i.pct}%</span><div class="bar b"><i style="width:${i.pct}%"></i></div></div>`;
+  const who = i.who && i.state !== "ok" ? `<div class="who"><b>${i.state === "bad" ? tr("Mi hiányzik, ki pótolja:") : tr("Ki viszi:")}</b> ${i.who}</div>` : "";
+  return `<li class="step ${i.state}" data-k="${i.key}"><span class="dot ${cls}">${ICON[i.state]}</span><div><div class="t">${tr(i.title)}</div><div class="dsc">${i.detail}</div>${parts}${who}</div><span class="pill ${pcls}">${tr(lab)}</span></li>`;
+}
+
+function countryTab(c) {
+  const n = k => c.items.filter(i => i.state === k).length;
+  const btn = c.status === "draft" ? `<button class="btn go" id="launchBtn">${ICON.play}${tr("Indulás")}</button>`
+    : c.status === "pause" ? `<button class="btn go" id="resumeBtn">${ICON.play}${tr("Folytatás")}</button>`
+    : c.iso === "HU" ? "" : `<button class="btn" id="pauseBtn">${ICON.pause}${tr("Szüneteltetés")}</button>`;
+  return `<div class="cols"><div>
+    <div class="box"><div class="bh"><h2>${tr("Alapadatok")}</h2></div><dl class="kv">
+      <dt>${tr("Státusz")}</dt><dd>${statusTxt(c)}${c.since ? ` <span class="mini">${tr("óta")} ${fmtD(c.since)}</span>` : ""}</dd>
+      <dt>${tr("Pénznem")}</dt><dd>${c.cur} · ${curNames.of(c.cur)}</dd>
+      <dt>${tr("Ár-régió")}</dt><dd>${c.region}</dd>
+      <dt>${tr("Nyelv")}</dt><dd>${c.lang}</dd>
+      <dt>${tr("Időzóna")}</dt><dd>${c.tz}</dd>
+      <dt>${tr("Hívószám")}</dt><dd>${c.dial}</dd>
+      <dt>${tr("Fizetés")}</dt><dd>Barion · ${BARION_WALLETS.includes(c.cur) ? tr("tárca megvan") : tr("nincs tárca")}</dd>
+      <dt>${tr("Csatorna")}</dt><dd>${c.channels}</dd>
+      <dt>${tr("Kiküldési ablak")}</dt><dd>${tr("hétköznap")} ${c.window}</dd>
+      <dt>${tr("Napi keret")}</dt><dd>${c.quota}</dd>
+      <dt>${tr("Lead / előfizető")}</dt><dd>${fmtN(c.leads)} / ${fmtN(c.subs)}</dd>
+    </dl><div class="foot"><a>${tr("Adatok szerkesztése")}</a> — ${tr("a mai Országok-szerkesztő (Azonosság és pénz · Felderítés · Telefonszám-szabály · Jog)")}</div></div>
+    ${btn ? `<div class="box"><div class="bh"><h2>${tr("Indítás")}</h2></div><div class="mini" style="margin-bottom:10px">${c.status === "draft"
+      ? tr("Az „Indulás” után a gép magától végigviszi: régió-felbontás → felderítés → kontakt → mock → kiküldés. A kiküldés csak akkor indul, ha minden záró tétel zöld.")
+      : tr("Szüneteltetéskor a leadgyűjtés és a kiküldés megáll; a meglévő előfizetők megújulása megy tovább.")}</div>${btn}</div>` : ""}
+  </div><div class="box"><div class="bh"><h2>${tr("Az indulás állapota")}</h2><span class="sp"></span>
+    <span class="lgd"><span>${n("ok")} ${tr("kész")}</span><span>${n("run")} ${tr("folyamatban")}</span><span>${n("bad")} ${tr("hiányzik")}</span><span>${n("warn")} ${tr("figyelem")}</span><span>${n("off")} ${tr("vár")}</span></span></div>
+    <ul class="steps">${c.items.map(stepHtml).join("")}</ul></div></div>`;
+}
+
+const TIERS = { "Alap":["gallery","location","amenities","usp"], "Ajánlott":["gallery","location","amenities","usp","rooms","reviews","pricing"], "Teljes":["gallery","location","amenities","usp","rooms","reviews","pricing","booking","poi","hours"] };
+function monthlyOf(p, mods) { return p.base + mods.reduce((a, m) => a + (p.mods[m] || 0), 0); }
+function priceTab(c) {
+  const p = priceState(c); const cur = c.cur; const d = minorDigits(cur);
+  const inp = (key, v, o) => `<span class="money"><input inputmode="decimal" data-price="${key}" value="${(v / Math.pow(10, d)).toFixed(d)}" class="${v !== o ? "chg" : ""}" aria-label="${key}"> ${cur === "HUF" ? "Ft" : "€"}${v !== o ? `<span class="old">${fmtMoney(o, cur)}</span>` : ""}</span>`;
+  const pk = Object.entries(TIERS).map(([n, ms]) => `<div class="pkg"><div class="pn">${tr(n)}</div><div>${fmtMoney(monthlyOf(p, ms), cur)} / ${tr("hó")}</div><ul>${ms.map(m => `<li>${MOD_NAME[m]}</li>`).join("")}</ul></div>`).join("");
+  const mrows = Object.keys(p.mods).map(m => `<tr><td>${MOD_NAME[m] || m}</td><td class="n">${inp(m, p.mods[m], p.orig.mods[m])}</td></tr>`).join("");
+  return `<div class="box"><div class="bh"><h2>${tr("Csomagok")}</h2><span class="mini">— ${tr("a mai panel, húzd a modult a csomagba")}</span></div><div class="pgrid">${pk}</div></div>
+  <div class="cols"><div>
+    <div class="box"><div class="bh"><h2>${tr("Alapdíj és éves fizetés")}</h2></div>
+      <table class="mt"><tr><td>${tr("Alapdíj / hó")}</td><td class="n">${inp("base", p.base, p.orig.base)}</td></tr>
+      <tr><td>${tr("Éves fizetésnél ingyenes hónap")}</td><td class="n">2</td></tr></table></div>
+    <div class="box"><div class="bh"><h2>${tr("Ajánlatok és próba")}</h2><span class="pill p-off">${tr("minden piacra érvényes")}</span></div>
+      <dl class="kv"><dt>${tr("Lead-ajánlat")}</dt><dd>−25%, ${tr("az adott tranzakcióra")}</dd><dt>${tr("Eszkalációs ajánlat")}</dt><dd>−50%, ${tr("3. látogatás után, 72 óra")}</dd>
+      <dt>${tr("Kupon")}</dt><dd>25%, ${tr("új előfizetőnek")}</dd><dt>${tr("Ingyenes próba")}</dt><dd>${tr("a mai Ingyenes próba panel")}</dd></dl></div>
+  </div><div class="box"><div class="bh"><h2>${tr("Modulok")}</h2><span class="mini">— ${tr("felár / hó")}</span></div>
+    <table class="mt"><thead><tr><th>${tr("Modul")}</th><th class="n">${tr("Ár")}</th></tr></thead><tbody>${mrows}</tbody></table></div></div>
+  <div class="savebar" id="savebar"><span id="sbTxt"></span><span class="sp"></span><button class="btn" id="sbReset">${tr("Visszaállítás")}</button><button class="btn go" id="sbSave">${tr("Mentés…")}</button></div>
+  ${S.pending && S.pending[c.iso] ? `<div class="box" style="margin-top:12px"><div class="bh"><h2>${tr("Ütemezett árváltozás")}</h2><span class="pill p-run">${tr("ütemezve")}</span></div><div class="mini">${S.pending[c.iso]}</div></div>` : ""}`;
+}
+
+function detailView() {
+  const c = COUNTRIES.find(x => x.iso === S.iso);
+  return `<div class="top"><div><div class="crumb"><a data-back>${tr("Országok / Árazás")}</a> ›</div>
+    <div class="dhead"><h1><span class="iso">${c.iso}</span>${c.name}</h1>${statusTxt(c)}<span class="pill p-off">${c.cur}</span></div></div></div>
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="country" aria-selected="${S.tab === "country"}">${tr("Ország")}</button><button class="tab" role="tab" data-tab="price" aria-selected="${S.tab === "price"}">${tr("Árazás")}</button><button class="tab" role="tab" data-tab="out" aria-selected="${S.tab === "out"}">${tr("Kiküldés")}</button></div>
+  <div class="body">${S.tab === "country" ? countryTab(c) : S.tab === "price" ? priceTab(c) : outTab(c)}</div>`;
+}
+
+function render() {
+  document.getElementById("view").innerHTML = S.view === "list" ? listView() : detailView();
+  if (S.view === "detail" && S.tab === "price") updateSavebar();
+  if (S.view === "detail" && S.tab === "out") updateOutbar();
+}
+
+// ---- price editing + B (scheduled) impact ----
+function parseMajor(s, cur) { const v = Number(String(s).replace(/\s/g, "").replace(",", ".")); if (!isFinite(v) || v < 0) return null; return Math.round(v * Math.pow(10, minorDigits(cur))); }
+function changes(c) { const p = priceState(c); const ch = []; if (p.base !== p.orig.base) ch.push(["base", p.orig.base, p.base]); for (const m in p.mods) if (p.mods[m] !== p.orig.mods[m]) ch.push([m, p.orig.mods[m], p.mods[m]]); return ch; }
+function updateSavebar() {
+  const c = COUNTRIES.find(x => x.iso === S.iso); const ch = changes(c); const bar = document.getElementById("savebar");
+  bar.classList.toggle("on", ch.length > 0);
+  document.getElementById("sbTxt").textContent = tr("{n} ár módosítva — még nincs mentve", { n: ch.length });
+}
+function subsOf(c) { return c.iso === "HU" ? HU_SUBS : []; }
+function addMonths(s, n) { const d = new Date(s + "T12:00:00Z"); d.setUTCMonth(d.getUTCMonth() + n); return iso10(d); }
+function renewalOnOrAfter(s, date) { let r = s.end; while (r < date) r = addMonths(r, s.per === "annual" ? 12 : 1); return r; }
+// B (scheduled): raises from the effective date (existing: first renewal on/after it),
+// cuts from the NEXT charge for everyone (existing: first renewal on/after today).
+function impact(c, date) {
+  const p = priceState(c); const today = iso10(TODAY);
+  const oldP = { base: p.orig.base, mods: p.orig.mods }, newP = { base: p.base, mods: p.mods };
+  const cutP = { base: Math.min(p.base, p.orig.base), mods: {} };
+  for (const m in p.mods) cutP.mods[m] = Math.min(p.mods[m], p.orig.mods[m]);
+  return subsOf(c).map(s => {
+    const k = s.per === "annual" ? 10 : 1; // annual = 12 − 2 free months
+    const mo = monthlyOf(oldP, s.mods) * k, mc = monthlyOf(cutP, s.mods) * k, mn = monthlyOf(newP, s.mods) * k;
+    return { ...s, old: mo, cut: mc, nw: mn, delta: mn - mo, next: renewalOnOrAfter(s, today), first: renewalOnOrAfter(s, date) };
+  }).filter(r => r.old !== r.nw || r.cut !== r.old);
+}
+function fillImpact(c, minDate, up, down) {
+  const el = document.getElementById("effDate"); const date = el.value; const err = document.getElementById("dErr");
+  const go = document.getElementById("saveGo");
+  if (up && (!date || date < minDate)) { err.textContent = tr("A legkorábbi kezdő dátum {d} (30 nap értesítés áremelésnél).", { d: fmtD(minDate) }); go.disabled = true; return; }
+  err.textContent = ""; go.disabled = false;
+  const eff = up ? date : iso10(TODAY);
+  const rows = impact(c, eff);
+  const frozen = rows.filter(r => r.st === "frozen").length;
+  const total = rows.reduce((a, r) => a + r.delta / (r.per === "annual" ? 12 : 1), 0);
+  const firstUp = up && rows.length ? rows.map(r => r.first).sort()[0] : null;
+  const firstCut = down && rows.length ? rows.map(r => r.next).sort()[0] : null;
+  const noticeDate = iso10(TODAY);
+  const subN = subsOf(c).length;
+  const both = up && down;
+  document.getElementById("impBox").innerHTML = `
+    <div class="imp">
+      <div class="kpi"><div class="v">${rows.length} / ${subN}</div><div class="l">${tr("érintett előfizető")}${frozen ? ` (${tr("ebből {n} szünetel", { n: frozen })})` : ""}</div></div>
+      <div class="kpi"><div class="v">${total >= 0 ? "+" : "−"}${fmtMoney(Math.abs(Math.round(total)), c.cur)}</div><div class="l">${tr("havi bevétel-változás a teljes átállás után (éves díj havira)")}</div></div>
+      <div class="kpi"><div class="v">${up ? fmtD(noticeDate) : "—"}</div><div class="l">${up ? tr("értesítő levél kimegy (mentéskor)") : tr("csökkenésnél értesítés nem kötelező")}</div></div>
+    </div>
+    <ul class="mini" style="margin:0 0 8px;padding-left:18px">
+      <li>${tr("Új vevő")}: ${up ? tr("{d} napjától az új árat látja és fizeti", { d: fmtD(eff) }) : tr("mentéstől az új árat látja és fizeti")}${both ? tr("; a csökkentett tételeket már mentéstől") : ""}.</li>
+      ${rows.length ? `${down ? `<li>${tr("Meglévő, csökkenés: a következő terheléstől, első: {d}.", { d: fmtD(firstCut) })}</li>` : ""}
+      ${up ? `<li>${tr("Meglévő, emelés: a {d} utáni első megújulástól, első: {f}.", { d: fmtD(eff), f: fmtD(firstUp) })}</li>` : ""}` : `<li>${tr("Ebben az országban nincs érintett előfizető.")}</li>`}
+    </ul>
+    ${rows.length ? `<div class="tscroll"><table class="it"><thead><tr><th>${tr("Előfizető")}</th><th>${tr("Ciklus")}</th><th class="n">${tr("Most")}</th>
+      ${down ? `<th>${tr("Következő terhelés")}</th>${both ? `<th class="n">${tr("Összeg")}</th>` : ""}` : ""}
+      ${up ? `<th>${tr("Első új áras terhelés")}</th>` : ""}<th class="n">${tr("Új ár")}</th><th class="n">${tr("Különbség")}</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${r.id}${r.st === "frozen" ? ` <span class="pill p-warn">${tr("szünetel")}</span>` : ""}</td><td>${r.per === "annual" ? tr("éves") : tr("havi")}</td><td class="n">${fmtMoney(r.old, c.cur)}</td>
+        ${down ? `<td>${fmtD(r.next)}</td>${both ? `<td class="n">${fmtMoney(r.cut, c.cur)}</td>` : ""}` : ""}
+        ${up ? `<td>${fmtD(r.first)}</td>` : ""}<td class="n">${fmtMoney(r.nw, c.cur)}</td><td class="n">${r.delta > 0 ? "+" : r.delta < 0 ? "−" : ""}${fmtMoney(Math.abs(r.delta), c.cur)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${up && rows.length ? `<div class="rule">${tr("Értesítő levél: {d}, a(z) {n} érintett előfizetőnek, a saját nyelvén (Bábel-csomag), az új összeggel és az első új áras terhelés napjával. Aki addig lemond, a régi áron fejezi be.", { d: fmtD(noticeDate), n: rows.length })}</div>` : ""}`;
+  S._save = { date: eff, n: rows.length, total, up };
+}
+function openSave() {
+  const c = COUNTRIES.find(x => x.iso === S.iso); const ch = changes(c);
+  const up = ch.some(([, o, n]) => n > o), down = ch.some(([, o, n]) => n < o);
+  const minDate = up ? addDays(iso10(TODAY), 30) : iso10(TODAY);
+  document.getElementById("saveBody").innerHTML = `
+    <div class="mini">${tr("Ütemezett árváltozás (tulaj-döntés, 2026-11-26): az új ár egy kezdő dátumtól érvényes.")}</div>
+    <table class="it" style="margin-top:8px"><thead><tr><th>${tr("Tétel")}</th><th class="n">${tr("Régi")}</th><th class="n">${tr("Új")}</th></tr></thead><tbody>
+      ${ch.map(([k, o, n]) => `<tr><td>${k === "base" ? tr("Alapdíj") : MOD_NAME[k]}</td><td class="n">${fmtMoney(o, c.cur)}</td><td class="n">${fmtMoney(n, c.cur)} ${n > o ? `<span class="pill p-warn">${tr("emelés")}</span>` : `<span class="pill p-ok">${tr("csökkenés")}</span>`}</td></tr>`).join("")}
+    </tbody></table>
+    <label class="field" ${up ? "" : 'hidden'}>${tr("Az emelés érvényes ettől a naptól")}<input type="date" id="effDate" value="${minDate}" min="${minDate}"><span class="err" id="dErr"></span></label>
+    <div class="rule">${up ? tr("Áremelés: a meglévő előfizetőt legalább 30 nappal az első új áras terhelés előtt értesítjük, ezért a legkorábbi kezdő dátum {d}.", { d: fmtD(minDate) }) : ""}
+      ${down ? tr("Árcsökkenés: a következő terheléstől mindenkinek jár, értesítési idő nélkül.") : ""}</div>
+    <div id="impBox"></div>`;
+  document.getElementById("effDate").addEventListener("input", () => fillImpact(c, minDate, up, down));
+  fillImpact(c, minDate, up, down);
+  document.getElementById("ovSave").classList.add("on");
+}
+function saveNow() {
+  const c = COUNTRIES.find(x => x.iso === S.iso); const p = priceState(c); const s = S._save;
+  S.pending = S.pending || {};
+  S.pending[c.iso] = tr("Új ár {d} napjától; {n} érintett előfizető; havi változás {t}.", { d: fmtD(s.date), n: s.n, t: fmtMoney(Math.round(s.total), c.cur) }) + (s.up && s.n ? " " + tr("Értesítő levél ma kimegy.") : "");
+  p.orig = { base: p.base, mods: { ...p.mods } };
+  closeOv(); render(); toast(tr("Árváltozás ütemezve (mock — nem ment semmi)."));
+}
+
+// ---- add country ----
+let pick = null;
+function renderClist(q) {
+  q = (q || "").trim().toLowerCase();
+  const have = new Set(COUNTRIES.map(c => c.iso));
+  const all = CUR.map(([iso, cur]) => ({ iso, cur, name: regionNames.of(iso) || iso })).sort((a, b) => a.name.localeCompare(b.name, "hu"));
+  const list = all.filter(x => !q || x.name.toLowerCase().includes(q) || x.iso.toLowerCase() === q);
+  document.getElementById("clist").innerHTML = list.map(x => {
+    const w = walletOf(x.cur);
+    return `<div class="citem ${have.has(x.iso) ? "dis" : ""}" role="option" data-iso="${x.iso}" aria-selected="${pick && pick.iso === x.iso}"><span class="iso">${x.iso}</span><span>${x.name}${have.has(x.iso) ? ` <span class="mini">· ${tr("már felvéve")}</span>` : ""}</span><span class="pill ${w.cls}">${x.cur}</span></div>`;
+  }).join("") || `<div class="citem dis"><span></span><span>${tr("Nincs ilyen ország")}</span><span></span></div>`;
+}
+function walletOf(cur) {
+  if (BARION_WALLETS.includes(cur)) return { cls: "p-ok", box: "ok", head: tr("Barion-tárca megvan"), txt: tr("A {c} tárca nyitva — a fizetés ebben az országban azonnal mehet.", { c: cur }) };
+  if (BARION_ACCEPTS.includes(cur)) return { cls: "p-warn", box: "warn", head: tr("Barion kezeli, de nincs {c} tárca", { c: cur }), txt: tr("A felvétel mehet, a felderítés és a mock-gyártás indulhat; a kiküldés addig áll, amíg a {c} tárca nincs megnyitva a Barion-fiókban.", { c: cur }) };
+  return { cls: "p-bad", box: "bad", head: tr("A Barion nem kezeli a(z) {c} pénznemet", { c: cur }), txt: tr("Ebben az országban a vevő nem tudna fizetni (Barion: HUF, EUR, USD, CZK). Felvehető és előkészíthető, de az indulás nem indíthat kiküldést, amíg más fizetési szolgáltató nincs.") };
+}
+function showPick() {
+  const el = document.getElementById("cpick"); const go = document.getElementById("addGo");
+  if (!pick) { el.innerHTML = ""; go.disabled = true; return; }
+  const w = walletOf(pick.cur);
+  el.innerHTML = `<div class="wal ${w.box}"><b>${pick.name} · ${pick.cur} (${curNames.of(pick.cur)})</b>${w.head}. ${w.txt}</div>
+    <div class="mini" style="margin-top:8px">${tr("Felvételkor a gép kitölti a nyilvános adatokat (nyelv, időzóna, hívószám, pénznem, ünnepnapok) és kezdő ársort hoz létre; az ország „Felvéve” státuszba kerül. Az „Indulás” külön lépés.")}</div>`;
+  go.disabled = false;
+}
+function addCountry() {
+  const p = pick; const w = walletOf(p.cur);
+  const c = { iso: p.iso, name: p.name, cur: p.cur, region: p.iso.toLowerCase(), lang: "—", status: "draft", leads: 0, subs: 0, frozen: 0, quota: 40, sentToday: 0, scouting: false, sending: false, priceOk: false, tz: "—", dial: "—", window: "8–17", channels: "e-mail" };
+  c.items = [
+    R("data","run","Ország-adatok","a gép tölti a nyilvános adatokból (nyelv, időzóna, hívószám, végződések)","A gép, felvételkor"),
+    R("region","off","Régió-felbontás (megyék, csempék)","Indulásra vár","A gép az indításkor felbontja megyékre és csempékre."),
+    R("babel","run","Fordítás — Bábel","a nyelvi csomag Bábel sorában","Bábel (fordító munkatárs)",{parts:[["Felület",0,4262],["Jogi csomag (egység)",0,227],["Levelek",0,9,true],["Súgó",0,52,true]]}),
+    R("holidays","run","Ünnepnapok","a gép tölti a nyilvános naptárból","A gép, felvételkor"),
+    R("prices","bad","Ársor",`kezdősor ${p.cur}-ban, jóváhagyásra vár`,"A gép kezdő ársort javasol; az árat az Árazás fülön te hagyod jóvá (pénz-döntés)."),
+    R("wallet", w.box === "ok" ? "ok" : "bad", "Barion-tárca", w.head, w.box === "ok" ? null : w.txt),
+    R("channel","ok","Kiküldési csatorna","e-mail"),
+    R("scout","off","Felderítés","Indulásra vár","Felderítő munkatárs, az indítás után magától."),
+    R("contact","off","Kontakt","Indulásra vár","Neo és a kontaktkereső kollégák."),
+    R("mock","off","Mock","Indulásra vár","A gép (mock-motor)."),
+    R("send","off","Kiküldés","Indulásra vár","Magától indul, amint minden záró tétel zöld.")
+  ];
+  COUNTRIES.push(c); closeOv(); S.view = "detail"; S.iso = c.iso; S.tab = "country"; render();
+  toast(tr("{n} felvéve (mock).", { n: c.name }));
+}
+
+// ---- launch: the machine walks the pipeline by itself (simulated) ----
+function launch() {
+  const c = COUNTRIES.find(x => x.iso === S.iso);
+  c.status = "launch"; c.since = iso10(TODAY); c.scouting = true;
+  const seq = [["region","run","felbontás folyamatban (megyehatárok → csempék)"],["region","ok","régiók és csempék kijelölve"],["scout","run","felderítés fut az első csempéken"],["contact","run","kontaktkeresés fut a friss leadeken"],["mock","run","mock készül a kontaktos leadekre"]];
+  let i = 0; render(); toast(tr("Indulás — a gép elkezdte."));
+  const tick = () => {
+    if (i >= seq.length || S.iso !== c.iso) return;
+    const [k, st, det] = seq[i++]; const it = c.items.find(x => x.key === k); if (it) { it.state = st; it.detail = det; }
+    const send = c.items.find(x => x.key === "send"); const blocked = c.items.find(x => x.state === "bad" && x.key !== "send");
+    if (send && i === seq.length) { send.state = blocked ? "bad" : "run"; send.detail = blocked ? tr("áll — piros: {t}", { t: blocked.title }) : tr("indul"); }
+    if (S.view === "detail" && S.tab === "country") render();
+    setTimeout(tick, 700);
+  };
+  setTimeout(tick, 500);
+}
+
+// Prod lead stock 2026-11-26 (read-only query): not yet contacted, not blocked; [country, ownPhotos (capped 10), site n/o/m/x, hasEmail, hasHuMobile, count].
+const DIST = [["HR",0,"m",0,0,1],["HR",0,"m",1,0,2],["HR",0,"n",0,0,119],["HR",0,"n",1,0,9],["HR",0,"o",0,0,2],["HR",2,"o",0,0,1],["HR",3,"m",0,0,1],["HR",4,"m",1,0,1],["HR",4,"o",1,0,1],["HR",6,"m",1,0,1],["HR",7,"n",0,0,1],["HR",8,"m",0,0,1],["HR",8,"m",1,0,1],["HR",10,"m",0,0,12],["HR",10,"m",1,0,2],["HU",0,"m",0,0,137],["HU",0,"m",0,1,278],["HU",0,"m",1,0,80],["HU",0,"m",1,1,230],["HU",0,"n",0,0,6093],["HU",0,"n",0,1,3760],["HU",0,"n",1,0,959],["HU",0,"n",1,1,1576],["HU",0,"o",0,0,434],["HU",0,"o",0,1,463],["HU",0,"o",1,0,119],["HU",0,"o",1,1,296],["HU",0,"x",0,0,125],["HU",0,"x",0,1,61],["HU",1,"m",0,0,38],["HU",1,"m",0,1,114],["HU",1,"m",1,0,38],["HU",1,"m",1,1,95],["HU",1,"n",0,0,9],["HU",1,"n",0,1,6],["HU",1,"n",1,0,5],["HU",1,"n",1,1,12],["HU",1,"o",0,0,11],["HU",1,"o",0,1,14],["HU",1,"o",1,0,7],["HU",1,"o",1,1,23],["HU",2,"m",0,0,32],["HU",2,"m",0,1,85],["HU",2,"m",1,0,40],["HU",2,"m",1,1,107],["HU",2,"n",0,0,9],["HU",2,"n",0,1,2],["HU",2,"n",1,0,4],["HU",2,"n",1,1,11],["HU",2,"o",0,0,7],["HU",2,"o",0,1,17],["HU",2,"o",1,0,4],["HU",2,"o",1,1,17],["HU",3,"m",0,0,39],["HU",3,"m",0,1,84],["HU",3,"m",1,0,38],["HU",3,"m",1,1,123],["HU",3,"n",0,0,7],["HU",3,"n",0,1,5],["HU",3,"n",1,0,50],["HU",3,"n",1,1,17],["HU",3,"o",0,0,7],["HU",3,"o",0,1,12],["HU",3,"o",1,0,4],["HU",3,"o",1,1,23],["HU",4,"m",0,0,27],["HU",4,"m",0,1,78],["HU",4,"m",1,0,35],["HU",4,"m",1,1,120],["HU",4,"n",0,0,11],["HU",4,"n",0,1,38],["HU",4,"n",1,0,9],["HU",4,"n",1,1,11],["HU",4,"o",0,0,6],["HU",4,"o",0,1,6],["HU",4,"o",1,0,4],["HU",4,"o",1,1,23],["HU",5,"m",0,0,21],["HU",5,"m",0,1,65],["HU",5,"m",1,0,48],["HU",5,"m",1,1,126],["HU",5,"n",0,0,8],["HU",5,"n",0,1,24],["HU",5,"n",1,0,3],["HU",5,"n",1,1,10],["HU",5,"o",0,0,2],["HU",5,"o",0,1,5],["HU",5,"o",1,0,1],["HU",5,"o",1,1,24],["HU",6,"m",0,0,29],["HU",6,"m",0,1,58],["HU",6,"m",1,0,46],["HU",6,"m",1,1,139],["HU",6,"n",0,0,79],["HU",6,"n",0,1,57],["HU",6,"n",1,0,23],["HU",6,"n",1,1,39],["HU",6,"o",0,0,5],["HU",6,"o",0,1,9],["HU",6,"o",1,0,7],["HU",6,"o",1,1,14],["HU",7,"m",0,0,14],["HU",7,"m",0,1,68],["HU",7,"m",1,0,51],["HU",7,"m",1,1,147],["HU",7,"n",0,0,124],["HU",7,"n",0,1,69],["HU",7,"n",1,0,25],["HU",7,"n",1,1,41],["HU",7,"o",0,0,10],["HU",7,"o",0,1,10],["HU",7,"o",1,0,3],["HU",7,"o",1,1,23],["HU",8,"m",0,0,21],["HU",8,"m",0,1,52],["HU",8,"m",1,0,43],["HU",8,"m",1,1,131],["HU",8,"n",0,0,92],["HU",8,"n",0,1,56],["HU",8,"n",1,0,28],["HU",8,"n",1,1,39],["HU",8,"o",0,0,13],["HU",8,"o",0,1,7],["HU",8,"o",1,0,2],["HU",8,"o",1,1,31],["HU",9,"m",0,0,24],["HU",9,"m",0,1,38],["HU",9,"m",1,0,47],["HU",9,"m",1,1,130],["HU",9,"n",0,0,109],["HU",9,"n",0,1,73],["HU",9,"n",1,0,28],["HU",9,"n",1,1,41],["HU",9,"o",0,0,8],["HU",9,"o",0,1,8],["HU",9,"o",1,0,12],["HU",9,"o",1,1,18],["HU",10,"m",0,0,517],["HU",10,"m",0,1,887],["HU",10,"m",1,0,1442],["HU",10,"m",1,1,3085],["HU",10,"n",0,0,2265],["HU",10,"n",0,1,1217],["HU",10,"n",1,0,473],["HU",10,"n",1,1,857],["HU",10,"o",0,0,124],["HU",10,"o",0,1,209],["HU",10,"o",1,0,141],["HU",10,"o",1,1,452]];
+// ---- Kiküldés tab: today's real values; `src` = what decides it TODAY in code / settings ----
+const CH_NAME = { email:"E-mail", sms:"SMS", mms:"MMS", viber:"Viber", whatsapp:"WhatsApp" };
+const DAY_NAME = ["H","K","Sze","Cs","P","Szo","V"];
+const SITE_NAME = { n:"Nincs honlap", o:"Elavult honlap", m:"Modern honlap", x:"Nincs besorolva" };
+function outDefaults(c) {
+  const hu = c.iso === "HU", hr = c.iso === "HR";
+  const rowCh = hu ? ["email","sms","mms","viber","whatsapp"] : ["email"];
+  return {
+    minPhotos: 5, town: true, stock: true,
+    sites: { n:true, o:true, m:true, x:true }, siteOrder: ["n","o","m","x"],
+    // order and on/off; only channels living in the country (country.outreach_channels) are selectable
+    channels: ["email","sms","mms","viber","whatsapp"].map(id => ({ id, live: rowCh.includes(id), on: id === "email" && rowCh.includes(id) })),
+    quota: hu ? 100 : hr ? 20 : c.quota,
+    ramp: hu,
+    approval: "auto", // owner 2026-11-26: „lófaszt én hagyom jóvá” — HR too
+    rules: { twoMocks:true, townNoMms:true, emailOnly:true, uncheckedEmail:true, noMailNoSend:true },
+    days: [1,1,1,1,1,0,0], from: 8, to: 17, holidays: true, tz: c.tz,
+    nonOpener: { on:false, days:14, count:1, cap:0 }, escalation: false
+  };
+}
+const SRC = {
+  minPhotos: ["kód", "mockPhotoGate.ts DISPATCH_MIN_OWN_PHOTOS = 5, minden országra"],
+  town: ["globális beállítás", "app_setting town_photo_dispatch = on (tulaj 11-25), minden országra egyszerre"],
+  stock: ["kód", "a render-kapu (mockRenderGate.ts) a MINTA-jelölt képet galéria- és szobahelyen engedi; 6 saját kép alatt a motor ezzel tölt"],
+  sites: ["kód", "autoDispatch.ts DISPATCH_PRIORITY: mind mehet, sorrend: nincs honlap → elavult → modern → besorolatlan, azon belül az e-mailes előre (tulaj 10-27, 11-17)"],
+  channels: ["sor + éles szkript", "country.outreach_channels a lehetőség; tulaj 11-20: „e-mail cím nélkül nem küldünk, SMS/MMS nem megy” → ma csak e-mail"],
+  quota: ["globális beállítás / sor", "HU: app_setting outreach_auto.dailyCap 100 + felfutás (a sor 40-e nem számít); más ország: country.daily_quota"],
+  approval: ["éles szkript", "/opt/citoviso/auto-approve.mts — égetett szabályok, tulaj 11-11 … 11-20; HR is automata (tulaj 11-26), a market-sor régi „tulaj-jóváhagyással” jegyzete elavult"],
+  window: ["sor + kód", "country.send_window_from/to ∩ a kódba égetett 8–17 (MOCK_OUTREACH_WINDOW); munkanap + country.public_holidays, a sor időzónájában"],
+  follow: ["kód + globális beállítás", "nonOpenerFollowup.ts: 14 nap (NONOPENER_FOLLOWUP_DAYS), 1 levél (egyszeri, kódban); napi keret app_setting nonopener_followup_daily_cap = 0 → ma KI; eszkalációs utánkövetés: escalation_followup KI (tulaj 11-18)"]
+};
+const RULES = [
+  ["twoMocks", "Két mock saját képpel — vagy településképes nyitóképpel, ha a „Településkép” engedett", "tulaj 11-11, 11-13"],
+  ["townNoMms", "Településképes mock MMS-ben nem megy", "tulaj 11-12"],
+  ["emailOnly", "Akinek van e-mail címe, csak e-mailt kap (mobilt nem)", "tulaj 11-16/17"],
+  ["uncheckedEmail", "Ellenőrizetlen mobilú lead e-mailben mehet, nem vár a mobil-ellenőrzésre", "tulaj 11-13"],
+  ["noMailNoSend", "E-mail cím nélkül nem küldünk", "tulaj 11-20"]
+];
+S.out = {};
+function outState(c) { if (!S.out[c.iso]) { const d = outDefaults(c); S.out[c.iso] = { cur: d, orig: JSON.parse(JSON.stringify(d)) }; } return S.out[c.iso]; }
+// Owner 2026-11-26 („igen” to the three open questions) — shown as decided.
+const DECIDED = {
+  approval: "a pipálható szabálylista kiváltja az /opt/citoviso/auto-approve.mts-t",
+  window: "a kódba égetett 8–17 megszűnik, az országonkénti időkeret az egyetlen ablak",
+  follow: "a nem-nyitó levél napi kerete országonkénti"
+};
+function srcLine(k) { const [who, what] = SRC[k];
+  return `<div class="src"><span class="pill p-off">${tr("ma")}: ${tr(who)}</span> ${what}<span class="will">${tr("→ lesz: országonkénti beállítás")}</span>${DECIDED[k] ? `<span class="dec"><span class="pill p-ok">${tr("döntve")}</span> ${tr("tulaj 2026-11-26")}: ${tr(DECIDED[k])}</span>` : ""}</div>`; }
+// How many leads of the stock pass the settings. Same order of rules the dispatcher applies.
+function eligible(c, o) {
+  const chOn = id => o.channels.some(x => x.id === id && x.live && x.on);
+  const mobileOn = ["sms","mms","viber","whatsapp"].some(chOn);
+  let own = 0, town = 0;
+  for (const [cc, ph, site, em, mob, k] of DIST) {
+    if (cc !== c.iso || !o.sites[site]) continue;
+    const townCase = ph < o.minPhotos;
+    if (townCase && !o.town) continue;
+    if (ph < 6 && !o.stock) continue;
+    const viaMail = em && chOn("email");
+    const mobChans = ["sms","mms","viber","whatsapp"].filter(id => chOn(id) && !(townCase && id === "mms" && o.rules.townNoMms));
+    const viaMob = mob && mobChans.length > 0 && !(o.rules.noMailNoSend && !em) && !(em && o.rules.emailOnly && chOn("email"));
+    if (viaMail || viaMob) { if (townCase) town += k; else own += k; }
+  }
+  return { own, town, total: own + town };
+}
+function nextSendDay(o) {
+  const d = new Date(TODAY); for (let i = 1; i < 15; i++) { const x = new Date(d.getTime() + i * 864e5); const wd = (x.getDay() + 6) % 7; if (o.days[wd]) return iso10(x); } return null;
+}
+function outTab(c) {
+  const st = outState(c), o = st.cur;
+  const el = eligible(c, o), n = el.total;
+  const chRows = o.channels.map((ch, i) => `<li class="chrow ${ch.live ? "" : "dead"}">
+      <span class="ord">${i + 1}.</span><label class="sw"><input type="checkbox" data-o="ch:${ch.id}" ${ch.on ? "checked" : ""} ${ch.live ? "" : "disabled"}> <b>${CH_NAME[ch.id]}</b></label>
+      <span class="mini">${ch.live ? "" : tr("nem él")}</span><span class="sp"></span>
+      <button class="ib" data-act="up:${i}" ${i === 0 ? "disabled" : ""} aria-label="${tr("feljebb")}">↑</button><button class="ib" data-act="down:${i}" ${i === o.channels.length - 1 ? "disabled" : ""} aria-label="${tr("lejjebb")}">↓</button></li>`).join("");
+  const siteRows = o.siteOrder.map(k => `<label class="chk"><input type="checkbox" data-o="site:${k}" ${o.sites[k] ? "checked" : ""}> ${tr(SITE_NAME[k])}</label>`).join("");
+  const days = DAY_NAME.map((d, i) => `<label class="day"><input type="checkbox" data-o="day:${i}" ${o.days[i] ? "checked" : ""}><span>${tr(d)}</span></label>`).join("");
+  const rules = RULES.map(([k, t, who]) => `<label class="chk"><input type="checkbox" data-o="rule:${k}" ${o.rules[k] ? "checked" : ""} ${o.approval === "auto" ? "" : "disabled"}> ${tr(t)} <span class="mini">· ${who}</span></label>`).join("");
+  const effFrom = Math.max(o.from, 8), effTo = Math.min(o.to, 17);
+  return `<div class="outsum"><div><div class="v">${fmtN(n)}</div><div class="l">${tr("lead felel meg most a beállításoknak")}</div></div>
+      <div><div class="v">${fmtN(Math.min(n, o.quota))}</div><div class="l">${tr("megkeresés mehet egy nap (napi keret {q})", { q: o.quota })}</div></div>
+      <div><div class="v">${o.approval === "auto" ? tr("automata") : tr("jóváhagyással")}</div><div class="l">${o.approval === "auto" ? tr("a feltételt teljesítő lead magától megy") : tr("minden levél a tulaj elé kerül")}</div></div></div>
+    <div class="mini" style="margin:-4px 0 14px">${tr("Lead-állomány: éles, 2026-11-26, még meg nem keresett és nem tiltott leadek. A mock-, render- és minőségi kapu ezen felül szűr.")}${c.iso === "HR" ? " " + tr("HR: a mobilszám-felismerés még csak magyar számot ismer, ezért itt 0 mobilos lead látszik.") : ""}</div>
+  <div class="cols2">
+    <div class="box"><div class="bh"><h2>1. ${tr("Milyen lead mehet")}</h2></div>
+      <div class="lab">${tr("Képek")}</div>
+      <div class="pick" role="radiogroup">
+        <label class="opt ${!o.town ? "on" : ""}"><input type="radio" name="photoMode" data-o="mode:own" ${!o.town ? "checked" : ""}>
+          <span><b>${tr("Csak saját képes")}</b> — ${tr("legalább")} <input type="number" min="1" max="10" data-o="minPhotos" value="${o.minPhotos}" aria-label="${tr("saját kép minimum")}"> ${tr("saját kép; kevesebb képes lead nem megy ki")}</span></label>
+        <label class="opt ${o.town ? "on" : ""}"><input type="radio" name="photoMode" data-o="mode:town" ${o.town ? "checked" : ""}>
+          <span><b>${tr("Saját képes + kevés képes is")}</b> — ${tr("legalább {n} saját kép, vagy kevesebb képpel településképes nyitóképpel", { n: o.minPhotos })}</span></label>
+      </div>
+      <div class="split">${tr("ebből saját képpel")}: <b>${fmtN(el.own)}</b> · ${tr("településképpel")}: <b>${fmtN(el.town)}</b></div>
+      ${srcLine("minPhotos")}${srcLine("town")}
+      <label class="chk big"><input type="checkbox" data-o="stock" ${o.stock ? "checked" : ""}> ${tr("Mehet MINTA-jelölt szobakép / galériakép (6 saját kép alatt)")}</label>${srcLine("stock")}
+      <div class="lab">${tr("Honlap szerint (ebben a sorrendben)")}</div><div class="chks">${siteRows}</div>${srcLine("sites")}
+    </div>
+    <div class="box"><div class="bh"><h2>2. ${tr("Csatornák, sorrendben")}</h2></div>
+      <ol class="chlist">${chRows}</ol>${o.rules.noMailNoSend && o.approval === "auto" && o.channels.some(x => x.on && x.id !== "email") ? `<div class="rule">${tr("Mobil-csatorna bekapcsolva, de az „E-mail cím nélkül nem küldünk” feltétel él: e-mail nélküli leadhez így sem indul. Ha mobilon is mennie kell, vedd ki a pipát a Jóváhagyásnál.")}</div>` : ""}${srcLine("channels")}
+      <div class="bh" style="margin-top:16px"><h2>3. ${tr("Napi keret")}</h2></div>
+      <label class="field">${tr("Megkeresés naponta (az ország napján)")} <input type="number" min="0" max="5000" data-o="quota" value="${o.quota}"></label>
+      ${o.ramp ? `<div class="rule">${tr("Felfutás él (tulaj 11-18): 100-ról indul, napi +30%, legfeljebb 3000; a fék a tegnapi eredményt nézi. Amíg él, a napi keretet ez adja.")}</div>` : ""}${srcLine("quota")}
+    </div>
+    <div class="box"><div class="bh"><h2>4. ${tr("Jóváhagyás")}</h2></div>
+      <div class="seg" role="radiogroup"><button data-o="appr:auto" aria-pressed="${o.approval === "auto"}">${tr("Automata")}</button><button data-o="appr:owner" aria-pressed="${o.approval === "owner"}">${tr("Tulaj-jóváhagyás")}</button></div>
+      <div class="lab">${o.approval === "auto" ? tr("Automata: az a lead megy magától, amelyik ezeknek a feltételeknek megfelel") : tr("Tulaj-jóváhagyás: minden levél a jóváhagyási sorba kerül, a feltételek csak előszűrnek")}</div>
+      <div class="chks col">${rules}</div>${srcLine("approval")}
+    </div>
+    <div class="box"><div class="bh"><h2>5. ${tr("Időkeret")}</h2></div>
+      <div class="days">${days}</div>
+      <div class="hrs"><label>${tr("ettől")} <input type="number" min="0" max="23" data-o="from" value="${o.from}"></label><label>${tr("eddig")} <input type="number" min="1" max="24" data-o="to" value="${o.to}"></label><span class="mini">${tr("óra")}, ${o.tz}</span></div>
+      ${(o.from < 8 || o.to > 17) ? `<div class="rule">${tr("Ma a kódba égetett 8–17 is szűr, így ténylegesen {f}–{t} között megy. Beállításként ez a korlát megszűnik.", { f: effFrom, t: effTo })}</div>` : ""}
+      <label class="chk big"><input type="checkbox" data-o="holidays" ${o.holidays ? "checked" : ""}> ${tr("Az ország ünnepnapjain nem küldünk")} <span class="mini">· ${c.iso === "HU" ? tr("HU: nincs ünnepnap megadva") : tr("{n} ünnepnap", { n: (EU_OPTS[c.iso] || {}).hol || 0 })}</span></label>${srcLine("window")}
+    </div>
+    <div class="box"><div class="bh"><h2>6. ${tr("Utánkövetés")}</h2></div>
+      <label class="chk big"><input type="checkbox" data-o="no:on" ${o.nonOpener.on ? "checked" : ""}> ${tr("Nem-nyitó levél: aki a megkeresést meg sem nyitotta")}</label>
+      <div class="hrs"><label>${tr("ennyi nap után")} <input type="number" min="1" max="60" data-o="no:days" value="${o.nonOpener.days}"></label><label>${tr("levelek száma")} <input type="number" min="1" max="3" data-o="no:count" value="${o.nonOpener.count}"></label><label>${tr("napi keret")} <input type="number" min="0" max="500" data-o="no:cap" value="${o.nonOpener.cap}"></label></div>
+      ${o.nonOpener.on && !o.nonOpener.cap ? `<div class="rule">${tr("A napi keret 0 — így egy nem-nyitó levél sem megy ki.")}</div>` : ""}
+      <label class="chk big"><input type="checkbox" data-o="esc" ${o.escalation ? "checked" : ""}> ${tr("Eszkalációs ajánlat e-mailben (3. látogatás után, ha nem vásárol)")}</label>${srcLine("follow")}
+    </div>
+  </div>
+  <div class="savebar" id="outbar"><span id="obTxt"></span><span class="sp"></span><button class="btn" id="obReset">${tr("Visszaállítás")}</button><button class="btn go" id="obSave">${tr("Mentés…")}</button></div>`;
+}
+function outDiff(c) {
+  const st = outState(c), a = st.orig, b = st.cur, d = [];
+  const yn = v => v ? tr("igen") : tr("nem");
+  if (a.minPhotos !== b.minPhotos) d.push([tr("Legalább ennyi saját kép"), a.minPhotos, b.minPhotos]);
+  if (a.town !== b.town) d.push([tr("Képek"), a.town ? tr("saját + településképes") : tr("csak saját képes"), b.town ? tr("saját + településképes") : tr("csak saját képes")]);
+  if (a.stock !== b.stock) d.push([tr("MINTA-kép"), yn(a.stock), yn(b.stock)]);
+  for (const k in a.sites) if (a.sites[k] !== b.sites[k]) d.push([tr(SITE_NAME[k]), yn(a.sites[k]), yn(b.sites[k])]);
+  const chs = x => x.channels.filter(c => c.on).map(c => CH_NAME[c.id]).join(" → ") || "—";
+  if (chs(a) !== chs(b)) d.push([tr("Csatornák"), chs(a), chs(b)]);
+  if (a.quota !== b.quota) d.push([tr("Napi keret"), a.quota, b.quota]);
+  if (a.approval !== b.approval) d.push([tr("Jóváhagyás"), a.approval === "auto" ? tr("automata") : tr("tulaj"), b.approval === "auto" ? tr("automata") : tr("tulaj")]);
+  for (const k in a.rules) if (a.rules[k] !== b.rules[k]) d.push([RULES.find(r => r[0] === k)[1], yn(a.rules[k]), yn(b.rules[k])]);
+  const dd = x => DAY_NAME.filter((_, i) => x.days[i]).join(", ");
+  if (dd(a) !== dd(b)) d.push([tr("Napok"), dd(a), dd(b)]);
+  if (a.from !== b.from || a.to !== b.to) d.push([tr("Órák"), `${a.from}–${a.to}`, `${b.from}–${b.to}`]);
+  if (a.holidays !== b.holidays) d.push([tr("Ünnepnap kihagyása"), yn(a.holidays), yn(b.holidays)]);
+  const no = x => x.nonOpener.on ? tr("{d} nap, {n} levél, napi {c}", { d: x.nonOpener.days, n: x.nonOpener.count, c: x.nonOpener.cap }) : tr("ki");
+  if (no(a) !== no(b)) d.push([tr("Nem-nyitó levél"), no(a), no(b)]);
+  if (a.escalation !== b.escalation) d.push([tr("Eszkalációs ajánlat"), yn(a.escalation), yn(b.escalation)]);
+  return d;
+}
+function updateOutbar() {
+  const c = COUNTRIES.find(x => x.iso === S.iso); const d = outDiff(c); const bar = document.getElementById("outbar"); if (!bar) return;
+  bar.classList.toggle("on", d.length > 0); document.getElementById("obTxt").textContent = tr("{n} beállítás módosítva — még nincs mentve", { n: d.length });
+}
+function openOutSave() {
+  const c = COUNTRIES.find(x => x.iso === S.iso); const st = outState(c); const d = outDiff(c);
+  const before = eligible(c, st.orig).total, after = eligible(c, st.cur).total, o = st.cur;
+  const day = nextSendDay(o);
+  const tomorrow = iso10(new Date(TODAY.getTime() + 864e5));
+  const perDay = Math.min(after, o.quota);
+  document.getElementById("outBody").innerHTML = `
+    <div class="imp">
+      <div class="kpi"><div class="v">${fmtN(after)}</div><div class="l">${tr("lead felel meg holnaptól")} (${tr("most")} ${fmtN(before)}, ${after - before >= 0 ? "+" : "−"}${fmtN(Math.abs(after - before))})</div></div>
+      <div class="kpi"><div class="v">${fmtN(perDay)}</div><div class="l">${tr("megkeresés naponta (napi keret {q})", { q: o.quota })}</div></div>
+      <div class="kpi"><div class="v">${day ? fmtD(day) : "—"}</div><div class="l">${day === tomorrow ? tr("holnap már így megy") : tr("az első küldési nap")}</div></div>
+    </div>
+    <ul class="mini" style="margin:0 0 8px;padding-left:18px">
+      <li>${o.approval === "auto" ? tr("Automata: a {n} lead közül naponta {p} magától megy ki, {f}–{t} óra között ({tz}).", { n: fmtN(after), p: fmtN(perDay), f: Math.max(o.from, 8), t: Math.min(o.to, 17), tz: o.tz }) : tr("Tulaj-jóváhagyás: naponta legfeljebb {p} levél kerül a jóváhagyási sorba; kimenni csak a jóváhagyott megy.", { p: fmtN(perDay) })}</li>
+      ${perDay ? `<li>${tr("Ezzel az ütemmel az állomány kb. {d} küldési nap alatt fogy el (az új leadek nélkül).", { d: fmtN(Math.ceil(after / perDay)) })}</li>` : `<li>${tr("Ezzel a beállítással semmi nem megy ki.")}</li>`}
+    </ul>
+    <div class="tscroll"><table class="it"><thead><tr><th>${tr("Beállítás")}</th><th>${tr("Most")}</th><th>${tr("Új")}</th></tr></thead><tbody>${d.map(([k, a, b]) => `<tr><td>${k}</td><td>${a}</td><td><b>${b}</b></td></tr>`).join("")}</tbody></table></div>`;
+  document.getElementById("ovOut").classList.add("on");
+}
+function onOut(t) {
+  const c = COUNTRIES.find(x => x.iso === S.iso); const o = outState(c).cur; const k = t.dataset.o || t.dataset.act;
+  const [a, b] = k.split(":");
+  const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(v) || 0)));
+  if (a === "ch") o.channels.find(x => x.id === b).on = t.checked;
+  else if (a === "up" || a === "down") { const i = Number(b), j = a === "up" ? i - 1 : i + 1; [o.channels[i], o.channels[j]] = [o.channels[j], o.channels[i]]; }
+  else if (a === "site") o.sites[b] = t.checked;
+  else if (a === "day") o.days[Number(b)] = t.checked ? 1 : 0;
+  else if (a === "rule") o.rules[b] = t.checked;
+  else if (a === "appr") o.approval = b;
+  else if (a === "minPhotos") o.minPhotos = num(t.value, 0, 10);
+  else if (a === "quota") o.quota = num(t.value, 0, 5000);
+  else if (a === "from") o.from = num(t.value, 0, 23);
+  else if (a === "to") o.to = num(t.value, 1, 24);
+  else if (a === "mode") o.town = b === "town";
+  else if (a === "stock" || a === "holidays") o[a] = t.checked;
+  else if (a === "esc") o.escalation = t.checked;
+  else if (a === "no") { if (b === "on") o.nonOpener.on = t.checked; else o.nonOpener[b] = num(t.value, b === "cap" ? 0 : 1, b === "days" ? 60 : b === "count" ? 3 : 500); }
+  if (o.from >= o.to) { toast(tr("Az időkeret vége a kezdete után legyen.")); o.to = Math.min(24, o.from + 1); }
+  const y = scrollY; render(); scrollTo(0, y);
+}
+
+// ---- wiring ----
+function closeOv() { document.querySelectorAll(".ov").forEach(o => o.classList.remove("on")); }
+function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("on"), 2600); }
+document.addEventListener("click", e => {
+  const ot = e.target.closest("button[data-o],[data-act]");
+  if (ot && !ot.disabled) { onOut(ot); return; }
+  const t = e.target.closest("[data-open],[data-back],[data-tab],[data-close],#addBtn,#launchBtn,#pauseBtn,#resumeBtn,#sbReset,#sbSave,#addGo,#saveGo,#obReset,#obSave,#outGo,.citem,[data-glob],#szM,#szD");
+  if (!t) return;
+  if (t.matches("[data-open]")) { S.view = "detail"; S.iso = t.dataset.open; S.tab = "country"; render(); scrollTo(0, 0); }
+  else if (t.matches("[data-back]")) { S.view = "list"; render(); }
+  else if (t.matches("[data-tab]")) { S.tab = t.dataset.tab; render(); }
+  else if (t.matches("[data-close]")) closeOv();
+  else if (t.id === "addBtn") { pick = null; document.getElementById("cq").value = ""; renderClist(""); showPick(); document.getElementById("ovAdd").classList.add("on"); document.getElementById("cq").focus(); }
+  else if (t.matches(".citem") && !t.classList.contains("dis")) { const iso = t.dataset.iso; pick = { iso, cur: CUR.find(x => x[0] === iso)[1], name: regionNames.of(iso) }; renderClist(document.getElementById("cq").value); showPick(); }
+  else if (t.id === "addGo") addCountry();
+  else if (t.id === "launchBtn") launch();
+  else if (t.id === "pauseBtn") { const c = COUNTRIES.find(x => x.iso === S.iso); c.status = "pause"; c.scouting = false; c.sending = false; render(); toast(tr("Szüneteltetve.")); }
+  else if (t.id === "resumeBtn") { const c = COUNTRIES.find(x => x.iso === S.iso); c.status = "launch"; c.scouting = true; render(); }
+  else if (t.id === "sbReset") { const c = COUNTRIES.find(x => x.iso === S.iso); const p = priceState(c); p.base = p.orig.base; p.mods = { ...p.orig.mods }; render(); }
+  else if (t.id === "sbSave") openSave();
+  else if (t.id === "saveGo") saveNow();
+  else if (t.id === "obReset") { const c = COUNTRIES.find(x => x.iso === S.iso); const st = outState(c); st.cur = JSON.parse(JSON.stringify(st.orig)); render(); }
+  else if (t.id === "obSave") openOutSave();
+  else if (t.id === "outGo") { const c = COUNTRIES.find(x => x.iso === S.iso); const st = outState(c); st.orig = JSON.parse(JSON.stringify(st.cur)); closeOv(); render(); toast(tr("Kiküldési feltételek mentve (mock — nem ment semmi).")); }
+  else if (t.matches("[data-glob]")) toast(tr("A globális ársor a mai /pricing „Globális” fülén marad."));
+  else if (t.id === "szM" || t.id === "szD") setSize(t.id === "szM");
+});
+document.addEventListener("change", e => {
+  const oi = e.target.closest("input[data-o]"); if (oi) { onOut(oi); return; }
+  const inp = e.target.closest("[data-price]"); if (!inp) return;
+  const c = COUNTRIES.find(x => x.iso === S.iso); const p = priceState(c); const v = parseMajor(inp.value, c.cur);
+  if (v === null) { toast(tr("Érvénytelen összeg")); render(); return; }
+  if (inp.dataset.price === "base") p.base = v; else p.mods[inp.dataset.price] = v;
+  render();
+});
+document.getElementById("cq").addEventListener("input", e => renderClist(e.target.value));
+function setSize(m) { document.getElementById("stage").classList.toggle("m", m); document.querySelectorAll(".dlg").forEach(d => d.classList.toggle("m", m)); document.getElementById("szM").setAttribute("aria-pressed", m); document.getElementById("szD").setAttribute("aria-pressed", !m); }
+setSize(window.innerWidth < 700);
+render();
+</script></body></html>
