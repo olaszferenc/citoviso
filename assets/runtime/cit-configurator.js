@@ -4272,6 +4272,9 @@
   // EMAIL_RE mirrors src/tenant/contact.ts; the phone rule is the server's own
   // (window.CIT_PHONE_NORM = src/text/phone.ts PHONE_NORM_JS, injected with this runtime).
   var TRIAL_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  // ADR-0498: an e-mail-only country never gets an SMS (configurator.ts phoneScriptForArtifact) — the
+  // trial's phone is optional there, and the form promises no SMS / no "we'll call you here".
+  var PHONE_OPTIONAL = window.CIT_TRIAL_PHONE_OPTIONAL === true;
   var trialNorm =
     typeof window.CIT_PHONE_NORM === "function"
       ? window.CIT_PHONE_NORM
@@ -4392,7 +4395,7 @@
         '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("Telefonszám")) + "</span>" +
         '<input class="cit-cfg-tin" name="phone" type="tel" inputmode="tel" autocomplete="tel" ' +
         'placeholder="' + esc(window.CIT_PHONE_EXAMPLE || "06 30 123 4567") + '" aria-describedby="cit-cfg-te-phone">' +
-        '<small class="cit-cfg-thint">' + esc(tr("A próba vége előtt itt is szólunk.")) + "</small>" +
+        (PHONE_OPTIONAL ? "" : '<small class="cit-cfg-thint">' + esc(tr("A próba vége előtt itt is szólunk.")) + "</small>") +
         '<em class="cit-cfg-terr" id="cit-cfg-te-phone" data-e="phone"></em></label>' +
         '<label class="cit-cfg-tf"><span class="cit-cfg-tl">' + esc(tr("E-mail-cím")) + "</span>" +
         '<input class="cit-cfg-tin" name="email" type="email" inputmode="email" autocomplete="email" ' +
@@ -4414,8 +4417,8 @@
         '<p class="cit-cfg-toklive"></p>' +
         '<p class="cit-cfg-tokmail"></p>' +
         '<p class="cit-cfg-tokdates"></p>' +
-        '<p class="cit-cfg-tnote cit-cfg-tokwarn">' +
-        esc(tr("A lejárat előtt 3 nappal és 1 nappal e-mailben és SMS-ben is szólunk.")) + "</p>" +
+        (PHONE_OPTIONAL ? "" : '<p class="cit-cfg-tnote cit-cfg-tokwarn">' +
+        esc(tr("A lejárat előtt 3 nappal és 1 nappal e-mailben és SMS-ben is szólunk.")) + "</p>") +
         '<button class="cit-cfg-tghost" type="button">' + esc(tr("Rendben")) + "</button>" +
         "</div>" +
         "</div>",
@@ -4472,7 +4475,7 @@
     });
     syncContactLine();
     // A missing or unusable prefill: the fields are open from the start (nothing to confirm).
-    if (fName.value.trim().length < 2 || !TRIAL_EMAIL_RE.test(fEmail.value.trim()) || !trialNorm(fPhone.value.trim())) openFields();
+    if (fName.value.trim().length < 2 || !TRIAL_EMAIL_RE.test(fEmail.value.trim()) || (!trialNorm(fPhone.value.trim()) && !(PHONE_OPTIONAL && !fPhone.value.trim()))) openFields();
     syncLaunchSheet = function () {
       syncContactLine();
       tSheet.querySelector(".cit-cfg-tpkg").innerHTML = launchPkgHtml();
@@ -4648,7 +4651,9 @@
       } else setErr("email", "");
       var pv = fPhone.value.trim();
       var pn = pv ? trialNorm(pv) : null;
-      if (!pv) {
+      if (!pv && PHONE_OPTIONAL) {
+        setErr("phone", "");
+      } else if (!pv) {
         setErr("phone", MSG.phoneEmpty);
         bad.push("phone");
       } else if (!pn) {

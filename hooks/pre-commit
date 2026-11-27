@@ -1985,9 +1985,16 @@ fi
 # Tulaj 2026-11-26 („Végpróba … 7 € helyett 0,10 €”, ADR: testCharge.ts fejléce): a [TESZT] lead minden
 # rendelése a szolgáltató minimumát terheli, valódi lead soha; mind a négy rendelés-hely bekötve. Tiszta, ~2 s.
 if [ -f scripts/test-charge-check.mts ] && \
-   changed_files | grep -qE '^src/payment/(testCharge|providers|billing)\.ts$|^src/console/server\.ts$|^src/tenant/(moduleUpsell|multilangOrder)\.ts$|^src/outreach/ownerTestPhone\.ts$|^scripts/test-charge-check'; then
+   changed_files | grep -qE '^src/payment/(testCharge|providers|billing)\.ts$|^src/console/server\.ts$|^src/tenant/(moduleUpsell|multilangOrder)\.ts$|^src/outreach/ownerTestPhone\.ts$|^src/outreach/autoDispatch\.ts$|^scripts/test-lead-clone\.mts$|^scripts/test-charge-check'; then
   echo "[pre-commit] test-charge-check ([TESZT]-rendelés = szolgáltatói minimum)…"
   npx tsx scripts/test-charge-check.mts >"$GATE_LOG" || gate_failed
+fi
+# ADR-0498 (HR élő próba 2026-11-27): a próba-űrlap telefonszáma csak ott kötelező, ahol SMS megy (az ország
+# sora); csak e-mailes országban nincs SMS-ígéret. Tiszta, ~2 s.
+if [ -f scripts/trial-phone-channel-check.mts ] && \
+   changed_files | grep -qE '^src/trial/start\.ts$|^src/generator/configurator\.ts$|^assets/runtime/cit-configurator\.js$|^src/country\.ts$|^scripts/trial-phone-channel-check'; then
+  echo "[pre-commit] trial-phone-channel-check (próba-telefon csak SMS-es országban kötelező)…"
+  npx tsx scripts/trial-phone-channel-check.mts >"$GATE_LOG" || gate_failed
 fi
 # Egy telefon-szabály szerveren és kliensen, és nincs fotó-útvonalból „kihalászott” szám
 # (2026-10-05: „06/30 …” elutasítva; „069/6590698” egy képazonosítóból). Tiszta, ~2 s.

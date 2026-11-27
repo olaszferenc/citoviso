@@ -742,6 +742,8 @@ async function phoneScriptForArtifact(artifactId: string): Promise<string> {
     `window.CIT_PHONE_NORM=(function(){${rules};return norm;})();` +
     `window.CIT_PHONE_PRETTY=(function(){${rules};return pretty;})();` +
     `window.CIT_PHONE_EXAMPLE=${jsonForScript(phoneExampleIn(row))};` +
+    // ADR-0498: an e-mail-only country never gets an SMS — the number is optional, and no SMS is promised.
+    ((await import("../trial/start.js")).trialPhoneRequired(row) ? "" : `window.CIT_TRIAL_PHONE_OPTIONAL=true;`) +
     `</script>\n`
   );
 }

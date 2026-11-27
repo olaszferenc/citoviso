@@ -109,7 +109,18 @@ export { trialModuleIds };
 /** A claimed trial younger than this with no tenant yet is assumed to be in flight. */
 const IN_FLIGHT_MS = 2 * 60_000;
 
-function validate(input: TrialInput, phoneRules: CountryConfig | null): TrialError | { name: string; email: string; phone: string } {
+/**
+ * Does the trial form require a phone number in this lead's country? Only where we can actually
+ * use it: the country's row carries SMS (the end-of-trial SMS notices, the login SMS). An
+ * e-mail-only country (HR, owner 2026-11-19 „HR = csak e-mail”) never gets an SMS
+ * (countryChannel.ts), so there the number is optional and the form promises no SMS.
+ * No row = the Hungarian rule, as before (required).
+ */
+export function trialPhoneRequired(row: CountryConfig | null): boolean {
+  return !row || row.outreachChannels.includes("sms");
+}
+
+function validate(input: TrialInput, phoneRules: CountryConfig | null): TrialError | { name: string; email: string; phone: string | null } {
   const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 120) return "invalid_name";
   const email = String(input.email ?? "").trim().toLowerCase();
@@ -118,8 +129,12 @@ function validate(input: TrialInput, phoneRules: CountryConfig | null): TrialErr
   // refused as an invalid Hungarian number). The Hungarian plan — and a lead with no country
   // row — keeps the Hungarian reading exactly.
   const rawPhone = String(input.phone ?? "");
-  const phone = phoneRules ? normalizePhoneIn(rawPhone, phoneRules) : normalizePhone(rawPhone);
-  if (!phone) return "invalid_phone";
+  // ADR-0498: empty is fine where the country gets no SMS; a number given is still read and checked.
+  let phone: string | null = null;
+  if (rawPhone.trim() || trialPhoneRequired(phoneRules)) {
+    phone = phoneRules ? normalizePhoneIn(rawPhone, phoneRules) : normalizePhone(rawPhone);
+    if (!phone) return "invalid_phone";
+  }
   if (input.aszfAccepted !== true) return "terms_required";
   if (input.photoRightsAccepted !== true) return "photo_rights_required";
   return { name, email, phone };
