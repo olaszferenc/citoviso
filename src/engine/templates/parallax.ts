@@ -469,7 +469,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ? `<section class="t-sec" id="t-services" style="padding-top:0">
     <div class="t-wrap">
       <p class="t-eyebrow">${T(data, "Szolgáltatások")}</p>
-      <h2>${T(data, "Egy pillantásra")}</h2>
+      <h2>${T(data, "Amit nálunk talál")}</h2>
       <div class="t-amen">
         ${grid
           .map(({ h, i }) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)

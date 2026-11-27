@@ -2860,7 +2860,7 @@
 "Egy napja nem tudjuk beolvasni {art} {portal} naptárát ({unit}). Az azóta a portálon érkezett foglalások nem jutnak át az Ön oldalára.":"level",
 "Egy összeg, akárhány éjszaka. Az érkezés napjának ára számít.":"admin",
 "Egy pillanat… {n} mp":"honlap",
-"Egy pillantásra":"admin+honlap",
+"Egy pillantásra":"admin",
 "Egy rövid sor a végösszeg alatt. Ha nincs mit írni, hagyja üresen.":"admin",
 "Egy sávra kattintva: a leadek névsora; a névre kattintva a lead riportja.":"konzol",
 "Egy sor egy felvett ország: az ára, az állapota, és hogy megy-e benne a leadgyűjtés és a kiküldés. Egy országra kattintva három fül nyílik: Ország, Árazás, Kiküldés.":"konzol",
