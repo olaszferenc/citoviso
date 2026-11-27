@@ -107,6 +107,17 @@ try {
   ok(!Object.keys(mailCopy?.headers ?? {}).some((k) => /^list-unsubscribe/i.test(k)) && mailCopy?.headers?.["X-Keep"] === "1", "a másolatról a List-Unsubscribe fejlécek lekerülnek (a tulaj postafiókja nem iratkoztathatja le a leadet)");
   ok(pilotOwnViewCopy({ ...leadMail, audience: "guest" }) === null, "vendég-levélről nincs másolat");
   ok(pilotOwnViewCopy({ ...leadMail, lane: "cold" as const }) === null, "hideg sávos levélről nincs másolat (a Zoho elutasítja, tulaj 2026-11-22)");
+  {
+    // Owner 2026-11-27: the Gmail copy rides on every mail, the cold lane included — only the Zoho mailbox stays off it.
+    const { config: cfg } = await import("../src/config.js");
+    const before = cfg.emailBcc;
+    (cfg as { emailBcc: string }).emailBcc = "masolat@citoviso.com, tulaj@gmail.com";
+    const cold = pilotOwnViewCopy({ ...leadMail, lane: "cold" as const });
+    const warm = pilotOwnViewCopy(leadMail);
+    (cfg as { emailBcc: string }).emailBcc = before;
+    ok(cold?.to === "tulaj@gmail.com", "hideg sáv: a másolat a Gmailre megy, a Zoho (citoviso.com) címre nem", String(cold?.to));
+    ok(warm?.to === "masolat@citoviso.com, tulaj@gmail.com", "nem hideg sáv: mindkét címre", String(warm?.to));
+  }
   ok(pilotOwnViewCopy({ ...leadMail, text: "számla", html: "<p>számla</p>" }) === null, "követett link nélkül nincs külön másolat (marad a Bcc)");
   await getEmailSender().send(leadMail);
   const emls = await readdir(path.join(work, "outbox")).catch(() => [] as string[]);

@@ -120,15 +120,20 @@ function safeSlug(s: string): string {
  * hand us third-party personal data. One choke point, one rule, no exceptions.
  */
 function pilotCopyAddress(msg: EmailMessage): string | null {
-  const addr = (config.emailBcc ?? "").trim();
-  if (!addr) return null;
   if (msg.audience === "guest") return null;
-  // Cold lane (getcitoviso.com): no pilot copy. The owner's mailbox is Zoho, and Zoho rejects every
-  // mail of this sender (554 5.7.7 policy violation): 341 copies bounced 2026-11-18..22, none arrived,
-  // and each bounce counts against the cold sender's reputation. Owner, 2026-11-22: „igen” to switching it off.
-  if (msg.lane === "cold") return null;
-  if (msg.to.trim().toLowerCase() === addr.toLowerCase()) return null; // no self-copy
-  return addr;
+  // EMAIL_BCC may list several addresses („a@x, b@y”). Owner 2026-11-27: „innentől a visszavonásig minden kimenő
+  // levélre BCC-be az én Gmail-es címemet is” — the cold lane included.
+  const to = msg.to.trim().toLowerCase();
+  const list = (config.emailBcc ?? "")
+    .split(/[,;\s]+/)
+    .map((a) => a.trim())
+    .filter(Boolean)
+    // Cold lane (getcitoviso.com): never to a Zoho (citoviso.com) mailbox — Zoho rejects every mail of this sender
+    // (554 5.7.7 policy violation): 341 copies bounced 2026-11-18..22, and each bounce counts against the cold
+    // sender's reputation (owner 2026-11-22). Any other mailbox (the owner's Gmail) gets the cold copy too.
+    .filter((a) => msg.lane !== "cold" || !/@citoviso\.com$/i.test(a))
+    .filter((a) => a.toLowerCase() !== to); // no self-copy
+  return list.length ? list.join(", ") : null;
 }
 
 /** True when the message carries a tracked /p/ link (cold outreach, reminders). */
