@@ -1924,6 +1924,8 @@ export interface ProspectPage {
   readonly artifactId: string;
   readonly artifactPath: string;
   readonly unsubscribed: boolean;
+  /** The link went out to the lead (any channel's send time). Before that only we can have it. */
+  readonly sent: boolean;
   /** ADR-0364 (B2): an ENGINE mock (recipe + data) — only that can become a live trial site. */
   readonly engine: boolean;
   /** The artifact's generation inputs — the serve-time model-HTML gate reads them (ADR-0370). */
@@ -1939,6 +1941,7 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
     .select([
       "prospect.id as id",
       "prospect.unsubscribed_at as unsubscribedAt",
+      sql<string | null>`coalesce(prospect.sent_at, prospect.email_sent_at, prospect.sms_sent_at, prospect.mms_sent_at)`.as("sentAt"),
       "lead.id as leadId",
       "lead.name as leadName",
       "mock_artifact.id as artifactId",
@@ -1957,6 +1960,7 @@ export async function getProspectByToken(token: string): Promise<ProspectPage | 
     artifactId: r.artifactId,
     artifactPath: r.artifactPath,
     unsubscribed: r.unsubscribedAt != null,
+    sent: r.sentAt != null,
     engine: isEngineArtifact(r.artifactInputs),
     artifactInputs: r.artifactInputs,
   };

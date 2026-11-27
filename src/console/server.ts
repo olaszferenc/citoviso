@@ -4594,6 +4594,10 @@ async function handle(
   if (method === "POST" && pViewMatch) {
     const p = await getProspectByToken(pViewMatch[1]);
     if (!p || p.unsubscribed || (await ownedSiteForProspectToken(pViewMatch[1]))) return send(res, 204, "");
+    // 11-27 (owner: Sirató 82 was sent today, the report said it was last seen on the 25th): before the link went
+    // out only we can open it (check letter, approval, test) — such a visit is not the lead's and records nothing:
+    // no funnel 'opened', no negative send→open time, no nth-visit offer minted by our own clicks.
+    if (!p.sent) return send(res, 204, "");
     const body = (await readJson(req)) as { referrer?: unknown; forras?: unknown; via?: unknown };
     // MULTI-PLAN (plan-tabs contract): the page says which plan it shows. A switch within
     // PLAN_SWITCH_VIEW_MINUTES of the visit's start continues that visit — no new view, no
