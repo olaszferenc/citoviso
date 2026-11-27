@@ -302,7 +302,8 @@ async function sample(n: number, shard: { k: number; n: number } | null): Promis
     .where(DISPATCH_PHOTOS_OK_SQL)
     .where(MOCK_CURRENT_GENERATOR_SQL)
     .where(sql<boolean>`a.inputs->'renderGate'->>'verdict' = 'pass'`)
-    .where(sql<boolean>`a.inputs->${QA_REVIEW_KEY} is null`)
+    // Not looked at on THIS file: no review, or a review of an earlier render (quality colleague 2026-11-27: the
+    // re-rendered mocks of earlier flags were never offered again, so no one could check that a rule took).
     .orderBy(sql`random()`)
     .limit(n * 6)
     .execute();
@@ -319,9 +320,11 @@ async function sample(n: number, shard: { k: number; n: number } | null): Promis
       continue;
     }
     if (cachedRenderGate(r.inputs, mtime, await stockOkFor(r.artifactId))?.verdict !== "pass") continue;
+    const seen = await qaReviewState(r.artifactId);
+    if (seen.state === "pass" || seen.state === "fail") continue;
     shown++;
     const alt = await secondPlanOf(r.leadId, r.artifactId);
-    console.log(`\n▶ ${r.artifactId} · ${r.name} (1. terv${alt?.current ? `; 2. terv: ${alt.id}` : "; 2. terv még nincs"})`);
+    console.log(`\n▶ ${r.artifactId} · ${r.name} (1. terv${alt?.current ? `; 2. terv: ${alt.id}` : "; 2. terv még nincs"})${seen.state === "stale" ? ` — ÚJRA: korábbi ítélet („${seen.review.note.slice(0, 80)}”) egy régebbi renderre szólt, nézd meg, a szabály megfogta-e` : ""}`);
     for (const f of await shots(r.artifactId)) console.log(`   ${f}`);
   }
   if (!shown) console.log("Nincs mintázható mock: a gépi kapu még nem engedett át átnézetlen, aktuális mockot.");
