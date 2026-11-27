@@ -57,6 +57,11 @@ const MAX_SCREENS = 16;
 /** Moments of the opening animation to shoot (wordmark-grow cycles photos for ~5 s, the gate splits at 0.45–4 s). */
 const OPENING_MS = [1200, 3000, 5500] as const;
 
+/** Placeholder for a picture the sampler could not fetch in time — a tool artefact, not a fault of the mock. */
+const SAMPLER_TIMEOUT_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"><rect width="800" height="500" fill="#d9d4cc"/>' +
+  '<text x="400" y="250" font-family="sans-serif" font-size="34" text-anchor="middle" fill="#5a5148">mintavevő: a kép nem töltődött be (időtúllépés)</text></svg>';
+
 async function shots(artifactId: string): Promise<string[]> {
   const a = await db.selectFrom("mock_artifact").select(["path"]).where("id", "=", artifactId).executeTakeFirst();
   if (!a?.path) throw new Error("a mockhoz nincs fájl");
@@ -84,7 +89,9 @@ async function shots(artifactId: string): Promise<string[]> {
           if (!r.ok) return await route.abort();
           return await route.fulfill({ status: 200, contentType: r.headers.get("content-type") ?? "image/jpeg", body: Buffer.from(await r.arrayBuffer()) });
         } catch {
-          return route.abort().catch(() => undefined);
+          // A picture the SAMPLER dropped (timeout on a loaded box) must not look like a broken mock (quality colleague
+          // 11-27: empty frames on Reljic whose 9 photos all answer 200 live) — it gets a labelled placeholder.
+          return route.fulfill({ status: 200, contentType: "image/svg+xml", body: SAMPLER_TIMEOUT_SVG }).catch(() => undefined);
         }
       }
       return route.continue();
