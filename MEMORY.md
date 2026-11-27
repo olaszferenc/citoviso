@@ -277,6 +277,8 @@ Utolsó frissítés: 2026-10-02 (🧾 **Elek M1 — tenant-admin + foglalás kö
 
 ## Párhuzamos szál (2026-10-13 — SUB `citd9a8f335`: Foglalás beállítása — kérdezz-felelek + Segítő, ADR-0380) — LANDOLVA, élesre csak külön tulaj-döntéssel
 - A tulaj a „B” változatot választotta (ellenőrzőlista). Az oldal: `/admin/booking-setup`. Terv: `assets/design-refs/tenant-admin/foglalas-kerdezz-felelek/`.
+- 2026-11-27 · TULAJ-MÁSOLAT GMAILRE, VISSZAVONÁSIG (tulaj: „minden kimenő levélre BCC-be az én Gmail-es email címemet is”): éles EMAIL_BCC = „<citoviso-cím>, olaszferenc@gmail.com” (prod/20261127-1625, 6f8fab00); a hideg sáv másolata csak a Gmailre megy (Zoho elutasítja), a követett linkes levél saját-nézet másolat (a tulaj megnyitása nem mér). Visszavonás: a Gmail-cím kivétele az éles .env-ből (mentés /opt/citoviso/backups/env-before-bcc-gmail-20261127).
+- 2026-11-27 · LEVÉL-MEGNYITÁS MÉRVE (email_open, ADR-0462, 11-23 óta): 11-23 hete Gmail 125 kiküldve → 66 megnyitotta a levelet (53%) → 20 kattintott (16%); egyéb 59 → 10 → 3 (képblokkoló kliensek alulszámolnak). Következtetés: a Gmail nem spam, a szűk keresztmetszet a levél → mock kattintás. Riport a konzolban még nincs (SUB citab2df38a).
 - Segítő = Haiku 5.5, csak magyaráz és a kérdéshez visz, nem ír; mérve ~$0.00043/kérdés (`tenant_ai_call`, napi 40/szállás).
 - A mai szabály-űrlap az Online foglalás képernyőn a „Haladó beállítások” alatt maradt. Őr: `scripts/booking-setup-check.mts`. Jegyzet: `_planning/memory/2026-10-13_foglalas_kerdezz_felelek.md`.
 - Következő: 2. kör (javaslat-kártya „Alkalmaz”, majd írás) — új terv-kör kell.
