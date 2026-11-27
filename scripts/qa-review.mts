@@ -322,10 +322,18 @@ async function sample(n: number, shard: { k: number; n: number } | null): Promis
     if (cachedRenderGate(r.inputs, mtime, await stockOkFor(r.artifactId))?.verdict !== "pass") continue;
     const seen = await qaReviewState(r.artifactId);
     if (seen.state === "pass" || seen.state === "fail") continue;
+    // One stuck mock (a 60 s goto on a loaded box, quality colleague 11-27: Jázmin) must not end the whole sample.
+    let sheets: string[];
+    try {
+      sheets = await shots(r.artifactId);
+    } catch (e) {
+      console.log(`\n⏭ ${r.artifactId} · ${r.name} — kihagyva, a képek nem készültek el (${String((e as Error)?.message ?? e).split("\n")[0]!.slice(0, 120)})`);
+      continue;
+    }
     shown++;
     const alt = await secondPlanOf(r.leadId, r.artifactId);
     console.log(`\n▶ ${r.artifactId} · ${r.name} (1. terv${alt?.current ? `; 2. terv: ${alt.id}` : "; 2. terv még nincs"})${seen.state === "stale" ? ` — ÚJRA: korábbi ítélet („${seen.review.note.slice(0, 80)}”) egy régebbi renderre szólt, nézd meg, a szabály megfogta-e` : ""}`);
-    for (const f of await shots(r.artifactId)) console.log(`   ${f}`);
+    for (const f of sheets) console.log(`   ${f}`);
   }
   if (!shown) console.log("Nincs mintázható mock: a gépi kapu még nem engedett át átnézetlen, aktuális mockot.");
   else console.log(`\n${shown} mock. Hiba-fajtát így rögzíts: qa-review.mts note <id> "<hiba-fajta> — <hol>"; összesítés: qa-review.mts findings`);

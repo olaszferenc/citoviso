@@ -341,6 +341,10 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     .map((h, i) => ({ h, i, k: catalogueIdFor(h, data.amenityIconMap) }))
     .filter((x) => x.i >= plan.rows.length && x.k !== null && !gridKinds.has(x.k) && Boolean(gridKinds.add(x.k)))
     .slice(0, 8);
+  // A lone tile is no section (11-27, quality colleague: Stéghouse „Wifi” alone, Gyékényes, Kevikincses — one card in a
+  // two-column grid reads as half-empty): under MIN_GRID_TILES the block is left out; its item stays in the highlights.
+  const MIN_GRID_TILES = 2;
+  if (grid.length < MIN_GRID_TILES) grid.length = 0;
   const heroPhoto = plan.hero?.url;
   const bandAUrl = plan.bandA?.url;
   const bandBUrl = plan.bandB?.url;
