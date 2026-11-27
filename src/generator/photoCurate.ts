@@ -10,7 +10,7 @@
 //      render gate's own predicates (photoKind fitsOpening / fitsBand / fitsContact), so a slot the
 //      generator fills is a slot the gate passes
 
-import { bandScore, classifyPhotoUrl, fitsBand, fitsContact, fitsHero, fitsOpening, NOT_CARD_MASS, notCardMass, photoFocusX, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst, type PhotoKind } from "../media/photoKind.js";
+import { bandScore, classifyPhotoUrl, fitsBand, fitsContact, fitsHero, fitsOpening, NOT_CARD_MASS, notCardMass, photoFocusX, isOffPagePhoto, isShowcase, withBestHeroFirst, withShowcaseFirst, type PhotoKind, photoOverlayLabels } from "../media/photoKind.js";
 import { fingerprintAndDedupe } from "./photoHash.js";
 import { detectPhotoObjects, type DetectedObject, showsBathroomFixture, showsBed, showsPerson, showsSittingArea, showsVehicleOrAnimal } from "../media/photoObjects.js";
 import { applyHeroPin } from "./heroOverride.js";
@@ -43,6 +43,9 @@ export function slotMarks(v: PhotoKind | null, objs: readonly DetectedObject[] |
 
 const fileOf = (u: string): string => u.split(/[?#]/)[0]!.split("/").pop() ?? u;
 
+/** How many hero candidates the painted-label look (㉒) checks at most — each is three OCR runs the first time. */
+export const HERO_LABEL_TRIES = 3;
+
 export async function curateMockPhotos<T extends { url: string }>(
   input: readonly T[],
   /** The quality colleague's hero choice (lead_hero_override, owner 2026-11-25: „wow-hatás”) — it wins. */
@@ -68,8 +71,17 @@ export async function curateMockPhotos<T extends { url: string }>(
   // The colleague's pick wins — only when it passes the gate's hero rule (fitsHero: sized for the moving cover
   // 11-26 Badacsony, no person / vehicle, not dark, not a kitchen / bathroom); else the machine's hero stands.
   const pinnedAt = opts.pinnedUrl ? dd.photos.findIndex((p) => p.url === opts.pinnedUrl) : -1;
-  const heroFirst = pinnedAt >= 0 && fitsHero(heroKinds[pinnedAt] ?? null) ? applyHeroPin(machine, opts.pinnedUrl!) : machine;
+  let heroFirst = pinnedAt >= 0 && fitsHero(heroKinds[pinnedAt] ?? null) ? applyHeroPin(machine, opts.pinnedUrl!) : machine;
   const idxOf = new Map(dd.photos.map((p, i) => [p, i] as const));
+  // ㉒ LABELS PAINTED ON THE HERO (Reljic feb441b0: „A2(2+2)” tags over the facade): the next hero-fit candidate opens the
+  // page instead — up to HERO_LABEL_TRIES looks (each cached per URL); the labelled photo stays in the gallery.
+  for (let t = 0; t < HERO_LABEL_TRIES && heroFirst.length > 1; t++) {
+    const hero = heroFirst[0]!;
+    if (!(await photoOverlayLabels(hero.url).catch(() => [] as string[])).length) break;
+    const next = heroFirst.slice(1).find((p) => fitsHero(heroKinds[idxOf.get(p)!] ?? null));
+    if (!next) break;
+    heroFirst = [next, ...heroFirst.filter((p) => p !== next)];
+  }
   const kept = heroFirst.filter((p, at) => {
     const i = idxOf.get(p)!;
     return !isOffPagePhoto(kinds[i] ?? null, at === 0) && !detailOff(i);

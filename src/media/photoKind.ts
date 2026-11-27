@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 import ort from "onnxruntime-node";
 import sharp from "sharp";
 import { config } from "../config.js";
-import { readPhotoText } from "./photoText.js";
+import { readOverlayLabels, readPhotoText } from "./photoText.js";
 import LABELS from "./photoKindLabels.json" with { type: "json" };
 
 /**
@@ -627,6 +627,32 @@ export async function photoFocusX(url: string): Promise<number | null> {
   await mkdir(CACHE_DIR, { recursive: true });
   await writeFile(file, JSON.stringify({ x })).catch(() => undefined);
   return x;
+}
+
+/** ㉒ The painted labels of a photo (photoText.readOverlayLabels), cached on disk per URL — the hero pick asks it. */
+export async function photoOverlayLabels(url: string, bytes?: Buffer): Promise<string[]> {
+  const key = createHash("sha1").update(`labels-v1|${url}`).digest("hex");
+  const file = path.join(CACHE_DIR, `${key}.json`);
+  try {
+    return (JSON.parse(await readFile(file, "utf8")) as { l: string[] }).l;
+  } catch {
+    // not cached yet
+  }
+  let buf = bytes;
+  if (!buf) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) return [];
+      buf = Buffer.from(await res.arrayBuffer());
+    } catch {
+      return [];
+    }
+  }
+  const l = await readOverlayLabels(buf).catch(() => null);
+  if (l == null) return []; // no OCR model: nothing known, nothing cached
+  await mkdir(CACHE_DIR, { recursive: true });
+  await writeFile(file, JSON.stringify({ l })).catch(() => undefined);
+  return l;
 }
 
 export async function focusXOfBuffer(buf: Buffer): Promise<number | null> {

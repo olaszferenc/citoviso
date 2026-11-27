@@ -105,7 +105,10 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the dep
 // label, and two sections never one heading (render.withUniqueSectionHeadings) — the waiting stock is re-rendered.
 // 11-27 afternoon (ADR-0503 ⑩–⑬, supply2): the corner date-stamp pass, a band caption is a sentence, a room opens the page
 // only when nothing outside can, the facilities module is always filled — the waiting stock is re-rendered with them.
-export const MOCK_HEROFIX_STAMP = "2026-11-27-supply2";
+// 11-27 evening (ADR-XXXX ⑱ ⑳ ㉑ ㉒, supply3): rooms block always filled (stock bedrooms), the title box never narrower than
+// its longest word, the neutral gallery title below 3 own
+// photos, a hero with painted labels steps aside — the waiting stock is re-rendered with them.
+export const MOCK_HEROFIX_STAMP = "2026-11-27-supply3";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
   and coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP})`;
 

@@ -46,7 +46,7 @@ import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { classifyPhotoBuffer, fitsBand, fitsContact, fitsHero, fitsOpening, isOffPagePhoto, isRoomHero, photoKindAvailable } from "../media/photoKind.js";
+import { classifyPhotoBuffer, fitsBand, fitsContact, fitsHero, fitsOpening, isOffPagePhoto, isRoomHero, photoKindAvailable, photoOverlayLabels } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
@@ -58,7 +58,8 @@ import { headingKey } from "../text/headingKey.js";
 // the same input for the same rule; the page's 1280 px file had failed pictures the picker had passed at 330 px.
 // 18 (11-27, ADR-0503 „Feltöltés elhagyás helyett”): the dim phone first screen, a room hero with an outside alternative,
 // the hero title on its picture, the empty map box, a band caption that is no sentence.
-export const RENDER_GATE_VERSION = 18;
+// 19 (11-27, ADR-XXXX ㉒): a hero with painted labels („A2(2+2)”).
+export const RENDER_GATE_VERSION = 19;
 /**
  * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty
  * (a background that never painted, a section whose content is missing — the §B no-JS empty-band case). The
@@ -750,8 +751,12 @@ export async function auditMockFile(
       // wow is the quality colleague's pick (qa-review heroes, isHeroCandidate) — the gate must not overrule it
       // with the machine pick's score floor (11-26, BaBo: the chosen geranium terrace was blocked as „not a hero”).
       // 11-27: photoKind.fitsHero — the very predicate the generator's hero pick and the colleague's pin pass.
+      const labels = fitsHero(hv) ? await photoOverlayLabels(heroUrl, heroBytes).catch(() => [] as string[]) : [];
       if (!fitsHero(hv)) {
         findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv?.label ?? "nincs ítélet"}): ${fileOf(heroUrl)}`, url: heroUrl });
+      } else if (labels.length) {
+        // ㉒ painted labels on the hero („A2(2+2)”) — named, the retry puts the next candidate first
+        findings.push({ code: "subject", detail: `feliratos nyitókép (${labels.slice(0, 3).join(" ")}): ${fileOf(heroUrl)}`, url: heroUrl });
       } else if (isRoomHero(hv)) {
         // ADR-0503 ⑫: a room opens the page while the page itself shows an outside / view picture the hero rule accepts
         // — named, so the retry puts that one first (photoKind.withBestHeroFirst makes the same choice at generation).

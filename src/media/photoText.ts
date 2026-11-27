@@ -180,3 +180,37 @@ async function readCornerStamp(buf: Buffer): Promise<string | null> {
   }
   return null;
 }
+
+/**
+ * LABELS PAINTED ONTO A PHOTO (ADR-XXXX ㉒, Reljic feb441b0: rotated tags „A2(2+2)”, „A5(2+1)” over the facade). They are
+ * tilted, so the horizontal pass reads nothing; read again turned ±28° at 2000 px. A label is a unit / bed-configuration
+ * token: digit + digit („2+2”) or a capital with digits before a bracket („A2(”), read with ≥ 60 confidence.
+ * Measured 11-27: Reljic caught at +28°, 60 live heroes 0 false alarms. Used for the HERO only (three OCR runs).
+ */
+const LABEL_TOKEN = /\d\s?\+\s?\d|^[A-Z]\d{1,2}\(/;
+export async function readOverlayLabels(buf: Buffer): Promise<string[] | null> {
+  if (!photoTextAvailable()) return null;
+  busy++;
+  try {
+    const worker = await getWorker();
+    const hits: string[] = [];
+    for (const deg of [0, 28, -28]) {
+      let png: Buffer;
+      try {
+        png = await sharp(buf).rotate().resize({ width: 2000 }).rotate(deg, { background: "#808080" }).greyscale().png().toBuffer();
+      } catch {
+        return null;
+      }
+      const res = await worker.recognize(png, {}, { blocks: true });
+      for (const b of res.data.blocks ?? []) for (const p of b.paragraphs) for (const l of p.lines) for (const x of l.words) {
+        const t = x.text.trim();
+        if (x.confidence >= 60 && LABEL_TOKEN.test(t)) hits.push(t);
+      }
+      if (hits.length) break;
+    }
+    return hits;
+  } finally {
+    busy--;
+    armIdle();
+  }
+}

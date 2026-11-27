@@ -578,11 +578,10 @@ export function roomsForMock(d: SiteData): readonly Room[] {
  */
 export function roomsFor(d: SiteData, phase: RenderPhase): readonly Room[] | null {
   if (phase === "mock") {
-    const rooms = roomsForMock(d);
-    // A SAMPLE card (no rooms in the source) with no picture of a room on a page with 5+ own photos → no rooms
-    // block at all (11-26, quality colleague: „Szobák és apartmanok” stood as a text-only card, Jaja/Zozo/Ország).
-    if (!d.rooms?.length && d.photos.length >= 5 && rooms.length && rooms.every((r) => !r.photo)) return null;
-    return rooms;
+    // ⑱ (owner 11-27, „a mock terv, tölts, ne hagyj el”): the rooms block stays — a card without a room photo of the
+    // lodging wears a marked stock bedroom (withStockCards; the render opens the stock cards for every mock, 5+ photos
+    // included). The 11-26 „no rooms block” rule for a picture-less sample card is gone.
+    return roomsForMock(d);
   }
   return d.rooms?.length ? d.rooms : null;
 }
@@ -1160,6 +1159,17 @@ export function heroFit(text: string): string {
   const w = word >= HERO_WORD_MIN ? ` data-cit-hero-word="${Math.min(word, HERO_WORD_MAX)}"` : "";
   return `data-cit-hero-fit="${n <= 28 ? "s" : n <= 48 ? "m" : n <= 72 ? "l" : "xl"}"${w}`;
 }
+/**
+ * The same width cap and floor for a MIXED-CASE display title (Névből növő: „Magánszálláshely”, ADR-XXXX ⑳): a lowercase
+ * serif letter measures ~.50–.58em, .62em leaves room for accents and bold. Inline, so it needs no stylesheet. The attribute
+ * comes with its leading space (`<h1${heroWordFit(name)}>`): a short name leaves the tag untouched.
+ */
+export function heroWordFit(text: string): string {
+  const word = Math.max(0, ...text.replace(/\s+/g, " ").trim().split(" ").map((w) => w.replace(/[^\p{L}\p{N}]/gu, "").length));
+  if (word < HERO_WORD_MIN) return "";
+  const n = Math.min(word, HERO_WORD_MAX);
+  return ` style="--cit-hero-wcap:calc((100vw - 56px) / ${(n * 0.62).toFixed(2)});--cit-hero-wmeasure:${(n * 0.62 + 0.6).toFixed(2)}em"`;
+}
 /** Words shorter than this fit a phone line at every band's size; longer ones get a width cap. */
 const HERO_WORD_MIN = 10;
 const HERO_WORD_MAX = 30;
@@ -1170,7 +1180,9 @@ const HERO_WORD_MAX = 30;
  */
 const HERO_WORD_CSS = Array.from(
   { length: HERO_WORD_MAX - HERO_WORD_MIN + 1 },
-  (_, i) => `h1[data-cit-hero-word="${HERO_WORD_MIN + i}"]{--cit-hero-wcap:calc((100vw - 56px) / ${((HERO_WORD_MIN + i) * 0.78).toFixed(2)})}`,
+  // …and a WIDTH FLOOR for the title box (ADR-XXXX ⑳, 11-27: „Balatonszárszón,” broke at 18 px — the fitter shrank the
+  // font, but the box was `16ch`, which shrinks with it; the word never fitted). In em, so it follows any font size.
+  (_, i) => `h1[data-cit-hero-word="${HERO_WORD_MIN + i}"]{--cit-hero-wcap:calc((100vw - 56px) / ${((HERO_WORD_MIN + i) * 0.78).toFixed(2)});--cit-hero-wmeasure:${((HERO_WORD_MIN + i) * 0.78 + 0.6).toFixed(2)}em}`,
 ).join("\n  ");
 export const HERO_FIT_CSS = `
   h1[data-cit-hero-fit="s"]{--cit-hero-cap:min(max(34px,16vh),var(--cit-hero-wcap,999px))}

@@ -30,3 +30,6 @@ src/generator/chainSupply.ts, src/generator/mockRefresh.ts, src/outreach/mockRen
 
 ## 2. kör (10–13., 15–16. pont) — ADR-0503 „Feltöltés elhagyás helyett”
 Dátumbélyeg sarok-OCR (sárgaság-csatorna, részleges alak a sarkon), a sávfelirat mondat, szoba csak végső nyitókép, sötét/fakó telefonos nyitóképernyő → következő jelölt, a felszereltség-modul mindig telt (standard készlet, MINTA), a Névből növő fotós hős-szövege fehér + a kapu a h1-et a képhez méri, eager térkép + üres-térkép lelet. Bélyeg supply2, kapu v18. Vak: 16/23 jó újrapróbával. ⑰ A Parallax mindig az egyik terv (újragenerálás, újrapróba, restoreParallaxQueue). Keret-szkript: `~/rc-briefs/uj-lanc-keret/keret-cand.sh check|go|rollback` (a go a koordinátoré; 7113 → 3353 jelölt). Képek: `assets/design-refs/_drafts/kor2/`.
+
+## 3. kör (⑱ ⑳ ㉑ ㉒) — ADR-XXXX „Mock 3. kör”
+A szobablokk mindig áll (stock hálószoba a kép nélküli kártyán), a cím doboza a leghosszabb szóhoz igazodik (`--cit-hero-wmeasure`, `heroWordFit`), semleges „Galéria” cím 3 saját kép alatt, feliratos nyitókép (forgatott OCR: „A2(2+2)”) helyett a következő jelölt. A ⑲ (mondatos sáv fotó nélkül) a tulaj kérésére KIMARADT („2, ok”). Bélyeg supply3, kapu v19. Vak 12: 2 → 8/12. Következő körre: a településkép-tárból a „satellite photo” tiltása; a ⑲ csak valódi mondattal és akcentszínen.

@@ -138,6 +138,17 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   check("⑰ az újragenerálás fő terve Parallax, a 2. terv tartaléka sosem Parallax", /const newMain = await generatePlan\(leadId, "parallax", fields, new Set\(\)\)/.test(cs) && /const other = \["wordmark-grow"\]\.find/.test(cs));
   check("⑰ a Parallax nélküli pár Parallaxot kap (az időzítő futtatja), kép nélkül nem próbálja újra", /export async function restoreParallaxQueue/.test(cs) && /parallaxRestore/.test(cs) && /restoreParallaxQueue\(/.test(read("./chain-supply.mts")));
 }
+// ⑱–㉑ (coordinator 11-27, 3rd round: „tölts, ne hagyj el”)
+{
+  const tk = read("../src/engine/templateKit.ts");
+  check("⑱ a minta-szobablokk nem marad el: a kép nélküli kártya MINTA stock hálószobát kap (5+ fotónál is)", !/rooms\.every\(\(r\) => !r\.photo\)\) return null/.test(tk) && !/rs\.every\(\(r\) => !r\.photo\)/.test(read("../src/engine/moduleSections.ts")) && /a short styled library is topped up from the general one/.test(read("../src/engine/stock.ts")));
+  const px = read("../src/engine/templates/parallax.ts");
+  check("⑳ a cím doboza sosem keskenyebb a leghosszabb szónál (em-ben, a kicsinyítéssel együtt), a mobil fix méret is a plafonhoz igazodik", /--cit-hero-wmeasure:/.test(tk) && /max-width:max\(var\(--cit-hero-measure,16ch\),var\(--cit-hero-wmeasure,0px\)\)/.test(px) && /\.t-hero h1\{font-size:min\(30px,var\(--cit-hero-cap,999px\)\)\}/.test(px));
+  check("⑳ a Névből növő címe is a leghosszabb szóhoz igazodik (vegyes betűs szorzóval)", /export function heroWordFit/.test(tk) && /<h1\$\{heroWordFit\(data\.name\)\}>/.test(read("../src/engine/templates/wordmarkGrow.ts")) && /max-width:max\(12ch,var\(--cit-hero-wmeasure,0px\)\)/.test(read("../src/engine/templates/wordmarkGrow.ts")));
+  const pt2 = read("../src/media/photoText.ts");
+  check("㉒ feliratos nyitókép: forgatott OCR (0°, ±28°) címke-mintára, a nyitókép-választás a következő jelöltre lép, a kapu jelez (URL-lel)", /export async function readOverlayLabels/.test(pt2) && /for \(const deg of \[0, 28, -28\]\)/.test(pt2) && /photoOverlayLabels\(hero\.url\)/.test(read("../src/generator/photoCurate.ts")) && /feliratos nyitókép/.test(read("../src/outreach/mockRenderGate.ts")));
+  check("㉑ a semleges „Galéria” cím a saját képek számán dől el (< 3), nem a lefordított szövegen", /const GALLERY_OWN_MIN = 3;/.test(read("../src/engine/render.ts")) && /if \(ownPhotoCount\(data\) >= GALLERY_OWN_MIN\) return recipe;/.test(read("../src/engine/render.ts")));
+}
 // wiring
 {
   const tick = read("./chain-supply.mts");

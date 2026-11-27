@@ -61,7 +61,7 @@ const PARALLAX_CSS = `
   .t-par--flat{background-image:linear-gradient(160deg, color-mix(in srgb, var(--cit-ink) 88%, black), color-mix(in srgb, var(--cit-accent) 45%, var(--cit-ink)))}
   @media(max-width:900px){.t-par{background-attachment:scroll;min-height:78svh}.t-par--band{min-height:52svh}
     /* masthead needs its own air above the bottom-anchored copy on small screens */
-    .t-par--hero{min-height:100svh}.t-hero h1{font-size:30px}}
+    .t-par--hero{min-height:100svh}.t-hero h1{font-size:min(30px,var(--cit-hero-cap,999px))}}
   @media(prefers-reduced-motion:reduce){.t-par{background-attachment:scroll}}
   @supports (-webkit-touch-callout: none){.t-par{background-attachment:scroll}}
 
@@ -88,7 +88,7 @@ const PARALLAX_CSS = `
   /* short desktop (a 150%-scaled laptop is ~1320×570, 2026-09-30): the centred copy outgrows the
      panel and rests on this padding, but the overlay masthead reaches 163px — clear it */
   @media(min-width:901px) and (max-height:760px){.t-hero{padding-top:190px}}
-  .t-hero h1{font-size:min(clamp(36px,5.5vw,72px),var(--cit-hero-cap,999px));color:#fff;margin-bottom:18px;max-width:var(--cit-hero-measure,16ch);text-shadow:0 2px 14px rgba(10,12,14,.6),0 1px 3px rgba(10,12,14,.5)}
+  .t-hero h1{font-size:min(clamp(36px,5.5vw,72px),var(--cit-hero-cap,999px));color:#fff;margin-bottom:18px;max-width:max(var(--cit-hero-measure,16ch),var(--cit-hero-wmeasure,0px));text-shadow:0 2px 14px rgba(10,12,14,.6),0 1px 3px rgba(10,12,14,.5)}
   /* landscape phone (844×390, 2026-09-27): 5 lines × 46px ended 6px above the fold on Laguna — a
      barely-passing value is a dead rule; vh-bound size after the base rule, portrait/desktop untouched */
   @media(max-height:500px) and (min-width:701px){

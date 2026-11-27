@@ -289,12 +289,21 @@ function stockBedrooms(d: SiteData): StockEntry[] {
  */
 export function stockRoomPhotos(d: SiteData, n: number, alt: (i: number) => string): Photo[] {
   const style = styledStyleOf(d);
+  const out: Photo[] = [];
   if (style) {
     const beds = styledOrdered(stockSeedOf(d), style, "bedroom");
-    if (beds.length > 1) return beds.slice(0, Math.max(0, Math.min(n, beds.length - 1))).map((e, i) => styledPhoto(e, alt(i)));
+    if (beds.length > 1) out.push(...beds.slice(0, Math.max(0, Math.min(n, beds.length - 1))).map((e, i) => styledPhoto(e, alt(i))));
   }
-  const list = stockBedrooms(d);
-  return list.slice(0, Math.max(0, Math.min(n, list.length - 1))).map((e, i) => toPhoto(e, alt(i)));
+  // ⑱ (owner 11-27, „tölts, ne hagyj el”): a short styled library is topped up from the general one, so every card that
+  // needs a picture gets one (a picture-less card no longer drops the rooms block).
+  if (out.length < n) {
+    const list = stockBedrooms(d);
+    // (the styled and the general library are separate picture sets — no picture can come twice)
+    const more = list.slice(0, Math.max(0, list.length - 1)).map((e, i) => toPhoto(e, alt(out.length + i)));
+    const have = new Set(out.map((o) => o.url));
+    out.push(...more.filter((p) => !have.has(p.url)).slice(0, n - out.length));
+  }
+  return out;
 }
 
 /**

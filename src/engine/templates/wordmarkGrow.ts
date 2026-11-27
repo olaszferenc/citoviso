@@ -34,7 +34,7 @@ import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { isStockPhoto } from "../stock.js";
-import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos, fitsSlot } from "../templateKit.js";
+import { accented, copyHook, highlightHook, hookPick, bookingCardCss, bookingSlot, copyOf, esc, firstSentence, heroPhoto, honestStarCount, photoFill, roomDetails, roomHint, roomsFor, roomShell, T, galleryOrder, galleryPager, hasBookingSurface, type ArtTemplate, galleryPhotos, fitsSlot, heroWordFit } from "../templateKit.js";
 
 /** A drawn four-point star — the reference's section mark. Inline SVG (§B.4). */
 const SPARK = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2c.5 5 2.5 7.5 8 8-5.5.5-7.5 3-8 8-.5-5-2.5-7.5-8-8 5.5-.5 7.5-3 8-8Z"/></svg>`;
@@ -132,7 +132,7 @@ section{padding:clamp(70px,10vh,124px) 0}
   /* ADR-0503 ⑮ (Natura c717f8a7: the dark on-accent ink of a light skin stood on a dark lawn): text on a PHOTO is light,
      over the dark veil below it — never the accent's ink colour (the Parallax hero's own rule) */
   color:#fff;text-shadow:0 2px 26px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.5)}
-.w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.1;max-width:16ch;margin:0}
+.w-hero-copy h1{font-size:min(clamp(28px,5.4vw,64px),var(--cit-hero-wcap,999px));line-height:1.1;max-width:max(16ch,var(--cit-hero-wmeasure,0px));margin:0}
 .w-hero-copy .w-hero-line{font-family:var(--cit-font-display);
   font-size:clamp(16px,2.2vw,24px);line-height:1.34;max-width:26ch;margin:.55em 0 0;
   color:color-mix(in srgb,#fff 92%,transparent)}
@@ -144,7 +144,7 @@ section{padding:clamp(70px,10vh,124px) 0}
 @media(max-height:500px) and (min-width:641px){
   .w-hero{height:calc(100svh - 52px);min-height:0}
   .w-hero-copy{bottom:10%}
-  .w-hero-copy h1{font-size:clamp(26px,9vh,40px)}
+  .w-hero-copy h1{font-size:min(clamp(26px,9vh,40px),var(--cit-hero-wcap,999px))}
   .w-hero-copy .w-hero-line{font-size:clamp(14px,4.2vh,18px)}
 }
 
@@ -158,8 +158,8 @@ section{padding:clamp(70px,10vh,124px) 0}
   color-mix(in srgb,var(--cit-bg) 55%,transparent),color-mix(in srgb,var(--cit-bg) 88%,transparent))}
 .w-type{position:relative;z-index:2;width:min(1140px,88vw);margin:0 auto;padding:72px 0}
 .w-type .w-kick{font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--cit-accent);margin-bottom:14px}
-.w-type h1{font-family:var(--cit-font-display);font-size:clamp(44px,10vw,132px);line-height:.95;margin:0;
-  color:var(--cit-ink);max-width:12ch;letter-spacing:-.01em}
+.w-type h1{font-family:var(--cit-font-display);font-size:min(clamp(44px,10vw,132px),var(--cit-hero-wcap,999px));line-height:.95;margin:0;
+  color:var(--cit-ink);max-width:max(12ch,var(--cit-hero-wmeasure,0px));letter-spacing:-.01em}
 .w-type .w-hero-line{font-family:var(--cit-font-display);max-width:46ch;margin:22px 0 0;font-size:clamp(16px,2vw,22px);
   line-height:1.4;color:color-mix(in srgb,var(--cit-ink) 78%,transparent)}
 /* no own photo: the about row has no picture — one centred column, never an empty frame */
@@ -309,7 +309,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     <img class="w-hero-back" src="${esc(backdrop.url)}" alt="${esc(backdrop.alt)}" aria-hidden="true">
     <div class="w-type cit-words" data-cit-hero-copy ${mo("in", 100)}>
       ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
-      <h1>${esc(data.name)}</h1>
+      <h1${heroWordFit(data.name)}>${esc(data.name)}</h1>
       ${heroCopy.lead ? `<p class="w-hero-line"${copyHook("hero.lead")}>${accented(heroCopy.lead, heroCopy.accent)}</p>` : ""}
     </div>
   </header>`
@@ -318,7 +318,7 @@ function renderWordmark(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     ${hero ? `<img ${parallax(0.7)} data-cit-hero-img${depthHeroAttr(data, hero.url)} src="${esc(hero.url)}" alt="${esc(hero.alt)}">` : photoFill(data.name)}
     <div class="w-hero-copy cit-words" data-cit-hero-copy ${mo("in", 100)}>
       ${place ? `<div class="w-kick">${esc(place)}</div>` : ""}
-      <h1>${esc(data.name)}</h1>
+      <h1${heroWordFit(data.name)}>${esc(data.name)}</h1>
       ${heroCopy.lead ? `<p class="w-hero-line"${copyHook("hero.lead")}>${accented(heroCopy.lead, heroCopy.accent)}</p>` : ""}
     </div>
   </header>`;

@@ -1445,11 +1445,8 @@ export function moduleSectionGroups(
           ? roomsBlock(d, opts.demo ? "mock" : "live")
           : s.has("rooms")
             ? ((rs) =>
-                // A sample card with no picture of a room on a page with 5+ own photos → no rooms block (11-26, Jaja:
-                // „Szobák és apartmanok” stood as a text-only card on the parallax page).
-                opts.demo && d.photos.length >= 5 && rs.every((r) => !r.photo)
-                  ? ""
-                  : asSample(roomsBlock({ ...d, rooms: rs }, opts.demo ? "mock" : "live"), d, T(d, "Minta — ide az Ön szobái, fotói és árai kerülnek.")))(sampleRooms(d))
+                // ⑱ the sample rooms block always stands; picture-less cards wear a marked stock bedroom (withStockCards)
+                asSample(roomsBlock({ ...d, rooms: rs }, opts.demo ? "mock" : "live"), d, T(d, "Minta — ide az Ön szobái, fotói és árai kerülnek.")))(sampleRooms(d))
             : "",
       d.amenities?.length
         ? // Per-item icons — the same 70-icon catalogue the admin picker uses

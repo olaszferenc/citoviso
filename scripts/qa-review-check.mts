@@ -297,7 +297,10 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("qafix7 óta az átengedett terv is újragenerálódik (11-27: a kivétel kivéve)", !/heroDepthArm' = 'depth'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
   {
     const sr = roomsForMock({ name: "Z", photos: [1, 2, 3, 4, 5].map((n) => ({ url: `https://z.test/${n}.jpg`, alt: "z", provenance: "portal", kindLabel: "the outside of a house" })) } as unknown as SD);
-    check("szálláskártya: nincs szoba-kép → beltéri kép, ha az sincs, a szoba-blokk elmarad (nem szöveges kártya)", sr.every((r) => !r.photo) && /rooms\.every\(\(r\) => !r\.photo\)\) return null/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
+    // ⑱ (owner 11-27, „tölts, ne hagyj el”): the rooms block no longer drops — a card without a room photo of the lodging
+    // wears a marked stock bedroom (withStockCards; the stock cards are open for every mock).
+    const srStock = roomsForMock({ name: "Z", stock: { gallery: [], cards: true }, photos: [1, 2, 3, 4, 5].map((n) => ({ url: `https://z.test/${n}.jpg`, alt: "z", provenance: "portal", kindLabel: "the outside of a house" })) } as unknown as SD);
+    check("szálláskártya: nincs szoba-kép → ágy/kanapé saját kép, ha az sincs, MINTA stock hálószoba — a szoba-blokk nem marad el", sr.every((r) => !r.photo) && srStock.every((r) => !!r.photo) && !/rooms\.every\(\(r\) => !r\.photo\)\) return null/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
   }
   check("parallax „Egy pillantásra”: nem ismétli a képes sorokat, fajtánként egy, csak ikonos tétel", /x\.i >= plan\.rows\.length && x\.k !== null && !gridKinds\.has\(x\.k\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
   check("szabványos tételek: a szolgáltatás a 70-es katalógus tételére képződik, a nem-szolgáltatás sor kimarad (nincs ikon nélküli csempe)",
@@ -309,7 +312,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const rs3 = roomsForMock({ name: "K", photos: [ph3(1, { bedroom: true, subject: "interior" }), ph3(2), ph3(3, { bedroom: true, subject: "interior" })], rooms: [{ name: "Kétágyas" }] } as unknown as SD);
     check("megnevezett szoba kártyája nem a nyitókép (Kálvária)", rs3[0]?.photo?.url === ph3(3).url, String(rs3[0]?.photo?.url));
   }
-  check("kapcsolat-kép: jármű/ember/állat nem; szobakártya csak ágy/kanapé (konyha, kályha nem), különben a szoba-blokk minden úton elmarad", /outdoor\(p\) && contactFit\(p\)/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && /rs\.every\(\(r\) => !r\.photo\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  check("kapcsolat-kép: jármű/ember/állat nem; szobakártya csak ágy/kanapé (konyha, kályha nem), különben MINTA stock hálószoba (⑱: a blokk nem marad el)", /outdoor\(p\) && contactFit\(p\)/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")) && !/rs\.every\(\(r\) => !r\.photo\)/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
   check("parallax-rács: a címben/alcímben felsorolt tétel nem jön vissza csempeként", /firstSentence\(data\.intro\), \.\.\.headings\]\)/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
   check("alkalmas nyitókép nélküli sor kikerül a kolléga-sorból (tartva), nem jön vissza ⭐-gal", /nincs mozgatható, alkalmas nyitókép/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
   check("rács és kiemelés-lista: a szakaszcímekben felsorolt tétel („Kert, terasz, parkoló”) nem jön vissza", /recipe\.sections\.flatMap\(\(s\) => \[s\.copy\?\.title/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /recipe\.sections\.flatMap\(\(s\) => \[s\.copy\?\.title/.test(readFileSync(new URL("../src/engine/templates/gateOpening.ts", import.meta.url), "utf8")));
