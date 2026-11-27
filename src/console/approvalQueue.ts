@@ -31,6 +31,7 @@ import {
 import { APPROVAL_PENDING_NOTE, CHAIN_WAIT_NOTES, LEAD_HAS_EMAIL_SQL, mockFileMtime, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
 import { planChainPassed, secondPlanOf } from "../outreach/secondPlan.js";
 import { ownViewHref } from "./prospectPath.js";
+import type { FixLetterCounts, FixLetterView } from "../outreach/fixLetter.js";
 import { cachedRenderGate, stockOkFor } from "../outreach/mockRenderGate.js";
 import { DISPATCH_PHOTOS_OK_SQL, MOCK_CURRENT_GENERATOR_SQL } from "../outreach/mockPhotoGate.js";
 
@@ -447,14 +448,18 @@ function chips(key: string, opts: readonly (readonly [string, string])[], lang: 
 }
 
 /** The two tabs of the page and the messenger state line above both. */
-function pageTop(tab: "wait" | "notseen", waiting: number, notSeen: number, cfg: MessengerConfig, lang: string): string {
+function pageTop(tab: "wait" | "notseen" | "fix", waiting: number, notSeen: number, cfg: MessengerConfig, lang: string, fix: FixLetterCounts = { ready: 0, total: 0 }): string {
   const tabs =
     `<nav class="aq-tabbar"><a href="/jovahagyas"${tab === "wait" ? ' class="on"' : ""}>${esc(T(lang, "Jóváhagyásra vár"))} <span class="n">${waiting}</span></a>` +
+    // ADR-XXXX: the correction letter's tab — only while there is any (approved plan design-refs/console/javito-level)
+    (fix.total || tab === "fix" ? `<a href="/jovahagyas?tab=javito"${tab === "fix" ? ' class="on"' : ""}>${esc(T(lang, "Javító levél"))} <span class="n${fix.ready ? " warn" : ""}">${fix.ready}</span></a>` : "") +
     // Owner 2026-11-25: „A messengeres rész kuka” — no messenger tab on the page (the route stays).
     (tab === "notseen" ? `<a href="/jovahagyas?tab=nemnezte" class="on">${esc(T(lang, "Messengeren nem nézte meg"))} <span class="n${notSeen ? " warn" : ""}">${notSeen}</span></a>` : "") +
     `<span class="aq-help">${helpLink("console.approval")}</span></nav>`;
   const intro =
-    tab === "wait"
+    tab === "fix"
+      ? T(lang, "Akinek a régi településkép-választó hibás nyitóképpel (mozdony, vasútállomás, űrfelvétel) ment ki a terve, és megnézte, egyszer kap egy javító levelet a mai generátor két új tervével. Bal oldalt a régi, kiküldött terv, jobb oldalt az új. „Mehet” → a levél a szokásos kiküldési úton megy ki, a küldéskori ellenőrzésekkel (leiratkozás, válasz, ügyfél, hétköznap 8–17). „Nem mehet ki” → lezárva, nem kap levelet.")
+      : tab === "wait"
       ? T(lang, "Itt döntöd el, mehet-e ki a megkeresés. A lista csatornánként csoportosítva mutatja, HOL megy ki: Viberen, WhatsAppon, MMS + SMS-ben vagy e-mailben.")
       : T(lang, "Ide az kerül, akinek legalább {n} napja Viberen vagy WhatsAppon kiment a megkeresés, és nem nézte meg. Aki válaszolt vagy elutasított, ide soha nem kerül. WhatsAppon az is „nem nézte meg”-nek látszik, aki kikapcsolta az olvasási visszaigazolást.", { n: NOT_SEEN_AFTER_DAYS });
   const on = cfg.enabled && !cfg.brake;
@@ -465,7 +470,7 @@ function pageTop(tab: "wait" | "notseen", waiting: number, notSeen: number, cfg:
       : T(lang, "Messenger-út: kikapcsolva — minden MMS + SMS-ben megy, együtt.");
   return (
     `${tabs}<p class="aq-intro">${esc(tab === "wait" ? T(lang, "Itt döntöd el, mehet-e ki a megkeresés. Csak az a megkeresés van itt, amelynek mindkét terve átment a gépi kapun.") : intro)}</p>` +
-    (tab === "wait" ? "" : `<div class="aq-state${on ? "" : " off"}"><span class="dot"></span><span>${esc(state)}</span><a href="/">${esc(T(lang, "Irányítópult"))}</a></div>`)
+    (tab === "wait" || tab === "fix" ? "" : `<div class="aq-state${on ? "" : " off"}"><span class="dot"></span><span>${esc(state)}</span><a href="/">${esc(T(lang, "Irányítópult"))}</a></div>`)
   );
 }
 
@@ -518,7 +523,7 @@ export function approvalPage(
   selected: string | null,
   flash: string,
   copyPanel = "",
-  ctx: { readonly cfg: MessengerConfig; readonly notSeen: number; readonly letter?: { readonly prospectId: string; readonly link: string } | null } = { cfg: { enabled: false, brake: null }, notSeen: 0 },
+  ctx: { readonly cfg: MessengerConfig; readonly notSeen: number; readonly letter?: { readonly prospectId: string; readonly link: string } | null; readonly fix?: FixLetterCounts } = { cfg: { enabled: false, brake: null }, notSeen: 0 },
 ): string {
   const lang = consoleLang();
   const cur = selectedApproval(items, selected);
@@ -555,7 +560,7 @@ export function approvalPage(
     }</div>${items.length ? filters : ""}${items.map(row).join("")}` +
     (items.length ? `<div class="aq-none" hidden>${esc(T(lang, "Nincs a szűrőnek megfelelő lead."))}</div>` : "") +
     `</nav>`;
-  const top = pageTop("wait", items.length, ctx.notSeen, ctx.cfg, lang);
+  const top = pageTop("wait", items.length, ctx.notSeen, ctx.cfg, lang, ctx.fix);
   const flashHtml = flash ? `<p class="aq-meta">${esc(flash)}</p>` : "";
   if (!cur) {
     return layout(
@@ -692,4 +697,182 @@ export function notSeenPage(
     `${CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}<div class="aq-main">${detail}</div></div></div>${SCRIPT}`,
     { active: "/jovahagyas" },
   );
+}
+
+// ── 3. fül: „Javító levél” (ADR-XXXX; approved plan assets/design-refs/console/javito-level/) ──
+
+const FIX_CSS = `<style>
+.fx-cmp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.fx-side{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden;min-width:0}
+.fx-side h3{margin:0;padding:8px 12px;font-size:.9rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--citui-line)}
+.fx-side.old h3{background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-white))}
+.fx-side.new h3{background:color-mix(in srgb,var(--citui-ok-ink) 7%,var(--citui-white))}
+.fx-side h3 small{font-weight:500;color:var(--citui-muted);font-size:.78rem}
+.fx-side .aq-tabs{padding:8px 12px 0;margin:0}
+.fx-view{background:var(--citui-surface-2);padding:8px;display:flex;justify-content:center}
+.fx-frame{display:block;width:100%;height:min(78vh,820px);border:0;background:var(--citui-white);border-radius:4px}
+.fx-sw{display:none;gap:6px;align-items:center;margin:0 0 8px;flex-wrap:wrap}
+.fx-sw .lbl,.fx-side .lbl{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);font-weight:700}
+.fx-sw button{font:inherit;font-size:.82rem;border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);border-radius:var(--citui-radius-pill);padding:5px 12px;cursor:pointer}
+.fx-sw button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
+.fx-why{margin-top:8px;font-size:.84rem;line-height:1.45;padding:8px 10px;border-radius:var(--citui-radius-sm);background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-white));border:1px solid color-mix(in srgb,var(--citui-bad) 25%,var(--citui-white))}
+.fx-warn{margin-top:8px;font-size:.84rem;line-height:1.45;padding:8px 10px;border-radius:var(--citui-radius-sm);background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white));border:1px solid color-mix(in srgb,var(--citui-warn) 45%,var(--citui-white));color:var(--citui-warn-ink)}
+.fx-done{font-size:.86rem;font-weight:600;padding:8px 12px;border-radius:var(--citui-radius-sm)}
+.fx-done.go{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.fx-done.no{background:var(--citui-surface-2);color:var(--citui-muted)}
+.aq-pill.wait{color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 50%,var(--citui-white));background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white))}
+.aq-pill.go{color:var(--citui-ok-ink);border-color:color-mix(in srgb,var(--citui-ok-ink) 35%,var(--citui-white));background:var(--citui-ok-soft)}
+.aq-pill.no{color:var(--citui-muted)}
+.fx-list a{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.fx-list a small{display:block}
+.fx-letter{margin-top:12px;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}
+.fx-letter h3{margin:0;padding:8px 12px;font-size:.9rem;border-bottom:1px solid var(--citui-line)}
+.fx-env{font-size:.82rem;color:var(--citui-muted);padding:8px 14px;border-bottom:1px solid var(--citui-line);line-height:1.6}
+.fx-env b{color:var(--citui-ink)}
+.fx-body{padding:14px 16px;font-size:.92rem;line-height:1.6;white-space:pre-line;max-width:640px;word-break:break-word}
+.fx-checks{font-size:.8rem;color:var(--citui-muted);padding:8px 14px;border-top:1px solid var(--citui-line);line-height:1.5}
+@container (max-width:760px){
+  .fx-cmp{grid-template-columns:1fr}
+  .fx-sw{display:flex}
+  .fx-cmp .fx-side{display:none}
+  .fx-cmp .fx-side.show{display:block}
+  .fx-frame{height:70vh}
+  .aq-act .aq-btn{flex:1}
+  .fx-list a small{display:none}
+}
+</style>`;
+
+const FIX_SCRIPT = `<script>
+(function(){
+  document.querySelectorAll('.fx-side .aq-tabs button[data-id]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var side=b.closest('.fx-side');
+      side.querySelectorAll('.aq-tabs button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      side.querySelector('iframe').src='/mock/'+b.getAttribute('data-id');
+    });
+  });
+  document.querySelectorAll('.fx-sw button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.fx-sw button').forEach(function(x){x.classList.toggle('on',x===b);});
+      document.querySelectorAll('.fx-cmp .fx-side').forEach(function(s){s.classList.toggle('show',s.classList.contains(b.getAttribute('data-ps')));});
+    });
+  });
+})();
+</script>`;
+
+const FIX_TEMPLATE_NAMES: Record<string, string> = { parallax: "Parallax", "gate-opening": "Kapunyitás", "wordmark-grow": "Névből növő" };
+
+function fixDay(d: Date | null): string {
+  return d ? new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest", month: "2-digit", day: "2-digit" }).format(d).replace(/\.\s*$/, "") : "—";
+}
+
+function fixStatePill(f: FixLetterView, lang: string): string {
+  switch (f.status) {
+    case "ready":
+      return `<span class="aq-pill wait">${esc(T(lang, "Döntésre vár"))}</span>`;
+    case "approved":
+      return `<span class="aq-pill go">${esc(T(lang, "Mehet — kiküldésre vár"))}</span>`;
+    case "sent":
+      return `<span class="aq-pill go">${esc(T(lang, "Kiment"))}</span>`;
+    case "rejected":
+      return `<span class="aq-pill no">${esc(T(lang, "Nem megy ki"))}</span>`;
+    case "skipped":
+      return `<span class="aq-pill no">${esc(T(lang, "Küldéskor kimaradt"))}</span>`;
+    case "held":
+      return `<span class="aq-pill wait">${esc(T(lang, "Elakadt — a gép újrapróbálja"))}</span>`;
+    default:
+      return `<span class="aq-pill no">${esc(T(lang, "Készül"))}</span>`;
+  }
+}
+
+function fixFault(f: FixLetterView, lang: string): string {
+  return f.fault === "mozdony" ? T(lang, "mozdony") : f.fault === "űrfelvétel" ? T(lang, "űrfelvétel") : T(lang, "vasútállomás");
+}
+
+export function fixLetterPage(
+  items: readonly FixLetterView[],
+  selected: string | null,
+  flash: string,
+  ctx: {
+    readonly cfg: MessengerConfig;
+    readonly waiting: number;
+    readonly notSeen: number;
+    readonly counts: FixLetterCounts;
+    readonly letter: { readonly subject: string; readonly body: string; readonly from: string; readonly to: string } | null;
+    readonly reviewed: boolean;
+  },
+): string {
+  const lang = consoleLang();
+  const cur = items.find((i) => i.id === selected) ?? items.find((i) => i.status === "ready") ?? items[0] ?? null;
+  const top = pageTop("fix", ctx.waiting, ctx.notSeen, ctx.cfg, lang, ctx.counts);
+  const flashHtml = flash ? `<p class="aq-meta">${esc(flash)}</p>` : "";
+  const row = (f: FixLetterView): string =>
+    `<a href="/jovahagyas?tab=javito&amp;id=${esc(f.id)}"${cur && cur.id === f.id ? ' class="on"' : ""}><span><b>${esc(f.name)}</b>` +
+    `<small>${esc(f.city)} · ${esc(T(lang, "kiment {d}", { d: fixDay(f.sentAt) }))} · ${esc(T(lang, "megnézte: {n}×", { n: f.views }))}</small>` +
+    `<small>${esc(T(lang, "hiba: {what}", { what: fixFault(f, lang) }))}</small></span>${fixStatePill(f, lang)}</a>`;
+  const left =
+    `<nav class="aq-list fx-list"><div class="aq-cnt">${esc(T(lang, "Javító levél: {n} lead · döntésre vár: {r}", { n: items.length, r: ctx.counts.ready }))}</div>${items.map(row).join("")}</nav>`;
+  if (!cur) {
+    return layout(T(lang, "Jóváhagyás"), `${CSS}${FIX_CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}<div class="aq-main"><div class="aq-empty">${esc(T(lang, "Nincs javító levél."))}</div></div></div></div>`, { active: "/jovahagyas" });
+  }
+  const form = (go: boolean) =>
+    `<form method="post" action="/jovahagyas/javito/${esc(cur.id)}"><input type="hidden" name="d" value="${go ? "mehet" : "nem"}"><button class="aq-btn ${go ? "aq-yes" : "aq-no"}">${esc(go ? T(lang, "Mehet") : T(lang, "Nem mehet ki"))}</button></form>`;
+  const act =
+    cur.status === "ready"
+      ? `<div class="aq-act">${form(true)}${form(false)}</div>`
+      : cur.status === "approved"
+        ? `<div class="aq-act"><span class="fx-done go">${esc(T(lang, "Mehet — a levél a következő kiküldési ablakban megy ki (hétköznap 8–17), a küldéskori ellenőrzésekkel."))}</span></div>`
+        : cur.status === "sent"
+          ? `<div class="aq-act"><span class="fx-done go">${esc(T(lang, "Kiment."))}</span></div>`
+          : cur.status === "rejected"
+            ? `<div class="aq-act"><span class="fx-done no">${esc(T(lang, "Lezárva — ez a lead nem kap javító levelet."))}</span></div>`
+            : `<div class="aq-act"><span class="fx-done no">${esc(cur.status === "skipped" ? T(lang, "Küldéskor kimaradt.") : cur.status === "held" ? T(lang, "Elakadt: a két új terv nem készült el. Az ok alatta áll; a gép naponta magától újrapróbálja (új szöveg érkezésekor azonnal) — teendőd nincs.") : T(lang, "A két új terv még készül."))}</span></div>`;
+  const noteLine = cur.note && cur.status !== "ready" && cur.status !== "rejected" ? `<div class="aq-meta">${esc(cur.note)}</div>` : "";
+  const review = cur.newPlans.length && !ctx.reviewed && (cur.status === "ready" || cur.status === "approved")
+    ? `<div class="fx-warn">${esc(T(lang, "Az új terv szövegét Vera még nem ellenőrizte: „Mehet” után is csak Vera ítélete után megy ki."))}</div>`
+    : "";
+  const head =
+    `<div class="aq-head"><h2>${esc(cur.name)}${cur.city ? ` <span class="aq-city">· ${esc(cur.city)}</span>` : ""}` +
+    ` <small class="aq-sub"><a href="/lead/${esc(cur.leadId)}" target="_blank" rel="noopener">${esc(T(lang, "lead lapja"))}</a></small></h2>` +
+    `<div class="aq-badges aq-badges--data">${cur.email ? `<span class="aq-pill aq-data">${ic("mail", 12)}${esc(cur.email)}</span>` : ""}` +
+    `<span class="aq-pill">${esc(T(lang, "kiment {d}", { d: fixDay(cur.sentAt) }))}</span>` +
+    `<span class="aq-pill">${esc(T(lang, "megnézte {n}× · először {d}", { n: cur.views, d: fixDay(cur.firstView) }))}</span></div>` +
+    `<div class="fx-why"><b>${esc(T(lang, "Ami rossz volt:"))}</b> ${esc(T(lang, "a nyitókép {what} volt — a régi településkép-választó hibája. Az új tervek a válogatott településképtárból készültek.", { what: fixFault(cur, lang) }))}</div>` +
+    review +
+    act +
+    noteLine +
+    `</div>`;
+  const tabs = (plans: FixLetterView["oldPlans"], label: string) =>
+    `<div class="aq-tabs"><span class="lbl">${esc(label)}</span>${plans
+      .map((p, i) => `<button type="button" data-id="${esc(p.id)}"${i === 0 ? ' class="on"' : ""}>${esc(T(lang, "{n}. terv", { n: i + 1 }))} · ${esc(FIX_TEMPLATE_NAMES[p.template ?? ""] ?? p.template ?? "")}</button>`)
+      .join("")}</div>`;
+  const side = (kind: "old" | "new") => {
+    const plans = kind === "old" ? cur.oldPlans : cur.newPlans;
+    const h =
+      kind === "old"
+        ? `<h3>${esc(T(lang, "Régi — kiküldve {d}", { d: fixDay(cur.sentAt) }))} <small>(${esc(T(lang, "{n} terv · hibás nyitókép: {what}", { n: plans.length, what: fixFault(cur, lang) }))})</small></h3>`
+        : `<h3>${esc(T(lang, "Új — javított"))} <small>(${esc(T(lang, "{n} terv · mai generátor, a render-kapun átment", { n: plans.length }))})</small></h3>`;
+    const first = plans[0];
+    return (
+      `<div class="fx-side ${kind}${kind === "new" ? " show" : ""}">${h}` +
+      (first
+        ? `${tabs(plans, kind === "old" ? T(lang, "A kiküldött levélben") : T(lang, "Az új levélben"))}<div class="fx-view"><iframe class="fx-frame" title="${esc(cur.name)}" src="/mock/${esc(first.id)}"></iframe></div>`
+        : `<div class="aq-empty">${esc(T(lang, "A két új terv még készül."))}</div>`) +
+      `</div>`
+    );
+  };
+  const sw =
+    `<div class="fx-sw"><span class="lbl">${esc(T(lang, "Mutasd"))}</span><button type="button" data-ps="old">${esc(T(lang, "Régi"))}</button>` +
+    `<button type="button" data-ps="new" class="on">${esc(T(lang, "Új"))}</button></div>`;
+  const letter = ctx.letter
+    ? `<div class="fx-letter"><h3>${esc(T(lang, "A levél, ahogy kimegy"))}</h3>` +
+      `<div class="fx-env"><b>${esc(T(lang, "Feladó:"))}</b> ${esc(ctx.letter.from)} · <b>${esc(T(lang, "Címzett:"))}</b> ${esc(ctx.letter.to)}<br><b>${esc(T(lang, "Tárgy:"))}</b> ${esc(ctx.letter.subject)}</div>` +
+      `<div class="fx-body">${esc(ctx.letter.body)}</div>` +
+      `<div class="fx-checks">${esc(T(lang, "A link a két új tervet nyitja; a régi link marad, ahogy volt. Küldéskor újra ellenőrizzük: leiratkozott-e (címre is), válaszolt-e bármit, ügyfél vagy próbázó-e, kapott-e már javító levelet; és csak hétköznap 8–17 megy ki."))}</div></div>`
+    : "";
+  const right = `<div class="aq-main">${head}${sw}<div class="fx-cmp">${side("old")}${side("new")}</div>${letter}</div>`;
+  return layout(T(lang, "Jóváhagyás"), `${CSS}${FIX_CSS}<div class="aq-page">${top}${flashHtml}<div class="aq">${left}${right}</div></div>${FIX_SCRIPT}`, {
+    active: "/jovahagyas",
+  });
 }

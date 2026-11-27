@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-javito-level-hibas-nyitokep-kuralt-telepulestar.md) — Javító levél a hibás nyitóképpel kiküldött és megnézett tervekre + kurált településtár
 - [ADR-0507](decisions/0507-a-maps-csillag-szam-nelkul-is-megmarad-es-a.md) — A Maps-csillag szám nélkül is megmarad, és a mockon 4,5-től látszik
 - [ADR-0506](decisions/0506-a-lapon-volt-ajanlat-elobb-a-regi-allomany.md) — A lapon volt ajánlat előbb, a régi állomány utána; bélyeg- és kapu-verzió emelés csak szabállyal és indoklással
 - [ADR-0505](decisions/0505-mock-3-kor-a-szobablokk-nem-marad-el-a-cim.md) — Mock 3. kör: a szobablokk nem marad el, a cím doboza a leghosszabb szóhoz igazodik, semleges galériacím kevés saját képnél, feliratos nyitókép helyett a következő jelölt

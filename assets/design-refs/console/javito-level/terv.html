@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jóváhagyás · Javító levél — terv (működő mock)</title>
+<link rel="stylesheet" href="../../../../public/assets/ui/citui.css">
+<style>
+/* ── mock shell: size switch (container query, not @media — the switch narrows a div, not the window) ── */
+body{margin:0;background:var(--citui-bg);color:var(--citui-ink);font-family:var(--citui-font-text)}
+.mk-bar{position:sticky;top:0;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--citui-navy-900);color:var(--citui-white);font-size:.84rem}
+.mk-bar b{font-weight:700}
+.mk-bar .sp{flex:1}
+.mk-bar button{font:inherit;font-size:.8rem;border:1px solid color-mix(in srgb,var(--citui-white) 40%,transparent);background:transparent;color:var(--citui-white);border-radius:var(--citui-radius-pill);padding:4px 12px;cursor:pointer}
+.mk-bar button.on{background:var(--citui-white);color:var(--citui-navy-900)}
+.mk-stage{padding:14px;display:flex;justify-content:center}
+.mk-frame{width:100%;max-width:1440px;transition:max-width .2s}
+.mk-frame.m{max-width:390px;border:1px solid var(--citui-line-strong);border-radius:18px;overflow:hidden;box-shadow:var(--citui-shadow-md)}
+.mk-console{background:var(--citui-bg);padding:12px}
+
+/* ── the approval page's own styles (approvalQueue.ts CSS, the parts this tab uses) ── */
+.aq-page{container-type:inline-size}
+.aq-tabbar{display:flex;gap:4px;border-bottom:1px solid var(--citui-line);margin:0 0 8px;flex-wrap:wrap}
+.aq-tabbar a{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;color:var(--citui-muted);text-decoration:none;font-weight:600;font-size:.92rem;border-bottom:3px solid transparent;margin-bottom:-1px;cursor:pointer}
+.aq-tabbar a.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+.aq-tabbar .n{font-size:.76rem;font-weight:700;padding:1px 8px;border-radius:var(--citui-radius-pill);background:var(--citui-surface-2);color:var(--citui-ink)}
+.aq-tabbar .n.warn{background:color-mix(in srgb,var(--citui-warn) 35%,var(--citui-white));color:var(--citui-warn-ink)}
+.aq-intro{font-size:.84rem;color:var(--citui-muted);margin:0 0 8px;line-height:1.45}
+.aq{display:grid;grid-template-columns:290px minmax(0,1fr);gap:14px;align-items:start}
+.aq-list{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);position:sticky;top:52px;max-height:calc(100vh - 70px);overflow:auto}
+.aq-list a{display:block;padding:9px 12px;border-bottom:1px solid var(--citui-line);color:inherit;text-decoration:none;cursor:pointer}
+.aq-list a:hover{background:var(--citui-surface-2)}
+.aq-list a.on{background:color-mix(in srgb,var(--citui-cyan-500) 10%,var(--citui-white));box-shadow:inset 3px 0 0 var(--citui-cyan-500)}
+.aq-list b{display:block;font-size:.9rem}
+.aq-list small{color:var(--citui-muted);font-size:.76rem;display:block;line-height:1.4}
+.aq-cnt{font-size:.8rem;color:var(--citui-muted);padding:9px 12px;border-bottom:1px solid var(--citui-line)}
+.aq-main{min-width:0}
+.aq-head{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);padding:10px 14px;margin-bottom:10px}
+.aq-head h2{margin:0 0 2px;font-size:1.1rem}
+.aq-city{font-weight:600}
+.aq-meta{font-size:.84rem;color:var(--citui-muted);line-height:1.5}
+.aq-pill{display:inline-flex;gap:4px;align-items:center;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:var(--citui-radius-pill);border:1px solid var(--citui-line-strong);white-space:nowrap}
+.aq-pill.wait{color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 50%,var(--citui-white));background:color-mix(in srgb,var(--citui-warn) 14%,var(--citui-white))}
+.aq-pill.go{color:var(--citui-ok-ink);border-color:color-mix(in srgb,var(--citui-ok-ink) 35%,var(--citui-white));background:var(--citui-ok-soft)}
+.aq-pill.no{color:var(--citui-muted)}
+.aq-data{font-size:.82rem;font-weight:600;padding:4px 10px;user-select:all}
+.aq-badges{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.aq-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.aq-btn{font:inherit;font-weight:700;font-size:.95rem;border:0;border-radius:var(--citui-radius-sm);padding:9px 22px;cursor:pointer}
+.aq-btn.aq-yes{background:var(--citui-ok-ink);color:var(--citui-white);border:1px solid var(--citui-ok-ink)}
+.aq-btn.aq-no{background:var(--citui-surface-2);color:var(--citui-ink);border:1px solid var(--citui-line-strong)}
+.aq-btn:disabled{opacity:.5;cursor:default}
+.aq-done{font-size:.86rem;font-weight:600;padding:8px 12px;border-radius:var(--citui-radius-sm)}
+.aq-done.go{background:var(--citui-ok-soft);color:var(--citui-ok-ink)}
+.aq-done.no{background:var(--citui-surface-2);color:var(--citui-muted)}
+.aq-done button{font:inherit;font-size:.8rem;margin-left:8px;border:0;background:none;color:var(--citui-link-ink);text-decoration:underline;cursor:pointer}
+.aq-why{margin-top:8px;font-size:.84rem;line-height:1.45;padding:8px 10px;border-radius:var(--citui-radius-sm);background:color-mix(in srgb,var(--citui-bad) 8%,var(--citui-white));border:1px solid color-mix(in srgb,var(--citui-bad) 25%,var(--citui-white))}
+.aq-tabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap;align-items:center}
+.aq-tabs button{font:inherit;font-size:.82rem;border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);border-radius:var(--citui-radius-pill);padding:5px 12px;cursor:pointer}
+.aq-tabs button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
+.aq-tabs .lbl{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);font-weight:700;margin-right:2px}
+
+/* ── NEW: the side-by-side comparison ── */
+.fx-cmp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.fx-side{background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm);overflow:hidden;min-width:0}
+.fx-side h3{margin:0;padding:8px 12px;font-size:.9rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--citui-line)}
+.fx-side.old h3{background:color-mix(in srgb,var(--citui-bad) 7%,var(--citui-white))}
+.fx-side.new h3{background:color-mix(in srgb,var(--citui-ok-ink) 7%,var(--citui-white))}
+.fx-side h3 small{font-weight:500;color:var(--citui-muted);font-size:.78rem}
+.fx-side .aq-tabs{padding:8px 12px 0;margin:0}
+.fx-view{background:var(--citui-surface-2);padding:8px;display:flex;justify-content:center}
+.fx-frame{display:block;width:100%;height:min(78vh,820px);border:0;background:var(--citui-white);border-radius:4px}
+.fx-frame.m{width:390px;max-width:100%}
+.fx-sw{display:flex;gap:6px;align-items:center;margin:0 0 8px;flex-wrap:wrap}
+.fx-sw .lbl{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);font-weight:700}
+.fx-sw button{font:inherit;font-size:.82rem;border:1px solid var(--citui-line-strong);background:var(--citui-white);color:var(--citui-ink);border-radius:var(--citui-radius-pill);padding:5px 12px;cursor:pointer}
+.fx-sw button.on{background:var(--citui-ink);color:var(--citui-white);border-color:var(--citui-ink)}
+
+/* the letter */
+.fx-letter{margin-top:12px;background:var(--citui-white);border:1px solid var(--citui-line);border-radius:var(--citui-radius-sm)}
+.fx-letter h3{margin:0;padding:8px 12px;font-size:.9rem;border-bottom:1px solid var(--citui-line)}
+.fx-env{font-size:.82rem;color:var(--citui-muted);padding:8px 14px;border-bottom:1px solid var(--citui-line);line-height:1.6}
+.fx-env b{color:var(--citui-ink)}
+.fx-body{padding:14px 16px;font-size:.92rem;line-height:1.6;white-space:pre-line;max-width:640px}
+.fx-body a{color:var(--citui-link-ink);word-break:break-all}
+.fx-sig{margin-top:12px}
+.fx-legal{font-size:.78rem;color:var(--citui-muted);margin-top:12px;line-height:1.5}
+.fx-checks{font-size:.8rem;color:var(--citui-muted);padding:8px 14px;border-top:1px solid var(--citui-line);line-height:1.5}
+
+/* ── phone layout of the tab (the console's narrow screen) ── */
+@container (max-width: 760px){
+  .aq{grid-template-columns:1fr}
+  .aq-list{position:static;max-height:none}
+  .aq-list a{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .aq-list a small{display:none}
+  .fx-cmp{grid-template-columns:1fr}
+  .fx-sw{display:flex}
+  .fx-cmp .fx-side{display:none}
+  .fx-cmp .fx-side.show{display:block}
+  .fx-frame{height:70vh}
+  .aq-btn{flex:1}
+}
+@container (min-width: 761px){ .fx-sw{display:none} }
+</style>
+</head>
+<body>
+<div class="mk-bar">
+  <b>TERV · Jóváhagyás → „Javító levél” fül</b>
+  <span>valós adat: a 7 kijelölt lead, a mai generátor két terve (render-kapu: átment), a régi kiküldött terv</span>
+  <span class="sp"></span>
+  <span>Nézet:</span>
+  <button type="button" data-size="m">Mobil 390px</button>
+  <button type="button" data-size="d" class="on">Asztali</button>
+</div>
+<div class="mk-stage"><div class="mk-frame" id="mkFrame"><div class="mk-console">
+<div class="aq-page">
+  <nav class="aq-tabbar">
+    <a data-tab="wait">Jóváhagyásra vár <span class="n">0</span></a>
+    <a class="on" data-tab="fix">Javító levél <span class="n warn" id="fxCount">7</span></a>
+  </nav>
+  <p class="aq-intro">Akinek a régi településkép-választó hibás nyitóképpel (mozdony, vasútállomás, űrfelvétel) ment ki a terve, és megnézte, egyszer kap egy javító levelet a mai generátor két új tervével. Bal oldalt a régi, kiküldött terv, jobb oldalt az új. „Mehet” → a levél a szokásos kiküldési úton megy ki, a küldéskori ellenőrzésekkel (leiratkozás, válasz, ügyfél, hétköznap 8–17). „Nem mehet ki” → lezárva, nem kap levelet.</p>
+  <div class="aq">
+    <nav class="aq-list" id="fxList"></nav>
+    <div class="aq-main" id="fxMain"></div>
+  </div>
+</div>
+</div></div></div>
+
+<script>
+var T = { "parallax": "Parallax", "gate-opening": "Kapunyitás", "wordmark-grow": "Névből növő" };
+var LEADS = [
+  { id: "f146cbf5", name: "Borpadlás Vendégház", city: "Szarvas", email: "borpadlas@gmail.com", sent: "11-13", views: 1, seen: "11-15 16:06", slug: "borpadlas-vendeghaz", token: "6Zkdxl-dFXkAxIO6aNJ8Yr4j",
+    why: "vasútállomás (Szarvas, a vasútállomás mérlegháza)",
+    old: [["wordmark-grow", "regi/mock-borpadlas-vendeghaz-wordmark-grow-5eb3ffa2.html"]],
+    neu: [["parallax", "uj/mock-borpadlas-vendeghaz-parallax-e5604b5b.html"], ["gate-opening", "uj/mock-borpadlas-vendeghaz-gate-opening-5f25a5d3.html"]] },
+  { id: "e60c097b", name: "Kamilla vendégház", city: "Mád", email: "ivetta28@hotmail.com", sent: "11-16", views: 1, seen: "11-16 10:41", slug: "kamilla-vendeghaz", token: "nluTtawSii3E8I_4jExB9Uzg",
+    why: "vasútállomás (Mád)",
+    old: [["parallax", "regi/mock-kamilla-vendeghaz-parallax-58caa59f.html"], ["wordmark-grow", "regi/mock-kamilla-vendeghaz-wordmark-grow-6b3e8bbf.html"]],
+    neu: [["parallax", "uj/mock-kamilla-vendeghaz-parallax-e50194b9.html"], ["wordmark-grow", "uj/mock-kamilla-vendeghaz-wordmark-grow-c917c210.html"]] },
+  { id: "c2573990", name: "Áfonya Vendégház Obornak", city: "Eszteregnye", email: "afonyavendeghazobornak@gmail.com", sent: "11-16", views: 1, seen: "11-16 10:17", slug: "afonya-vendeghaz-obornak", token: "6P4sQkGJROEm-0F8PrJkbeOM",
+    why: "űrfelvétel (ISS „View of Earth”)",
+    old: [["wordmark-grow", "regi/mock-afonya-vendeghaz-obornak-wordmark-grow-0593dd49.html"]],
+    neu: [["parallax", "uj/mock-afonya-vendeghaz-obornak-parallax-55b022c6.html"], ["wordmark-grow", "uj/mock-afonya-vendeghaz-obornak-wordmark-grow-830603a3.html"]] },
+  { id: "47a72486", name: "Bagoly Szállás", city: "Derekegyház", email: "turizmus.derekegyhaz@gmail.com", sent: "11-19", views: 2, seen: "11-19 11:02", slug: "bagoly-szallas", token: "t9hpgZa19ZzXpJ_4ag02erPK",
+    why: "űrfelvétel (ISS „View of Earth”)",
+    old: [["wordmark-grow", "regi/mock-bagoly-szallas-wordmark-grow-e4b52d7c.html"]],
+    neu: [["parallax", "uj/mock-bagoly-szallas-parallax-c21b3a3b.html"], ["gate-opening", "uj/mock-bagoly-szallas-gate-opening-d800b2da.html"]] },
+  { id: "8e6f6505", name: "Woolly Cottage", city: "Vaszar", email: "ekovarczy@gmail.com", sent: "11-19", views: 1, seen: "11-19 19:15", slug: "woolly-cottage", token: "wgtCPSfo1_ttqOpsbSsI-Gr_",
+    why: "vasútállomás (Vaszar)",
+    old: [["wordmark-grow", "regi/mock-woolly-cottage-wordmark-grow-0ef5b97e.html"]],
+    neu: [["parallax", "uj/mock-woolly-cottage-parallax-51f78ce2.html"], ["wordmark-grow", "uj/mock-woolly-cottage-wordmark-grow-512f32bb.html"]] },
+  { id: "bff0c5d6", name: "Benzin Presszó és Panzió", city: "Zalaegerszeg", email: "benzinpanzio@gmail.com", sent: "11-23", views: 1, seen: "11-23 13:35", slug: "benzin-presszo-es-panzio", token: "Ti-L3jDl4RkTlRQryJRj2WFZ",
+    why: "mozdony (Zalaegerszeg, M62 dízelmozdony)",
+    old: [["wordmark-grow", "regi/mock-benzin-presszo-es-panzio-wordmark-grow-6f5707a9.html"]],
+    neu: [["parallax", "uj/mock-benzin-presszo-es-panzio-parallax-a2463014.html"], ["gate-opening", "uj/mock-benzin-presszo-es-panzio-gate-opening-d3773f2c.html"]] },
+  { id: "b199fec1", name: "Zsuzsi Vendégház", city: "Zalaegerszeg", email: "zsuzsivendeghaz@gmail.com", sent: "11-23", views: 1, seen: "11-23 20:31", slug: "zsuzsi-vendeghaz", token: "hwE2e0JndlPWqFKKbvtlOKyT",
+    why: "mozdony (Zalaegerszeg, M62 dízelmozdony)",
+    old: [["wordmark-grow", "regi/mock-zsuzsi-vendeghaz-wordmark-grow-274c8f8a.html"]],
+    neu: [["parallax", "uj/mock-zsuzsi-vendeghaz-parallax-faff9734.html"], ["gate-opening", "uj/mock-zsuzsi-vendeghaz-gate-opening-2eec70b7.html"]] }
+];
+// the letter's fixed parts — produced by the code with the live config (draft.ts senderParts / advertiserIdentity, legal.ts)
+var SIG = ["Citoviso", "citoviso.com", "ajanlat@getcitoviso.com"];
+var LEGAL = "Ezt a levelet azért kapta, mert vállalkozása nyilvánosan elérhető adatai alapján úgy láttuk, a szolgáltatásunk hasznos lehet Önnek (jogos érdek — Grt. 6. § / GDPR 6. cikk (1) f)). Adatkezelési tájékoztató:";
+var IDENT = "A megkeresés küldője: Olasz Ferenc e.v. · 2100 Gödöllő, Klebelsberg Kunó utca 6. 2. · nyilvántartási szám: 62588818 · adószám: 92227011-1-33";
+var BASE = "https://citoviso.com";
+
+var state = {}; LEADS.forEach(function (l) { state[l.id] = "wait"; });
+var cur = LEADS[0].id, size = "d", sideOld = 0, sideNew = 0, phoneSide = "new";
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+function pill(st) {
+  return st === "go" ? '<span class="aq-pill go">Mehet — kiküldésre vár</span>' : st === "no" ? '<span class="aq-pill no">Nem megy ki</span>' : '<span class="aq-pill wait">Döntésre vár</span>';
+}
+function list() {
+  var waiting = LEADS.filter(function (l) { return state[l.id] === "wait"; }).length;
+  document.getElementById("fxCount").textContent = waiting;
+  document.getElementById("fxList").innerHTML =
+    '<div class="aq-cnt">Javító levél: ' + LEADS.length + " lead · döntésre vár: " + waiting + "</div>" +
+    LEADS.map(function (l) {
+      return '<a data-id="' + l.id + '"' + (l.id === cur ? ' class="on"' : "") + "><span><b>" + esc(l.name) + "</b><small>" + esc(l.city) + " · kiment " + l.sent + " · megnézte: " + l.views + "×</small><small>hiba: " + esc(l.why.split(" (")[0]) + "</small></span>" + pill(state[l.id]) + "</a>";
+    }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("#fxList a"), function (a) {
+    a.addEventListener("click", function () { cur = a.getAttribute("data-id"); sideOld = 0; sideNew = 0; render(); });
+  });
+}
+function planTabs(kind, plans, on) {
+  return '<div class="aq-tabs"><span class="lbl">' + (kind === "old" ? "A kiküldött levélben" : "Az új levélben") + "</span>" +
+    plans.map(function (p, i) { return '<button type="button" data-k="' + kind + '" data-i="' + i + '"' + (i === on ? ' class="on"' : "") + ">" + (i + 1) + ". terv · " + T[p[0]] + "</button>"; }).join("") + "</div>";
+}
+function side(kind, l) {
+  var plans = kind === "old" ? l.old : l.neu, on = kind === "old" ? sideOld : sideNew;
+  var head = kind === "old"
+    ? '<h3>Régi — kiküldve ' + l.sent + " <small>(" + l.old.length + " terv · hibás nyitókép: " + esc(l.why) + ")</small></h3>"
+    : '<h3>Új — javított <small>(2 terv · mai generátor, a render-kapun átment)</small></h3>';
+  return '<div class="fx-side ' + kind + (phoneSide === kind ? " show" : "") + '">' + head + planTabs(kind, plans, on) +
+    '<div class="fx-view"><iframe class="fx-frame' + (size === "m" ? " m" : "") + '" title="' + esc(l.name) + " " + kind + '" src="' + plans[on][1] + '"></iframe></div></div>';
+}
+function letter(l) {
+  var link = BASE + "/p/" + l.slug + "/<i>&lt;új token&gt;</i>";
+  var unsub = BASE + "/p/" + l.slug + "/<i>&lt;új token&gt;</i>/unsubscribe";
+  return '<div class="fx-letter"><h3>A levél, ahogy kimegy</h3>' +
+    '<div class="fx-env"><b>Feladó:</b> Citoviso &lt;ajanlat@getcitoviso.com&gt; · <b>Címzett:</b> ' + esc(l.email) + "<br><b>Tárgy:</b> " + esc(l.name) + " – javított honlapterv</div>" +
+    '<div class="fx-body">Tisztelt ' + esc(l.name) + "!\n\n" +
+    "A napokban küldtünk Önnek egy honlaptervet, amelyet sajnálatos módon meghibásodott generátorunkkal állítottunk elő. A tervet újra elkészítettük:\n" +
+    '<a>' + link + "</a>\n\n" +
+    "Ez egy előzetes terv, még nem nyilvános oldal. A képek csak bemutatásra szolgálnak, és lecserélhetők az Önök saját fotóira. A megtekintés ingyenes, és semmire nem kötelez.\n\n" +
+    "Ha nem szeretne több megkeresést kapni tőlünk, egy kattintással leiratkozhat:\n" +
+    '<a>' + unsub + "</a>" +
+    '<div class="fx-sig">' + SIG.map(esc).join("\n") + "</div>" +
+    '<div class="fx-legal">' + esc(LEGAL) + " <a>" + BASE + "/privacy</a>\n" + esc(IDENT) + "</div></div>" +
+    '<div class="fx-checks">A link a két új tervet nyitja (1. Parallax, 2. ' + T[l.neu[1][0]] + "); a régi link marad, ahogy volt. Küldéskor újra ellenőrizzük: leiratkozott-e (címre is), válaszolt-e bármit, ügyfél vagy próbázó-e, kapott-e már javító levelet; és csak hétköznap 8–17 megy ki.</div></div>";
+}
+function render() {
+  list();
+  var l = LEADS.filter(function (x) { return x.id === cur; })[0], st = state[l.id];
+  var act = st === "wait"
+    ? '<div class="aq-act"><button type="button" class="aq-btn aq-yes" id="fxYes">Mehet</button><button type="button" class="aq-btn aq-no" id="fxNo">Nem mehet ki</button></div>'
+    : '<div class="aq-act"><span class="aq-done ' + st + '">' + (st === "go" ? "Mehet — a levél a következő kiküldési ablakban megy ki (hétköznap 8–17), a küldéskori ellenőrzésekkel." : "Lezárva — ez a lead nem kap javító levelet.") + "</span></div>";
+  var both = side("old", l) + side("new", l);
+  document.getElementById("fxMain").innerHTML =
+    '<div class="aq-head"><h2>' + esc(l.name) + ' <span class="aq-city">· ' + esc(l.city) + "</span></h2>" +
+    '<div class="aq-badges"><span class="aq-pill aq-data">' + esc(l.email) + '</span><span class="aq-pill">kiment ' + l.sent + '</span><span class="aq-pill">megnézte ' + l.views + "× · először " + l.seen + "</span></div>" +
+    '<div class="aq-why"><b>Ami rossz volt:</b> a nyitókép ' + esc(l.why) + " volt — a régi településkép-választó hibája. Az új tervek a válogatott településképtárból készültek.</div>" + act + "</div>" +
+    '<div class="fx-sw"><span class="lbl">Mutasd</span><button type="button" data-ps="old"' + (phoneSide === "old" ? ' class="on"' : "") + '>Régi</button><button type="button" data-ps="new"' + (phoneSide === "new" ? ' class="on"' : "") + ">Új</button></div>" +
+    '<div class="fx-cmp">' + both + "</div>" + letter(l);
+  var y = document.getElementById("fxYes"), n = document.getElementById("fxNo");
+  if (y) y.addEventListener("click", function () { decide("go"); });
+  if (n) n.addEventListener("click", function () { decide("no"); });
+  Array.prototype.forEach.call(document.querySelectorAll(".aq-tabs button[data-k]"), function (b) {
+    b.addEventListener("click", function () { if (b.getAttribute("data-k") === "old") sideOld = +b.getAttribute("data-i"); else sideNew = +b.getAttribute("data-i"); render(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".fx-sw button"), function (b) {
+    b.addEventListener("click", function () { phoneSide = b.getAttribute("data-ps"); render(); });
+  });
+}
+function decide(d) {
+  state[cur] = d;
+  // the next lead still waiting, like the real page's redirect
+  var next = LEADS.filter(function (l) { return state[l.id] === "wait"; })[0];
+  if (next) { cur = next.id; sideOld = 0; sideNew = 0; }
+  render();
+}
+Array.prototype.forEach.call(document.querySelectorAll(".mk-bar button[data-size]"), function (b) {
+  b.addEventListener("click", function () {
+    size = b.getAttribute("data-size");
+    document.querySelectorAll(".mk-bar button[data-size]").forEach(function (x) { x.classList.toggle("on", x === b); });
+    document.getElementById("mkFrame").classList.toggle("m", size === "m");
+    render();
+  });
+});
+// a phone opens in phone mode
+if (window.matchMedia && window.matchMedia("(max-width: 600px)").matches) { document.querySelector('.mk-bar button[data-size="m"]').click(); } else { render(); }
+</script>
+</body>
+</html>

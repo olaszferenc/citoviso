@@ -326,6 +326,36 @@ function buildPlainMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, 
 }
 
 /**
+ * THE CORRECTION LETTER (src/outreach/fixLetterCopy.ts, ADR-XXXX): the owner's own sentences in the white, logo-less
+ * frame — greeting, p1 (parts.hook) with the bare link, p2 (parts.p1), the opt-out sentence with its link, the
+ * three-line signature (no closing formula: the owner's text has none), the legal line with the privacy link and the
+ * advertiser identity. No hero, no button, no price. Renders exactly the parts composeFixBody puts in the text.
+ */
+function buildFixMail(t: OutreachParts, l: MailLinks): string {
+  const link = (href: string): string => `<a href="${esc(href)}" style="color:${NAVY};word-break:break-all">${esc(href)}</a>`;
+  const line = (txt: string, after: string): string =>
+    `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">${esc(txt)}<br>${after}</p>`;
+  const small = (txt: string, extra = ""): string =>
+    `<p style="margin:0 0 8px;font-size:12px;line-height:1.6;color:${FOOT};font-family:${FONT}">${esc(txt)}${extra}</p>`;
+  const body =
+    `<tr><td style="padding:20px ${PAD}px 0">${p(t.greet)}${line(t.hook, link(l.cta))}${p(t.p1)}${line(t.unsubTxt, link(l.unsub))}` +
+    `<p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:${INK};font-family:${FONT}">${esc(t.sigName)}<br>${esc(t.sigCo)}<br>${esc(t.sigMail)}</p></td></tr>` +
+    `<tr><td style="padding:0 ${PAD}px 22px"><div style="padding-top:14px;border-top:1px solid ${LINE}">` +
+    small(`${t.legal} `, link(l.privacy)) +
+    `<p style="margin:0;font-size:12px;line-height:1.6;color:${FOOT};font-family:${FONT}">${esc(t.identity)}</p>` +
+    `</div></td></tr>`;
+  const inner = tbl(`width="100%" style="width:100%;max-width:${W}px;background:#ffffff" bgcolor="#ffffff"`, body);
+  return tbl(
+    `width="100%" bgcolor="#ffffff" style="background:#ffffff"`,
+    `<tr><td align="left" style="padding:0">` +
+      `<!--[if mso]><table role="presentation" width="${W}" align="left" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->` +
+      inner +
+      `<!--[if mso]></td></tr></table><![endif]-->` +
+      `</td></tr>`,
+  );
+}
+
+/**
  * The PERSONAL letter (experiment `body_style: szemelyes`, src/outreach/experimentCopy.ts): first
  * person singular, no logo, no button, no price box — greeting, the intro with the bare link, the
  * hero (if the image dimension keeps it), the proof, the no-work promise, the price line, the „not
@@ -408,7 +438,8 @@ export function buildOutreachEmail(
     heroUrl?: string;
     firstLine?: string;
     fromName?: string;
-    bodyStyle?: "boxed" | "plain" | "personal";
+    /** "fix" = the correction letter (fixLetterCopy.ts): the owner's text, no hero / button / price / inbox line. */
+    bodyStyle?: "boxed" | "plain" | "personal" | "fix";
     /** THE OWNER'S LETTER (bodyStyle boxed): the boxed design with the owner's text, no inbox line. */
     owner?: OwnerLayout;
     noImage?: boolean;
@@ -439,7 +470,7 @@ export function buildOutreachEmail(
   const hasShot = !opts.noImage && !remoteHero && Boolean(opts.heroShotPath);
   const heroSrc = remoteHero ?? (hasShot ? `cid:${HERO_CID}` : null);
   // The plain and the personal layouts share the white, logo-less frame.
-  const plain = opts.bodyStyle === "plain" || opts.bodyStyle === "personal";
+  const plain = opts.bodyStyle === "plain" || opts.bodyStyle === "personal" || opts.bodyStyle === "fix";
   const brand = bandBrand();
   // The W row names the cold-lane host: a letter from getcitoviso.com mentions ONE domain.
   const sig = signatureBlock(senderSignature(draft.parts, opts.lang, T(opts.lang, "Üdvözlettel,"), config.outreachSender.title, coldHost()));
@@ -449,7 +480,9 @@ export function buildOutreachEmail(
     privacy: draft.privacyLink,
     ...(draft.whyLink ? { why: draft.whyLink } : {}),
   };
-  const inner = opts.bodyStyle === "personal"
+  const inner = opts.bodyStyle === "fix"
+    ? buildFixMail(draft.parts, links)
+    : opts.bodyStyle === "personal"
     ? buildPersonalMail(heroSrc, draft.parts, links, opts.lang)
     : plain
     ? buildPlainMail(heroSrc, draft.parts, links, opts.lang)
@@ -463,7 +496,7 @@ export function buildOutreachEmail(
     // The personal letter has no such line: its first visible text is the greeting, so the Gmail
     // preview reads „Tisztelt {név}! Elkészítettem…” (coordinator 2026-11-22).
     // The owner's letter has no such line either (owner 2026-11-23: the preview starts with the greeting).
-    (opts.bodyStyle === "personal" || opts.owner
+    (opts.bodyStyle === "personal" || opts.bodyStyle === "fix" || opts.owner
       ? ""
       : `<div style="font-family:${FONT};font-size:13px;line-height:20px;color:${MUTED};text-align:${plain ? "left" : "center"};padding:12px ${plain ? PAD : 16}px 0">` +
         `${esc(opts.firstLine ?? T(opts.lang, "Elkészült a honlapja, nézze meg!"))}</div>`) +

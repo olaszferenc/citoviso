@@ -214,9 +214,11 @@ export async function prepareFixLetter(fixId: string): Promise<{ ok: boolean; no
     // the old words' Vera PASS / approval carry over only on byte-equal copy (the chain's rule, chainSupply.carryApproval)
     if (oldMain) await carryApproval(oldMain.id, main.id);
     if (oldAlt) await carryApproval(oldAlt.id, alt.id);
-    // the new plans pass the curator step by the gate + the owner's yes later (the send path checks both)
+    // the MAIN plan passes the curator step (the send path reads the main plan's status; approving the second plan
+    // too would supersede the main one — curateArtifact keeps one approved plan per lead, measured 11-27); the owner's
+    // yes is stamped on both files later (decideFixLetter)
     const { curateArtifact } = await import("../console/data.js");
-    for (const id of [main.id, alt.id]) await curateArtifact(id, "approve", "javító levél: a mai generátor, a render-kapun átment", "Javító levél");
+    await curateArtifact(main.id, "approve", "javító levél: a mai generátor, a render-kapun átment", "Javító levél");
     const op = await db.selectFrom("prospect").select("contact_email").where("id", "=", f.old_prospect_id).executeTakeFirst();
     const pr = await createProspect({ leadId: f.lead_id, artifactId: main.id, ...(op?.contact_email ? { contactEmail: op.contact_email } : {}) });
     if (!pr) throw new Error("a prospect nem jött létre");
@@ -240,15 +242,17 @@ export async function prepareFixLetter(fixId: string): Promise<{ ok: boolean; no
 export async function fixLetterStep(budgetMs: number): Promise<{ selected: number; prepared: number; failed: number }> {
   const started = Date.now();
   const { selected } = await selectFixLetters();
-  // A held correction tries again by itself when what held it changed: the lead got NEWER curated words since (the
-  // chain's writer re-wrote a repeated text — ~/rc-briefs javító-író step), or its town got pictures (the curated
-  // library / a new pick) after a „no second plan” hold. Counted tries reset with it (a new input, a new chance).
+  // A held correction tries again by itself: (a) at once when the lead got NEWER curated words since (the chain's
+  // writer re-wrote a repeated text — ~/rc-briefs javító-író step); (b) once a day otherwise — a town's pictures (the
+  // curated library arrives with a deploy, a new pick with the chain) carry no timestamp to compare, so the daily try
+  // is what picks them up (two generations a day per held lead, $0). Counted tries reset with it.
   await sql`
     update fix_letter f set status = 'selected', tries = 0, note = 'újrapróba: ' || coalesce(f.note, ''), updated_at = now()
      where f.status = 'held'
-       and exists (select 1 from mock_artifact a
-                    where a.lead_id = f.lead_id and a.status <> 'rejected' and a.inputs ? 'copyManual'
-                      and a.generated_at > f.updated_at)`.execute(db);
+       and (f.updated_at < now() - interval '1 day'
+            or exists (select 1 from mock_artifact a
+                        where a.lead_id = f.lead_id and a.status <> 'rejected' and a.inputs ? 'copyManual'
+                          and a.generated_at > f.updated_at))`.execute(db);
   const rows = await db.selectFrom("fix_letter").select("id").where("status", "=", "selected").orderBy("created_at").execute();
   let prepared = 0;
   let failed = 0;
@@ -259,5 +263,204 @@ export async function fixLetterStep(budgetMs: number): Promise<{ selected: numbe
     else failed++;
     console.log(`  ${o.ok ? "✉️" : "⚠️"} javító levél ${r.id.slice(0, 8)}: ${o.note}`); // i18n-exempt: operator log
   }
+  // ④ the owner's approved corrections go out in the window (they are few; the prepare budget does not hold them)
+  const sent = await sendApprovedFixLetters();
+  if (sent.sent || sent.skipped) console.log(`  javító levél küldés: ${JSON.stringify(sent)}`); // i18n-exempt: operator log
   return { selected: selected.length, prepared, failed };
+}
+
+// ── ③ the owner's decision and ④ the send ─────────────────────────────────────────────────────────────────────────
+
+/** The faulty picture in plain words (the page's „Ami rossz volt” line). Pure. */
+export function faultOf(matched: string): "mozdony" | "űrfelvétel" | "vasútállomás" {
+  const u = decodedUrl(matched);
+  if (/_M62_|_M41_|mozdony|locomotive/i.test(u)) return "mozdony";
+  if (/ISS0\d|View_of_Earth/i.test(u)) return "űrfelvétel";
+  return "vasútállomás";
+}
+
+/** A send-time refusal of the correction letter (operator-facing), or null. Called by sendOutreachMail. */
+export async function fixLetterSendBlock(fixId: string, prospectId: string, opts: { readonly sample?: boolean } = {}): Promise<string | null> {
+  const f = await db.selectFrom("fix_letter").select(["status", "prospect_id", "lead_id"]).where("id", "=", fixId).executeTakeFirst();
+  if (!f) return "nincs ilyen javító levél";
+  if (f.prospect_id !== prospectId) return "a javító levél nem ehhez a linkhez tartozik";
+  // a look (owner's sample, dry run) may build a ready letter; the send itself only an approved one
+  const ok = opts.sample ? ["ready", "approved"] : ["approved"];
+  if (!ok.includes(f.status)) return f.status === "sent" ? "a javító levél már kiment (egyszer leadenként)" : `a javító levél nincs jóváhagyva (${f.status})`;
+  // any reply since — a refusal, a „not mine”, even an empty one — closes it (owner 11-27: Hajnalka left out for one)
+  const reply = await db.selectFrom("outreach_reply").select("id").where("lead_id", "=", f.lead_id).executeTakeFirst();
+  if (reply) return "a lead válaszolt — javító levél nem megy";
+  return null;
+}
+
+export interface FixLetterView {
+  readonly id: string;
+  readonly leadId: string;
+  readonly name: string;
+  readonly city: string;
+  readonly email: string | null;
+  readonly sentAt: Date | null;
+  readonly views: number;
+  readonly firstView: Date | null;
+  readonly fault: ReturnType<typeof faultOf>;
+  readonly matched: string;
+  readonly status: "ready" | "approved" | "rejected" | "sent" | "skipped" | "held" | "selected";
+  readonly note: string | null;
+  readonly oldPlans: readonly { readonly id: string; readonly template: string | null }[];
+  readonly newPlans: readonly { readonly id: string; readonly template: string | null }[];
+  readonly prospectId: string | null;
+}
+
+/** The page's list: every correction, the ones waiting for the owner first. */
+export async function listFixLetters(): Promise<FixLetterView[]> {
+  const rows = await db
+    .selectFrom("fix_letter as f")
+    .innerJoin("lead as l", "l.id", "f.lead_id")
+    .innerJoin("prospect as p", "p.id", "f.old_prospect_id")
+    .select([
+      "f.id as id",
+      "f.lead_id as leadId",
+      "l.name as name",
+      sql<string>`coalesce(l.raw->>'city', '')`.as("city"),
+      "p.contact_email as email",
+      sql<Date | null>`coalesce(p.email_sent_at, p.sent_at)`.as("sentAt"),
+      sql<number>`(select count(*)::int from mock_view v where v.prospect_id = p.id and coalesce(v.device, '') <> 'bot')`.as("views"),
+      sql<Date | null>`(select min(v.started_at) from mock_view v where v.prospect_id = p.id and coalesce(v.device, '') <> 'bot')`.as("firstView"),
+      "f.matched as matched",
+      "f.status as status",
+      "f.note as note",
+      "f.old_prospect_id as oldProspectId",
+      "f.main_id as mainId",
+      "f.alt_id as altId",
+      "f.prospect_id as prospectId",
+    ])
+    .orderBy(sql`case f.status when 'ready' then 0 when 'approved' then 1 when 'held' then 2 when 'selected' then 3 else 4 end`)
+    .orderBy(sql`coalesce(p.email_sent_at, p.sent_at)`)
+    .execute();
+  const tpl = async (ids: (string | null)[]) => {
+    const real = ids.filter((x): x is string => Boolean(x));
+    if (!real.length) return [];
+    const a = await db.selectFrom("mock_artifact").select(["id", "inputs"]).where("id", "in", real).execute();
+    return real.map((id) => ({ id, template: templateOf(a.find((x) => x.id === id)?.inputs) }));
+  };
+  const out: FixLetterView[] = [];
+  for (const r of rows) {
+    const old = await oldPlansOf(r.oldProspectId);
+    out.push({
+      id: r.id,
+      leadId: r.leadId,
+      name: r.name,
+      city: r.city,
+      email: r.email,
+      sentAt: r.sentAt,
+      views: r.views,
+      firstView: r.firstView,
+      fault: faultOf(r.matched),
+      matched: r.matched,
+      status: r.status,
+      note: r.note,
+      oldPlans: await tpl([old.mainId, old.altId]),
+      newPlans: await tpl([r.mainId, r.altId]),
+      prospectId: r.prospectId,
+    });
+  }
+  return out;
+}
+
+/**
+ * ③ The owner's „Mehet” / „Nem mehet ki” on a READY correction. „Mehet” stamps his yes on both plan files as they are
+ * now (the send path's ownerApprovalBlock), then the row is approved and the timer sends it in the next window.
+ */
+export async function decideFixLetter(fixId: string, go: boolean, by: string): Promise<{ ok: boolean; message: string }> {
+  const f = await db.selectFrom("fix_letter").select(["status", "main_id", "alt_id"]).where("id", "=", fixId).executeTakeFirst();
+  if (!f || f.status !== "ready") return { ok: false, message: "ez a javító levél már nem vár döntésre" };
+  if (go) {
+    const { recordOwnerApproval } = await import("./mockQaReview.js");
+    for (const id of [f.main_id, f.alt_id]) {
+      if (!id || !(await recordOwnerApproval(id, by))) return { ok: false, message: "a terv fájlja hiányzik — nem hagyható jóvá" };
+    }
+  }
+  const r = await db
+    .updateTable("fix_letter")
+    // the preparation's note goes: from here the grey line under the decision speaks only of the send
+    .set({ status: go ? "approved" : "rejected", note: null, decided_by: by, decided_at: sql`now()`, updated_at: sql`now()` })
+    .where("id", "=", fixId)
+    .where("status", "=", "ready")
+    .executeTakeFirst();
+  return r.numUpdatedRows ? { ok: true, message: go ? "mehet" : "nem megy ki" } : { ok: false, message: "közben más döntött" };
+}
+
+/** A send-time refusal that will not pass by waiting (the row closes as `skipped`). Pure. */
+export function isFinalRefusal(reason: string): boolean {
+  return /leiratkoz|ne keressük|ügyfél|próbázó|válaszolt|megszűnt|már kiment|suppression/i.test(reason);
+}
+
+/** ④ The approved corrections, through the guarded send path — inside the lead's send window only. */
+export async function sendApprovedFixLetters(): Promise<{ sent: number; skipped: number; waiting: number }> {
+  const { sendOutreachMail } = await import("./sendBatch.js");
+  const { outreachWindowBlocksIn } = await import("./countryOutreach.js");
+  const { countryConfigSync, countryOfLead } = await import("../country.js");
+  const rows = await db.selectFrom("fix_letter").select(["id", "lead_id", "prospect_id"]).where("status", "=", "approved").orderBy("decided_at").execute();
+  let sent = 0;
+  let skipped = 0;
+  let waiting = 0;
+  for (const r of rows) {
+    if (!r.prospect_id) continue;
+    // the window first: outside it the render gate would run for nothing every five minutes
+    if (outreachWindowBlocksIn(new Date(), countryConfigSync((await countryOfLead(r.lead_id)) ?? "HU"))) {
+      waiting++;
+      continue;
+    }
+    const rep = await sendOutreachMail(r.prospect_id, { fixLetter: r.id });
+    const o = rep.outcome;
+    if (o.kind === "sent") {
+      sent++;
+      console.log(`  ✉️ javító levél kiment: ${rep.leadName} → ${rep.to}`); // i18n-exempt: operator log
+      continue;
+    }
+    const reason = o.kind === "skipped" ? o.reason : o.kind === "flagged" ? o.reasons.join(" · ") : o.kind;
+    if (o.kind === "skipped" && isFinalRefusal(reason)) {
+      await db.updateTable("fix_letter").set({ status: "skipped", note: reason.slice(0, 500), updated_at: sql`now()` }).where("id", "=", r.id).where("status", "=", "approved").execute();
+      skipped++;
+    } else {
+      // a gate that may pass later (a re-render, a photo source back): the row stays approved, the reason is kept
+      await db.updateTable("fix_letter").set({ note: `küldés vár: ${reason}`.slice(0, 500), updated_at: sql`now()` }).where("id", "=", r.id).execute();
+      waiting++;
+    }
+    console.log(`  ⚠️ javító levél ${rep.leadName}: ${reason.slice(0, 200)}`); // i18n-exempt: operator log
+  }
+  return { sent, skipped, waiting };
+}
+
+export interface FixLetterCounts {
+  /** Waiting for the owner's decision. */
+  readonly ready: number;
+  /** All corrections ever (the tab shows while there is any). */
+  readonly total: number;
+}
+
+export async function fixLetterCounts(): Promise<FixLetterCounts> {
+  const r = await sql<{ ready: number; total: number }>`
+    select count(*) filter (where status = 'ready')::int as ready, count(*)::int as total from fix_letter`.execute(db);
+  return r.rows[0] ?? { ready: 0, total: 0 };
+}
+
+/** The letter exactly as it goes out (the page shows it): built by the send path's own builders, nothing sent. */
+export async function fixLetterPreview(prospectId: string): Promise<{ subject: string; body: string; from: string; to: string } | null> {
+  const { buildDraftForProspect } = await import("./draft.js");
+  const { fixLetterDraft } = await import("./fixLetterCopy.js");
+  const { coldSenderEmail } = await import("./coldLane.js");
+  const d = await buildDraftForProspect(prospectId);
+  const p = await db.selectFrom("prospect").select("contact_email").where("id", "=", prospectId).executeTakeFirst();
+  if (!d) return null;
+  const l = fixLetterDraft(d.draft, d.input.leadName, d.lang);
+  return { subject: l.subject, body: l.body, from: coldSenderEmail() || "?", to: p?.contact_email ?? "" };
+}
+
+/** Is the plan's text reviewed (Vera) — the send path's verdict gate holds an unreviewed curated text. */
+export async function planReviewed(artifactId: string | null): Promise<boolean> {
+  if (!artifactId) return false;
+  const { reviewStateOf } = await import("./mockVerdictGate.js");
+  const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", artifactId).executeTakeFirst();
+  return reviewStateOf(a?.inputs) === "pass";
 }

@@ -4,7 +4,7 @@ title: Jóváhagyás — mehet-e ki a megkeresés, és hol
 audience: operator
 category: lead-path
 anchors: console.approval
-updated: 2026-11-26
+updated: 2026-11-27
 ---
 
 A **„Jóváhagyás”** lapon döntöd el, hogy egy megkeresés kimehet-e a leadnek. A listán csak az a lead
@@ -48,3 +48,39 @@ lista felül áll, alatta a kiválasztott lead.
 - **„Megkereső link megnyitása (nem számít kattintásnak)”** — új lapon megnyitja azt az oldalt, amire
   a levél linkje visz (a „Levél” fül és ez a gomb akkor látszik, ha a levél elkészíthető). A te megnyitásod nem számít a lead kattintásának; a „Levél” nézetben lévő
   linkek ugyanígy.
+
+## „Javító levél”
+
+Ez a fül csak akkor látszik, ha van javító levél. A régi településkép-választó november 13. és 23. között néhány
+megkeresés tervébe hibás nyitóképet tett (mozdonyt, vasútállomást, űrfelvételt). Aki egy ilyen tervet megnézett,
+és azóta nem válaszolt, nem iratkozott le és nem ügyfél, egyszer kap egy javító levelet a mai generátor két új
+tervével. A fül melletti szám azt mutatja, hány javító levél vár a döntésedre.
+
+- **Bal oldalt a lista**: a szállás neve és egy címke. Asztali gépen a név alatt a település, hogy mikor ment ki a
+  hibás levél, hányszor nézte meg és mi volt a hiba is látszik; telefonon ezek a kiválasztott lead fejében állnak.
+  A címke mutatja, hol tart:
+  - **„Döntésre vár”** — a két új terv kész, a te döntésedre vár.
+  - **„Mehet — kiküldésre vár”** — jóváhagytad, a következő kiküldési ablakban megy ki. A jóváhagyás után a lead
+    fejében szürke sor csak akkor áll, ha a küldés egy ellenőrzésen akadt el („küldés vár: …”, például Vera ítélete
+    hiányzik); ez később magától átmehet, a gép minden kiküldési ablakban újra megpróbálja, teendőd nincs.
+  - **„Kiment”** — a javító levél elment.
+  - **„Nem megy ki”** — „Nem mehet ki”-t nyomtál.
+  - **„Küldéskor kimaradt”** — küldés előtt kiderült, hogy a lead közben leiratkozott, válaszolt vagy ügyfél lett;
+    nem kap levelet.
+  - **„Készül”** — a két új terv még nem készült el (néhány percen belül elkészül).
+  - **„Elakadt — a gép újrapróbálja”** — a két új terv nem készült el; az okát a lead fejében a szürke sor írja ki.
+    A gép naponta egyszer magától újrapróbálja (így egy bővült településképtárat is felvesz), új szöveg érkezésekor
+    azonnal. Teendőd nincs.
+- **Fent** az **„Ami rossz volt”** sor megmondja, mi volt a hibás nyitókép. Ha sárga doboz figyelmeztet, hogy az új
+  terv szövegét Vera még nem ellenőrizte, a levél a „Mehet” után is csak Vera ítélete után megy ki.
+- **Középen egymás mellett** látod a két oldalt: balra **„Régi — kiküldve”** és a dátum (amit a lead annak idején
+  kapott), jobbra **„Új — javított”** (a két új terv). A gombokon a terv száma és a sablon neve áll (például
+  „1. terv · Parallax”, „2. terv · Kapunyitás”); ezekkel váltasz. Ha a régi levélben csak egy terv volt, bal
+  oldalt csak az az egy gomb van. Telefonon a **„Régi”** / **„Új”** gomb váltja, melyik oldalt látod.
+- **Alul** pontosan az a levél áll, amit a lead megkap: feladó, címzett, tárgy, a szöveg, az aláírás és a jogi sor.
+- **„Mehet”** — a jóváhagyásod mindkét új tervre ebben a mostani állapotukban szól. A levél a következő kiküldési
+  ablakban (hétköznap 8–17) megy ki. Küldés előtt a gép újra megnézi, hogy a lead nem iratkozott-e le (a címre sem),
+  nem válaszolt-e bármit, nem ügyfél vagy próbázó-e, és kapott-e már javító levelet. **„Nem mehet ki”** — a lead nem
+  kap javító levelet. A döntés után felül egy sor visszajelez („<név>: mehet” vagy „<név>: nem megy ki”), és a
+  következő döntésre váró lead nyílik meg; ha nincs több, ugyanaz marad nyitva. Ha a döntés nem sikerült (például
+  közben más döntött), a visszajelző sor ezt írja ki, és ugyanaz a lead marad nyitva.

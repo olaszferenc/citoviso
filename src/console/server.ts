@@ -2187,7 +2187,19 @@ async function handle(
     const op = await currentOperator(req);
     if (!op) return redirect(res, "/login");
     const { getMessengerConfig, notSeenList } = await import("../mms/messenger.js");
-    const [items, notSeen, cfg] = await Promise.all([listPendingApprovals(), notSeenList(), getMessengerConfig()]);
+    const { fixLetterCounts } = await import("../outreach/fixLetter.js");
+    const [items, notSeen, cfg, fixCounts] = await Promise.all([listPendingApprovals(), notSeenList(), getMessengerConfig(), fixLetterCounts()]);
+    // ADR-XXXX: the correction letter's tab (approved plan design-refs/console/javito-level)
+    if (url.searchParams.get("tab") === "javito") {
+      const { listFixLetters, fixLetterPreview, planReviewed } = await import("../outreach/fixLetter.js");
+      const { fixLetterPage } = await import("./approvalQueue.js");
+      const fixes = await listFixLetters();
+      const sel = url.searchParams.get("id");
+      const cur = fixes.find((f) => f.id === sel) ?? fixes.find((f) => f.status === "ready") ?? fixes[0] ?? null;
+      const letter = cur?.prospectId ? await fixLetterPreview(cur.prospectId).catch(() => null) : null;
+      const reviewed = await planReviewed(cur?.newPlans[0]?.id ?? null);
+      return send(res, 200, fixLetterPage(fixes, cur?.id ?? null, url.searchParams.get("ok") ?? "", { cfg, waiting: items.length, notSeen: notSeen.length, counts: fixCounts, letter, reviewed }));
+    }
     if (url.searchParams.get("tab") === "nemnezte") {
       return send(res, 200, notSeenPage(notSeen, url.searchParams.get("id"), url.searchParams.get("ok") ?? "", { cfg, waiting: items.length }));
     }
@@ -2200,7 +2212,24 @@ async function handle(
     }
     const panel = cur ? await approvalCopyPanel(cur) : "";
     const letter = cur ? await approvalLetter(cur) : null;
-    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel, { cfg, notSeen: notSeen.length, letter }));
+    return send(res, 200, approvalPage(items, cur?.leadId ?? null, url.searchParams.get("ok") ?? "", panel, { cfg, notSeen: notSeen.length, letter, fix: fixCounts }));
+  }
+  // POST /jovahagyas/javito/:id (d=mehet|nem) — the owner's decision on a correction letter, then the next waiting one.
+  {
+    const m = method === "POST" ? /^\/jovahagyas\/javito\/([0-9a-f-]{36})$/i.exec(path) : null;
+    if (m) {
+      const op = await currentOperator(req);
+      if (!op) return redirect(res, "/login");
+      const form = await readBody(req);
+      const { decideFixLetter, listFixLetters } = await import("../outreach/fixLetter.js");
+      const go = form.get("d") === "mehet";
+      const before = await listFixLetters();
+      const name = before.find((f) => f.id === m[1])?.name ?? "";
+      const r = await decideFixLetter(m[1]!, go, op.displayName || op.username);
+      const next = before.find((f) => f.id !== m[1] && f.status === "ready") ?? null;
+      const flash = r.ok ? `${name}: ${go ? T(consoleLang(), "mehet") : T(consoleLang(), "nem megy ki")}` : `${name}: ${r.message}`;
+      return redirect(res, `/jovahagyas?tab=javito&${next && r.ok ? `id=${next.id}&` : `id=${m[1]}&`}ok=${encodeURIComponent(flash)}`);
+    }
   }
   // GET /jovahagyas/csatorna/:lead — the selected lead's channel, polled while the phone checks it.
   {

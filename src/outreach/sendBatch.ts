@@ -43,7 +43,8 @@ import { babelHoldReason, outreachWindowBlocksIn } from "./countryOutreach.js";
 import { alreadyCustomerBlocks } from "./customerGate.js";
 import { isTestLeadName } from "./ownerTestPhone.js";
 import { planCountStill } from "./planSet.js";
-import { assignVariants, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
+import { assignVariants, CONTROL_LETTER, controlOf, recordSendVariants, type LetterVariants } from "./experiment.js";
+import { fixLetterDraft } from "./fixLetterCopy.js";
 import { mailHeroUrl, remoteHeroActive, storeMailHero } from "./emailOpen.js";
 import { composePersonalBody, ownerLetter, personalParts, personalSenderName, priceSentence } from "./experimentCopy.js";
 import type { OwnerLayout } from "../email/outreachEmail.js";
@@ -315,7 +316,10 @@ export async function sendOutreachMail(
   // `sampleTo`: build the letter EXACTLY as the send would, then mail it to this address only (the
   // owner's check of the coded letter, 2026-11-23) — no claim, no stamp, no variant record, every
   // mock link own-view marked, outside the send window. Never set by the dispatcher.
-  opts: { dryRun?: boolean; probe?: boolean; sampleTo?: string } = {},
+  // `fixLetter`: THE CORRECTION LETTER (fixLetter.ts, ADR-XXXX) — the id of an APPROVED fix_letter row whose new
+  // prospect this is. Every send-time gate below runs; the letter is the owner's text (fixLetterCopy.ts), no experiment,
+  // no offer stamp; the address-level one-shot gives way to the row's own once-per-lead stamp (claimed atomically).
+  opts: { dryRun?: boolean; probe?: boolean; sampleTo?: string; fixLetter?: string } = {},
 ): Promise<SendReport> {
   const p = await db
     .selectFrom("prospect")
@@ -398,6 +402,11 @@ export async function sendOutreachMail(
   // Elek 10-13 O-1: a trialing or paying lead gets no cold letter — on the server, not only on the screen.
   const customer = await alreadyCustomerBlocks(p.leadId);
   if (customer) return { ...base, outcome: { kind: "skipped", reason: customer } };
+  if (opts.fixLetter) {
+    const { fixLetterSendBlock } = await import("./fixLetter.js");
+    const fixBlock = await fixLetterSendBlock(opts.fixLetter, prospectId, { sample: Boolean(opts.sampleTo || opts.probe || opts.dryRun) });
+    if (fixBlock) return { ...base, outcome: { kind: "skipped", reason: fixBlock } };
+  }
   // Re-send guard keys on WHETHER THE MAIL WAS SENT (email_sent_at), not the view-status: an
   // operator can legitimately send the initial outreach even if the prospect already
   // 'opened'/'engaged' by viewing the /p link (e.g. the operator tested it) — as long as no
@@ -421,7 +430,8 @@ export async function sendOutreachMail(
   // recipients, not him (owner 2026-10-14/10-17: a test is never held by them). The
   // per-prospect stamp above still holds: one test prospect is mailed once.
   const testLead = isTestLeadName(p.leadName);
-  if (!testLead && (await emailAlreadyMailed(p.contactEmail))) {
+  // The correction letter goes to an address that got the faulty cold letter — by design, once (fix_letter row).
+  if (!testLead && !opts.fixLetter && (await emailAlreadyMailed(p.contactEmail))) {
     return {
       ...base,
       outcome: {
@@ -469,7 +479,7 @@ export async function sendOutreachMail(
   if (!d0) return { ...base, outcome: { kind: "skipped", reason: "a piszkozat nem állítható elő" } };
   // The owner's own wording for this lead, if he edited it on the approval page (copyOverride.ts);
   // every gate below judges the letter that actually goes out.
-  const override = await loadCopyOverride(prospectId);
+  const override = opts.fixLetter ? null : await loadCopyOverride(prospectId);
   const d = { ...d0, draft: withMailOverride(d0.draft, override, d0.lang) };
 
   // ADR-0070 §3 — LANGUAGE gate, ON THE LETTER (ADR-0488, 2026-11-26): a half-Polish, half-Hungarian cold
@@ -505,7 +515,7 @@ export async function sendOutreachMail(
   // positive requirement (name, framing, opt-out, identity) is met by the text itself; the second
   // run catches what a variant's wording could add (a misleading claim). A FLAG falls back to the
   // control letter — a bad variant never holds the queue, and never goes out.
-  let variants: LetterVariants = await assignVariants({
+  let variants: LetterVariants = opts.fixLetter ? { ...CONTROL_LETTER, image: false } : await assignVariants({
     lang: d.lang,
     leadName: d.input.leadName,
     city: p.leadCity,
@@ -558,9 +568,9 @@ export async function sendOutreachMail(
   if (variants.bodyStyle === "boxed" && variants.firstLine) variants = { ...variants, firstLine: undefined };
   const gated = (l: OutreachDraft) =>
     checkOutreachDraft({ ...l, body: variants.firstLine ? `${variants.firstLine}\n\n${l.body}` : l.body }, d.input.leadName, d.lang, d.market);
-  let letter = letterOf(variants);
+  let letter = opts.fixLetter ? fixLetterDraft(d.draft, d.input.leadName, d.lang) : letterOf(variants);
   let vcheck = letter ? gated(letter) : null;
-  if (!letter || vcheck?.verdict === "FLAG") {
+  if (!opts.fixLetter && (!letter || vcheck?.verdict === "FLAG")) {
     if (vcheck) console.warn(`[experiment] a változat elbukott a §C-kapun (${JSON.stringify(variants.keys)}): ${vcheck.reasons.join(" · ")} → kontroll-levél`);
     // The control is the OWNER'S letter — never the old one (owner 2026-11-23).
     variants = controlOf(variants);
@@ -736,7 +746,7 @@ export async function sendOutreachMail(
   }
 
   if (opts.dryRun) {
-    return { ...base, outcome: { kind: "dry-run", subject: d.draft.subject } };
+    return { ...base, outcome: { kind: "dry-run", subject: opts.fixLetter && letter ? letter.subject : d.draft.subject } };
   }
 
   // The owner's mock-outreach window (ADR-0334): a cold mail goes out only on a weekday
@@ -777,7 +787,7 @@ export async function sendOutreachMail(
       ...(heroUrl ? { heroUrl } : {}),
       ...(variants.firstLine ? { firstLine: variants.firstLine } : {}),
       ...(variants.fromName ? { fromName: variants.fromName } : ownerNow ? { fromName: ownerNow.fromName } : {}),
-      bodyStyle: variants.bodyStyle,
+      bodyStyle: opts.fixLetter ? "fix" : variants.bodyStyle,
       ...(ownerNow ? { owner: ownerNow.layout } : {}),
       noImage: !variants.image,
       ...(variants.priceLine !== undefined ? { noPriceBox: true } : {}),
@@ -851,7 +861,18 @@ export async function sendOutreachMail(
       .where("email_sent_at", "is not", null)
       .limit(1)
       .executeTakeFirst();
-    if (already && !testLead) return { won: false, reason: "address" as const };
+    if (already && !testLead && !opts.fixLetter) return { won: false, reason: "address" as const };
+    // the correction letter's own once-per-lead stamp, in the same transaction as the prospect's
+    if (opts.fixLetter) {
+      const f = await trx
+        .updateTable("fix_letter")
+        .set({ status: "sent", sent_at: sql`now()`, updated_at: sql`now()` })
+        .where("id", "=", opts.fixLetter)
+        .where("status", "=", "approved")
+        .where("prospect_id", "=", prospectId)
+        .executeTakeFirst();
+      if (!f.numUpdatedRows) return { won: false, reason: "fix" as const };
+    }
     // The letter was written for N plans — the link must still carry N at the claim
     // (plan-tabs; jog/provenance-őr FLAG 2026-09-23). Locks the row; the variant editor
     // takes the same lock, so after this claim the plan set cannot change.
@@ -874,7 +895,9 @@ export async function sendOutreachMail(
         reason:
           claimed.reason === "address"
             ? "erre a CÍMRE közben kiment egy hideg megkeresés (cím-szintű egy-lövés) — nincs újraküldés"
-            : claimed.reason === "plans"
+            : claimed.reason === "fix"
+              ? "a javító levelet közben kiküldték vagy lezárták (egyszer leadenként)"
+              : claimed.reason === "plans"
               ? "a link tervei a levél megírása óta változtak — a következő futás a friss tervszámmal írja meg"
               : "párhuzamos küldés claimelte a prospectet",
       },
@@ -899,7 +922,8 @@ export async function sendOutreachMail(
   try {
     const result = await getEmailSender().send(msg);
     // ADR-0286: the letter's percent binds — stamped once it is out, not at the first visit.
-    await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
+    // the correction letter names no price: no offer is bound by it
+    if (!opts.fixLetter) await stampOutreachOffer(prospectId, draftOfferPercent(d.input));
     // The experiment's label, once the letter is out (never throws).
     await recordSendVariants(prospectId, variants, now);
     return { ...base, outcome: { kind: "sent", emailId: result.id, provider: result.provider } };
@@ -912,6 +936,9 @@ export async function sendOutreachMail(
       .set({ email_sent_at: null })
       .where("id", "=", prospectId)
       .execute();
+    if (opts.fixLetter) {
+      await db.updateTable("fix_letter").set({ status: "approved", sent_at: null, updated_at: sql`now()` }).where("id", "=", opts.fixLetter).where("status", "=", "sent").execute();
+    }
     // The first-touch stamp is only ours to clear if no OTHER channel reached the
     // prospect (ADR-0082) — an SMS that did go out must keep its funnel base.
     await db
