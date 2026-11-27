@@ -35,7 +35,7 @@ import { OWNER_ALLOWED_TEMPLATES } from "../engine/templates.js";
 import { sizelessPhotoKey } from "../engine/samePicture.js";
 import { enqueueDispatch } from "../outreach/autoDispatch.js";
 import { DEFAULT_MIN_OWN_PHOTOS, LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
-import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
+import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, LEAD_HAS_EMAIL_SQL, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
 import { cachedRenderGate, RENDER_GATE_VERSION, type RenderGateResult, type RenderFindingCode } from "../outreach/mockRenderGate.js";
 import { copyHashOf, recordReview, reviewOf, reviewStateOf } from "../outreach/mockVerdictGate.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
@@ -218,6 +218,7 @@ export async function regenerateOldQueue(budgetMs: number, limit = 20): Promise<
     .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
     .innerJoin("lead as l", "l.id", "d.lead_id")
     .where(WAITING_SQL)
+    .where(LEAD_HAS_EMAIL_SQL)
     .where(sql<boolean>`a.generated_at < ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where("l.lifecycle_status", "<>", "disqualified");
   const rows = await base
@@ -426,6 +427,7 @@ export async function retryFailedQueue(budgetMs: number, limit = 20): Promise<{ 
     .innerJoin("lead as l", "l.id", "d.lead_id")
     .select(["d.id as dispatchId", "d.lead_id as leadId", "d.artifact_id as mainId", "a.inputs as inputs"])
     .where(WAITING_SQL)
+    .where(LEAD_HAS_EMAIL_SQL)
     .where(MOCK_CURRENT_GENERATOR_SQL)
     .orderBy(FAIR_ORDER)
     .execute();

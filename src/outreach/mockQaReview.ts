@@ -50,6 +50,20 @@ export const APPROVAL_PENDING_NOTE = "JÓVÁHAGYÁSRA VÁR (egylépéses átnéz
 export const QA_WAIT_NOTE = "gépi kapura vár — a tulaj lapjára a render-kapu passza után kerül (mindkét tervvel)";
 /** The same row's note as written before 2026-11-26 (1 800+ live rows carry it); matched everywhere alongside the new one. */
 export const QA_WAIT_NOTE_LEGACY = "minőségi kolléga: még nem nézte át — a tulaj lapjára csak az ő jóváhagyása után kerül";
+/**
+ * THE NO-E-MAIL HOLD (owner 2026-11-20: „Email cím nélkül nem küldünk ki. Sms mms nem megy ki”; coordinator 11-27, ⑭: such
+ * a lead must not occupy the chain — measured live: 1 566 of 2 231 chain rows had no raw.email). The exact text the
+ * live rows already carry (124 rows on 11-27); a row in it goes back to the chain by itself once the lead has an address.
+ */
+export const NO_EMAIL_HOLD_NOTE = "TARTVA: e-mail-cím nélkül nem küldünk, SMS/MMS nem megy ki (tulaj 2026-11-20)";
+/**
+ * The lead (alias `l`) has an e-mail address — raw.email or one of raw.otherEmails, the very sources email/leadEmails.ts
+ * reads. One predicate for the approval page, the refresh, the re-gate and the chain-supply steps.
+ */
+export const LEAD_HAS_EMAIL_SQL = sql<boolean>`(coalesce(btrim(l.raw->>'email'), '') <> ''
+  or exists (select 1 from jsonb_array_elements_text(case when jsonb_typeof(l.raw->'otherEmails') = 'array' then l.raw->'otherEmails' else '[]'::jsonb end) oe
+             where btrim(oe) <> ''))`;
+
 /** Every note of a row waiting for the chain (owner's page / refresh / re-gate / messenger presence read). */
 export const CHAIN_WAIT_NOTES: readonly string[] = [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE, QA_WAIT_NOTE_LEGACY];
 /**

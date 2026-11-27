@@ -25,7 +25,7 @@ import { gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../media/photoKind.js";
 import { DISPATCH_PHOTOS_OK_SQL, LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
 import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
-import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, PHOTO_SETASIDE_PREFIX, QA_HOLD_PREFIX, QA_WAIT_NOTE, REPLAN_NOTE, mockFileMtime } from "../outreach/mockQaReview.js";
+import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, LEAD_HAS_EMAIL_SQL, NO_EMAIL_HOLD_NOTE, PHOTO_SETASIDE_PREFIX, QA_HOLD_PREFIX, QA_WAIT_NOTE, REPLAN_NOTE, mockFileMtime } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
 import { cachedRenderGate, RENDER_GATE_VERSION, renderGateFor, stockOkFor, type RenderGateResult } from "../outreach/mockRenderGate.js";
 import { acquireRenderSlot } from "../outreach/heroShot.js";
@@ -132,6 +132,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where("d.status", "in", ["queued", "held"])
     // Not the rows a person or a rule took out (twins, no contact …): only those waiting for the review chain.
     .where(CHAIN_ROWS)
+    .where(LEAD_HAS_EMAIL_SQL)
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     // Since qafix7 (11-26 night) the TOWN-PAGE mocks (<5 own photos, town picture) are refreshed too: the HU
     // row's own_town branch is open, and a stamp bump otherwise strands them (not current, never refreshed).
@@ -170,6 +171,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
       .select(["d.lead_id as leadId", "d.artifact_id as mainId"])
       .where("d.status", "in", ["queued", "held"])
       .where(CHAIN_ROWS)
+    .where(LEAD_HAS_EMAIL_SQL)
       .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
       .where(MOCK_CURRENT_GENERATOR_SQL)
       .orderBy(FAIR_ORDER)
@@ -196,6 +198,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .select(db.fn.countAll().as("n"))
     .where("d.status", "in", ["queued", "held"])
     .where(CHAIN_ROWS)
+    .where(LEAD_HAS_EMAIL_SQL)
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(sql<boolean>`(${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} or a.inputs->'siteData'->'townPhoto' is not null)`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
@@ -272,6 +275,7 @@ export async function regateStaleQueue(
     .select(["d.id as dispatchId", "d.status as status", "d.note as note", "d.lead_id as leadId", "d.artifact_id as mainId"])
     .where("d.status", "in", ["queued", "held"])
     .where(CHAIN_ROWS)
+    .where(LEAD_HAS_EMAIL_SQL)
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(MOCK_CURRENT_GENERATOR_SQL)
     .where(DISPATCH_PHOTOS_OK_SQL)
@@ -426,6 +430,7 @@ export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanne
     ])
     .where("d.status", "=", "held")
     .where((eb) => eb.or([eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${GATE_HOLD_PREFIX}%`)]))
+    .where(LEAD_HAS_EMAIL_SQL)
     .where("a.status", "<>", "rejected")
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${DISPATCH_PHOTOS_OK_SQL}`)
@@ -477,4 +482,33 @@ export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanne
     });
   }
   return { replanned, setAside };
+}
+
+/**
+ * ⑭ A LEAD WITHOUT AN E-MAIL ADDRESS DOES NOT OCCUPY THE CHAIN (owner 2026-11-20: no e-mail → no letter, no SMS / MMS /
+ * Viber; coordinator 11-27: the refresh and the regeneration spent the box on ~1 600 such rows). Every firing: a chain
+ * row (waiting, set aside by the gate, or owner-approved and queued) of a lead with no address moves to NO_EMAIL_HOLD_NOTE;
+ * a row in that hold whose lead has an address now (the contact finder found one) goes back to the machine gate.
+ * SQL only — no render, no browser.
+ */
+export async function syncNoEmailHolds(): Promise<{ held: number; released: number }> {
+  const held = await db
+    .updateTable("outreach_dispatch as d")
+    .set({ status: "held", note: NO_EMAIL_HOLD_NOTE })
+    .from("lead as l")
+    .whereRef("l.id", "=", "d.lead_id")
+    .where("d.status", "in", ["queued", "held"])
+    .where(CHAIN_ROWS)
+    .where(sql<boolean>`not ${LEAD_HAS_EMAIL_SQL}`)
+    .executeTakeFirst();
+  const released = await db
+    .updateTable("outreach_dispatch as d")
+    .set({ note: QA_WAIT_NOTE })
+    .from("lead as l")
+    .whereRef("l.id", "=", "d.lead_id")
+    .where("d.status", "=", "held")
+    .where("d.note", "=", NO_EMAIL_HOLD_NOTE)
+    .where(LEAD_HAS_EMAIL_SQL)
+    .executeTakeFirst();
+  return { held: Number(held.numUpdatedRows ?? 0), released: Number(released.numUpdatedRows ?? 0) };
 }

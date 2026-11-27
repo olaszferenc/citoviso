@@ -100,6 +100,16 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   check("a generátor a közös befejező lépésben futtatja (minden sablon)", /const noted = withUniqueSectionHeadings\(withLongWordBreak\(/.test(read("../src/engine/render.ts")));
   check("a kapu két azonos h2-t ismétlésnek vesz, modultól függetlenül", /két szakasz ugyanazzal a címmel/.test(read("../src/outreach/mockRenderGate.ts")) && /tag: el\.tagName\.toLowerCase\(\)/.test(read("../src/outreach/mockRenderGate.ts")));
 }
+// ⑭ no e-mail → no chain (owner 2026-11-20; coordinator 11-27)
+{
+  const mr = read("../src/generator/mockRefresh.ts");
+  const cs = read("../src/generator/chainSupply.ts");
+  const aq = read("../src/console/approvalQueue.ts");
+  check("⑭ a frissítés, a kapu és az újratervezés minden lánc-lekérdezése e-mailes leadre szűr", (mr.match(/\.where\(CHAIN_ROWS\)\n\s*\.where\(LEAD_HAS_EMAIL_SQL\)/g) ?? []).length >= 4 && /\.where\(LEAD_HAS_EMAIL_SQL\)/.test(mr.slice(mr.indexOf("export async function replanUnfitQueue"))));
+  check("⑭ a lánc-utánpótlás (újragenerálás, újrapróba) e-mailes leadre szűr", (cs.match(/\.where\(WAITING_SQL\)\n\s*\.where\(LEAD_HAS_EMAIL_SQL\)/g) ?? []).length >= 2);
+  check("⑭ a jóváhagyó lap csak e-mailes leadet listáz, és a csatornája mindig e-mail", /and \$\{LEAD_HAS_EMAIL_SQL\}/.test(aq) && !/expectedChannel\(presence/.test(aq));
+  check("⑭ a söprő lépés: e-mail nélkül → TARTVA, e-maillel → vissza a láncba; mindkét időzítő futtatja", /export async function syncNoEmailHolds/.test(mr) && /syncNoEmailHolds\(\)/.test(read("./outreach-dispatch.mts")) && /syncNoEmailHolds\(\)/.test(read("./chain-supply.mts")));
+}
 // wiring
 {
   const tick = read("./chain-supply.mts");

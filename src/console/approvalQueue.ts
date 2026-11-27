@@ -19,7 +19,6 @@ import { ic } from "../ui/icons.js";
 import { leadMobileIn, modemPairBlocks } from "../outreach/countryOutreach.js";
 import { countryConfigSync, countryOf } from "../country.js";
 import {
-  expectedChannel,
   getMessengerConfig,
   presenceOf,
   NOT_SEEN_AFTER_DAYS,
@@ -29,7 +28,7 @@ import {
   type Presence,
 } from "../mms/messenger.js";
 
-import { APPROVAL_PENDING_NOTE, CHAIN_WAIT_NOTES, mockFileMtime, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
+import { APPROVAL_PENDING_NOTE, CHAIN_WAIT_NOTES, LEAD_HAS_EMAIL_SQL, mockFileMtime, qaReviewState, recordOwnerApproval } from "../outreach/mockQaReview.js";
 import { planChainPassed, secondPlanOf } from "../outreach/secondPlan.js";
 import { ownViewHref } from "./prospectPath.js";
 import { cachedRenderGate, stockOkFor } from "../outreach/mockRenderGate.js";
@@ -99,6 +98,8 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       join mock_artifact a on a.id = d.artifact_id
      where d.status = 'held' and d.note in (${sql.join(CHAIN_WAIT_NOTES)})
        and a.status = 'approved'
+       -- ⑭ (owner 2026-11-20): no e-mail → no letter; such a lead is not on the owner's page
+       and ${LEAD_HAS_EMAIL_SQL}
        and ${DISPATCH_PHOTOS_OK_SQL}
        and ${MOCK_CURRENT_GENERATOR_SQL}
      order by (l.qualification = 'no_site') desc, d.queued_at asc`.execute(db);
@@ -148,15 +149,13 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
       mobile: m,
       presence: m ? (presence.get(m) ?? null) : null,
       waOn: cfg.whatsapp !== false,
-      channel: m
-        ? expectedChannel(presence.get(m) ?? null, cfg)
-        : {
-            channel: "email" as const,
-            step: 0 as const,
-            reason: modemPairBlocks(countryConfigSync(ccOf(r)))
-              ? T(lang, "a lead országában nincs engedélyezett mobil-csatorna — csak e-mail megy, a mobil megkeresés tartva")
-              : T(lang, "nincs magyar mobilszám — csak e-mail megy"),
-          },
+      // ⑭ (owner 2026-11-20 „Sms mms nem megy ki”): the letter is the e-mail, always — the page offers no mobile channel
+      // (the sender holds every mobile message anyway: autoDispatch.dispatchOne).
+      channel: {
+        channel: "email" as const,
+        step: 0 as const,
+        reason: T(lang, "e-mailben megy ki (SMS / MMS / Viber nem megy ki — tulaj 2026-11-20)"),
+      },
     };
   });
 }

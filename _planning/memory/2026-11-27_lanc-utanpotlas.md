@@ -24,3 +24,6 @@ Lásd az ADR „Mérve” szakaszát. Röviden: ① 15/24 jó, 9/24 tartva (egyt
 
 ## Fájlok
 src/generator/chainSupply.ts, src/generator/mockRefresh.ts, src/outreach/mockRenderGate.ts, src/outreach/mockPhotoGate.ts, src/engine/palette.ts, src/engine/skins.ts, src/engine/render.ts, src/engine/moduleSections.ts, src/engine/templates/parallax.ts, src/engine/templates/wordmarkGrow.ts, src/media/photoKind.ts, scripts/chain-supply.mts, scripts/chain-supply-check.mts, scripts/qa-review-check.mts, deploy/systemd/citoviso-chain-supply.service, deploy/systemd/citoviso-chain-supply.timer, deploy/systemd/targets.json, hooks/pre-commit, MEMORY.md, _planning/decisions/XXXX-lanc-utanpotlas-ujrageneralas-ujraproba.md
+
+## ⑭ E-mail nélküli lead nem foglalja a láncot (2026-11-27 délelőtt, sürgős, külön land)
+`LEAD_HAS_EMAIL_SQL` (mockQaReview.ts; raw.email + raw.otherEmails, a leadEmails forrása) a frissítés, a kapu, az újratervezés, az újragenerálás és az újrapróba előtt. A jóváhagyó lap csak e-mailes leadet listáz, a csatornája mindig e-mail. `syncNoEmailHolds` (mindkét időzítő): az e-mail nélküli lánc-sor a „TARTVA: e-mail-cím nélkül nem küldünk…” jegyzetre kerül, és amint e-mailje lesz, visszalép (gépi kapura vár). Scratch-mérés: 1569 sor került tartásba, idempotens, a visszalépés működik.

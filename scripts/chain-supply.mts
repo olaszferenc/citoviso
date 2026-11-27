@@ -11,6 +11,7 @@ import { sql } from "kysely";
 import { db } from "../src/db/client.js";
 import { chainSupplyEnabled, enqueueReadyWithoutRow, regenerateOldQueue, regenerateRow, retryFailedPlan, retryFailedQueue } from "../src/generator/chainSupply.js";
 import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
+import { syncNoEmailHolds } from "../src/generator/mockRefresh.js";
 
 /** One firing's budget (TimeoutStartSec=600, with air): the retry first (a half-done offer), then the old stock. */
 const RETRY_BUDGET_MS = 150_000;
@@ -25,6 +26,9 @@ async function main(): Promise<void> {
         return;
       }
       const started = Date.now();
+      // ⑭ no e-mail → out of the chain first (the regeneration must not spend the box on such a row)
+      const ne = await syncNoEmailHolds();
+      if (ne.held || ne.released) console.log(`e-mail nélküli sorok: ${JSON.stringify(ne)}`);
       const q = await enqueueReadyWithoutRow();
       if (q.queued || q.refused) console.log(`sor nélküli kész mock: ${JSON.stringify(q)}`);
       const r = await retryFailedQueue(RETRY_BUDGET_MS);

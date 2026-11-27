@@ -26,7 +26,7 @@
 
 import { readFile } from "node:fs/promises";
 import { db } from "../src/db/client.js";
-import { refreshStaleQueue, regateStaleQueue, replanUnfitQueue } from "../src/generator/mockRefresh.js";
+import { refreshStaleQueue, regateStaleQueue, replanUnfitQueue, syncNoEmailHolds } from "../src/generator/mockRefresh.js";
 import {
   cancelDispatch,
   DISPATCH_HOME_COUNTRY,
@@ -105,6 +105,11 @@ async function main(): Promise<void> {
         // quality colleague looks at it again. Sends nothing.
         // A plan that cannot carry the lead's photos goes back to the chain's main plan (HR approval chain 11-27) —
         // SQL only, before the refresh, so the refresh and the gate do not spend time on it.
+        // ⑭ a lead without an e-mail address leaves the chain (and comes back once it has one) — SQL only, first
+        if (!opt("now")) {
+          const ne = await syncNoEmailHolds();
+          if (ne.held || ne.released) console.log(`e-mail nélküli sorok: ${JSON.stringify(ne)}`);
+        }
         if (!opt("now")) {
           const p = await replanUnfitQueue();
           if (p.replanned || p.setAside) console.log(`újratervezés: ${JSON.stringify(p)}`);
