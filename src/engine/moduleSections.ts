@@ -686,12 +686,12 @@ function amenitiesSampleBlock(d: SiteData): string {
   if (!items.length)
     return asSample(
       `<section class="cit-modsec" data-cit-module="amenities">` +
-        `<div class="cit-modsec__in"><h2>${T(d, "Amit kínálunk")}</h2></div></section>`,
+        `<div class="cit-modsec__in"><h2>${T(d, "Felszereltség")}</h2></div></section>`,
       d,
       T(d, "Minta — ide kerülnek a szállás szolgáltatásai, Ön jelöli be őket; ezen az előnézeten szándékosan nincs kitalált szolgáltatás."),
     );
   return asSample(
-    listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t)),
+    listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t)),
     d,
     T(d, "Minta — a tényleges szolgáltatásait Ön jelöli be."),
   );
@@ -1454,7 +1454,7 @@ export function moduleSectionGroups(
           ((items) =>
             items.length &&
             !(opts.demo && items.length < SAMPLE_AMENITY_MIN && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null))
-              ? listBlock(d, "amenities", T(d, "Amit kínálunk"), items, (t) => amenityIconSvg(t, d.amenityIconMap))
+              ? listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t, d.amenityIconMap))
               : "")(opts.demo ? notShownYet(d, d.amenities) : [...d.amenities])
         : s.has("amenities")
           ? amenitiesSampleBlock(d)
