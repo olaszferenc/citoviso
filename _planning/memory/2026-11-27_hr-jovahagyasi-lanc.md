@@ -74,3 +74,15 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - A kapu a 330 px-es letöltés hibájakor a lap 1280 px-es fájlján ítélt.
   - Most a `townPick.townJudgeInput` 330 px-re kicsinyít, és `RENDER_GATE_VERSION` 17.
   - Elvetve: a `data.amenities` szűrése (bérlő-tartalom, ADR-0044).
+
+## Lap-ürülés bélyeg- / verzió-emelés után (koordinátor, 11-27 11:4x)
+- **Élesen, olvasva:**
+  - a 35f2a6d1 deploy (bélyeg `supply1`, kapu v16) után a frissítés `left` értéke 646;
+  - a HR fő tervek ítélete v15 maradt (11 passz, 19 bukás);
+  - a 10:38:57 UTC-s tick-et a systemd 600 s-nál kilőtte, ezért a kapu-újramérés naplósora sem íródott ki.
+- **Ok:** a `HALF_DONE_SQL` csak a mai verzió passzát veszi előre, így verzió-emeléskor a lapon volt sorok a hátralék mögé kerültek. A kapu-keret a lekérdezés után indult.
+- **Javítás:**
+  - `OFFER_PROGRESS_SQL` (utolsó ítélet passz, bármely verzió) az országon belüli sorrend élén;
+  - a keret a lépés elejétől számol;
+  - render csak teljes 60 s-os hellyel indul.
+  - Az e2e mérve: a lapon volt sor az országa első sora.

@@ -217,11 +217,23 @@ export const HALF_DONE_SQL = sql<boolean>`exists (select 1 from mock_artifact hm
   and hm.inputs->'renderGate'->>'verdict' = 'pass' and (hm.inputs->'renderGate'->>'version')::int = ${RENDER_GATE_VERSION})`;
 
 /**
- * Countries take turns (HR approval chain, 2026-11-27): the n-th waiting row of every country before the
- * (n+1)-th of any; within a country a half-done offer first (HALF_DONE_SQL), then the oldest. Aliases `d` =
- * outreach_dispatch, `l` = its lead.
+ * HOW FAR THE OFFER GOT (coordinator 2026-11-27, 11:4x: every HR row fell off the owner's page after the stamp bump
+ * 5882aaed and the gate version 16 — HALF_DONE_SQL counts a pass of the CURRENT version only, so after a bump the rows
+ * that WERE on the page lost their place and waited behind the whole backlog of 646 plans): the lead's live plans whose
+ * LAST render-gate verdict was a pass, under any rule version and file — 2 = it was on the owner's page, 1 = half-done.
+ * After a stamp or version bump these are refreshed and judged again first, so the page refills in a firing or two
+ * instead of hours. Alias `d` = outreach_dispatch.
  */
-export const FAIR_ORDER = sql`row_number() over (partition by ${LEAD_COUNTRY_SQL} order by ${sql`(select ${HALF_DONE_SQL})`} desc, d.queued_at), d.queued_at`;
+export const OFFER_PROGRESS_SQL = sql<number>`(select least(count(*), 2) from mock_artifact hm where hm.lead_id = d.lead_id
+  and hm.status <> 'rejected' and hm.inputs->'renderGate'->>'verdict' = 'pass')`;
+
+/**
+ * Countries take turns (HR approval chain, 2026-11-27): the n-th waiting row of every country before the
+ * (n+1)-th of any; within a country the offer that got furthest first (OFFER_PROGRESS_SQL: was on the page, then
+ * half-done — whatever rule version judged it), among those a pass of the current version (HALF_DONE_SQL), then the
+ * oldest. Aliases `d` = outreach_dispatch, `l` = its lead.
+ */
+export const FAIR_ORDER = sql`row_number() over (partition by ${LEAD_COUNTRY_SQL} order by ${OFFER_PROGRESS_SQL} desc, ${sql`(select ${HALF_DONE_SQL})`} desc, d.queued_at), d.queued_at`;
 
 /** The waiting rows the refresh / re-gate / re-plan steps work on (alias `d`). */
 const CHAIN_ROWS = (eb: any) =>
@@ -281,7 +293,10 @@ export async function regateStaleQueue(
     .where(DISPATCH_PHOTOS_OK_SQL)
     .orderBy(FAIR_ORDER)
     .execute();
-  const started = Date.now();
+  // The budget counts from the step's START, the rows' query included (coordinator 11-27: the 10:38 UTC firing after the
+  // deploy was killed by systemd at TimeoutStartSec=600 — the budget had started after the query, and a worker could still
+  // begin a two-plan row at its end; the verdicts in flight were lost and the step's log line never came).
+  const started = t0;
   let judged = 0;
   let held = 0;
   let released = 0;
@@ -309,7 +324,8 @@ export async function regateStaleQueue(
     const verdicts: (RenderGateResult | null)[] = [];
     for (const id of plans) {
       let v = await currentVerdict(id);
-      if (!v && Date.now() - started <= budgetMs && judged < limit) {
+      // A render starts only when a whole one still fits in the budget (REGATE_RENDER_ROOM_MS).
+      if (!v && Date.now() - started + REGATE_RENDER_ROOM_MS <= budgetMs && judged < limit) {
         judged++;
         await renderGateFor(id, { browser: await sharedBrowser() }).catch(() => undefined);
         // A crashed render is not stored (renderGateFor) — unknown, judged again next firing.
@@ -337,7 +353,7 @@ export async function regateStaleQueue(
       Array.from({ length: concurrency }, async () => {
         for (;;) {
           // Out of time: the rows not reached yet wait for the next firing (the note rules too).
-          if (Date.now() - started > budgetMs) return;
+          if (Date.now() - started + REGATE_RENDER_ROOM_MS > budgetMs) return;
           const i = next++;
           const r = rows[i];
           if (!r) return;
@@ -359,6 +375,8 @@ export async function regateStaleQueue(
  * Measured 11-27 on 30 blind plans, 2 cores: 1 → 254 plans/hour, 2 → 581, 3 → 732, verdicts identical (30/30).
  * RENDER_GATE_CONCURRENCY overrides the default; the memory floor always wins.
  */
+/** One plan's render-gate audit at most (measured 11-27: ~30 s, ~60 s under load) — no render starts without this much left. */
+export const REGATE_RENDER_ROOM_MS = 60_000;
 export const REGATE_CONCURRENCY_DEFAULT = 2;
 /** Below this much available memory (MB) one plan at a time — the dispatcher, the console and the scrapers come first. */
 export const REGATE_MIN_FREE_MB = 700;

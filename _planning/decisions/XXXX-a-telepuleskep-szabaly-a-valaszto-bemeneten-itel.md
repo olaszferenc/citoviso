@@ -1,4 +1,4 @@
-## ADR-XXXX — A településkép-szabály a kapun is a választó bemenetén ítél (330 px)
+## ADR-XXXX — A településkép-szabály a kapun is a választó bemenetén ítél (330 px); bélyeg- vagy verzió-emelés nem üríti ki a tulaj lapját
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`: „a településkép-választó ugyanazt a szabályt hívja, amit a render-kapu”)
@@ -17,6 +17,22 @@
 - A választó saját 330 px-es bélyegképei változatlanul mennek át, az ítéletei nem mozdulnak. A gyűjtött településkép-készletek nem évülnek el (`TOWN_PICK_VERSION` marad).
 - A kapu verziója 17: a régebbi ítéletek újraítélődnek az ADR-0499 ④ / ADR-0500 ④ ütemezése szerint.
 - Mérve a két éles képen: normalizálva mindkettő „jó”, ahogy a választónál.
+
+### ② Bélyeg- vagy verzió-emelés nem üríti ki a tulaj lapját (koordinátor, 11-27 11:4x: „minden horvát sor eltűnt”)
+**Mérve, élesen, olvasva:**
+- A 5882aaed (bélyeg `headings1`) és a 35f2a6d1 (bélyeg `supply1`, kapu v16) után minden várakozó terv elavult; a frissítés `left: 646`-ot mutatott.
+- A HR fő tervek ítélete v15 maradt: 11 passz, 19 bukás.
+- A `HALF_DONE_SQL` csak a JELENLEGI verzió passzát számolja, így a lapon volt sorok elvesztették az elsőbbségüket, és a teljes hátralék mögé kerültek.
+- A deploy utáni első tick-et (10:38:57 UTC) a systemd 10:48:57-kor kilőtte (`TimeoutStartSec=600`). Két ok:
+  - a kapu-keret a sorok lekérdezése után indult;
+  - egy dolgozó a keret végén még kétterves sort kezdett.
+  A félig kész ítéletek elvesztek, és a lépés naplósora sem íródott ki.
+- A „released: 0” önmagában nem hiba: csak a „gépi kapu megfogta” jegyzetű, majd mindkét tervvel átment sort számolja. A lapra kerüléshez nem kell, ott a két jelenlegi passz dönt.
+
+**Döntés:**
+- Az ajánlat előrehaladása (`OFFER_PROGRESS_SQL`) a lead élő terveinek száma, amelyek UTOLSÓ ítélete passz volt, bármely verzión (2 = a lapon volt, 1 = félkész). Országon belül ez áll a sorrend élén (`FAIR_ORDER`), utána a mai passz (`HALF_DONE_SQL`), aztán a kor. Bélyeg- vagy verzió-emelés után a lapon volt sorok frissülnek és ítélődnek újra elsőként, így a lap egy-két tüzelés alatt újratelik.
+- A kapu-keret a lépés elejétől számol, és új render csak akkor indul, ha egy teljes (`REGATE_RENDER_ROOM_MS` = 60 s) még belefér. A tick így a 600 s alatt marad.
+- Elvetve: a régi passzos sor maradjon a lapon az új ítéletig. A frissítés addigra a fájlt már átírta, a lap tehát meg nem ítélt mockot mutatna a tulajnak. A tulaj „Mehet”-je a fájl mtime-jához kötődik.
 
 ### Miért
 A teszt-doktrína (§2c) szerint a választó előre szűr, a kapu pedig ugyanazt méri. Ha ugyanaz a szabály két különböző bemeneten fut, a választó átenged egy képet, a kapu megbuktatja, és az újrapróbának nincs mit választania.

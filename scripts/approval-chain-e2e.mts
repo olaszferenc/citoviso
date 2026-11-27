@@ -189,7 +189,7 @@ if (!photoKindAvailable()) {
   await plan(staleF, { template: "gate-opening", photos: 8, verdict: "pass" });
   await row(staleF, staleMain, QA_WAIT_NOTE);
   // judged under budget 0 for renders: only the note rules run on current verdicts (limit 0 = no render)
-  const g = await regateStaleQueue(60_000, 0);
+  const g = await regateStaleQueue(120_000, 0);
   check("bukott fő terv (a jelenlegi fájlon) → a sor félretéve a kapu okával", (await noteOf(failing)).startsWith(`${GATE_HOLD_PREFIX} fő terv: ugyanaz a kép kétszer`), await noteOf(failing));
   check("mindkét terv átment egy félretett soron → vissza a tulaj lapja felé (QA_WAIT_NOTE)", (await noteOf(back)) === QA_WAIT_NOTE, await noteOf(back));
   const page = (await listPendingApprovals()).map((i) => i.leadId);
@@ -224,6 +224,23 @@ if (!photoKindAvailable()) {
       .execute();
     seen.push(...order.slice(0, 2).map((o) => o.id));
     check("országok felváltva: 3 régi HU sor mellett az új HR sor a második helyen (a sor-kor szerint az utolsó lenne)", seen[1] === hr, seen.join(","));
+
+    // after a rule-version / stamp bump: the HU row that WAS on the owner's page (both plans passed under an older
+    // version) is judged first inside its country — before the older HU rows that never passed
+    const wasOnPage = await lead("Lapon Volt HU", "HU", { placesPhotos: 8 });
+    const wm = await plan(wasOnPage, { template: "parallax", photos: 8, verdict: "pass" });
+    const wa = await plan(wasOnPage, { template: "gate-opening", photos: 8, verdict: "pass" });
+    await db.updateTable("mock_artifact").set({ inputs: sql`jsonb_set(inputs, '{renderGate,version}', '1'::jsonb)` as never }).where("id", "in", [wm, wa]).execute();
+    await row(wasOnPage, wm, QA_WAIT_NOTE, new Date());
+    const order2 = await db
+      .selectFrom("outreach_dispatch as d")
+      .innerJoin("lead as l", "l.id", "d.lead_id")
+      .select("d.lead_id as id")
+      .where("d.lead_id", "in", [...hu, hr, wasOnPage])
+      .orderBy(FAIR_ORDER)
+      .execute();
+    check("bélyeg- / verzió-emelés után a lapon volt sor (régi passz mindkét terven) az országa ELSŐ sora, a régebbi, soha át nem ment sorok előtt",
+      order2.filter((o) => o.id !== hr)[0]?.id === wasOnPage, order2.map((o) => o.id.slice(0, 6)).join(","));
   }
 }
 
