@@ -21,6 +21,7 @@
 //
 // Measured on the 22-town plan sample (2026-11-24): 18 own town picture, 3 fallback, 1 none.
 
+import sharp from "sharp";
 import { dHashFromBuffer } from "../generator/photoHash.js";
 import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { reverseGeocode } from "../scraper/enrichGeo.js";
@@ -221,6 +222,28 @@ export function townVerdict(s: TownScores, tier: TownTier, km?: number): string 
   return null;
 }
 
+/** The width the picker judges every candidate at (Commons' 330 px thumbnail, `thumb330`). */
+export const TOWN_JUDGE_WIDTH = 330;
+
+/**
+ * THE SAME INPUT FOR THE SAME RULE (HR approval chain, 2026-11-27): the picker scores Commons' 330 px thumbnail;
+ * the render gate re-judged the page's 1280 px file whenever the thumbnail fetch failed — and CLIP reads the two
+ * sizes differently near its thresholds (measured: Kreuze im Sonnenschein 330 px ok / 1280 px „sötét / alkonyi”,
+ * Tučepi-Podstup 330 px ok / 1280 px „a grave or cemetery”; ~9 of the 18 HR rows the gate set aside in the blind
+ * run of 10:50). A wider picture is scaled to the picker's width first, locally ($0); a thumbnail-sized one is
+ * judged as it is, so the picker's own verdicts do not move.
+ */
+export async function townJudgeInput(buf: Buffer): Promise<Buffer> {
+  try {
+    const img = sharp(buf, { failOn: "none" });
+    const m = await img.metadata();
+    if (!m.width || m.width <= TOWN_JUDGE_WIDTH) return buf;
+    return await img.rotate().resize({ width: TOWN_JUDGE_WIDTH }).jpeg({ quality: 85 }).toBuffer();
+  } catch {
+    return buf;
+  }
+}
+
 /**
  * Judge picture bytes as a town hero with the approved rule — the render gate re-judges the page's
  * town hero with it. Null = the model is missing (the caller decides; the send gate refuses).
@@ -230,7 +253,7 @@ export async function judgeTownPicture(
   tier: TownTier = "town",
   asHero = false,
 ): Promise<{ ok: boolean; reason: string | null; scores: TownScores } | null> {
-  const emb = await clipImageEmbedding(buf);
+  const emb = await clipImageEmbedding(await townJudgeInput(buf));
   if (!emb) return null;
   const scores = scoreTownEmbedding(emb);
   const reason = townVerdict(scores, tier) ?? (asHero && !heroView(scores, tier) ? "a nyitókép-padló alatt (felülnézet, fakó, tető közelről vagy sima vidék)" : null);

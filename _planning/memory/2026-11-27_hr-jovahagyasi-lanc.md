@@ -61,3 +61,16 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - ~9 sor: a településkép-választó olyan helyi képet enged át, amit a render-kapu településkép-szabálya buktat (sötét, „grave or cemetery”, közeli tető, gyenge minőség). A választó és a kapu szabálya eltér → szabály-jelölt;
   - 3–4 sor: a nyitókép nem való nyitóképnek;
   - 2 sor: ismétlődő szöveg.
+
+## 2. kör (koordinátor „mehet”, 11-27 délelőtt)
+- **A kért pontok nagy része már landolt az ADR-0500-ban** (másik szál, ugyanaznap reggel):
+  - az automatikus újrapróba bukás után (képcsere, sablonváltás; `inputs.gateRetry`);
+  - a `withBestHeroFirst` → `fitsHero`;
+  - a kapu `MEASURE_JS` „s”-hibája (a sablon-literálban `/\s+/` → a böngészőben `/s+/`);
+  - `RENDER_GATE_VERSION` 16.
+  A saját, ezekkel átfedő commitomat (be81d673) a land rebase-ütközése után eldobtam; patch a scratchpadben.
+- **Ami hiányzott, és bekerült (ADR-XXXX):** a településkép bemenete.
+  - A CLIP méretfüggő. Mérve: Kreuze 330 px jó / 1280 px „sötét”; Podstup 330 px jó / 1280 px „grave”.
+  - A kapu a 330 px-es letöltés hibájakor a lap 1280 px-es fájlján ítélt.
+  - Most a `townPick.townJudgeInput` 330 px-re kicsinyít, és `RENDER_GATE_VERSION` 17.
+  - Elvetve: a `data.amenities` szűrése (bérlő-tartalom, ADR-0044).

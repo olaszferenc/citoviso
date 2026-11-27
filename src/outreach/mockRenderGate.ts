@@ -54,7 +54,9 @@ import { TEXT_MIN_CONTRAST } from "../engine/palette.js";
 import { headingKey } from "../engine/render.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 16;
+// 17 (11-27, HR approval chain): a town picture is judged at the picker's width (media/townPick.townJudgeInput) —
+// the same input for the same rule; the page's 1280 px file had failed pictures the picker had passed at 330 px.
+export const RENDER_GATE_VERSION = 17;
 /**
  * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty
  * (a background that never painted, a section whose content is missing — the §B no-JS empty-band case). The

@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-a-telepuleskep-szabaly-a-valaszto-bemeneten-itel.md) — A településkép-szabály a kapun is a választó bemenetén ítél (330 px)
 - [ADR-0500](decisions/0500-a-lanc-sajat-magat-tolti-regi-mock.md) — A lánc saját magát tölti: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu
 - [ADR-0499](decisions/0499-a-varakozo-sor-a-tulaj-lapjara-jut-vagy-okkal.md) — A várakozó sor a tulaj lapjára jut, vagy okkal félreáll: fotószám = a generátor képei, képtelen terv újratervezése, országonkénti render-kapu
 - [ADR-0498](decisions/0498-elesi-vegproba-teszt-leaddel-minimum-terheles.md) — Élesi végpróba [TESZT]-leaddel: minimum-terhelés, ablak- és keret-kivétel, visszautalás és sztornó kódból
