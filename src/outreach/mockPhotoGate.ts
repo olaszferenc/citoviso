@@ -109,8 +109,11 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the dep
 // its longest word, the neutral gallery title below 3 own
 // photos, a hero with painted labels steps aside — the waiting stock is re-rendered with them.
 export const MOCK_HEROFIX_STAMP = "2026-11-27-supply3";
+// …or (owner 2026-11-27 evening, „minket csak egy dolog zavar, az a vevő”) a plan that already PASSED the render gate
+// (version ≥ 15, mockRenderGate.MIN_ACCEPTED_PASS_VERSION): a later stamp no longer re-renders a ready offer.
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
-  and coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP})`;
+  and (coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP}
+       or (a.inputs->'renderGate'->>'verdict' = 'pass' and coalesce((a.inputs->'renderGate'->>'version')::int, 0) >= 15)))`;
 
 /**
  * THE OWNER'S SWITCH for the <N-photo branch (owner rule 2026-11-25 via cit5980e14c: „amíg a képtár nincs

@@ -371,8 +371,8 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check(`slot-predikátum: 4000 véletlen ítéletből a generátor jelzője sosem enged, amit a kapu tilt (nyitás ${filled.opening}, sáv ${filled.band}, kapcsolat ${filled.contact}, gépi hős ${filled.hero})`,
     bad === 0 && filled.opening > 0 && filled.band > 0 && filled.contact > 0 && filled.hero > 0);
   const none = slotMarks(null, null);
-  check("friss mock a generátor bélyegét viseli (a bélyeg-emelés egymagában frissíti a régebbi kóddal készült állományt)",
-    /terhatasAt: MOCK_HEROFIX_STAMP,/.test(src("src/generator/generateEngine.ts")) && /and coalesce\(a\.inputs->>'terhatasAt', ''\) >= \$\{MOCK_HEROFIX_STAMP\}\)`/.test(src("src/outreach/mockPhotoGate.ts")));
+  check("friss mock a generátor bélyegét viseli; a bélyeg-emelés a régebbi kódú állományt frissíti, de a már átment (v15+) tervet nem (tulaj 11-27 este)",
+    /terhatasAt: MOCK_HEROFIX_STAMP,/.test(src("src/generator/generateEngine.ts")) && /coalesce\(a\.inputs->>'terhatasAt', ''\) >= \$\{MOCK_HEROFIX_STAMP\}/.test(src("src/outreach/mockPhotoGate.ts")) && /verdict' = 'pass' and coalesce\(\(a\.inputs->'renderGate'->>'version'\)::int, 0\) >= 15/.test(src("src/outreach/mockPhotoGate.ts")));
   check("slot-predikátum: ítélet nélküli kép egyik slotra sem alkalmas (generátor és kapu)", !none.okOpening && !none.okBand && !none.okContact && !fitsOpening(null) && !fitsBand(null) && !fitsContact(null) && !fitsHero(null));
   check("sáv: egy luma-küszöb (a 70/85 kettősség megszűnt)", !/BAND_GOOD_LUMA/.test(kindSrc) && /export const BAND_MIN_LUMA = 85;/.test(kindSrc));
   // Through the templates' own slot pickers: random photo sets, marked by slotMarks, each filled slot re-judged by the gate's rule.

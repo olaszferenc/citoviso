@@ -899,10 +899,20 @@ export async function auditMockFile(
 }
 
 /** The cached verdict if it belongs to the current file and rule version. */
+/**
+ * A PASS STAYS A PASS (owner 2026-11-27 evening: „egész nap ezzel lett elbaszva érzékelhető eredmény nélkül … minket csak
+ * egy dolog zavar, az a vevő”). Six rule bumps that day each threw every ready offer off the owner's page and re-rendered the
+ * whole stock on a 2-core box. Since then a plan that PASSED the gate from this version on keeps its pass on the same file:
+ * new rules judge new and failed plans, they do not take back a ready offer.
+ */
+export const MIN_ACCEPTED_PASS_VERSION = 15;
+
 export function cachedRenderGate(inputs: unknown, mtime: number, stockOk = true): RenderGateResult | null {
   const g = (inputs as { renderGate?: RenderGateResult } | null)?.renderGate;
   // 0155: a verdict judged under another stock rule of the country is stale.
-  return g && g.version === RENDER_GATE_VERSION && g.mtime === mtime && (g.stockOk ?? true) === stockOk ? g : null;
+  if (!g || g.mtime !== mtime || (g.stockOk ?? true) !== stockOk) return null;
+  if (g.version === RENDER_GATE_VERSION) return g;
+  return g.verdict === "pass" && g.version >= MIN_ACCEPTED_PASS_VERSION ? g : null;
 }
 
 /** The lead's country row's dispatch_stock_ok for an artifact (default true — the old fixed rule). */
