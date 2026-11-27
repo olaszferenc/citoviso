@@ -165,7 +165,17 @@ export async function prepareFixLetter(fixId: string): Promise<{ ok: boolean; no
   const arts = await db.selectFrom("mock_artifact").select(["id", "inputs"]).where("id", "in", [old.mainId, old.altId].filter((x): x is string => Boolean(x))).execute();
   const oldMain = arts.find((a) => a.id === old.mainId);
   const oldAlt = arts.find((a) => a.id === old.altId);
-  const fields = curatedFieldsOf(oldMain?.inputs) ?? curatedFieldsOf(oldAlt?.inputs);
+  // The lead's NEWEST curated words (a writer may have re-written them since the old letter — e.g. after the render
+  // gate's repeated-text finding), else the old letter's own words.
+  const newest = await db
+    .selectFrom("mock_artifact")
+    .select("inputs")
+    .where("lead_id", "=", f.lead_id)
+    .where("status", "<>", "rejected")
+    .where(sql<boolean>`inputs ? 'copyManual'`)
+    .orderBy("generated_at", "desc")
+    .executeTakeFirst();
+  const fields = curatedFieldsOf(newest?.inputs) ?? curatedFieldsOf(oldMain?.inputs) ?? curatedFieldsOf(oldAlt?.inputs);
   if (!fields) {
     await hold(f.id, "a régi terven nincs kurátori szöveg (copyManual) — írót kér, nem gépi lépés", tries);
     return { ok: false, note: "nincs kurátori szöveg" };
@@ -230,6 +240,15 @@ export async function prepareFixLetter(fixId: string): Promise<{ ok: boolean; no
 export async function fixLetterStep(budgetMs: number): Promise<{ selected: number; prepared: number; failed: number }> {
   const started = Date.now();
   const { selected } = await selectFixLetters();
+  // A held correction tries again by itself when what held it changed: the lead got NEWER curated words since (the
+  // chain's writer re-wrote a repeated text — ~/rc-briefs javító-író step), or its town got pictures (the curated
+  // library / a new pick) after a „no second plan” hold. Counted tries reset with it (a new input, a new chance).
+  await sql`
+    update fix_letter f set status = 'selected', tries = 0, note = 'újrapróba: ' || coalesce(f.note, ''), updated_at = now()
+     where f.status = 'held'
+       and exists (select 1 from mock_artifact a
+                    where a.lead_id = f.lead_id and a.status <> 'rejected' and a.inputs ? 'copyManual'
+                      and a.generated_at > f.updated_at)`.execute(db);
   const rows = await db.selectFrom("fix_letter").select("id").where("status", "=", "selected").orderBy("created_at").execute();
   let prepared = 0;
   let failed = 0;

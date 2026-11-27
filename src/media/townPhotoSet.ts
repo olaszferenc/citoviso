@@ -20,6 +20,7 @@ import { hashDistance, NEAR_DUP_BITS } from "../engine/samePicture.js";
 import { langForCountry } from "../i18n/lang.js";
 import type { TownPhoto } from "../engine/recipe.js";
 import { LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL } from "../outreach/mockPhotoGate.js";
+import { bestTier, curatedTown, mergeCurated } from "./townCurated.js";
 import { pickTownPhotos, TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION, type TownPick, type TownPickResult, type TownStyle } from "./townPick.js";
 
 export type TownSetTrigger = "scrape" | "generate" | "backfill" | "chain";
@@ -83,7 +84,10 @@ function rowOf(r: {
   };
 }
 
-/** The stored set of a town (any version), or null. */
+/**
+ * The stored set of a town (any version), or null — with the curated library merged in (townCurated.ts, ADR-XXXX):
+ * a curated town reads as a CURRENT set whose curated pictures come first; a stale stored pick contributes nothing.
+ */
 export async function readTownPhotoSet(country: string, city: string): Promise<TownPhotoSetRow | null> {
   const r = await db
     .selectFrom("town_photo_set")
@@ -91,7 +95,21 @@ export async function readTownPhotoSet(country: string, city: string): Promise<T
     .where("country", "=", country.toUpperCase())
     .where("city_key", "=", townKey(city))
     .executeTakeFirst();
-  return r ? rowOf(r as never) : null;
+  const own = r ? rowOf(r as never) : null;
+  const cur = curatedTown(country, townKey(city));
+  if (!cur) return own;
+  const merged = mergeCurated(own && isCurrentPick(own) ? own : null, cur);
+  return {
+    country: country.toUpperCase(),
+    cityKey: cur.cityKey,
+    city: own?.city ?? cur.city,
+    version: TOWN_PICK_VERSION,
+    threshold: TOWN_PICK_THRESHOLD,
+    tier: bestTier(merged.heroes) as TownPhotoSetRow["tier"],
+    style: cur.style,
+    heroes: merged.heroes,
+    gallery: merged.gallery,
+  };
 }
 
 /** Does any lead of this town have an e-mail and fewer than its country's minimum own photos? */

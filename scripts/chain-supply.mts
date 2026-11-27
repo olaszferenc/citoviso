@@ -1,6 +1,6 @@
 // THE CHAIN FEEDS ITSELF (ADR-0500, owner „Mehet” 2026-11-27) — the timer of src/generator/chainSupply.ts.
 //
-//   tsx scripts/chain-supply.mts tick                 # ③ ready mocks → rows · ⑤ failed plans retry · ① old stock regenerated
+//   tsx scripts/chain-supply.mts tick                 # ③ ready mocks → rows · ⑤ failed plans retry · correction letters · ① old stock regenerated
 //   tsx scripts/chain-supply.mts regen <dispatchId>   # ① one row (a measurement / the blind sample)
 //   tsx scripts/chain-supply.mts retry <dispatchId> <planId>
 //   tsx scripts/chain-supply.mts status               # what is left of each kind
@@ -18,6 +18,8 @@ const RETRY_BUDGET_MS = 150_000;
 const REGEN_BUDGET_MS = 300_000;
 /** …while offers that were on the owner's page wait for their new verdict (mockRefresh.pageRejudgePending): one lead. */
 const REGEN_YIELD_BUDGET_MS = 90_000;
+/** The correction letters' plans (src/outreach/fixLetter.ts) — a handful of leads, before the old stock. */
+const FIX_BUDGET_MS = 120_000;
 
 async function main(): Promise<void> {
   const [cmd, a, b] = process.argv.slice(2);
@@ -38,6 +40,11 @@ async function main(): Promise<void> {
       if (px.restored || px.failed) console.log(`Parallax-pótlás: ${JSON.stringify(px)}`);
       const r = await retryFailedQueue(RETRY_BUDGET_MS);
       if (r.tried || r.held) console.log(`render-kapu újrapróba: ${JSON.stringify(r)}`);
+      // the correction letter (ADR-XXXX): select by the rule, make both plans, retry a held one, send the approved —
+      // before the gate-backlog pause below (a handful of leads; the owner's „Mehet” must not wait for the old stock)
+      const { fixLetterStep } = await import("../src/outreach/fixLetter.js");
+      const fx = await fixLetterStep(FIX_BUDGET_MS);
+      if (fx.selected || fx.prepared || fx.failed) console.log(`javító levél: ${JSON.stringify(fx)}`);
       // The offers that were on the owner's page come back first (coordinator 11-27): while some of them wait for their
       // new verdict, the old stock gets one lead a firing at most — the gate (outreach-dispatch tick) gets the box.
       const pending = await pageRejudgePending();

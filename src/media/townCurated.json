@@ -1,0 +1,781 @@
+{
+ "towns": [
+  {
+   "country": "HU",
+   "cityKey": "derekegyhaz",
+   "city": "Derekegyház",
+   "style": "rural",
+   "heroes": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/M%C3%A1rt%C3%A9ly%2C_sunset_%2C_Explored_on_2016.05.13_%2C_Thank_you_all_-_Flickr_-_P%C3%A1sztor_Andr%C3%A1s.jpg/1920px-M%C3%A1rt%C3%A9ly%2C_sunset_%2C_Explored_on_2016.05.13_%2C_Thank_you_all_-_Flickr_-_P%C3%A1sztor_Andr%C3%A1s.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Mártély, sunset , Explored on 2016.05.13 , Thank you all - Flickr - Pásztor András.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:M%C3%A1rt%C3%A9ly,_sunset_,_Explored_on_2016.05.13_,_Thank_you_all_-_Flickr_-_P%C3%A1sztor_Andr%C3%A1s.jpg",
+     "author": "András Pásztor from Hódmezővásárhely, Hungary",
+     "license": "CC BY 2.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "44c086860707040e",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "gallery": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Martelyi_Holt-Tisza_molo.jpg/1280px-Martelyi_Holt-Tisza_molo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Martelyi Holt-Tisza molo.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Martelyi_Holt-Tisza_molo.jpg",
+     "author": "Azagi",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "strand",
+     "dhash": "32f2f9a428e8eaec",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/M%C3%A1rt%C3%A9lyi_Holt-Tisza.jpg/1280px-M%C3%A1rt%C3%A9lyi_Holt-Tisza.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Mártélyi Holt-Tisza.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:M%C3%A1rt%C3%A9lyi_Holt-Tisza.jpg",
+     "author": "Azagi",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "8724016101018998",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Mindszent%2C_Tisza_a_r%C3%A9vn%C3%A9l_2025_01.jpg/1280px-Mindszent%2C_Tisza_a_r%C3%A9vn%C3%A9l_2025_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Mindszent, Tisza a révnél 2025 01.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Mindszent,_Tisza_a_r%C3%A9vn%C3%A9l_2025_01.jpg",
+     "author": "Pasztilla aka Attila Terbócs",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "ff7f3f3737377f7e",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/The_dykes_in_Mindszent.jpg/1280px-The_dykes_in_Mindszent.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "The dykes in Mindszent.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:The_dykes_in_Mindszent.jpg",
+     "author": "Frank Paul Silye",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "ffff7f53bbfdecde",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/Szentes%2C_Kossuth_t%C3%A9r%2C_image2.jpg/1280px-Szentes%2C_Kossuth_t%C3%A9r%2C_image2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Szentes, Kossuth tér, image2.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Szentes,_Kossuth_t%C3%A9r,_image2.jpg",
+     "author": "Christo",
+     "license": "CC0",
+     "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+     "tier": "region",
+     "score": 1,
+     "bucket": "square",
+     "dhash": "f8392030717170c4",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d4/Szentes%2C_G%C3%B6r%C3%B6g_ortodox_templom%2C_image11.jpg/1280px-Szentes%2C_G%C3%B6r%C3%B6g_ortodox_templom%2C_image11.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Szentes, Görög ortodox templom, image11.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Szentes,_G%C3%B6r%C3%B6g_ortodox_templom,_image11.jpg",
+     "author": "Christo",
+     "license": "CC0",
+     "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+     "tier": "region",
+     "score": 1,
+     "bucket": "sight",
+     "dhash": "5d4a69706403974c",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "note": "tulaj 2026-11-27: a gép nem talált jó nyitóképet — kézi válogatás, szabad licenc (Commons); a régió (Holt-Tisza, Tisza-part, Szentes)"
+  },
+  {
+   "country": "HU",
+   "cityKey": "eszteregnye",
+   "city": "Eszteregnye",
+   "style": "rural",
+   "heroes": [
+    {
+     "url": "https://upload.wikimedia.org/wikipedia/commons/c/c6/Kis-Balaton._Zalavar._foto_Victor_Belousov_-_panoramio_-_Victor_Belousov_%281%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+     "title": "Kis-Balaton. Zalavar. foto Victor Belousov - panoramio - Victor Belousov (1).jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis-Balaton._Zalavar._foto_Victor_Belousov_-_panoramio_-_Victor_Belousov_(1).jpg",
+     "author": "Victor Belousov",
+     "license": "CC BY 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "1f4010150d0d8fcf",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Kis_Balaton_-_Little_Balaton.jpg/1920px-Kis_Balaton_-_Little_Balaton.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Kis Balaton - Little Balaton.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis_Balaton_-_Little_Balaton.jpg",
+     "author": "ModriDirkac",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "963337260d2deccc",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "gallery": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2d/Kis-Balaton.jpg/1280px-Kis-Balaton.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Kis-Balaton.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis-Balaton.jpg",
+     "author": "Jarba",
+     "license": "CC BY 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "410619191d36094b",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Kis-Balaton1.JPG/1280px-Kis-Balaton1.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Kis-Balaton1.JPG",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis-Balaton1.JPG",
+     "author": "Wolfgang glock",
+     "license": "CC BY 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "03c7382787071b18",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/Kis-Balaton._Zalavar._foto_Victor_Belousov_-_panoramio.jpg/1280px-Kis-Balaton._Zalavar._foto_Victor_Belousov_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Kis-Balaton. Zalavar. foto Victor Belousov - panoramio.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis-Balaton._Zalavar._foto_Victor_Belousov_-_panoramio.jpg",
+     "author": "Victor Belousov",
+     "license": "CC BY 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "86898fc946c763b2",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b7/Kis-Balaton._foto_Victor_Belousov_-_panoramio.jpg/1280px-Kis-Balaton._foto_Victor_Belousov_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Kis-Balaton. foto Victor Belousov - panoramio.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis-Balaton._foto_Victor_Belousov_-_panoramio.jpg",
+     "author": "Victor Belousov",
+     "license": "CC BY 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "b1614f1d3d0f090f",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Balatonh%C3%ADdv%C3%A9g.JPG/1280px-Balatonh%C3%ADdv%C3%A9g.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Balatonhídvég.JPG",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Balatonh%C3%ADdv%C3%A9g.JPG",
+     "author": "Derzsi Elekes Andor",
+     "license": "CC BY-SA 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "f0494645c44e7bf9",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "note": "tulaj 2026-11-27: a gép nem talált jó nyitóképet — kézi válogatás, szabad licenc (Commons); a településről nincs szabad kép: a régió (Kis-Balaton) tája"
+  },
+  {
+   "country": "HU",
+   "cityKey": "mad",
+   "city": "Mád",
+   "style": "rural",
+   "heroes": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ae/Tokaj%2C_Hungary_-_panoramio_%283%29.jpg/1920px-Tokaj%2C_Hungary_-_panoramio_%283%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Tokaj, Hungary - panoramio (3).jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Tokaj,_Hungary_-_panoramio_(3).jpg",
+     "author": "Róbert Antalóczi",
+     "license": "CC BY 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "e3f1671e09257fcd",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e4/Zempl%C3%A9n4.jpg/1920px-Zempl%C3%A9n4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Zemplén4.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Zempl%C3%A9n4.jpg",
+     "author": "Kossuthzsuzsa",
+     "license": "Public domain",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "63e03e3b5f8d0f31",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "gallery": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/MadFotoThalerTamas28.jpg/1280px-MadFotoThalerTamas28.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "MadFotoThalerTamas28.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:MadFotoThalerTamas28.jpg",
+     "author": "Thaler Tamas",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "3f3d75c197a3a345",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/Weinkeller_Tokai.png/1280px-Weinkeller_Tokai.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Weinkeller Tokai.png",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Weinkeller_Tokai.png",
+     "author": "MyName (Verita (talk) 11:34, 19 May 2010 (UTC))",
+     "license": "CC BY-SA 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "sight",
+     "dhash": "71e39b930315052f",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/Zempl%C3%A9n5.jpg/1280px-Zempl%C3%A9n5.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Zemplén5.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Zempl%C3%A9n5.jpg",
+     "author": "Kossuthzsuzsa",
+     "license": "Public domain",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "03412c2607091b13",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "note": "tulaj 2026-11-27: a gép nem talált jó nyitóképet — kézi válogatás, szabad licenc (Commons); nyitókép: a régió (Tokaj-Hegyalja, Zemplén) tája"
+  },
+  {
+   "country": "HU",
+   "cityKey": "szarvas",
+   "city": "Szarvas",
+   "style": "rural",
+   "heroes": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Bolza-kast%C3%A9ly_01.JPG/1920px-Bolza-kast%C3%A9ly_01.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Bolza-kastély 01.JPG",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Bolza-kast%C3%A9ly_01.JPG",
+     "author": "Zátonyi Sándor, (ifj.) Fizped",
+     "license": "CC BY-SA 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "sight",
+     "dhash": "3232626672336262",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5a/Arbor%C3%A9tum-Stra%C3%9Fe-Ferienh%C3%A4user%2C_K%C3%B6r%C3%B6s%2C_2026_Szarvas.jpg/1920px-Arbor%C3%A9tum-Stra%C3%9Fe-Ferienh%C3%A4user%2C_K%C3%B6r%C3%B6s%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Arborétum-Straße-Ferienhäuser, Körös, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Arbor%C3%A9tum-Stra%C3%9Fe-Ferienh%C3%A4user,_K%C3%B6r%C3%B6s,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "70f0f35b4343c2d0",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Blick_nach_S%C3%BCden_von_Elisabethbr%C3%BCcke%2C_2026_Szarvas.jpg/1920px-Blick_nach_S%C3%BCden_von_Elisabethbr%C3%BCcke%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Blick nach Süden von Elisabethbrücke, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Blick_nach_S%C3%BCden_von_Elisabethbr%C3%BCcke,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "81030f8c0f0f27a3",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "gallery": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/Arboretum%2C_Turm%2C_2026_Szarvas.jpg/1280px-Arboretum%2C_Turm%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Arboretum, Turm, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Arboretum,_Turm,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "sight",
+     "dhash": "f7f6d5e565e9cbe7",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5c/K%C3%B6r%C3%B6s%2C_Motorboot%2C_2026_Szarvas.jpg/1280px-K%C3%B6r%C3%B6s%2C_Motorboot%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Körös, Motorboot, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:K%C3%B6r%C3%B6s,_Motorboot,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "strand",
+     "dhash": "a59030b3beafd191",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/20170819_142949_Szarvasi_V%C3%ADzi_Sz%C3%ADnh%C3%A1z.jpg/1280px-20170819_142949_Szarvasi_V%C3%ADzi_Sz%C3%ADnh%C3%A1z.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "20170819 142949 Szarvasi Vízi Színház.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:20170819_142949_Szarvasi_V%C3%ADzi_Sz%C3%ADnh%C3%A1z.jpg",
+     "author": "Kriszti2083",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "sight",
+     "dhash": "cc6c45073a1a4b5e",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/Blick_nach_Elisabethw%C3%A4ldchen_von_Elisabethbr%C3%BCcke%2C_2026_Szarvas.jpg/1280px-Blick_nach_Elisabethw%C3%A4ldchen_von_Elisabethbr%C3%BCcke%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Blick nach Elisabethwäldchen von Elisabethbrücke, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Blick_nach_Elisabethw%C3%A4ldchen_von_Elisabethbr%C3%BCcke,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "782600880a200800",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Ausblick_SW_von_Elisabethbr%C3%BCcke%2C_2026_Szarvas.jpg/1280px-Ausblick_SW_von_Elisabethbr%C3%BCcke%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Ausblick SW von Elisabethbrücke, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Ausblick_SW_von_Elisabethbr%C3%BCcke,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "3bdbd9bfffdbdbdb",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7b/Anlagestelle%2C_Arboretum_von_%C3%9Cd%C3%BCl%C5%91_Promenade_N_Park%2C_2026_Szarvas.jpg/1280px-Anlagestelle%2C_Arboretum_von_%C3%9Cd%C3%BCl%C5%91_Promenade_N_Park%2C_2026_Szarvas.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Anlagestelle, Arboretum von Üdülő Promenade N Park, 2026 Szarvas.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Anlagestelle,_Arboretum_von_%C3%9Cd%C3%BCl%C5%91_Promenade_N_Park,_2026_Szarvas.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "strand",
+     "dhash": "5ce9e3e9d9f4a4d4",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "note": "tulaj 2026-11-27: a gép nem talált jó nyitóképet — kézi válogatás, szabad licenc (Commons)"
+  },
+  {
+   "country": "HU",
+   "cityKey": "vaszar",
+   "city": "Vaszar",
+   "style": "rural",
+   "heroes": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Bakony_2.jpg/1920px-Bakony_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Bakony 2.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Bakony_2.jpg",
+     "author": "Christo",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "2527656727078fbe",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "gallery": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Bakony_3.jpg/1280px-Bakony_3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Bakony 3.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Bakony_3.jpg",
+     "author": "Christo",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "242c4c4457f4367d",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/43/Bakony_4.jpg/1280px-Bakony_4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Bakony 4.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Bakony_4.jpg",
+     "author": "Christo",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "44819380c881381d",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Bakony_6.jpg/1280px-Bakony_6.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Bakony 6.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Bakony_6.jpg",
+     "author": "Christo",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "c6c7dedaca999b32",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/Burg_Soml%C3%B3.jpg/1280px-Burg_Soml%C3%B3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Burg Somló.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Burg_Soml%C3%B3.jpg",
+     "author": "Traxxmaster",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "sight",
+     "dhash": "c00ffff44a7bd9ad",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/14_F%C5%91_Square_and_2_F%C5%91_Street%2C_2020_P%C3%A1pa.jpg/1280px-14_F%C5%91_Square_and_2_F%C5%91_Street%2C_2020_P%C3%A1pa.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "14 Fő Square and 2 Fő Street, 2020 Pápa.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:14_F%C5%91_Square_and_2_F%C5%91_Street,_2020_P%C3%A1pa.jpg",
+     "author": "Globetrotter19",
+     "license": "CC BY-SA 3.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "square",
+     "dhash": "4208d9dbd99e1f9b",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "note": "tulaj 2026-11-27: a gép nem talált jó nyitóképet — kézi válogatás, szabad licenc (Commons); a településről nincs szabad tájkép: a régió (Bakony, Somló, Pápa)"
+  },
+  {
+   "country": "HU",
+   "cityKey": "zalaegerszeg",
+   "city": "Zalaegerszeg",
+   "style": "rural",
+   "heroes": [
+    {
+     "url": "https://upload.wikimedia.org/wikipedia/commons/2/20/OrsegiNemzetiPark4.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+     "title": "OrsegiNemzetiPark4.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:OrsegiNemzetiPark4.jpg",
+     "author": "János Korom Dr. from Wien, Austria",
+     "license": "CC BY-SA 2.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "7f7fba88cf8e2ee9",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Kis_Balaton_-_Little_Balaton.jpg/1920px-Kis_Balaton_-_Little_Balaton.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Kis Balaton - Little Balaton.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Kis_Balaton_-_Little_Balaton.jpg",
+     "author": "ModriDirkac",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "963337260d2deccc",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://upload.wikimedia.org/wikipedia/commons/b/bc/R._k._pl%C3%A9b%C3%A1niatemplom_%2811066._sz%C3%A1m%C3%BA_m%C5%B1eml%C3%A9k%29_5.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+     "title": "R. k. plébániatemplom (11066. számú műemlék) 5.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:R._k._pl%C3%A9b%C3%A1niatemplom_(11066._sz%C3%A1m%C3%BA_m%C5%B1eml%C3%A9k)_5.jpg",
+     "author": "ollievonpearl",
+     "license": "CC BY 2.5 hu",
+     "licenseUrl": "https://creativecommons.org/licenses/by/2.5/hu/deed.en",
+     "tier": "town",
+     "score": 1,
+     "bucket": "square",
+     "dhash": "33f7cfee5a74747b",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "gallery": [
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Gocsej_village_lake.jpg/1280px-Gocsej_village_lake.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Gocsej village lake.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Gocsej_village_lake.jpg",
+     "author": "No machine-readable author provided. Alensha assumed (based on copyright claims).",
+     "license": "Public domain",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "e3d3dbd333232767",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Zalaegerszeg_tv-tower_2019_01.jpg/1280px-Zalaegerszeg_tv-tower_2019_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "Zalaegerszeg tv-tower 2019 01.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:Zalaegerszeg_tv-tower_2019_01.jpg",
+     "author": "VargaA",
+     "license": "CC BY-SA 4.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+     "tier": "town",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "03071313172b2b86",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/86/OrsegiNemzetiPark2.jpg/1280px-OrsegiNemzetiPark2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "OrsegiNemzetiPark2.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:OrsegiNemzetiPark2.jpg",
+     "author": "János Korom Dr. from Wien, Austria",
+     "license": "CC BY-SA 2.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "0303014f03838303",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/OrsegiNemzetiPark3.jpg/1280px-OrsegiNemzetiPark3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "OrsegiNemzetiPark3.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:OrsegiNemzetiPark3.jpg",
+     "author": "János Korom Dr. from Wien, Austria",
+     "license": "CC BY-SA 2.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "15131f0f0b07211c",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    },
+    {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/OrsegiNemzetiPark5.jpg/1280px-OrsegiNemzetiPark5.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+     "title": "OrsegiNemzetiPark5.jpg",
+     "pageUrl": "https://commons.wikimedia.org/wiki/File:OrsegiNemzetiPark5.jpg",
+     "author": "János Korom Dr. from Wien, Austria",
+     "license": "CC BY-SA 2.0",
+     "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+     "tier": "region",
+     "score": 1,
+     "bucket": "landscape",
+     "dhash": "6f6f6703010d7707",
+     "heroOk": true,
+     "judge": {
+      "verdict": "jó",
+      "reason": "kézi válogatás a kurált tárba (tulaj 2026-11-27)"
+     }
+    }
+   ],
+   "note": "tulaj 2026-11-27: a gép nem talált jó nyitóképet — kézi válogatás, szabad licenc (Commons); a régió (Őrség, Kis-Balaton — Zala megye) tája + a település temploma"
+  }
+ ]
+}
