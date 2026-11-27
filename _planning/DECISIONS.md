@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-varakozo-sor-a-tulaj-lapjara-jut-vagy-okkal-felreall.md) — A várakozó sor a tulaj lapjára jut, vagy okkal félreáll: fotószám = a generátor képei, képtelen terv újratervezése, országonkénti render-kapu
+- [ADR-0499](decisions/0499-a-varakozo-sor-a-tulaj-lapjara-jut-vagy-okkal.md) — A várakozó sor a tulaj lapjára jut, vagy okkal félreáll: fotószám = a generátor képei, képtelen terv újratervezése, országonkénti render-kapu
 - [ADR-0498](decisions/0498-elesi-vegproba-teszt-leaddel-minimum-terheles.md) — Élesi végpróba [TESZT]-leaddel: minimum-terhelés, ablak- és keret-kivétel, visszautalás és sztornó kódból
 - [ADR-0497](decisions/0497-a-deploy-nem-var-futo-munkara-a-hosszu-munka.md) — A deploy nem vár futó munkára: a hosszú munka külön dolgozóban, DB-feladatsorból, folytatható lépésekben
 - [ADR-0496](decisions/0496-ejszakai-szabaly-csomag-11-26-sajat-akcentszin.md) — Éjszakai szabály-csomag (11-26): saját akcentszín, ismétlés-tilalom, üres sáv, településkép-galéria, dátumbélyeg, egy fotó két vágatban

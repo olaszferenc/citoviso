@@ -1,4 +1,4 @@
-## ADR-XXXX — A várakozó sor a tulaj lapjára jut, vagy okkal félreáll: fotószám = a generátor képei, képtelen terv újratervezése, országonkénti render-kapu
+## ADR-0499 — A várakozó sor a tulaj lapjára jut, vagy okkal félreáll: fotószám = a generátor képei, képtelen terv újratervezése, országonkénti render-kapu
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3` feladata: „Lánc-hiány a HR-en… kódszintű, általános javítás”; a végpróba-SUB `citd68cb3c0` mérése)

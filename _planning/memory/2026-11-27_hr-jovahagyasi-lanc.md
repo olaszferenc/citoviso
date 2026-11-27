@@ -1,6 +1,6 @@
 # HR jóváhagyási lánc — a várakozó sor a tulaj lapjára jut, vagy okkal félreáll (2026-11-27)
 
-Session `cit9d514f15`, koordinátor `cit9b4690e3`. Kiinduló jelzés: a végpróba-SUB `citd68cb3c0` élesen mérte, hogy a 183 horvát tervből 13-nak van render-kapu ítélete, és egyetlen horvát leadnek sincs két kapun átment terve. A `/jovahagyas` lap ezért HR-re üres. ADR-XXXX.
+Session `cit9d514f15`, koordinátor `cit9b4690e3`. Kiinduló jelzés: a végpróba-SUB `citd68cb3c0` élesen mérte, hogy a 183 horvát tervből 13-nak van render-kapu ítélete, és egyetlen horvát leadnek sincs két kapun átment terve. A `/jovahagyas` lap ezért HR-re üres. ADR-0499.
 
 ## Mérés (éles, csak olvasva, 07:00–07:45 UTC)
 - **74 várakozó HR sor:** 67 „JÓVÁHAGYÁSRA VÁR”, 4 „gépi kapura vár”, 3 egyéb lánc-jegyzet.
