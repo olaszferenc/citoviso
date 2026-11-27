@@ -112,7 +112,7 @@ async function main(): Promise<void> {
         }
         if (!opt("now")) {
           const p = await replanUnfitQueue();
-          if (p.replanned || p.setAside) console.log(`újratervezés: ${JSON.stringify(p)}`);
+          if (p.replanned || p.setAside || p.measured || p.released) console.log(`újratervezés: ${JSON.stringify(p)}`);
         }
         const budget = Math.min(REFRESH_BUDGET_MS, UNIT_BUDGET_MS - (Date.now() - tickStarted));
         if (!opt("now") && budget > 0) {

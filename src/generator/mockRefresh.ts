@@ -23,7 +23,7 @@ import { db } from "../db/client.js";
 import type { Photo, Recipe, SiteData } from "../engine/recipe.js";
 import { gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../media/photoKind.js";
-import { DISPATCH_PHOTOS_OK_SQL, LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
+import { DISPATCH_PHOTOS_OK_SQL, LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, LEAD_STORED_PHOTOS_SQL, recordUsablePhotos, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
 import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, LEAD_HAS_EMAIL_SQL, NO_EMAIL_HOLD_NOTE, PHOTO_SETASIDE_PREFIX, QA_HOLD_PREFIX, QA_WAIT_NOTE, REPLAN_NOTE, mockFileMtime } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
@@ -449,7 +449,7 @@ export const REPLAN_BATCH = 40;
  * step re-points this row to the new plan. A lead re-planned once whose NEW plan fails again is set aside with
  * the reason (PHOTO_SETASIDE_PREFIX) — never re-planned twice. Only current-generator plans (MOCK_MIN_GENERATED_AT).
  */
-export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanned: number; setAside: number }> {
+export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanned: number; setAside: number; measured: number; released: number }> {
   const rows = await db
     .selectFrom("outreach_dispatch as d")
     .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
@@ -461,36 +461,70 @@ export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanne
       "a.generated_at as generatedAt",
       sql<number>`(case when jsonb_typeof(a.inputs->'siteData'->'photos') = 'array' then jsonb_array_length(a.inputs->'siteData'->'photos') else 0 end)`.as("mockPhotos"),
       sql<number>`${LEAD_OWN_PHOTOS_SQL}`.as("own"),
+      sql<number>`${LEAD_STORED_PHOTOS_SQL}`.as("stored"),
+      sql<boolean>`(jsonb_typeof(l.raw->'material'->'usablePhotos'->'stored') = 'number'
+        and (l.raw->'material'->'usablePhotos'->>'stored')::int = ${LEAD_STORED_PHOTOS_SQL})`.as("measured"),
+      // the listing's photos were read AFTER this plan was made: the plan says nothing about what they can show
+      sql<boolean>`exists (select 1 from jsonb_array_elements(coalesce(l.raw->'portalProfiles', '[]'::jsonb)) pp
+        where (pp->>'fetchedAt') is not null and (pp->>'fetchedAt')::timestamptz > a.generated_at)`.as("late"),
       sql<number>`${LEAD_MIN_OWN_PHOTOS_SQL}`.as("min"),
       sql<boolean>`a.inputs->'siteData'->'townPhoto' is not null`.as("town"),
-      sql<string | null>`l.raw->'replan'->>'at'`.as("replanAt"),
+      sql<boolean>`(a.inputs->'siteData'->'townPhoto' is not null or a.inputs->'siteData'->'townGallery' is not null)`.as("townPick"),
+      sql<unknown>`l.raw->'replan'`.as("replan"),
     ])
     .where("d.status", "=", "held")
-    .where((eb) => eb.or([eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${GATE_HOLD_PREFIX}%`)]))
+    .where((eb) =>
+      eb.or([
+        eb("d.note", "in", [...CHAIN_WAIT_NOTES]),
+        eb("d.note", "like", `${GATE_HOLD_PREFIX}%`),
+        // set aside on the own-photo way before the measured count existed: the town way is still to try
+        eb("d.note", "like", `${PHOTO_SETASIDE_PREFIX}%`),
+      ]),
+    )
     .where(LEAD_HAS_EMAIL_SQL)
     .where("a.status", "<>", "rejected")
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${DISPATCH_PHOTOS_OK_SQL}`)
-    .where(
-      sql<boolean>`((${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL})
-        or (a.inputs->'siteData'->'townPhoto' is null and a.inputs->'siteData'->'townGallery' is null))`,
-    )
     .orderBy(FAIR_ORDER)
     .limit(limit)
     .execute();
   let replanned = 0;
   let setAside = 0;
+  let measured = 0;
+  let released = 0;
   for (const r of rows) {
-    const own = Number(r.own);
     const min = Number(r.min);
     const shown = Number(r.mockPhotos);
+    let own = Number(r.own);
+    // THE MEASURED COUNT, read back off a current plan (11-27): a lead counted ≥ min whose plan — made after its photos
+    // were read — shows fewer has only that many usable photos (the generator's curation decided); the chain then plans
+    // it the town-picture way at once instead of re-planning it with the same photos.
+    if (own >= min && shown < min && !r.measured && !r.late) {
+      await recordUsablePhotos(r.leadId, shown).catch(() => undefined);
+      own = shown;
+      measured++;
+    }
+    const route: "own" | "town" = own >= min ? "own" : "town";
+    // A plan that already carries a town pick IS the town way: nothing to re-plan (a stale pick version is the refresh's
+    // business). One set aside on the own way before the measured count existed goes back to the machine gate.
+    if (route === "town" && r.townPick) {
+      if ((r.note ?? "").startsWith(PHOTO_SETASIDE_PREFIX)) {
+        const u = await db.updateTable("outreach_dispatch").set({ note: QA_WAIT_NOTE }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
+        released += Number(u.numUpdatedRows ?? 0);
+      }
+      continue;
+    }
+    const prev = (r.replan ?? null) as { at?: string; routes?: string[]; final?: string } | null;
+    const routes = prev?.routes ?? (prev?.at ? ["own"] : []);
     const reason =
-      own >= min
-        ? `a lead ${own} saját képe helyett a mockon ${shown}${r.town ? " és településkép" : ""} van (min. ${min})`
-        : `a leadnek ${own} saját képe van (min. ${min}), a mockon nincs településkép`;
-    if (r.replanAt && new Date(String(r.generatedAt)) > new Date(r.replanAt)) {
-      // Re-planned once and the NEW plan fails the same rule: the lead's photos do not make a page — set aside.
-      const note = `${PHOTO_SETASIDE_PREFIX} ${reason} — újratervezés után is; nem tervezzük újra`.slice(0, 1000);
+      route === "own"
+        ? `a lead ${own} használható saját képe helyett a mockon ${shown}${r.town ? " és településkép" : ""} van (min. ${min})`
+        : `a leadnek ${own} használható saját képe van (min. ${min}; tárolt ${Number(r.stored)}), a mockon nincs településkép`;
+    if (routes.includes(route)) {
+      // This way was tried: a plan made after it that fails the same rule → set aside with the reason, once.
+      if (!prev?.at || new Date(String(r.generatedAt)) <= new Date(prev.at) || (r.note ?? "").startsWith(PHOTO_SETASIDE_PREFIX)) continue;
+      const why = route === "own" ? `${reason} — újratervezés után is` : `${reason} — a településképes újratervezés után is (nincs jóváhagyott településkép)`;
+      const note = `${PHOTO_SETASIDE_PREFIX} ${why}; nem tervezzük újra`.slice(0, 1000);
       const u = await db.updateTable("outreach_dispatch").set({ note }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
       if (Number(u.numUpdatedRows ?? 0)) {
         await db
@@ -502,14 +536,14 @@ export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanne
       }
       continue;
     }
-    if (r.replanAt) continue; // taken back already; the chain's main plan has not made the new one yet
     await db.transaction().execute(async (tx) => {
       const live = await tx.selectFrom("mock_artifact").select("id").where("lead_id", "=", r.leadId).where("status", "<>", "rejected").execute();
       const ids = live.map((m) => m.id);
       const u = await tx.updateTable("outreach_dispatch").set({ note: REPLAN_NOTE }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
       if (!Number(u.numUpdatedRows ?? 0) || !ids.length) return;
       await tx.updateTable("mock_artifact").set({ status: "rejected" }).where("id", "in", ids).execute();
-      const replan = { at: new Date().toISOString(), reason, rejectedMocks: ids, note: r.note, leadPhotos: own, mockPhotos: shown };
+      // a NEW re-plan object (no `final`): the chain's replan.py takes the lead off its tried lists for this one
+      const replan = { at: new Date().toISOString(), route, routes: [...routes, route], reason, rejectedMocks: ids, note: r.note, leadPhotos: own, mockPhotos: shown, ...(prev?.at ? { previous: prev } : {}) };
       await tx
         .updateTable("lead")
         .set({ raw: sql`coalesce(raw, '{}'::jsonb) || jsonb_build_object('replan', ${JSON.stringify(replan)}::jsonb)` as never })
@@ -518,7 +552,7 @@ export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanne
       replanned++;
     });
   }
-  return { replanned, setAside };
+  return { replanned, setAside, measured, released };
 }
 
 /**

@@ -9,6 +9,7 @@
 // (country.dispatch_min_own_photos, country.dispatch_photo_mode) — the code's 5 and the global
 // switch were written into every row by the migration and are not read.
 import { sql } from "kysely";
+import { db } from "../db/client.js";
 import { DISPATCH_DEFAULTS } from "../country.js";
 import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import { TOWN_PICK_THRESHOLD, TOWN_PICK_VERSION } from "../media/townPick.js";
@@ -31,9 +32,37 @@ export const LEAD_TOWN_MODE_SQL = sql<boolean>`exists (
  *  saw on the lodging's page, never a photo the generator receives. Measured on prod: 17 of the 72 waiting HR
  *  rows (and 8 HU) counted „≥5 own photos” only through it — the main plan skipped the town picture, the mock
  *  came out photo-less (wordmark, no second plan) and no rule could ever let it reach the owner's page. */
-export const LEAD_OWN_PHOTOS_SQL = sql<number>`(
+/** The STORED count: what the scraper counted (Places + the listings). Table alias `l` = lead. */
+export const LEAD_STORED_PHOTOS_SQL = sql<number>`(
   case when jsonb_typeof(l.raw->'material'->'placesPhotos') = 'number' then (l.raw->'material'->>'placesPhotos')::int else 0 end
   + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end)`;
+/**
+ * …and the MEASURED one wins while the stored set is the one it was measured on (HR approval chain, 2026-11-27,
+ * coordinator: „a fo-cand / láncszámlálót igazítsd a generátor tényleges képhalmazához”). Measured on the 22 leads set
+ * aside with „TARTVA (képkapu)”: 100 stored photos, 96 alive, the generator's curation (curateMockPhotos: off-page
+ * subject, person / WC detail, near-duplicate) kept 57 — and the stored count itself was often higher than the photos
+ * the listing holds (9 counted, 5 stored). The generator writes what it put on the page (`material.usablePhotos`,
+ * generateEngine; the re-plan step reads it back off a current mock) with the stored count it measured; a lead whose
+ * photos changed since (a new listing read, a re-scrape) counts by the stored number again until the next plan.
+ */
+export const LEAD_OWN_PHOTOS_SQL = sql<number>`(case
+  when jsonb_typeof(l.raw->'material'->'usablePhotos'->'n') = 'number'
+   and jsonb_typeof(l.raw->'material'->'usablePhotos'->'stored') = 'number'
+   and (l.raw->'material'->'usablePhotos'->>'stored')::int = ${LEAD_STORED_PHOTOS_SQL}
+  then (l.raw->'material'->'usablePhotos'->>'n')::int
+  else ${LEAD_STORED_PHOTOS_SQL} end)`;
+
+/** Record the measured own-photo count on the lead (`material.usablePhotos`: n, the stored count it was measured on, when). */
+export async function recordUsablePhotos(leadId: string, n: number): Promise<void> {
+  await db
+    .updateTable("lead as l")
+    .set({
+      raw: sql`jsonb_set(coalesce(l.raw, '{}'::jsonb), '{material}', coalesce(l.raw->'material', '{}'::jsonb)
+        || jsonb_build_object('usablePhotos', jsonb_build_object('n', ${n}::int, 'stored', ${LEAD_STORED_PHOTOS_SQL}, 'at', now()::text)))` as never,
+    })
+    .where("l.id", "=", leadId)
+    .execute();
+}
 
 /** The mock itself holds at least the country's minimum of the lodging's photos and no town
  *  photo hero. Table aliases `a` = mock_artifact, `l` = its lead. */

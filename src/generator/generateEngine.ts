@@ -49,7 +49,7 @@ import { curateMockPhotos } from "./photoCurate.js";
 import { getHeroPin } from "./heroOverride.js";
 import { GATE_OPENING, gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { townPhotosForMock } from "./townHero.js";
-import { DEFAULT_MIN_OWN_PHOTOS, MOCK_HEROFIX_STAMP } from "../outreach/mockPhotoGate.js";
+import { DEFAULT_MIN_OWN_PHOTOS, MOCK_HEROFIX_STAMP, recordUsablePhotos } from "../outreach/mockPhotoGate.js";
 import { WORDMARK_GROW } from "../engine/templates/wordmarkGrow.js";
 import { isGoogleRatingUrl, reviewsUrlFor } from "../reviews/placeRating.js";
 import {
@@ -386,6 +386,10 @@ async function generateEngineMockInner(
   }
   if (photoSet.heroMoved) console.log("  ↳ a nyitókép helyére a legjobb külső/szoba-kép került"); // i18n-exempt: operator log
   const photos = photoSet.photos;
+  // THE MEASURED OWN-PHOTO COUNT (HR approval chain 11-27): what the curation leaves is what this lead's page can show —
+  // recorded on the lead with the stored count it was measured on (mockPhotoGate.LEAD_OWN_PHOTOS_SQL), so the main plan
+  // sends a lead whose stored „≥5” curates down to fewer the town-picture way at once, not after two plans.
+  if (leadId) await recordUsablePhotos(leadId, photos.length).catch(() => undefined);
   // NO OR FEW OWN PHOTOS → the TOWN's picture set (owner 2026-11-25, ADR-0479, plan
   // assets/design-refs/console/kepnelkuli-hero/; before: one Wikipedia lookup, ADR-0436): the town's
   // hero, shared out among its e-mail leads, opens the page unless a few-photo lead's own first photo

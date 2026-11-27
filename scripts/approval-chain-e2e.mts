@@ -136,12 +136,15 @@ check("a mock 6 saját képet mutat, településkép nélkül → átmegy, bárm
 
 // ── ② re-plan ─────────────────────────────────────────────────────────────────────────────
 console.log("② újratervezés");
-const late = await lead("Késő Képes Ház", cc2, { placesPhotos: 0, portalPhotos: 40, websiteImages: 10 });
+const late = await lead("Késő Képes Ház", cc2, { placesPhotos: 0, portalPhotos: 40, websiteImages: 10 }, { portalProfiles: [{ url: "https://late.example/", fetchedAt: "2099-01-01T00:00:00Z", photos: [] }] });
 const lateMain = await plan(late, { template: "wordmark-grow", photos: 0 });
 await row(late, lateMain);
+const curated = await lead("Kurált Ház", cc2, { placesPhotos: 0, portalPhotos: 9 });
+const curatedMain = await plan(curated, { template: "parallax", photos: 3 });
+await row(curated, curatedMain);
 const townLate = await lead("Településképes Ház", cc2, { placesPhotos: 0, portalPhotos: 12 });
 const townLateMain = await plan(townLate, { template: "parallax", photos: 2, town: true });
-const townLateAlt = await plan(townLate, { template: "gate-opening", photos: 2, town: true });
+await plan(townLate, { template: "gate-opening", photos: 2, town: true });
 await row(townLate, townLateMain);
 const fit = await lead("Rendben Panzió", cc2, { placesPhotos: 8 });
 const fitMain = await plan(fit, { template: "parallax", photos: 8 });
@@ -149,27 +152,52 @@ await row(fit, fitMain);
 const old = await lead("Régi Generátoros", cc2, { portalPhotos: 20 });
 const oldMain = await plan(old, { template: "wordmark-grow", photos: 0, generatedAt: new Date("2026-11-10T10:00:00Z") });
 await row(old, oldMain);
-const again = await lead("Másodszor Sem", cc2, { portalPhotos: 9 }, { replan: { at: "2026-11-27T06:00:00Z", reason: "e2e" } });
+// re-planned once on the OWN way (before the measured count existed), its new plan shows 1: the town way is next
+const again = await lead("Másodszor Településképpel", cc2, { portalPhotos: 9 }, { replan: { at: "2026-11-27T06:00:00Z", reason: "e2e" } });
 await plan(again, { template: "wordmark-grow", photos: 0, generatedAt: new Date("2026-11-27T05:00:00Z") }).then((id) => db.updateTable("mock_artifact").set({ status: "rejected" }).where("id", "=", id).execute());
 const againMain = await plan(again, { template: "wordmark-grow", photos: 1, generatedAt: new Date("2026-11-27T07:00:00Z") });
 await row(again, againMain);
+// both ways tried, the newest plan still has neither → set aside with the reason
+const tried = await lead("Mindkét Út Kipróbálva", cc2, { portalPhotos: 9 }, { replan: { at: "2026-11-27T06:00:00Z", routes: ["own", "town"], reason: "e2e" } });
+const triedMain = await plan(tried, { template: "wordmark-grow", photos: 0, generatedAt: new Date("2026-11-27T07:00:00Z") });
+await row(tried, triedMain);
+// set aside yesterday-style („TARTVA (képkapu)” after the own way): revived on the town way
+const legacy = await lead("Tegnap Félretett", cc2, { portalPhotos: 7 }, { replan: { at: "2026-11-27T06:00:00Z", reason: "e2e", final: "2026-11-27T08:00:00Z" } });
+const legacyMain = await plan(legacy, { template: "parallax", photos: 2, generatedAt: new Date("2026-11-27T07:00:00Z") });
+await row(legacy, legacyMain, `${PHOTO_SETASIDE_PREFIX} a lead 7 saját képe helyett a mockon 2 van (min. 5) — újratervezés után is; nem tervezzük újra`);
+// set aside the same way, but its plan carries a town pick: measured < 5 → it IS the town way → back to the gate
+const legacyTown = await lead("Tegnap Félretett Településképes", cc2, { portalPhotos: 8 }, { replan: { at: "2026-11-27T06:00:00Z", reason: "e2e", final: "2026-11-27T08:00:00Z" } });
+const legacyTownMain = await plan(legacyTown, { template: "parallax", photos: 2, town: true, generatedAt: new Date("2026-11-27T07:00:00Z") });
+await row(legacyTown, legacyTownMain, `${PHOTO_SETASIDE_PREFIX} a lead 8 saját képe helyett a mockon 2 és településkép van (min. 5) — újratervezés után is; nem tervezzük újra`);
 
+const usableOf = async (id: string) => ((await db.selectFrom("lead").select("raw").where("id", "=", id).executeTakeFirstOrThrow()).raw as { material?: { usablePhotos?: { n?: number; stored?: number } } }).material?.usablePhotos;
+const replanOf = async (id: string) => ((await db.selectFrom("lead").select("raw").where("id", "=", id).executeTakeFirstOrThrow()).raw as { replan?: { route?: string; routes?: string[]; reason?: string; rejectedMocks?: string[]; note?: string; final?: string } }).replan;
 const p = await replanUnfitQueue();
-check("újratervezés: a fantom, a késői képes és a településképes (lead ≥5) újratervezve, 1 félretéve", p.replanned === 3 && p.setAside === 1, JSON.stringify(p));
-check("A · a lead 40 képe helyett 0 a mockon → a tervei visszavéve (rejected), a sor REPLAN-jegyzettel vár",
-  (await statusesOf(late)).every((s) => s === "rejected") && (await noteOf(late)) === REPLAN_NOTE);
-const lr = (await db.selectFrom("lead").select("raw").where("id", "=", late).executeTakeFirstOrThrow()).raw as { replan?: { reason?: string; rejectedMocks?: string[]; note?: string } };
+check("újratervezés: késői kép (saját út), kurált + fantom + egyszer-tervezett + tegnap félretett (településképes út) = 5; mindkét út után 1 félre",
+  p.replanned === 5 && p.setAside === 1, JSON.stringify(p));
+check("A · a terv UTÁN beolvasott hirdetés (40 kép): saját úton újratervezve, nincs visszamérés (a terv nem mondhat róluk semmit)",
+  (await statusesOf(late)).every((s) => s === "rejected") && (await noteOf(late)) === REPLAN_NOTE && (await replanOf(late))?.route === "own" && !(await usableOf(late)), JSON.stringify(await replanOf(late)));
+const lr = await replanOf(late);
 check("A · visszaállítási adat a lead.raw.replan-ben (ok, a visszavett mockok, a régi jegyzet)",
-  !!lr.replan?.reason?.includes("40") && lr.replan?.rejectedMocks?.length === 1 && lr.replan?.note === APPROVAL_PENDING_NOTE, JSON.stringify(lr.replan));
-check("A · a településképes terv (a lead ma 12 saját képet tart) a második tervvel együtt visszavéve",
-  (await statusesOf(townLate)).length === 2 && (await statusesOf(townLate)).every((s) => s === "rejected") && !!townLateAlt);
-check("B · a fantom (valójában 0 saját kép, nincs településkép) újratervezve — a fő terv a településkép-ágra viszi", (await noteOf(phantom)) === REPLAN_NOTE);
+  !!lr?.reason?.includes("40") && lr?.rejectedMocks?.length === 1 && lr?.note === APPROVAL_PENDING_NOTE, JSON.stringify(lr));
+check("MÉRT · 9 tárolt képből a mai terv 3-at mutat → a használható szám 3 (a tárolt 9-hez kötve), és a lead ELSŐRE a településképes útra megy",
+  (await usableOf(curated))?.n === 3 && (await usableOf(curated))?.stored === 9 && (await replanOf(curated))?.route === "town" && (await noteOf(curated)) === REPLAN_NOTE,
+  JSON.stringify({ u: await usableOf(curated), r: await replanOf(curated) }));
+check("MÉRT · a településképes terv (12 tárolt, 2 használható): visszamérve, nem tervezzük újra (a településkép-ág az övé)",
+  (await usableOf(townLate))?.n === 2 && (await statusesOf(townLate)).every((s) => s === "approved"));
+check("B · a fantom (valójában 0 saját kép, nincs településkép) a településképes útra", (await noteOf(phantom)) === REPLAN_NOTE && (await replanOf(phantom))?.route === "town");
 check("a rendben lévő sor érintetlen", (await noteOf(fit)) === APPROVAL_PENDING_NOTE && (await statusesOf(fit))[0] === "approved");
 check("a régi generátoros terv érintetlen (nem ennek a szabálynak a dolga)", (await noteOf(old)) === APPROVAL_PENDING_NOTE);
-check("másodszor nem tervezzük újra: az új terv is kép nélküli → TARTVA (képkapu) okkal",
-  (await noteOf(again)).startsWith(PHOTO_SETASIDE_PREFIX) && (await noteOf(again)).includes("9"), await noteOf(again));
+check("a saját úton egyszer újratervezett, 1 képes lead most a településképes utat kapja (nem áll félre)",
+  (await noteOf(again)) === REPLAN_NOTE && JSON.stringify((await replanOf(again))?.routes) === JSON.stringify(["own", "town"]), JSON.stringify(await replanOf(again)));
+check("mindkét út kipróbálva, az új terv sem jó → TARTVA (képkapu) okkal, „településképes újratervezés után is”",
+  (await noteOf(tried)).startsWith(PHOTO_SETASIDE_PREFIX) && (await noteOf(tried)).includes("településképes"), await noteOf(tried));
+check("a tegnap félretett (csak saját úton tervezett) lead újra él a településképes úton, a „final” jelölő nélkül (a lánc leveszi a tried-listáról)",
+  (await noteOf(legacy)) === REPLAN_NOTE && (await replanOf(legacy))?.route === "town" && !(await replanOf(legacy))?.final, JSON.stringify(await replanOf(legacy)));
+check("a tegnap félretett, településképes tervű lead (mért 2 kép) visszakerül a gépi kapu felé, újratervezés nélkül",
+  (await noteOf(legacyTown)) === QA_WAIT_NOTE && (await usableOf(legacyTown))?.n === 2 && p.released >= 1 && (await statusesOf(legacyTown)).every((s) => s === "approved"), `${await noteOf(legacyTown)} ${JSON.stringify(p)}`);
 const again2 = await replanUnfitQueue();
-check("második futás: semmi új (idempotens)", again2.replanned === 0 && again2.setAside === 0, JSON.stringify(again2));
+check("második futás: semmi új (idempotens)", again2.replanned === 0 && again2.setAside === 0 && again2.released === 0, JSON.stringify(again2));
 
 // ── ③ re-gate ─────────────────────────────────────────────────────────────────────────────
 console.log("③ render-kapu a várakozó sorokon");

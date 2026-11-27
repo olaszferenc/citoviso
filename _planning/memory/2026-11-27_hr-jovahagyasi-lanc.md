@@ -94,3 +94,15 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - a kapu-újramérésnek kemény határideje van (`REGATE_GRACE_MS`: a keret + 15 s után a böngésző zár, a lépés visszatér, a késő audit nem ír);
   - a tick folyamata a parancs végén `process.exit`-tel lép ki (stdout kiürítve);
   - őr a `chain-supply-check`-ben.
+
+## Képszám-szabály (koordinátor „mehet”, 11-27 délután, ADR-XXXX)
+- **Mérés, 22 „TARTVA (képkapu)” lead, a generátor szűrői helyben:**
+  - 100 tárolt kép → 96 élő → **57 a kurálás után** (`curateMockPhotos`). A méret- és duplikátum-szűrő 0-t ejtett.
+  - A `material.portalPhotos` gyakran több, mint a tárolt kép (9 vs 5).
+  - 3 lead csak Places-számos, tárolt Places-válasz nélkül.
+- **Javítás:**
+  - a generátor felírja a `material.usablePhotos = {n, stored}` mezőt;
+  - a számláló ezt használja (app és lánc `fo-cand`);
+  - az újratervezés útvonalanként egyszer fut (saját / településképes);
+  - a már félretett 26 sor: 9 a településképes úton újraindul, 17 (településképes terv) vissza a kapuhoz.
+- **Lánc:** `atallas-kepszam.sh` (05d1042), a deploy ELŐTT. Élesen mérve: fo-cand 72 = 72.
