@@ -77,9 +77,15 @@ async function shots(artifactId: string): Promise<string[]> {
         return route.fulfill({ status: 200, body: await readFile(abs).catch(() => Buffer.alloc(0)) });
       }
       if (/^https?:/.test(url)) {
-        const r = await fetch(url, { headers: { "user-agent": PORTAL_USER_AGENT }, signal: AbortSignal.timeout(20000) }).catch(() => null);
-        if (!r?.ok) return route.abort();
-        return route.fulfill({ status: 200, contentType: r.headers.get("content-type") ?? "image/jpeg", body: Buffer.from(await r.arrayBuffer()) });
+        // The body read can time out too (quality colleague 11-27 12:18: an uncaught TimeoutError from the route
+        // handler ended the whole sample) — any failure here aborts this one image, never the run.
+        try {
+          const r = await fetch(url, { headers: { "user-agent": PORTAL_USER_AGENT }, signal: AbortSignal.timeout(20000) });
+          if (!r.ok) return await route.abort();
+          return await route.fulfill({ status: 200, contentType: r.headers.get("content-type") ?? "image/jpeg", body: Buffer.from(await r.arrayBuffer()) });
+        } catch {
+          return route.abort().catch(() => undefined);
+        }
       }
       return route.continue();
     });
