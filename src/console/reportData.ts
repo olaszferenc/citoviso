@@ -21,6 +21,14 @@
 //              is not a trial.
 //   ordered  = first order_intent.submitted_at
 //   paid     = first payment.status='paid' — from the PAYMENT table, never prospect.status
+//   mail opened = the cold letter's hero image was fetched by a PERSON (email_open kind='open',
+//              own=false; ADR-0462, src/outreach/emailOpen.ts). Only letters sent since the image
+//              rides remotely count (`mailTracked`: e-mail sent at/after the first send that ever
+//              produced an email_open row — 2026-11-23 on prod); Apple's delivery prefetch and
+//              scanners are counted apart and never as an open. A mail client that blocks images
+//              hides a real open, so the measure UNDERCOUNTS outside Gmail. First round only: the
+//              follow-up letter carries no remote image. An 'open' within 60 s of the send is the
+//              Gmail scanner (emailOpen.ts MAIL_OPEN_MIN_DELAY_MS) and counts as a bot, old rows too.
 // trialed is a SIDE stage, not a rung between deep and ordered: a buyer may never trial, and
 // a trialist who continues DOES submit an order_intent (/p/:token/folytatas posts to
 // /p/:token/request), so it also counts as ordered/paid. `ordered`/`paid` keep their
@@ -48,6 +56,7 @@ import { ELEK_LEAD_NAME } from "../elek/park.js";
 import { sql } from "kysely";
 import { partsIn, APP_TZ, addIsoDays, isoDayDiff, isoDayIn, midnightIn, todayIn } from "../text/zoneTime.js";
 import { countryConfig, countryConfigSync, countryOf } from "../country.js";
+import { tooSoonAfterSend } from "../outreach/emailOpen.js";
 import {
   EXIT_REASONS,
   EXPECTED_STATED,
@@ -60,8 +69,8 @@ import {
 } from "../analytics/exitReason.js";
 
 export type ReportDays = 0 | 7 | 30 | 90;
-export type ReportDim = "segment" | "channel" | "device" | "style" | "hour" | "country";
-export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device", "style", "hour", "country"];
+export type ReportDim = "segment" | "channel" | "device" | "style" | "hour" | "country" | "mailbox";
+export const REPORT_DIMS: readonly ReportDim[] = ["segment", "channel", "device", "style", "hour", "country", "mailbox"];
 /** Country filter: "all", or the lead's ISO-2 ("" = no known country). Scopes EVERY metric, like `seg`. */
 export type ReportCountry = string;
 /** One chip of the shared country strip: a country (ISO-2, "" = unknown) and the tab's rows in it. */
@@ -243,6 +252,29 @@ export interface ProspectFacts {
   readonly stated: StatedReason | null;
   /** The lead answered the outreach (an `outreach_reply` row for this send). */
   readonly replied: boolean;
+  /** The recipient's mailbox provider (from the address); null/absent = no e-mail went out. */
+  readonly mailDomain?: MailDomain | null;
+  /** The letter went out while the open measurement ran (see the header); absent = not measured. */
+  readonly mailTracked?: boolean;
+  /** First PERSON fetch of the letter's image (kind='open', own=false), in this round; null = none seen. */
+  readonly mailOpenedAt?: Date | null;
+  /** Apple Mail's delivery prefetch fetched the image (informational, not an open). */
+  readonly mailPrefetch?: boolean;
+  /** A scanner/bot fetched the image (informational, not an open). */
+  readonly mailBot?: boolean;
+}
+
+/** Recipient mailbox group for the letter-open split: Gmail reports opens well, the rest less so. */
+export type MailDomain = "gmail" | "other";
+export const MAIL_DOMAINS: readonly MailDomain[] = ["gmail", "other"];
+
+/** gmail.com / googlemail.com → "gmail"; any other address → "other"; no address → null. */
+export function mailDomainOf(email: string | null | undefined): MailDomain | null {
+  const at = (email ?? "").trim().toLowerCase().lastIndexOf("@");
+  if (at < 0) return null;
+  const host = (email ?? "").trim().toLowerCase().slice(at + 1);
+  if (!host) return null;
+  return host === "gmail.com" || host === "googlemail.com" ? "gmail" : "other";
 }
 
 export interface StageCounts {
@@ -254,6 +286,17 @@ export interface StageCounts {
   readonly paid: number;
   readonly returned: number;
   readonly unsubscribed: number;
+  /** Letters sent while the open measurement ran (the letter-open denominator). */
+  readonly mailSent: number;
+  /** Of `mailSent`: the letter was opened by a person (image fetched). */
+  readonly mailOpened: number;
+  /** Of `mailOpened`: also opened the mock (clicked). */
+  readonly mailClicked: number;
+  /** Of `mailSent`: opened the mock although no letter open was seen (image blocked). */
+  readonly mailClickedUnseen: number;
+  /** Of `mailSent`: Apple prefetch / bot fetches (informational, never opens). */
+  readonly mailPrefetch: number;
+  readonly mailBot: number;
 }
 
 export interface TimeStats {
@@ -264,7 +307,7 @@ export interface TimeStats {
 }
 
 export interface Hypothesis {
-  readonly key: "open_rate" | "return_rate" | "deep_rate" | "trial_rate" | "order_rate" | "paid_rate" | "first_open_hours";
+  readonly key: "mail_open_rate" | "open_rate" | "return_rate" | "deep_rate" | "trial_rate" | "order_rate" | "paid_rate" | "first_open_hours";
   /** Percent (0–100) or hours for first_open_hours; NaN = no data. */
   readonly value: number;
   /** The same measure over the previous, equally long window; null for "Összes". */
@@ -459,6 +502,10 @@ export interface ReportData {
     readonly prevSentToOpen: TimeStats | null;
   };
   readonly hypotheses: readonly Hypothesis[];
+  /** The letter-open stage per recipient mailbox group (Gmail / other), in the window. */
+  readonly mailByDomain: Readonly<Record<MailDomain, StageCounts>>;
+  /** ISO day (app zone) the letter-open measurement started; null = no open measured yet. */
+  readonly mailSince: string | null;
   readonly returns: readonly ReturnRow[];
   /** „Honnan nyitották” (0132, frozen plan design-refs/console/honnan-nyitottak/ B). */
   readonly openSources: readonly OpenSourceRow[];
@@ -517,6 +564,9 @@ const timeStats = (hours: readonly number[]): TimeStats => ({ n: hours.length, m
 
 /** Default targets (README ⑦) — overridden by report_target rows when present. */
 export const DEFAULT_TARGETS: Readonly<Record<Hypothesis["key"], number>> = {
+  // A person opened the cold letter (image fetched). No report_target row is seeded — this holds
+  // until the operator writes one.
+  mail_open_rate: 40,
   open_rate: 40,
   return_rate: 30,
   deep_rate: 20,
@@ -679,6 +729,7 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
       "prospect.sms_sent_at as sms_sent_at",
       "prospect.mms_sent_at as mms_sent_at",
       "prospect.unsubscribed_at as unsubscribed_at",
+      "prospect.contact_email as contact_email",
       "lead.name as lead_name",
       // Only the two keys styleOf/templateOf read — the whole `inputs` (≈6 KB of JSON a mock) was
       // shipped and parsed for every sent prospect, twice per dashboard click (measured 2026-11-26).
@@ -730,6 +781,9 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
     rows.map((r) => ({ id: r.id, leadId: r.lead_id, sentAt: toDate(r.sent_at)! })),
     (leadId, at) => inRound(leadId, at),
   );
+  // The letter's image fetches (first round only — the follow-up letter carries no remote image).
+  const emailSentOf = new Map(rows.map((r) => [r.id, toDate(r.email_sent_at)]));
+  const mail = round === "first" ? await loadMailOpens(ids, (prospectId, at) => inRound(leadOfProspect.get(prospectId) ?? "", at), emailSentOf) : null;
 
   const eventsByView = new Map<string, RawEvent[]>();
   for (const e of events) {
@@ -822,8 +876,68 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
       exitConfidence: verdict?.confidence ?? null,
       stated: feedback.get(r.id) ?? null,
       replied: replied.has(r.id),
+      ...mailFactsOf(r, mail),
     };
   });
+}
+
+interface MailOpens {
+  /** Earliest e-mail send that ever produced a fetch: the measurement's start (null = none yet). */
+  readonly sinceMs: number | null;
+  readonly byProspect: ReadonlyMap<string, { openedAt: Date | null; prefetch: boolean; bot: boolean }>;
+}
+
+/**
+ * email_open rows of the given prospects (own=false), folded per prospect, cut to the round.
+ * An 'open' within MAIL_OPEN_MIN_DELAY_MS of the letter's send is Gmail's delivery scanner, not a
+ * person — the rule the writer applies since 2026-11-23 14:32, applied here to EVERY row, so the
+ * rows written before it (prod: 47 of the first morning's opens, 3–17 s after the send) count as
+ * bots too.
+ */
+async function loadMailOpens(
+  ids: readonly string[],
+  counts: (prospectId: string, at: Date) => boolean,
+  emailSentOf: ReadonlyMap<string, Date | null>,
+): Promise<MailOpens> {
+  const since = await db
+    .selectFrom("prospect")
+    .select(sql<Date | string | null>`min(prospect.email_sent_at)`.as("since"))
+    .where(({ exists, selectFrom }) => exists(selectFrom("email_open").select("email_open.id").whereRef("email_open.prospect_id", "=", "prospect.id")))
+    .executeTakeFirst();
+  const rows = ids.length
+    ? await db
+        .selectFrom("email_open")
+        .select(["prospect_id", "at", "kind"])
+        .where("prospect_id", "in", ids)
+        .where("own", "=", false)
+        .orderBy("at", "asc")
+        .execute()
+    : [];
+  const byProspect = new Map<string, { openedAt: Date | null; prefetch: boolean; bot: boolean }>();
+  for (const r of rows) {
+    const at = toDate(r.at)!;
+    if (!counts(r.prospect_id, at)) continue;
+    const m = byProspect.get(r.prospect_id) ?? { openedAt: null, prefetch: false, bot: false };
+    const kind = r.kind === "open" && tooSoonAfterSend(emailSentOf.get(r.prospect_id) ?? null, at) ? "bot" : r.kind;
+    if (kind === "open" && !m.openedAt) m.openedAt = at;
+    if (kind === "proxy_prefetch") m.prefetch = true;
+    if (kind === "bot") m.bot = true;
+    byProspect.set(r.prospect_id, m);
+  }
+  const s = toDate(since?.since ?? null);
+  return { sinceMs: s ? s.getTime() : null, byProspect };
+}
+
+/** The letter-open facts of one prospect row (pure; `mail` null = not measured in this round). */
+export function mailFactsOf(
+  r: { id: string; email_sent_at: unknown; contact_email: string | null },
+  mail: MailOpens | null,
+): Pick<ProspectFacts, "mailDomain" | "mailTracked" | "mailOpenedAt" | "mailPrefetch" | "mailBot"> {
+  const emailAt = toDate(r.email_sent_at);
+  const mailDomain = emailAt ? mailDomainOf(r.contact_email) : null;
+  const mailTracked = !!(mail && emailAt && mailDomain && mail.sinceMs !== null && emailAt.getTime() >= mail.sinceMs);
+  const m = mailTracked ? mail!.byProspect.get(r.id) : undefined;
+  return { mailDomain, mailTracked, mailOpenedAt: m?.openedAt ?? null, mailPrefetch: m?.prefetch ?? false, mailBot: m?.bot ?? false };
 }
 
 // ── „Honnan nyitották” (0132) ──────────────────────────────────────────────────
@@ -1107,7 +1221,22 @@ function stageCounts(ps: readonly ProspectFacts[]): StageCounts {
   let paid = 0;
   let returned = 0;
   let unsub = 0;
+  let mailSent = 0;
+  let mailOpened = 0;
+  let mailClicked = 0;
+  let mailClickedUnseen = 0;
+  let mailPrefetch = 0;
+  let mailBot = 0;
   for (const p of ps) {
+    if (p.mailTracked) {
+      mailSent++;
+      if (p.mailOpenedAt) {
+        mailOpened++;
+        if (p.openedAt) mailClicked++;
+      } else if (p.openedAt) mailClickedUnseen++;
+      if (p.mailPrefetch) mailPrefetch++;
+      if (p.mailBot) mailBot++;
+    }
     if (p.openedAt) opened++;
     if (p.deepAt) deep++;
     if (p.trialedAt) trialed++;
@@ -1116,7 +1245,7 @@ function stageCounts(ps: readonly ProspectFacts[]): StageCounts {
     if (p.visits.length > 1) returned++;
     if (p.unsubscribedAt) unsub++;
   }
-  return { sent: ps.length, opened, deep, trialed, ordered, paid, returned, unsubscribed: unsub };
+  return { sent: ps.length, opened, deep, trialed, ordered, paid, returned, unsubscribed: unsub, mailSent, mailOpened, mailClicked, mailClickedUnseen, mailPrefetch, mailBot };
 }
 
 const hours = (a: Date | null, b: Date | null): number | null => (a && b ? (b.getTime() - a.getTime()) / HOUR : null);
@@ -1138,7 +1267,17 @@ export function dimKey(p: ProspectFacts, dim: ReportDim): string {
       return String(p.sentHour).padStart(2, "0") + ":00";
     case "country":
       return p.country ?? "";
+    case "mailbox":
+      // The recipient's mailbox group; "none" = no e-mail went out (SMS/MMS/messenger only).
+      return p.mailDomain ?? "none";
   }
+}
+
+/** The first measured letter's day (app zone) among the facts; null = nothing measured. */
+function mailSinceOf(ps: readonly ProspectFacts[]): string | null {
+  let min = Infinity;
+  for (const p of ps) if (p.mailTracked && p.sentAt.getTime() < min) min = p.sentAt.getTime();
+  return Number.isFinite(min) ? isoDay(new Date(min)) : null;
 }
 
 function isoDay(d: Date): string {
@@ -1396,6 +1535,8 @@ export function foldReport(
     return { key, value, prevValue, target: targets[key], direction, verdict: verdictOf(value, targets[key], direction), num: numV, den: denV, weekly: weekly(weeklyF) };
   };
   const hypotheses: Hypothesis[] = [
+    // Between „kiküldött” and the mock open: did a person open the LETTER (measured letters only)?
+    hyp("mail_open_rate", counts.mailOpened, counts.mailSent, "higher", (ps) => { const c = stageCounts(ps); return rate(c.mailOpened, c.mailSent); }),
     hyp("open_rate", counts.opened, counts.sent, "higher", (ps) => rate(stageCounts(ps).opened, ps.length)),
     hyp("return_rate", counts.returned, counts.opened, "higher", (ps) => { const c = stageCounts(ps); return rate(c.returned, c.opened); }),
     hyp("deep_rate", counts.deep, counts.opened, "higher", (ps) => { const c = stageCounts(ps); return rate(c.deep, c.opened); }),
@@ -1545,6 +1686,8 @@ export function foldReport(
     prevCounts,
     times,
     hypotheses,
+    mailByDomain: { gmail: stageCounts(inRange.filter((p) => p.mailDomain === "gmail")), other: stageCounts(inRange.filter((p) => p.mailDomain === "other")) },
+    mailSince: mailSinceOf(everyone),
     returns,
     openSources: foldOpenSources(inRange),
     escalation,

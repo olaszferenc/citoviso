@@ -2444,6 +2444,13 @@ const rpFacts: ProspectFacts[] = Array.from({ length: 72 }, (_, i) => {
     device, exitReason: verdict?.reason ?? null, exitConfidence: verdict?.confidence ?? null,
     stated: !paidAt && opened && rnd() < 0.1 ? "expensive" : null,
     replied: opened && i % 9 === 0,
+    // The letter open (email_open, ADR-0462): e-mail sends only, deterministic (no rnd() call, so the
+    // seeded sequence stays put) — Gmail opens most, the other clients hide some behind blocked images.
+    mailDomain: i % 2 === 0 ? (i % 6 === 0 ? "other" : "gmail") : null,
+    mailTracked: i % 2 === 0,
+    mailOpenedAt: i % 2 === 0 && (opened || i % 6 === 2) && !(i % 6 === 0 && i % 12 !== 0) ? new Date(sentAt.getTime() + 2 * 3_600_000) : null,
+    mailPrefetch: i % 6 === 0 && i % 12 !== 0,
+    mailBot: i % 10 === 4,
   };
 });
 const rpNotes = [{ id: "n1", day: "2026-09-18", text: "Tárgymező csere: személyes megszólítás" }];

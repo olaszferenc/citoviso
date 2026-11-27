@@ -3706,6 +3706,19 @@ if [ -f scripts/open-channels-check.mts ] && \
   echo "[pre-commit] open-channels-check (megnyitás csatornánként: kapta / megnyitotta / időszak)…"
   npx tsx scripts/open-channels-check.mts >"$GATE_LOG" || gate_failed
 fi
+# Levél-megnyitás a Riport-tölcsérben (email_open, ADR-0462; brief levelnyitas-riport-20261127): a mért levél
+#     megnyitása / kiküldött, Apple-előtöltés és robot külön, „kattintott / megnyitotta a levelet”, Gmail / egyéb,
+#     a kártya a „Megfogja-e a levél?” előtt; a DB-láb a fold számait a brief SQL-jével veti össze (saját sorok, finally törli).
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/mail-open-report-check.mts ] && \
+   changed_files | grep -qE '^src/console/report(Data|Views)\.ts$|^src/outreach/emailOpen\.ts$|^scripts/mail-open-report-check\.mts$'; then
+  if changed_files | grep -qE '^scripts/mail-open-report-check\.mts$'; then
+    echo "[pre-commit] mail-open-report-check --self-test (a levél-megnyitás őr pirosra tud-e menni)…"
+    npx tsx scripts/mail-open-report-check.mts --self-test >"$GATE_LOG" || gate_failed
+  fi
+  echo "[pre-commit] mail-open-report-check (levél-megnyitás a tölcsérben: fold = SQL)…"
+  npx tsx scripts/mail-open-report-check.mts >"$GATE_LOG" || gate_failed
+fi
 # Ingyenes próba (free_trial, 0097 — src/trial/start.ts): kártya nélküli konvertálás — próbázóra nincs számla/dunning, dupla indítás =
 #     1 tenant, minden modul aktív (trial_grant), 1 kupon, vásárolt lead elutasítva, trial_start mérve.
 #     Saját, eldobható sorokat ír a közös dev-DB-re, `finally`-ben törli; EMAIL_PROVIDER=mock kötelező. ~10 mp.

@@ -4,7 +4,7 @@ title: Riport — a megkeresés-tölcsér és a viselkedés olvasása
 audience: operator
 category: measure
 anchors: console.report
-updated: 2026-11-26
+updated: 2026-11-27
 ---
 
 A Riport négy lapon felel a pilot kérdéseire: a **„Tölcsér”** azt mutatja, hol szivárog el a
@@ -27,7 +27,7 @@ A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselk
 Egy sorban: az **időszak** chipjei (**„Ma”** · 7 · 30 · 90 nap vagy **„Összes”**; a lap a
 **„Ma”**-val nyílik), a **„Lead típus”**
 legördülő (**„mind”** · nincs honlap · 0 lábnyom · van lábnyom · elavult honlap · ismeretlen) és a
-**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra · ország). A fülsor
+**bontás** legördülő (szegmens · csatorna · eszköz · mock-stílus · küldési óra · ország · címzett postafiókja). A fülsor
 alatt minden riport-fülön ott az **„Ország”** sáv: **„Mind”** és országonként a kód, a név (telefonon
 csak a kód) és a fül sorainak száma abban az országban (itt: kiküldött linkek; a halvány 0-s ország
 be van állítva, de nincs sora). A **„?”** chip azokat a sorokat számolja, amelyek leadjének nem
@@ -66,12 +66,27 @@ Alattuk egy sor elmondja, mit mér az éppen választott kör.
 - **Miért külön?** Ha a két kör egybefolyna, a levél után jött megnyitások az első megkeresés számait
   fújnák fel, és nem látnád, mennyit ér maga a levél.
 
-## Tölcsér — hét kérdés, hét kártya
+## Tölcsér — nyolc kérdés, nyolc kártya
 
 Minden kártya egy kérdés, a mérőszám nevével, a nagy értékkel, az ítélettel és a célt jelölő
 mérővel:
 
-- **„Megfogja-e a levél?”** — megnyitás / kiküldött (cél 40%).
+- **„Megnyitotta-e a levelet?”** — levél-megnyitás / kiküldött levél (cél 40%). Azt méri, hány
+  e-mailt nyitott meg egy ember: a levélben lévő kép a megnyitáskor töltődik le, és ezt a letöltést
+  számoljuk. Csak az e-mail számít, és csak azok a levelek, amelyek a mérés kezdete óta mentek ki: a
+  kezdőnap a kártya alján áll („… óta mérjük”). A küldés utáni első percben jött letöltés a Gmail
+  levélszűrője, nem ember: az robotnak számít. Alatta: **Gmail** és **egyéb** levelezők külön, százalékkal és
+  darabszámmal. Halványan: **„Apple-előtöltés”** (az Apple Mail minden képet letölt már a kézbesítéskor,
+  akkor is, ha senki nem nyitja meg) és **„robot”** (levélszűrő, ellenőrző program). Ezek nem számítanak
+  megnyitásnak. ⚠️ Sok nem-Gmail levelező alapból nem tölti le a képeket, ilyenkor a megnyitás nem
+  látszik: a szám ott **kevesebb a valóságosnál**. A Gmail-arány a megbízhatóbb. Ha az időszakban nem
+  ment ki mért levél, a kártya „nincs adat” ítéletet kap, és ezt írja: „Az időszakban nem ment ki mért
+  levél.” Az **„Újrakeresés”** körben ugyanez áll („Az utánkövető levélben nincs mérhető kép.”), mert
+  az utánkövető levélben nincs ilyen kép.
+- **„Megfogja-e a levél?”** — megnyitás / kiküldött (cél 40%): a mock megnyitása. Alatta:
+  **„kattintott / megnyitotta a levelet”** — akik megnyitották a levelet, azok közül hányan nyitották meg
+  a mockot is. Ha valaki a mockot megnyitotta, de a levél-megnyitása nem látszott (letiltotta a képet),
+  külön szerepel: „+N kattintó levél-megnyitás nélkül”.
 - **„Visszatér-e?”** — visszatérő / megnyitó (cél 30%).
 - **„Belenyúl-e a modulokba?”** — elmélyülő / megnyitó (cél 20%). Elmélyült az, aki modult vagy
   presetet érintett, vagy a lap felénél lejjebb görgetett.
@@ -103,9 +118,11 @@ leadet mutatja.
   a névre kattintva a lead riportja nyílik (mit csinált a mockon), a **„lead-lap”** link a lead
   adatlapjára visz. Alatta egy mondat az eszkalációs ajánlatról: hánynak jelent meg, hány
   kattintott, hány rendelt, hány vetette el.
-- **„Bontás”**: a kiválasztott dimenzió szerint (pl. szegmensenként) a tölcsér hat oszlopa:
-  **„Kiküldve”** · **„Megnyitva”** · **„Elmélyült”** · **„Próba”** · **„Rendelés”** · **„Fizetve”**; az
-  **„ÖSSZES”** sor az összesítés. Asztali gépen a panel a lap teljes szélességét kapja, így minden
+- **„Bontás”**: a kiválasztott dimenzió szerint (pl. szegmensenként) a tölcsér oszlopai:
+  **„Kiküldve”** · **„Levelet megnyitotta”** (a mért levelek közül hányat nyitottak meg; „–”, ha nem
+  ment mért levél) · **„Megnyitva”** (a mock) · **„Elmélyült”** · **„Próba”** · **„Rendelés”** · **„Fizetve”**; az
+  **„ÖSSZES”** sor az összesítés. A **„Címzett postafiókja”** bontás (a bontás legördülőből) a **Gmail** · **Egyéb levelező** ·
+  **Nem ment e-mail** sorokra oszt: így látod, mennyivel pontosabban mér a Gmail. Asztali gépen a panel a lap teljes szélességét kapja, így minden
   oszlop látszik; telefonon a táblázat oldalra húzható — az utolsó oszlopok a jobb szélen túl vannak.
   A tölcsér sosem lép vissza: aki fizetett, az a megnyitók között is ott van. A **„Próba”** kivétel:
   az a rendelés melletti másik út, nem lépcsőfok — aki próbázik, nem feltétlenül rendel, és aki már

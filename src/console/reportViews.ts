@@ -118,6 +118,13 @@ export const DIM_LABEL = (lang: string): Readonly<Record<ReportDim, string>> => 
   style: T(lang, "Mock-stílus"),
   hour: T(lang, "Küldési óra"),
   country: T(lang, "Ország"),
+  mailbox: T(lang, "Címzett postafiókja"),
+});
+/** The recipient mailbox groups of the letter-open split ("none" = no e-mail went out). */
+const MAILBOX_LABEL = (lang: string): Readonly<Record<string, string>> => ({
+  gmail: T(lang, "Gmail"),
+  other: T(lang, "Egyéb levelező"),
+  none: T(lang, "Nem ment e-mail"),
 });
 /** A country key as the operator reads it: the layer row's name, else the code; "" = unknown. */
 function countryLabel(iso: string, lang: string): string {
@@ -160,6 +167,7 @@ function dimValueLabel(dim: ReportDim, key: string, lang: string): string {
   if (dim === "device") return DEVICE_LABEL(lang)[key as Device] ?? key;
   if (dim === "style") return SKINS[key]?.label ?? (key === "ismeretlen" ? T(lang, "Ismeretlen") : key);
   if (dim === "country") return countryLabel(key, lang);
+  if (dim === "mailbox") return MAILBOX_LABEL(lang)[key] ?? key;
   return key;
 }
 
@@ -374,6 +382,7 @@ const bar = (widthPct: number, cls = ""): string =>
 
 // ── Tölcsér page (B — question-first) ─────────────────────────────────────────
 const HYP_TEXT = (lang: string): Readonly<Record<Hypothesis["key"], { q: string; m: string }>> => ({
+  mail_open_rate: { q: T(lang, "Megnyitotta-e a levelet?"), m: T(lang, "levél-megnyitás / kiküldött levél") },
   open_rate: { q: T(lang, "Megfogja-e a levél?"), m: T(lang, "megnyitás / kiküldött") },
   return_rate: { q: T(lang, "Visszatér-e?"), m: T(lang, "visszatérő / megnyitó") },
   deep_rate: { q: T(lang, "Belenyúl-e a modulokba?"), m: T(lang, "elmélyülő / megnyitó") },
@@ -414,13 +423,39 @@ function hypothesisCards(d: ReportData, lang: string): string {
           ? T(lang, "{d} a tegnapihoz", { d: change })
           : T(lang, "{d} az előző {n} naphoz", { d: change, n: d.days });
       return (
-        `<div class="rp-hcard rp-hcard--${v.cls || "none"}"><div class="rp-hcard__q">${esc(tx[h.key].q)}</div><div class="rp-hcard__m">${esc(tx[h.key].m)}</div>` +
+        `<div class="rp-hcard rp-hcard--${v.cls || "none"}" data-hyp="${h.key}"><div class="rp-hcard__q">${esc(tx[h.key].q)}</div><div class="rp-hcard__m">${esc(tx[h.key].m)}</div>` +
         `<div class="rp-hcard__v"><b>${esc(value)}</b><span class="rp-pill rp-pill--${v.cls}"><i></i>${esc(v.label)}</span></div>` +
         `<div class="rp-meter" title="${esc(T(lang, "cél: {t}", { t: lower ? fmtH(h.target, lang) : `${h.target}%` }))}">${bar(fill)}<em style="left:${mark.toFixed(1)}%" data-l="${esc(T(lang, "cél {t}", { t: lower ? fmtH(h.target, lang) : `${h.target}%` }))}"></em></div>` +
-        `<div class="rp-hcard__m rp-hcard__sub">${esc(sub)} · ${changeNote}</div>${sparkline(h.weekly)}</div>`
+        `<div class="rp-hcard__m rp-hcard__sub">${esc(sub)} · ${changeNote}</div>${mailCardExtra(d, h.key, lang)}${sparkline(h.weekly)}</div>`
       );
     })
     .join("")}</div>`;
+}
+
+/** The letter-open lines under two cards: the mailbox split + the informational fetches on the
+ *  letter card, „kattintott / megnyitotta a levelet” on the mock-open card. */
+function mailCardExtra(d: ReportData, key: Hypothesis["key"], lang: string): string {
+  const c = d.counts;
+  if (key === "mail_open_rate") {
+    if (!c.mailSent) {
+      return `<div class="rp-hcard__m rp-hcard__sub">${esc(d.round === "re" ? T(lang, "Az utánkövető levélben nincs mérhető kép.") : T(lang, "Az időszakban nem ment ki mért levél."))}</div>`;
+    }
+    const g = d.mailByDomain.gmail;
+    const o = d.mailByDomain.other;
+    const split = T(lang, "Gmail {g} ({gn}/{gd}) · egyéb {o} ({on}/{od})", { g: pct(g.mailOpened, g.mailSent), gn: g.mailOpened, gd: g.mailSent, o: pct(o.mailOpened, o.mailSent), on: o.mailOpened, od: o.mailSent });
+    const info = T(lang, "nem számít megnyitásnak: Apple-előtöltés {a} · robot {b}", { a: c.mailPrefetch, b: c.mailBot });
+    const since = d.mailSince ? T(lang, "{d} óta mérjük; képblokkoló levelezőnél alulszámol", { d: dayLabel(d.mailSince) }) : "";
+    return (
+      `<div class="rp-hcard__m rp-hcard__sub">${esc(split)}</div>` +
+      `<div class="rp-hcard__m rp-hcard__sub rp-hcard__faint">${esc(info)}</div>` +
+      (since ? `<div class="rp-hcard__m rp-hcard__sub rp-hcard__warn">${esc(since)}</div>` : "")
+    );
+  }
+  if (key === "open_rate" && c.mailSent) {
+    const unseen = c.mailClickedUnseen ? ` · ${T(lang, "+{n} kattintó levél-megnyitás nélkül", { n: c.mailClickedUnseen })}` : "";
+    return `<div class="rp-hcard__m rp-hcard__sub">${esc(T(lang, "kattintott / megnyitotta a levelet: {p} ({a}/{b})", { p: pct1(c.mailClicked, c.mailOpened), a: c.mailClicked, b: c.mailOpened }))}${esc(unseen)}</div>`;
+  }
+  return "";
 }
 
 function returnsPanel(d: ReportData, lang: string): string {
@@ -466,12 +501,13 @@ function returnsPanel(d: ReportData, lang: string): string {
 function dimPanel(d: ReportData, lang: string): string {
   const mx = Math.max(1, ...d.dims.map((r) => r.counts.sent));
   const row = (label: string, c: StageCounts, tot = false): string =>
-    `<tr${tot ? ' class="rp-tot"' : ""}><td>${esc(label)}</td><td class="num"><span class="rp-mini" style="width:${((c.sent / mx) * 48).toFixed(0)}px"></span>${c.sent}</td><td class="num">${pct(c.opened, c.sent)}</td><td class="num">${pct(c.deep, c.opened)}</td><td class="num">${pct1(c.trialed, c.sent)}</td><td class="num">${pct1(c.ordered, c.sent)}</td><td class="num">${pct1(c.paid, c.sent)}</td></tr>`;
+    `<tr${tot ? ' class="rp-tot"' : ""}><td>${esc(label)}</td><td class="num"><span class="rp-mini" style="width:${((c.sent / mx) * 48).toFixed(0)}px"></span>${c.sent}</td><td class="num"${c.mailSent ? ` title="${esc(`${c.mailOpened} / ${c.mailSent}`)}"` : ""}>${pct(c.mailOpened, c.mailSent)}</td><td class="num">${pct(c.opened, c.sent)}</td><td class="num">${pct(c.deep, c.opened)}</td><td class="num">${pct1(c.trialed, c.sent)}</td><td class="num">${pct1(c.ordered, c.sent)}</td><td class="num">${pct1(c.paid, c.sent)}</td></tr>`;
   return (
     `<div class="panel"><h2>${esc(T(lang, "Bontás"))} <span class="rp-q">${esc(T(lang, "— {dim} szerint", { dim: DIM_LABEL(lang)[d.dim].toLowerCase() }))}</span></h2>` +
-    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(DIM_LABEL(lang)[d.dim])}</th><th class="num">${esc(T(lang, "Kiküldve"))}</th><th class="num">${esc(T(lang, "Megnyitva"))}</th><th class="num">${esc(T(lang, "Elmélyült"))}</th><th class="num">${esc(T(lang, "Próba"))}</th><th class="num">${esc(T(lang, "Rendelés"))}</th><th class="num">${esc(T(lang, "Fizetve"))}</th></tr></thead>` +
+    `<div class="tblwrap"><table class="rp-tbl"><thead><tr><th>${esc(DIM_LABEL(lang)[d.dim])}</th><th class="num">${esc(T(lang, "Kiküldve"))}</th><th class="num">${esc(T(lang, "Levelet megnyitotta"))}</th><th class="num">${esc(T(lang, "Megnyitva"))}</th><th class="num">${esc(T(lang, "Elmélyült"))}</th><th class="num">${esc(T(lang, "Próba"))}</th><th class="num">${esc(T(lang, "Rendelés"))}</th><th class="num">${esc(T(lang, "Fizetve"))}</th></tr></thead>` +
     `<tbody>${row(T(lang, "ÖSSZES"), d.counts, true)}${d.dims.map((r) => row(dimValueLabel(d.dim, r.key, lang), r.counts)).join("")}</tbody></table></div>` +
-    `<p class="mut small rp-note">${esc(T(lang, "A tölcsér sosem lép vissza: a szám azt jelenti, hogy a lead LEGALÁBB eddig eljutott."))}</p></div>`
+    `<p class="mut small rp-note">${esc(T(lang, "A tölcsér sosem lép vissza: a szám azt jelenti, hogy a lead LEGALÁBB eddig eljutott."))}</p>` +
+    `<p class="mut small rp-note">${esc(T(lang, "„Levelet megnyitotta”: a mért levelek közül hányat nyitott meg egy ember (a levél képe letöltődött), csak e-mailnél. A „Megnyitva” a mock megnyitása. Képblokkoló levelezőnél a levél-megnyitás nem látszik, ezért alulszámol."))}</p></div>`
   );
 }
 

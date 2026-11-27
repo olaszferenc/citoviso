@@ -3047,6 +3047,9 @@ a.rp-cc.on { background: var(--citui-navy-900); border-color: var(--citui-navy-9
 .rp-hcard__q { font-family: var(--citui-font-display); font-weight: 700; font-size: 17px; line-height: 1.3; color: var(--citui-ink-brand); }
 .rp-hcard__m { font-size: 11.5px; color: var(--citui-muted); }
 .rp-hcard__sub { margin-top: 14px; }
+.rp-hcard__sub + .rp-hcard__sub { margin-top: -2px; }
+.rp-hcard__faint { opacity: .7; }
+.rp-hcard__warn { color: var(--citui-warn-ink); }
 .rp-hcard__v { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .rp-hcard__v b { font-family: var(--citui-font-display); font-size: 1.5rem; color: var(--citui-ink-brand); font-variant-numeric: tabular-nums; }
 .rp-meter { position: relative; height: 8px; background: color-mix(in srgb, var(--citui-muted) 22%, var(--citui-panel)); border-radius: 4px; margin: 2px 0; }
