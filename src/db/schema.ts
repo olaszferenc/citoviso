@@ -669,6 +669,26 @@ export interface NonopenerFollowupTable {
 
 /** 0115 (ADR-0405): the automatic outreach go list — one row per lead, sent by the prod
  *  timer through the send-all gates (src/outreach/autoDispatch.ts). */
+/** 0161 — the one-off correction letter per lead (src/outreach/fixLetter.ts). */
+export interface FixLetterTable {
+  id: Generated<string>;
+  lead_id: string;
+  old_prospect_id: string;
+  rule: string;
+  matched: string;
+  status: Generated<"selected" | "ready" | "held" | "approved" | "sent" | "rejected" | "skipped">;
+  prospect_id: string | null;
+  main_id: string | null;
+  alt_id: string | null;
+  note: string | null;
+  tries: Generated<number>;
+  decided_by: string | null;
+  decided_at: Timestamp | null;
+  sent_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface OutreachDispatchTable {
   id: Generated<string>;
   lead_id: string;
@@ -2510,6 +2530,7 @@ export interface Database {
   behavior_message: BehaviorMessageTable;
   nonopener_followup: NonopenerFollowupTable;
   outreach_dispatch: OutreachDispatchTable;
+  fix_letter: FixLetterTable;
   outreach_variant: OutreachVariantTable;
   outreach_send_variant: OutreachSendVariantTable;
   email_open: EmailOpenTable;

@@ -102,7 +102,7 @@ function templateOf(inputs: unknown): string | null {
  * Generate a plan for the lead in `template` with `fields` (curated words). A thin lead that cannot open a gate gets the
  * other allowed template not in `avoid` (the second-plan step's rule, owner 2026-11-07). Returns the new artifact id.
  */
-async function generatePlan(leadId: string, template: string, fields: Record<string, unknown>, avoid: ReadonlySet<string>): Promise<{ id: string; template: string }> {
+export async function generatePlan(leadId: string, template: string, fields: Record<string, unknown>, avoid: ReadonlySet<string>): Promise<{ id: string; template: string }> {
   const loaded = await loadLead(leadId);
   // The template the engine ACTUALLY rendered: a lead with no photo and no town picture always gets the Névből növő
   // (generateEngine noPhotoHero), whatever was asked — measured 11-27 on the blind sample (13/24).

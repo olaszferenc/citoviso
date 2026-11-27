@@ -77,6 +77,19 @@ const LEAD_CC = `coalesce(nullif(upper(trim(l.raw->>'country')), ''), (select up
 
 let ids: string[] = [];
 if (leadsFile) ids = readFileSync(leadsFile, "utf8").split(/\s+/).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+// THE CORRECTION LETTER's leads go first (src/outreach/fixLetter.ts, ADR-XXXX): a selected correction waits for its
+// town's current set, and it is never in the main plan's list the chain passes — without this it would wait forever.
+// A DB without migration 0161 (no fix_letter table) simply adds nothing.
+if (leadsFile) {
+  try {
+    const fix = psql(`select case when to_regclass('public.fix_letter') is null then '' else (select coalesce(string_agg(lead_id::text, ' '), '') from fix_letter where status = 'selected') end;`)
+      .split(/\s+/)
+      .filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+    ids = [...new Set([...fix, ...ids])];
+  } catch (e) {
+    console.warn(`a javító levelek leadjei nem olvashatók: ${(e as Error).message.slice(0, 160)}`); // i18n-exempt: operator log
+  }
+}
 
 interface LeadRow {
   id: string;
