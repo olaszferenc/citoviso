@@ -544,7 +544,7 @@ export function withShowcaseFirst<T>(photos: readonly T[], kinds: readonly (Phot
  * Unknown verdicts (no model, unreadable image) never move anything.
  */
 /**
- * A ROOM INSIDE opens the page only when nothing outside can (ADR-XXXX ⑫, Nyerges 6f9ac931: a bed close-up under „a view
+ * A ROOM INSIDE opens the page only when nothing outside can (ADR-0503 ⑫, Nyerges 6f9ac931: a bed close-up under „a view
  * onto the garden”). Measured 11-27 on 60 live heroes: 10 were rooms (bed ≥ 0.35 or room mass ≥ 0.55), 5 of them had
  * an outdoor / view photo the hero rule accepts. A preference, not a ban: a lead with rooms only keeps its best room.
  */

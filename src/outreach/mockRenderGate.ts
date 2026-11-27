@@ -56,7 +56,7 @@ import { headingKey } from "../text/headingKey.js";
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
 // 17 (11-27, HR approval chain): a town picture is judged at the picker's width (media/townPick.townJudgeInput) —
 // the same input for the same rule; the page's 1280 px file had failed pictures the picker had passed at 330 px.
-// 18 (11-27, ADR-XXXX „Feltöltés elhagyás helyett”): the dim phone first screen, a room hero with an outside alternative,
+// 18 (11-27, ADR-0503 „Feltöltés elhagyás helyett”): the dim phone first screen, a room hero with an outside alternative,
 // the hero title on its picture, the empty map box, a band caption that is no sentence.
 export const RENDER_GATE_VERSION = 18;
 /**
@@ -74,7 +74,7 @@ export const PAGE_MAX_GAP_PX = 400;
  */
 export const HERO_MAX_LIGHT_SHARE = 0.6;
 
-/** The phone's first screen, photo band (ADR-XXXX ⑫, measured 11-27 on 41 live pages + Castor): mean luma under this = dark… */
+/** The phone's first screen, photo band (ADR-0503 ⑫, measured 11-27 on 41 live pages + Castor): mean luma under this = dark… */
 export const HERO_SCREEN_DARK = 55;
 /** Reference only (not a rule): above this the screen is no longer dim. The 41-page measurement: Castor 46.8 fails; a dark but
  *  sharp forest (62.6), a dusk garden (67.1) and the fixture's shaded facade (59) pass. */
@@ -641,7 +641,7 @@ export async function auditMockFile(
   // short heading through; two visible <h2> with the same normalized text are a repeat, in any module.
   {
     const seenH2 = new Map<string, string>();
-    // ADR-XXXX ⑪: a band's caption is a sentence, never a section's title („GALERIJA”, „FOTÓK A HÁZRÓL” over a band)
+    // ADR-0503 ⑪: a band's caption is a sentence, never a section's title („GALERIJA”, „FOTÓK A HÁZRÓL” over a band)
     const h2keys = new Set((measure.texts ?? []).filter((l) => l.tag === "h2").map((l) => headingKey(l.text)));
     for (const c of (measure.texts ?? []).filter((l) => l.tag === "caption")) {
       const words = (c.text.match(/[\p{L}\p{N}]+/gu) ?? []).length;
@@ -665,7 +665,7 @@ export async function auditMockFile(
   if ((measure.maxGap ?? 0) > PAGE_MAX_GAP_PX) {
     findings.push({ code: "gap", detail: `üres sáv a lapon: ${measure.maxGap} px tartalom nélkül (${measure.gapAt} px-től; legfeljebb ${PAGE_MAX_GAP_PX})` });
   }
-  // THE FIRST SCREEN AS THE PHONE SHOWS IT (ADR-XXXX ⑫, Castor 6aa09dd6): the source photo measured fine (luma 107,
+  // THE FIRST SCREEN AS THE PHONE SHOWS IT (ADR-0503 ⑫, Castor 6aa09dd6): the source photo measured fine (luma 107,
   // Laplace 2914) — the page cut a landscape into a portrait cover under a dark veil and it opened dim and soft. Measured
   // on the photo band of the rendered screen (25–70 % of the top clip: the title excluded): dark, or dark AND soft.
   // DARK only: the „dim and soft” branch (< 70 and Laplace < 400) failed the fixture's plain facade under the Kapunyitás's own
@@ -753,7 +753,7 @@ export async function auditMockFile(
       if (!fitsHero(hv)) {
         findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv?.label ?? "nincs ítélet"}): ${fileOf(heroUrl)}`, url: heroUrl });
       } else if (isRoomHero(hv)) {
-        // ADR-XXXX ⑫: a room opens the page while the page itself shows an outside / view picture the hero rule accepts
+        // ADR-0503 ⑫: a room opens the page while the page itself shows an outside / view picture the hero rule accepts
         // — named, so the retry puts that one first (photoKind.withBestHeroFirst makes the same choice at generation).
         const others = [...new Set(slots.map((sl) => sl.u))].filter((u) => u !== heroUrl && !isTown(u) && !stockUrl(u));
         for (const u of others.slice(0, 12)) {

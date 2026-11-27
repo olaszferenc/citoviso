@@ -129,7 +129,7 @@ section{padding:clamp(70px,10vh,124px) 0}
 /* copy sits BOTTOM-LEFT, not centred — this is the reference's stance */
 .w-hero-copy{position:absolute;left:0;right:0;bottom:8%;z-index:3;text-align:left;
   width:min(1140px,88vw);margin-inline:auto;
-  /* ADR-XXXX ⑮ (Natura c717f8a7: the dark on-accent ink of a light skin stood on a dark lawn): text on a PHOTO is light,
+  /* ADR-0503 ⑮ (Natura c717f8a7: the dark on-accent ink of a light skin stood on a dark lawn): text on a PHOTO is light,
      over the dark veil below it — never the accent's ink colour (the Parallax hero's own rule) */
   color:#fff;text-shadow:0 2px 26px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.5)}
 .w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.1;max-width:16ch;margin:0}

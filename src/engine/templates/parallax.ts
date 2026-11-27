@@ -231,7 +231,7 @@ const PARALLAX_CSS = `
 /** Words of a caption (letters / digits runs). */
 const captionWords = (t: string): number => (t.match(/[\p{L}\p{N}]+/gu) ?? []).length;
 /**
- * A band caption: a SENTENCE (≥ 4 words) that is not one of the page's section titles; else none (ADR-XXXX ⑪).
+ * A band caption: a SENTENCE (≥ 4 words) that is not one of the page's section titles; else none (ADR-0503 ⑪).
  * `headings` are the titles it may not repeat (case, spacing and punctuation folded).
  */
 export function bandCaption(text: string | undefined, headings: readonly (string | undefined)[]): string {
@@ -466,7 +466,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       : "";
 
   // -- image band A (quote text only from REAL copy/tagline — never invented) --
-  // A BAND'S CAPTION IS A SENTENCE (ADR-XXXX ⑪, quality colleague 11-27: „GALERIJA”, „FOTÓK A HÁZRÓL” over a band —
+  // A BAND'S CAPTION IS A SENTENCE (ADR-0503 ⑪, quality colleague 11-27: „GALERIJA”, „FOTÓK A HÁZRÓL” over a band —
   // the gallery's heading fell in when there was no tagline). The tagline only; no sentence → the band goes uncaptioned.
   const bandAText = bandCaption(data.tagline && data.tagline !== h1 && data.tagline !== sub ? data.tagline : "", [galCopy.title, revCopy.title, featCopy.title]);
   // A page WITH photos but no band-fit one → no band A (11-26, quality colleague, Vandus: the wall-mural band was

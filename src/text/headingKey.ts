@@ -1,5 +1,5 @@
 // One normalisation for „is this the same title?” — the generator's unique-heading pass (render.ts), the Parallax band
-// caption rule and the render gate's same-heading finding (ADR-XXXX ⑨⑪).
+// caption rule and the render gate's same-heading finding (ADR-0503 ⑨⑪).
 
 /** A heading's text for comparison: tags out, entities and case folded, punctuation and spaces squeezed. */
 export function headingKey(inner: string): string {

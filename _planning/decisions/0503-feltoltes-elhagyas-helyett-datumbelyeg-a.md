@@ -1,4 +1,4 @@
-## ADR-XXXX — Feltöltés elhagyás helyett: dátumbélyeg a sarkokon, mondat a sávon, szoba csak végső nyitókép, sötét nyitóképernyő, telt felszereltség, olvasható hős-cím, térkép mindig, Parallax mindig
+## ADR-0503 — Feltöltés elhagyás helyett: dátumbélyeg a sarkokon, mondat a sávon, szoba csak végső nyitókép, sötét nyitóképernyő, telt felszereltség, olvasható hős-cím, térkép mindig, Parallax mindig
 
 - **Dátum:** 2026-11-27 (délután)
 - **Státusz:** elfogadva (a koordinátor `cit96bd8170` 10–13., 15–16. pontja, a tulaj elve: „a mock terv, szakasz nem maradhat üres”, „rossz kép helyett a következő jelölt, felirat helyett mondat vagy semmi”)

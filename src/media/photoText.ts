@@ -42,7 +42,7 @@ const DATE_RE = new RegExp(
 );
 
 /**
- * A PARTIAL stamp at the picture's EDGE (ADR-XXXX ⑩, quality colleague 11-27, Virágeső: a yellow „2011/” in the corner):
+ * A PARTIAL stamp at the picture's EDGE (ADR-0503 ⑩, quality colleague 11-27, Virágeső: a yellow „2011/” in the corner):
  * a year with its separator, read only in the corner pass — inside the picture a year alone is a sign or a plaque.
  */
 const PARTIAL_DATE_RE = /(?:^|[^\d])((?:19|20)\d{2}\s?[/.\-]\s?(?:\d{1,2})?)(?=[^\d]|$)/;
@@ -137,7 +137,7 @@ const CORNER_H = 0.25;
 const CORNER_SCALE = 2.5;
 
 /**
- * THE SECOND PASS ON THE CORNERS (ADR-XXXX ⑩). A yellow / orange camera stamp on grass or foliage is a weak contrast in
+ * THE SECOND PASS ON THE CORNERS (ADR-0503 ⑩). A yellow / orange camera stamp on grass or foliage is a weak contrast in
  * greyscale (Virágeső: „2011/06/17” read on no photo). In the R − B channel it is bright (R high, B low) while grass,
  * sky and walls are dark or mid. Each corner: cut, enlarge, R − B stretched and inverted (dark text on light for
  * Tesseract), read; a full date or a partial one (year + separator) counts.
