@@ -2851,6 +2851,7 @@
  "e-mailben (nincs magyar mobilszám).": "e-poštom (nema mađarskog mobilnog broja).",
  "e-mailben elküldjük": "šaljemo e-poštom",
  "E-mailben megy": "Ide e-poštom",
+ "e-mailben megy ki (SMS / MMS / Viber nem megy ki — tulaj 2026-11-20)": "šalje se e-poštom (SMS / MMS / Viber se ne šalju — vlasnik 2026-11-20)",
  "E-mailben, néhány percen belül: {email}": "E-poštom, unutar nekoliko minuta: {email}",
  "E-mailben, néhány percen belül.": "E-poštom, unutar nekoliko minuta.",
  "E-mailen és messengeren is elérhető (a messenger mobilszámot jelent, így MMS-en is).": "Dostupan i e-poštom i messengerom (messenger znači broj mobitela, dakle i MMS-om).",

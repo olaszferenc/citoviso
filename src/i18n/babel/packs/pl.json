@@ -2851,6 +2851,7 @@
  "e-mailben (nincs magyar mobilszám).": "e-mailem (brak węgierskiego numeru komórkowego).",
  "e-mailben elküldjük": "wyślemy e-mailem",
  "E-mailben megy": "Idzie e-mailem",
+ "e-mailben megy ki (SMS / MMS / Viber nem megy ki — tulaj 2026-11-20)": "wychodzi e-mailem (SMS / MMS / Viber nie wychodzą — właściciel 2026-11-20)",
  "E-mailben, néhány percen belül: {email}": "E-mailem, w ciągu kilku minut: {email}",
  "E-mailben, néhány percen belül.": "E-mailem, w ciągu kilku minut.",
  "E-mailen és messengeren is elérhető (a messenger mobilszámot jelent, így MMS-en is).": "Dostępny zarówno przez e-mail, jak i komunikator (komunikator oznacza numer komórkowy, więc także przez MMS).",

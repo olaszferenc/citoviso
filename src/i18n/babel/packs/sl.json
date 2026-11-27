@@ -2833,6 +2833,7 @@
  "e-mailben (nincs magyar mobilszám).": "po e-pošti (ni madžarske mobilne številke).",
  "e-mailben elküldjük": "pošljemo po e-pošti",
  "E-mailben megy": "Gre po e-pošti",
+ "e-mailben megy ki (SMS / MMS / Viber nem megy ki — tulaj 2026-11-20)": "gre ven po e-pošti (SMS / MMS / Viber ne gredo ven — lastnik 2026-11-20)",
  "E-mailben, néhány percen belül: {email}": "Po e-pošti, v nekaj minutah: {email}",
  "E-mailben, néhány percen belül.": "Po e-pošti, v nekaj minutah.",
  "E-mailen és messengeren is elérhető (a messenger mobilszámot jelent, így MMS-en is).": "Dosegljivo po e-pošti in po messengerju (messenger pomeni mobilno številko, torej tudi po MMS).",

@@ -2832,6 +2832,7 @@
  "e-mailben (nincs magyar mobilszám).": "by email (no Hungarian mobile number).",
  "e-mailben elküldjük": "we'll send it by email",
  "E-mailben megy": "Goes by email",
+ "e-mailben megy ki (SMS / MMS / Viber nem megy ki — tulaj 2026-11-20)": "goes out by email (SMS / MMS / Viber do not go out — owner 2026-11-20)",
  "E-mailben, néhány percen belül: {email}": "By email, within a few minutes: {email}",
  "E-mailben, néhány percen belül.": "By email, within a few minutes.",
  "E-mailen és messengeren is elérhető (a messenger mobilszámot jelent, így MMS-en is).": "Reachable by both e-mail and messenger (messenger means a mobile number, so MMS too).",
