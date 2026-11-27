@@ -46,17 +46,19 @@ import { dHashFromBuffer } from "../generator/photoHash.js";
 import { readCachedScores, photoUrlKey } from "../generator/heroPick.js";
 import { PORTAL_USER_AGENT } from "../scraper/sources/portals/politeness.js";
 import { acquireRenderSlot } from "./heroShot.js";
-import { classifyPhotoBuffer, fitsBand, fitsContact, fitsHero, fitsOpening, isOffPagePhoto, photoKindAvailable } from "../media/photoKind.js";
+import { classifyPhotoBuffer, fitsBand, fitsContact, fitsHero, fitsOpening, isOffPagePhoto, isRoomHero, photoKindAvailable } from "../media/photoKind.js";
 import { createPhotoCache } from "./photoCache.js";
 import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
 import { TEXT_MIN_CONTRAST } from "../engine/palette.js";
-import { headingKey } from "../engine/render.js";
+import { headingKey } from "../text/headingKey.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
 // 17 (11-27, HR approval chain): a town picture is judged at the picker's width (media/townPick.townJudgeInput) —
 // the same input for the same rule; the page's 1280 px file had failed pictures the picker had passed at 330 px.
-export const RENDER_GATE_VERSION = 17;
+// 18 (11-27, ADR-XXXX „Feltöltés elhagyás helyett”): the dim phone first screen, a room hero with an outside alternative,
+// the hero title on its picture, the empty map box, a band caption that is no sentence.
+export const RENDER_GATE_VERSION = 18;
 /**
  * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty
  * (a background that never painted, a section whose content is missing — the §B no-JS empty-band case). The
@@ -71,6 +73,61 @@ export const PAGE_MAX_GAP_PX = 400;
  * with a picture ≤ 9 %. At or above this share the hero is blank.
  */
 export const HERO_MAX_LIGHT_SHARE = 0.6;
+
+/** The phone's first screen, photo band (ADR-XXXX ⑫, measured 11-27 on 41 live pages + Castor): mean luma under this = dark… */
+export const HERO_SCREEN_DARK = 55;
+/** Reference only (not a rule): above this the screen is no longer dim. The 41-page measurement: Castor 46.8 fails; a dark but
+ *  sharp forest (62.6), a dusk garden (67.1) and the fixture's shaded facade (59) pass. */
+export const HERO_SCREEN_DIM = 70;
+
+/** A map box whose grey pixels vary less than this (standard deviation) shows no map (⑯). */
+export const MAP_MIN_STDEV = 8;
+
+/** The hero title is large text: WCAG's 3:1 for large text, against the picture behind it (⑮). */
+export const HERO_TITLE_MIN_CONTRAST = 3;
+
+/**
+ * The hero title's colour against the picture behind its letters: the clip's grey pixels that are NOT the text colour
+ * (|Δluma| > 40) are the picture; their median is the ground. Grey luma → WCAG luminance (sRGB curve).
+ */
+export function heroTitleContrast(rgb: readonly [number, number, number], grey: Uint8Array | Buffer, text: string): { ratio: number; text: string } | null {
+  const textLuma = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+  const ground: number[] = [];
+  for (const v of grey) if (Math.abs(v - textLuma) > 40) ground.push(v);
+  if (ground.length < grey.length * 0.2) return null; // nearly all text-coloured: no measurable ground
+  ground.sort((a, b) => a - b);
+  const bg = ground[Math.floor(ground.length / 2)]!;
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lt = lin(textLuma);
+  const lb = lin(bg);
+  const ratio = (Math.max(lt, lb) + 0.05) / (Math.min(lt, lb) + 0.05);
+  return { ratio: Math.round(ratio * 100) / 100, text };
+}
+
+/** Mean luma and Laplacian variance of the band 25–70 % down a greyscale clip (w × h, 1 byte a pixel). */
+export function heroScreenStats(g: Uint8Array | Buffer, w: number, h: number): { midMean: number; midLap: number } {
+  const H = Math.floor(h);
+  const y0 = Math.round(H * 0.25);
+  const y1 = Math.round(H * 0.7);
+  let n = 0;
+  let sum = 0;
+  let m = 0;
+  let m2 = 0;
+  for (let y = Math.max(1, y0); y < Math.min(H - 1, y1); y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      sum += g[i]!;
+      const l = 4 * g[i]! - g[i - 1]! - g[i + 1]! - g[i - w]! - g[i + w]!;
+      n++;
+      m += l;
+      m2 += l * l;
+    }
+  }
+  return n ? { midMean: sum / n, midLap: m2 / n - (m / n) ** 2 } : { midMean: 255, midLap: 1e9 };
+}
 
 /** A town page (no / few own photos, plan kepnelkuli-hero) carries at least this many distinct pictures (coordinator 2026-11-25: „tele kell lennie képpel”). */
 export const TOWN_PAGE_MIN_PICTURES = 12;
@@ -263,7 +320,7 @@ const MEASURE_JS = `(() => {
     const t = (el.textContent || "").trim().replace(/\\s+/g, " ");
     if (t.length < 8) continue;
     const r = el.getBoundingClientRect();
-    texts.push({ text: t.slice(0, 160), mod: modOf(el), y: Math.round(r.top + scrollY), tag: el.tagName.toLowerCase() });
+    texts.push({ text: t.slice(0, 160), mod: modOf(el), y: Math.round(r.top + scrollY), tag: el.classList.contains("t-quote") ? "caption" : el.tagName.toLowerCase() });
     if (texts.length >= 40) break;
   }
   // CONTRAST (ADR-0500 ⑦): the text of every fixed / sticky bar on screen, and the h1 / h2 / buttons, against the
@@ -396,6 +453,9 @@ export async function auditMockFile(
   let measure: PageMeasure;
   let opening: PageMeasure = { slots: [], broken: [], scrollWidth: 0, innerWidth: 0, wideText: [], brokenWords: [] };
   let heroLightShare = 0;
+  let heroScreen: { midMean: number; midLap: number } | null = null;
+  let heroTitle: { ratio: number; text: string } | null = null;
+  let mapBlank = false;
   try {
     // The PAGE renders with the browser's own UA: Google Fonts answers a bot UA with another font
     // file, the headline then fits where a phone's Fraunces does not (measured 11-24, Crystal
@@ -493,6 +553,18 @@ export async function auditMockFile(
     let light = 0;
     for (let i = 0; i < g.length; i++) if (g[i]! > 200) light++;
     heroLightShare = g.length ? light / g.length : 0;
+    heroScreen = heroScreenStats(g, VIEWPORT.width, g.length / VIEWPORT.width);
+    // ⑮ THE HERO TITLE ON ITS PICTURE (Natura c717f8a7: dark serif name on a dark lawn): the first screen's h1, its colour
+    // against the pixels actually behind it (the clip's pixels unlike the text colour = the picture under the letters).
+    const t = (await page.evaluate(`(() => { const h = [...document.querySelectorAll("h1")].find((e) => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 10 && r.top < innerHeight && r.bottom > 0 && getComputedStyle(e).visibility !== "hidden"; }); if (!h) return null; const r = h.getBoundingClientRect(); const c = getComputedStyle(h).color; return { x: Math.max(0, r.left), y: Math.max(0, r.top), w: Math.min(innerWidth - Math.max(0, r.left), r.width), h: Math.min(innerHeight - Math.max(0, r.top), r.height), c, text: (h.textContent || "").trim().slice(0, 40) }; })()`)) as { x: number; y: number; w: number; h: number; c: string; text: string } | null;
+    if (t && t.w >= 20 && t.h >= 10) {
+      const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(t.c);
+      if (m) {
+        const clip = await page.screenshot({ clip: { x: Math.floor(t.x), y: Math.floor(t.y), width: Math.max(1, Math.floor(t.w)), height: Math.max(1, Math.floor(t.h)) } });
+        const px = await sharp(clip).greyscale().raw().toBuffer();
+        heroTitle = heroTitleContrast([Number(m[1]), Number(m[2]), Number(m[3])], px, t.text);
+      }
+    }
     // Walk the page so lazy images load, then measure from the top.
     const height = (await page.evaluate("document.documentElement.scrollHeight")) as number;
     for (let y = 0; y < height; y += VIEWPORT.height / 2) {
@@ -506,6 +578,18 @@ export async function auditMockFile(
     await page.evaluate(`window.scrollTo(0, ${Math.max(VIEWPORT.height * 1.5, Math.round(height * 0.5))})`);
     await page.waitForTimeout(700);
     const midway = (await page.evaluate(MEASURE_JS)) as PageMeasure;
+    // ⑯ THE MAP BOX ACTUALLY SHOWS A MAP: after the walk (the frame had its chance to load) the box's pixels are measured
+    // — a near-uniform box is the white pin card or a grey error page, not a map.
+    const mapBox = await page.$(".cit-map-box");
+    if (mapBox) {
+      await mapBox.scrollIntoViewIfNeeded().catch(() => undefined);
+      await page.waitForTimeout(1500);
+      const shot = await mapBox.screenshot().catch(() => null);
+      if (shot) {
+        const st = await sharp(shot).greyscale().stats();
+        mapBlank = (st.channels[0]?.stdev ?? 99) < MAP_MIN_STDEV;
+      }
+    }
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(300);
     const walkedTop = (await page.evaluate(MEASURE_JS)) as PageMeasure;
@@ -557,6 +641,15 @@ export async function auditMockFile(
   // short heading through; two visible <h2> with the same normalized text are a repeat, in any module.
   {
     const seenH2 = new Map<string, string>();
+    // ADR-XXXX ⑪: a band's caption is a sentence, never a section's title („GALERIJA”, „FOTÓK A HÁZRÓL” over a band)
+    const h2keys = new Set((measure.texts ?? []).filter((l) => l.tag === "h2").map((l) => headingKey(l.text)));
+    for (const c of (measure.texts ?? []).filter((l) => l.tag === "caption")) {
+      const words = (c.text.match(/[\p{L}\p{N}]+/gu) ?? []).length;
+      if (words < 4 || h2keys.has(headingKey(c.text))) {
+        findings.push({ code: "repeat", detail: `a sáv felirata nem mondat, hanem cím: „${c.text.slice(0, 50)}”` });
+        break;
+      }
+    }
     for (const l of measure.texts ?? []) {
       if (l.tag !== "h2") continue;
       const key = headingKey(l.text);
@@ -571,6 +664,17 @@ export async function auditMockFile(
   }
   if ((measure.maxGap ?? 0) > PAGE_MAX_GAP_PX) {
     findings.push({ code: "gap", detail: `üres sáv a lapon: ${measure.maxGap} px tartalom nélkül (${measure.gapAt} px-től; legfeljebb ${PAGE_MAX_GAP_PX})` });
+  }
+  // THE FIRST SCREEN AS THE PHONE SHOWS IT (ADR-XXXX ⑫, Castor 6aa09dd6): the source photo measured fine (luma 107,
+  // Laplace 2914) — the page cut a landscape into a portrait cover under a dark veil and it opened dim and soft. Measured
+  // on the photo band of the rendered screen (25–70 % of the top clip: the title excluded): dark, or dark AND soft.
+  // DARK only: the „dim and soft” branch (< 70 and Laplace < 400) failed the fixture's plain facade under the Kapunyitás's own
+  // shade (Aranyforrás: 59 / 82, a fine hero) — a smooth wall is not a soft photo. The room close-up it also caught is the
+  // room-hero rule's case (isRoomHero) since this round.
+  const heroDim = heroScreen != null && heroScreen.midMean < HERO_SCREEN_DARK;
+  if (mapBlank) findings.push({ code: "thin", detail: "a megközelítés-blokkban nem látszik térkép (üres doboz a tűvel)" });
+  if (heroTitle && heroTitle.ratio < HERO_TITLE_MIN_CONTRAST) {
+    findings.push({ code: "contrast", detail: `a nyitókép címe halvány a képen: „${heroTitle.text}” ${heroTitle.ratio}:1 (legalább ${HERO_TITLE_MIN_CONTRAST}:1)` });
   }
   if (heroLightShare >= HERO_MAX_LIGHT_SHARE) {
     findings.push({ code: "thin", detail: `a nyitóképernyő szinte üres (${Math.round(heroLightShare * 100)}% világos, kép nélkül)` });
@@ -648,7 +752,23 @@ export async function auditMockFile(
       // 11-27: photoKind.fitsHero — the very predicate the generator's hero pick and the colleague's pin pass.
       if (!fitsHero(hv)) {
         findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv?.label ?? "nincs ítélet"}): ${fileOf(heroUrl)}`, url: heroUrl });
+      } else if (isRoomHero(hv)) {
+        // ADR-XXXX ⑫: a room opens the page while the page itself shows an outside / view picture the hero rule accepts
+        // — named, so the retry puts that one first (photoKind.withBestHeroFirst makes the same choice at generation).
+        const others = [...new Set(slots.map((sl) => sl.u))].filter((u) => u !== heroUrl && !isTown(u) && !stockUrl(u));
+        for (const u of others.slice(0, 12)) {
+          const b = bodies.get(u);
+          const v = b ? await classifyPhotoBuffer(b).catch(() => null) : null;
+          if (fitsHero(v) && !isRoomHero(v)) {
+            findings.push({ code: "subject", detail: `beltéri kép a nyitóképen, pedig van kültéri / kilátásos (${fileOf(u)}): ${fileOf(heroUrl)}`, url: heroUrl });
+            break;
+          }
+        }
       }
+    }
+    // the dim first screen names its picture: the retry puts the next candidate in its place (never leaves the hero empty)
+    if (heroDim && heroUrl && heroScreen) {
+      findings.push({ code: "subject", detail: `a nyitóképernyő telefonon sötét / fakó (luma ${Math.round(heroScreen.midMean)}, élesség ${Math.round(heroScreen.midLap)}): ${fileOf(heroUrl)}`, url: heroUrl });
     }
     // THE OPENING SEQUENCE, TOO (11-24, second round): wordmark-grow cycles photos 2–5 in its big
     // frame before the hero fades in, and gate-opening's leaves carry their own photo — a toilet or a

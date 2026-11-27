@@ -144,6 +144,13 @@ export function amenityIconIdFor(sourceLabel: string): string | null {
 }
 
 /** The catalogue item's Hungarian source label (the i18n key), or null for an unknown id. */
+/**
+ * THE STANDARD FILL of a facility list (owner 11-27: „a mock terv, szakasz nem maradhat üres” — a sample section is
+ * topped up, never dropped or left as an empty frame). Common, low-risk catalogue items, in order; the caller skips what
+ * the page already shows and marks the section as a sample („Minta”). Shared by the Parallax grid and the module.
+ */
+export const STANDARD_FACILITY_FILL = ["wifi", "full_kitchen", "free_parking", "terrace", "garden", "air_conditioning", "flat_tv", "fridge", "coffee_maker", "grill"] as const;
+
 export function catalogueLabel(id: string): string | null {
   return byId.get(id)?.label ?? null;
 }

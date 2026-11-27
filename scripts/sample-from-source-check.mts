@@ -296,8 +296,10 @@ for (const [id, tpl] of Object.entries(TEMPLATES)) {
   check(`${id}: nincs kitalált „3. szoba”`, !/3\. szoba/.test(visible));
   check(`${id}: forrás nélkül nincs „Reggeli” a mintán`, !/>\s*Reggeli\s*</.test(visible));
   const amen = visible.match(/<section[^>]*data-cit-module="amenities"[\s\S]*?<\/section>/)?.[0] ?? "";
-  check(`${id}: forrás nélkül is látszik az „Amit kínálunk” keret (ADR-0061), kitalált tétel nélkül`,
-    /szándékosan nincs kitalált szolgáltatás/.test(amen) && !/cit-modsec__item/.test(amen), amen.slice(0, 160));
+  // ⑬ (owner 11-27 via the coordinator: „a mock terv, szakasz nem maradhat üres”): no source → the module is FILLED with
+  // standard catalogue items, marked as a sample — the empty frame and its „no invented service” note are gone.
+  check(`${id}: forrás nélkül a felszereltség-modul standard tételekkel feltöltve (MINTA), üres keret és magyarázó mondat nélkül`,
+    !/szándékosan nincs kitalált szolgáltatás/.test(amen) && (amen === "" || (amen.match(/cit-modsec__item/g) ?? []).length >= 4), amen.slice(0, 160));
 }
 
 console.log("⑥ kapcsolat-kép: kültéri kép, fürdő/WC soha; az alt a kép tárgyát mondja");

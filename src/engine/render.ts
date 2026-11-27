@@ -11,6 +11,8 @@ import { repeatsText } from "../text/textOverlap.js";
 import { renderSeoHead, seoTitle } from "./seo.js";
 import { stripTenantLegalLinks } from "./legalPages.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "./skins.js";
+import { headingKey } from "../text/headingKey.js";
+export { headingKey };
 import { localizeFonts } from "./fontScripts.js";
 import { TEMPLATES } from "./templates.js";
 import { amenityIconSvg } from "./amenityIcon.js";
@@ -896,19 +898,6 @@ function withoutRepeatedLines(recipe: Recipe, data: SiteData): { recipe: Recipe;
   const highlights = (data.highlights ?? []).filter((h) => keep(h));
   if (highlights.length !== (data.highlights ?? []).length) out = { ...out, highlights };
   return { recipe: sections === recipe.sections ? recipe : { ...recipe, sections }, data: out };
-}
-
-/** A heading's text for comparison: tags out, entities and case folded, punctuation and spaces squeezed. */
-export function headingKey(inner: string): string {
-  return inner
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;|&#160;/g, " ")
-    .replace(/&amp;/g, "&")
-    .normalize("NFC")
-    .toLowerCase()
-    .replace(/[\p{P}\p{S}]+/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 /**

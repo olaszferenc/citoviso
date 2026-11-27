@@ -9,7 +9,7 @@
 // the send tick, the console and the scrapers come first, and the heavy steps skip a firing on a loaded box.
 import { sql } from "kysely";
 import { db } from "../src/db/client.js";
-import { chainSupplyEnabled, enqueueReadyWithoutRow, regenerateOldQueue, regenerateRow, retryFailedPlan, retryFailedQueue } from "../src/generator/chainSupply.js";
+import { chainSupplyEnabled, enqueueReadyWithoutRow, regenerateOldQueue, regenerateRow, restoreParallaxQueue, retryFailedPlan, retryFailedQueue } from "../src/generator/chainSupply.js";
 import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
 import { syncNoEmailHolds } from "../src/generator/mockRefresh.js";
 
@@ -31,6 +31,9 @@ async function main(): Promise<void> {
       if (ne.held || ne.released) console.log(`e-mail nélküli sorok: ${JSON.stringify(ne)}`);
       const q = await enqueueReadyWithoutRow();
       if (q.queued || q.refused) console.log(`sor nélküli kész mock: ${JSON.stringify(q)}`);
+      // ⑰ a pair without a Parallax gets one first (a handful of leads; then the retry and the regeneration)
+      const px = await restoreParallaxQueue(60_000);
+      if (px.restored || px.failed) console.log(`Parallax-pótlás: ${JSON.stringify(px)}`);
       const r = await retryFailedQueue(RETRY_BUDGET_MS);
       if (r.tried || r.held) console.log(`render-kapu újrapróba: ${JSON.stringify(r)}`);
       const g = await regenerateOldQueue(Math.max(0, REGEN_BUDGET_MS - (Date.now() - started)));

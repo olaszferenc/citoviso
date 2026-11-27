@@ -8,10 +8,11 @@
 // only for the photo scrims (skin-agnostic legibility, same convention as fullbleed).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
-import { amenityIconSvg, catalogueIdFor, catalogueLabel } from "../amenityIcon.js";
+import { amenityIconSvg, catalogueIdFor, catalogueLabel, STANDARD_FACILITY_FILL } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
+import { headingKey } from "../../text/headingKey.js";
 import { renderSeoHead, seoTitle } from "../seo.js";
 import { renderSkinFontLinks, renderSkinVars, SKINS } from "../skins.js";
 import { accented, allotPhotos, bookingSlot, copyHook, copyOf, ctaLabel, esc, firstSentence, hasBookingSurface, HERO_FIT_CSS, heroFit, highlightHook, honestStarCount, hookPick, mastheadCss, mastheadHtml, MOBCTA_CSS, mobCtaStat, T, type ArtTemplate, type MastheadLink } from "../templateKit.js";
@@ -227,6 +228,19 @@ const PARALLAX_CSS = `
   @media(max-width:700px){.t-mobcta{display:flex}body{padding-bottom:64px}}
 `;
 
+/** Words of a caption (letters / digits runs). */
+const captionWords = (t: string): number => (t.match(/[\p{L}\p{N}]+/gu) ?? []).length;
+/**
+ * A band caption: a SENTENCE (≥ 4 words) that is not one of the page's section titles; else none (ADR-XXXX ⑪).
+ * `headings` are the titles it may not repeat (case, spacing and punctuation folded).
+ */
+export function bandCaption(text: string | undefined, headings: readonly (string | undefined)[]): string {
+  const t = (text ?? "").trim();
+  if (!t || captionWords(t) < 4) return "";
+  const k = headingKey(t);
+  return headings.some((h) => h && headingKey(h) === k) ? "" : t;
+}
+
 // Tiny behavior layer: the side dot-nav gets its active state marked while scrolling.
 // Progressive enhancement only — the dots are plain anchors and work without it.
 // The active dot is the section under a line 40% down the screen (the last one whose top
@@ -345,7 +359,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   // techdemo”). When the no-repeat filter above leaves fewer than GRID_FULL tiles, the grid tops up with the lodging's
   // OWN catalogue items it skipped as already seen higher up (real source items, one per kind — nothing invented).
   const GRID_FULL = 4;
-  const GRID_FILL = ["wifi", "full_kitchen", "free_parking", "terrace", "garden", "air_conditioning", "flat_tv"] as const;
+  const GRID_FILL = STANDARD_FACILITY_FILL;
   if (grid.length < GRID_FULL) {
     const inGrid = new Set(grid.map((x) => x.k));
     for (const [i, h] of data.highlights.entries()) {
@@ -452,16 +466,15 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       : "";
 
   // -- image band A (quote text only from REAL copy/tagline — never invented) --
-  const bandAText =
-    data.tagline && data.tagline !== h1 && data.tagline !== sub
-      ? data.tagline
-      : galCopy.title ?? "";
+  // A BAND'S CAPTION IS A SENTENCE (ADR-XXXX ⑪, quality colleague 11-27: „GALERIJA”, „FOTÓK A HÁZRÓL” over a band —
+  // the gallery's heading fell in when there was no tagline). The tagline only; no sentence → the band goes uncaptioned.
+  const bandAText = bandCaption(data.tagline && data.tagline !== h1 && data.tagline !== sub ? data.tagline : "", [galCopy.title, revCopy.title, featCopy.title]);
   // A page WITH photos but no band-fit one → no band A (11-26, quality colleague, Vandus: the wall-mural band was
   // filtered and an empty gradient strip stood in its place). The flat quote strip stays for photo-less pages.
   const bandA =
     bandAUrl || (!photos.length && bandAText)
       ? `<section class="t-par t-par--band${bandAUrl ? "" : " t-par--flat"}"${bandAUrl ? ` style="background-image:url('${esc(bandAUrl)}')"` : ""}>
-    <div class="t-wrap t-parin">${bandAText ? `<p class="t-quote"${data.tagline && bandAText === data.tagline ? copyHook("tagline") : copyHook("gallery.title")}>${esc(bandAText)}</p>` : ""}</div>
+    <div class="t-wrap t-parin">${bandAText ? `<p class="t-quote"${copyHook("tagline")}>${esc(bandAText)}</p>` : ""}</div>
   </section>`
       : "";
 
@@ -505,11 +518,13 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     : "";
 
   // -- image band B -----------------------------------------------------------
+  // (the reviews heading stood here and again over the reviews: a band caption is a sentence, not a section's title)
+  const bandBText = bandCaption(revCopy.title && revCopy.title !== bandAText ? revCopy.title : "", [galCopy.title, featCopy.title, revCopy.title]);
   // No band-worthy photo → no band B (11-26: an empty grey-brown full screen read as a broken page).
   const bandB =
     photos.length >= 2 && bandBUrl
       ? `<section class="t-par t-par--band${bandBUrl ? "" : " t-par--flat"}"${bandBUrl ? ` style="background-image:url('${esc(bandBUrl)}')"` : ""}>
-    <div class="t-wrap t-parin">${revCopy.title ? `<p class="t-quote"${copyHook("reviews.title")}>${esc(revCopy.title)}</p>` : ""}</div>
+    <div class="t-wrap t-parin">${bandBText ? `<p class="t-quote"${copyHook("reviews.title")}>${esc(bandBText)}</p>` : ""}</div>
   </section>`
       : "";
 

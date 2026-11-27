@@ -53,6 +53,8 @@ export const GATE_RETRY_PHOTO_MAX = 2;
 export const GATE_RETRY_LEAD_MAX = 4;
 /** The note prefix of a row whose automatic re-tries are used up (off the chain loops; a person or a new rule decides). */
 export const GATE_EXHAUSTED_PREFIX = "render-kapu: az automata újrapróba kimerült —";
+/** ⑰ The second plan's templates (the Parallax is always the other plan). */
+export const SECOND_PLAN_TEMPLATES: ReadonlySet<string> = new Set(["gate-opening", "wordmark-grow"]);
 /** The finding codes a different photo allotment can answer. The others are the page's, not a picture's. */
 const PHOTO_CODES: ReadonlySet<RenderFindingCode> = new Set(["repeat", "subject", "stock", "broken"]);
 
@@ -113,7 +115,8 @@ async function generatePlan(leadId: string, template: string, fields: Record<str
     return await gen(template);
   } catch (e) {
     // wordmark-grow first (it needs no gate photo), the Parallax last.
-    const other = ["wordmark-grow", "parallax"].find((t) => t !== template && !avoid.has(t) && OWNER_ALLOWED_TEMPLATES.has(t));
+    // the Névből növő (it needs no gate photo); the Parallax only for the main plan's own call (⑰: never as a second plan)
+    const other = ["wordmark-grow"].find((t) => t !== template && !avoid.has(t) && OWNER_ALLOWED_TEMPLATES.has(t));
     if (template !== "gate-opening" || !other || !/Kapunyitás/.test((e as Error).message)) throw e;
     return gen(other);
   }
@@ -173,11 +176,12 @@ export async function regenerateRow(dispatchId: string): Promise<RegenOutcome> {
   const altRow = alt ? await db.selectFrom("mock_artifact").select(["id", "inputs"]).where("id", "=", alt.id).executeTakeFirst() : null;
   const fields = curatedFieldsOf(main.inputs) ?? curatedFieldsOf(altRow?.inputs);
   if (!fields) return { leadId, ok: false, note: "a terven nincs kurátori szöveg (copyManual) — írót kér, nem gépi lépés" };
-  const oldMainT = templateOf(main.inputs);
-  const mainT = oldMainT && OWNER_ALLOWED_TEMPLATES.has(oldMainT) ? oldMainT : "parallax";
-  const newMain = await generatePlan(leadId, mainT, fields, new Set());
+  // ⑰ (owner 11-27, „Parallax ok”): the Parallax is ALWAYS one of the two plans — the main plan is a Parallax whenever the
+  // lead has a picture for it (own or the town's; with neither the engine renders the Névből növő and the pair check below
+  // holds the row). The second plan is a Kapunyitás or a Névből növő.
+  const newMain = await generatePlan(leadId, "parallax", fields, new Set());
   const oldAltT = templateOf(altRow?.inputs);
-  const altT = oldAltT && OWNER_ALLOWED_TEMPLATES.has(oldAltT) && oldAltT !== newMain.template
+  const altT = oldAltT && SECOND_PLAN_TEMPLATES.has(oldAltT) && oldAltT !== newMain.template
     ? oldAltT
     : (parseInt(leadId.slice(0, 2), 16) % 2 ? "gate-opening" : "wordmark-grow") !== newMain.template
       ? (parseInt(leadId.slice(0, 2), 16) % 2 ? "gate-opening" : "wordmark-grow")
@@ -293,7 +297,7 @@ export async function enqueueReadyWithoutRow(limit = 200): Promise<{ queued: num
 /** ⑤ What to try for a failed plan, from its findings and its counted tries. Pure — the rule the step and the check share. */
 export function retryPlanFor(
   gate: Pick<RenderGateResult, "verdict" | "findings">,
-  tries: { readonly planPhoto: number; readonly lead: number; readonly templateLeft: boolean },
+  tries: { readonly planPhoto: number; readonly lead: number; readonly templateLeft: boolean; readonly parallax?: boolean },
 ): { readonly step: "photos"; readonly exclude: readonly string[] } | { readonly step: "template" } | { readonly step: "hold"; readonly reason: string } {
   if (gate.verdict !== "fail") return { step: "hold", reason: "nem bukott" };
   const reason = gate.findings.slice(0, 3).map((f) => f.detail).join(" · ");
@@ -302,7 +306,8 @@ export function retryPlanFor(
   const photoOnly = gate.findings.every((f) => PHOTO_CODES.has(f.code));
   const exclude = [...new Set(gate.findings.map((f) => f.url).filter((u): u is string => typeof u === "string" && /^https?:/i.test(u)))];
   if (photoOnly && exclude.length && tries.planPhoto < GATE_RETRY_PHOTO_MAX) return { step: "photos", exclude };
-  if (tries.templateLeft) return { step: "template" };
+  // ⑰ the Parallax keeps its template: photos only, then the lead is held with the reason (never a pair without it)
+  if (tries.templateLeft && !tries.parallax) return { step: "template" };
   return { step: "hold", reason };
 }
 
@@ -332,9 +337,12 @@ export async function retryFailedPlan(dispatchId: string, planId: string): Promi
   const own = gateRetryOf(plan.inputs);
   const live = await db.selectFrom("mock_artifact").select("inputs").where("lead_id", "=", d.lead_id).where("status", "<>", "rejected").execute();
   const used = new Set(live.map((p) => templateOf(p.inputs)).filter((t): t is string => !!t));
-  const triedTemplates = new Set(plans.map((p) => templateOf(p.inputs)).filter((t): t is string => !!t));
-  const freeTemplate = [...OWNER_ALLOWED_TEMPLATES].find((t) => !used.has(t) && !triedTemplates.has(t)) ?? null;
-  const plan5 = retryPlanFor(gate, { planPhoto: own?.step === "photos" ? own.n : 0, lead: leadTries, templateLeft: freeTemplate != null });
+  // a template the RETRY already tried for this lead (not every old plan: a regeneration retires the old ones)
+  const triedTemplates = new Set(plans.filter((p) => gateRetryOf(p.inputs)?.step === "template").map((p) => templateOf(p.inputs)).filter((t): t is string => !!t));
+  const isParallax = templateOf(plan.inputs) === "parallax";
+  // ⑰ only the second plan changes template, between the Kapunyitás and the Névből növő
+  const freeTemplate = isParallax ? null : ([...SECOND_PLAN_TEMPLATES].find((t) => !used.has(t) && !triedTemplates.has(t)) ?? null);
+  const plan5 = retryPlanFor(gate, { planPhoto: own?.step === "photos" ? own.n : 0, lead: leadTries, templateLeft: freeTemplate != null, parallax: isParallax });
   const codes = [...new Set(gate.findings.map((f) => f.code))];
   let step = plan5;
   if (step.step === "photos") {
@@ -462,4 +470,51 @@ export async function retryFailedQueue(budgetMs: number, limit = 20): Promise<{ 
     }
   }
   return { tried, held };
+}
+
+/**
+ * ⑰ A PAIR WITHOUT A PARALLAX GETS ITS PARALLAX (owner 11-27, „Parallax ok”; live ~5 leads had a Kapunyitás + Névből növő
+ * pair). The Parallax is made from the main plan's words and becomes the row's main plan; the former main plan stays as
+ * the second plan (secondPlan.ts picks the newest other-template plan). Approval / PASS carry over only with byte-equal
+ * words (carryApproval). A lead whose Parallax would render as the Névből növő (no picture) is left as it is.
+ */
+export async function restoreParallaxQueue(budgetMs: number, limit = 10): Promise<{ restored: number; failed: number }> {
+  const started = Date.now();
+  const rows = await db
+    .selectFrom("outreach_dispatch as d")
+    .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
+    .innerJoin("lead as l", "l.id", "d.lead_id")
+    .select(["d.id as dispatchId", "d.lead_id as leadId", "d.artifact_id as mainId", "a.inputs as inputs"])
+    .where(WAITING_SQL)
+    .where(LEAD_HAS_EMAIL_SQL)
+    .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
+    .where(sql<boolean>`not exists (select 1 from mock_artifact p where p.lead_id = d.lead_id and p.status <> 'rejected' and p.inputs->'recipe'->>'template' = 'parallax')`)
+    .where(sql<boolean>`not exists (select 1 from mock_artifact p where p.lead_id = d.lead_id and p.inputs->'parallaxRestore' is not null)`)
+    .orderBy(FAIR_ORDER)
+    .limit(limit)
+    .execute();
+  let restored = 0;
+  let failed = 0;
+  for (const r of rows) {
+    if (Date.now() - started > budgetMs || !boxHasRoom()) break;
+    try {
+      const fields = curatedFieldsOf(r.inputs);
+      if (!fields) continue;
+      const made = await generatePlan(r.leadId, "parallax", fields, new Set());
+      // remembered either way, so a lead without a picture for it is not tried every firing
+      await db.updateTable("mock_artifact").set({ inputs: sql`jsonb_set(inputs, '{parallaxRestore}', ${JSON.stringify({ at: new Date().toISOString(), from: r.mainId, got: made.template })}::jsonb)` as never }).where("id", "=", made.id).execute();
+      if (made.template !== "parallax") {
+        await curateArtifact(made.id, "reject", "a Parallax kép nélkül Névből növő lett — a pár marad", CHAIN_SUPPLY_BY);
+        continue;
+      }
+      await carryApproval(r.mainId, made.id);
+      await db.updateTable("outreach_dispatch").set({ artifact_id: made.id, status: "held", note: QA_WAIT_NOTE }).where("id", "=", r.dispatchId).where("status", "in", ["queued", "held"]).execute();
+      restored++;
+      console.log(`  ⊕ ${r.leadId.slice(0, 8)} Parallax pótolva (${made.id.slice(0, 8)})`); // i18n-exempt: operator log
+    } catch (e) {
+      failed++;
+      console.warn(`  ⚠️ Parallax-pótlás ${r.leadId.slice(0, 8)}: ${(e as Error).message.slice(0, 200)}`); // i18n-exempt: operator log
+    }
+  }
+  return { restored, failed };
 }

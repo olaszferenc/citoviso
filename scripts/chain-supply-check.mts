@@ -5,11 +5,14 @@
 // ③ a ready mock without a row is queued, ⑤ a failed plan re-tries by itself (photos → template → hold, counted).
 // Hermetic: the pure rules are run, the wiring is read from the files. No DB, no browser.
 import { readFileSync } from "node:fs";
-import { chainSupplyEnabled, curatedFieldsOf, GATE_RETRY_LEAD_MAX, GATE_RETRY_PHOTO_MAX, retryPlanFor } from "../src/generator/chainSupply.js";
+import { chainSupplyEnabled, curatedFieldsOf, GATE_RETRY_LEAD_MAX, GATE_RETRY_PHOTO_MAX, retryPlanFor, SECOND_PLAN_TEMPLATES } from "../src/generator/chainSupply.js";
 import { memoryHasRoom, regateConcurrency, REGATE_MIN_FREE_MB } from "../src/generator/mockRefresh.js";
 import type { RenderFinding } from "../src/outreach/mockRenderGate.js";
 import { renderSkinVars, SKINS } from "../src/engine/skins.js";
 import { headingKey, withUniqueSectionHeadings } from "../src/engine/render.js";
+import { bandCaption } from "../src/engine/templates/parallax.js";
+import { isRoomHero, withBestHeroFirst } from "../src/media/photoKind.js";
+import { heroScreenStats, HERO_SCREEN_DARK, HERO_SCREEN_DIM } from "../src/outreach/mockRenderGate.js";
 import { contrastRatio, parseHex, TEXT_MIN_CONTRAST } from "../src/engine/palette.js";
 
 let failed = 0;
@@ -100,7 +103,7 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   check("a későbbi azonos szakaszcím a szakasz saját felcímét kapja (Anikó: „Ami nálunk vár” → „Kiemelt”), a felcím nem áll kétszer", /<h2>Kiemelt<\/h2>/.test(out) && !/t-eyebrow">Kiemelt/.test(out) && (out.match(/Ami nálunk vár/gi) ?? []).length === 1 && /<h2>Árak<\/h2>/.test(out));
   check("normalizált egyezés (kis/nagybetű, írásjel, szóköz)", headingKey("Ami  nálunk VÁR!") === headingKey("Ami nálunk vár"));
   check("a generátor a közös befejező lépésben futtatja (minden sablon)", /const noted = withUniqueSectionHeadings\(withLongWordBreak\(/.test(read("../src/engine/render.ts")));
-  check("a kapu két azonos h2-t ismétlésnek vesz, modultól függetlenül", /két szakasz ugyanazzal a címmel/.test(read("../src/outreach/mockRenderGate.ts")) && /tag: el\.tagName\.toLowerCase\(\)/.test(read("../src/outreach/mockRenderGate.ts")));
+  check("a kapu két azonos h2-t ismétlésnek vesz, modultól függetlenül", /két szakasz ugyanazzal a címmel/.test(read("../src/outreach/mockRenderGate.ts")) && /tag: el\.classList\.contains\("t-quote"\) \? "caption" : el\.tagName\.toLowerCase\(\)/.test(read("../src/outreach/mockRenderGate.ts")));
 }
 // ⑭ no e-mail → no chain (owner 2026-11-20; coordinator 11-27)
 {
@@ -111,6 +114,29 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   check("⑭ a lánc-utánpótlás (újragenerálás, újrapróba) e-mailes leadre szűr", (cs.match(/\.where\(WAITING_SQL\)\n\s*\.where\(LEAD_HAS_EMAIL_SQL\)/g) ?? []).length >= 2);
   check("⑭ a jóváhagyó lap csak e-mailes leadet listáz, és a csatornája mindig e-mail", /and \$\{LEAD_HAS_EMAIL_SQL\}/.test(aq) && !/expectedChannel\(presence/.test(aq));
   check("⑭ a söprő lépés: e-mail nélkül → TARTVA, e-maillel → vissza a láncba; mindkét időzítő futtatja", /export async function syncNoEmailHolds/.test(mr) && /syncNoEmailHolds\(\)/.test(read("./outreach-dispatch.mts")) && /syncNoEmailHolds\(\)/.test(read("./chain-supply.mts")));
+}
+// ⑩–⑬ (coordinator 11-27, the owner's „fill, never drop” principle)
+{
+  const pt = read("../src/media/photoText.ts");
+  check("⑩ dátumbélyeg: a sarkokon második OCR-menet nagyítva, sárgaság-csatornán (R−B), a részleges alak (évszám + elválasztó) csak ott számít", /async function readCornerStamp/.test(pt) && /Math\.min\(img\.data\[i\]!, img\.data\[i \+ 1\]!\) - img\.data\[i \+ 2\]!/.test(pt) && /PARTIAL_DATE_RE\.exec\(text\)/.test(pt) && !/PARTIAL_DATE_RE\.exec\(all\)/.test(pt));
+  check("⑪ a sáv felirata mondat (≥ 4 szó), szakaszcímet nem ismétel; nincs mondat → felirat nélkül", bandCaption("Galerija", []) === "" && bandCaption("Fotók a házról", ["Fotók a házról"]) === "" && bandCaption("Csendes reggelek a tó partján, a kertben", ["Galéria"]) !== "" && bandCaption("Vendégek véleménye rólunk itt", ["Vendégek véleménye rólunk itt"]) === "");
+  const room = { kind: "ok", label: "a bedroom with a bed", probs: { "a bedroom with a bed": 0.77 }, quality: { long: 1600, short: 1200, luma: 120, lap: 900 } } as never;
+  const lake = { kind: "ok", label: "a lake shore", probs: { "a lake shore": 0.6 }, quality: { long: 1600, short: 1200, luma: 120, lap: 900 } } as never;
+  check("⑫ szoba csak akkor nyit, ha nincs kültéri / kilátásos jelölt (elsőbbség, nem tiltás)", isRoomHero(room) && !isRoomHero(lake) && withBestHeroFirst(["szoba", "to"], [room, lake])[0] === "to" && withBestHeroFirst(["szoba"], [room])[0] === "szoba");
+  const dark = Buffer.alloc(390 * 506, 40);
+  const bright = Buffer.alloc(390 * 506, 140);
+  check("⑫ a telefonos első képernyő képsávja mérve: sötét → bukás, világos → átmegy", heroScreenStats(dark, 390, 506).midMean < HERO_SCREEN_DARK && heroScreenStats(bright, 390, 506).midMean > HERO_SCREEN_DIM && /a nyitóképernyő telefonon sötét \/ fakó/.test(read("../src/outreach/mockRenderGate.ts")));
+  const ms = read("../src/engine/moduleSections.ts");
+  check("⑬ a felszereltség-modul mindig feltöltve (forrás → standard tételek, MINTA), üres keret és elhagyás nincs", /function withStandardFill/.test(ms) && !/szándékosan nincs kitalált szolgáltatás/.test(ms) && !/items\.length < SAMPLE_AMENITY_MIN && \(d\.highlights/.test(ms));
+  check("⑬ a Parallax-rács és a modul ugyanabból a standard készletből tölt", /GRID_FILL = STANDARD_FACILITY_FILL/.test(read("../src/engine/templates/parallax.ts")) && /STANDARD_FACILITY_FILL/.test(ms));
+}
+// ⑰ the Parallax is always one of the two plans (owner 11-27, „Parallax ok”)
+{
+  const cs = read("../src/generator/chainSupply.ts");
+  check("⑰ a Parallax terv újrapróbája csak képkiosztás: oldal-lelet vagy elfogyott képpróba → tartás, sablonváltás soha", retryPlanFor(fail(f("overflow")), { ...fresh, parallax: true }).step === "hold" && retryPlanFor(fail(f("repeat", "https://x.hu/a.jpg")), { ...fresh, parallax: true }).step === "photos" && retryPlanFor(fail(f("repeat", "https://x.hu/a.jpg")), { ...fresh, planPhoto: GATE_RETRY_PHOTO_MAX, parallax: true }).step === "hold");
+  check("⑰ sablont csak a 2. terv cserél, a Kapunyitás és a Névből növő között", /const freeTemplate = isParallax \? null : \(\[\.\.\.SECOND_PLAN_TEMPLATES\]/.test(cs) && SECOND_PLAN_TEMPLATES.has("gate-opening") && SECOND_PLAN_TEMPLATES.has("wordmark-grow") && !SECOND_PLAN_TEMPLATES.has("parallax"));
+  check("⑰ az újragenerálás fő terve Parallax, a 2. terv tartaléka sosem Parallax", /const newMain = await generatePlan\(leadId, "parallax", fields, new Set\(\)\)/.test(cs) && /const other = \["wordmark-grow"\]\.find/.test(cs));
+  check("⑰ a Parallax nélküli pár Parallaxot kap (az időzítő futtatja), kép nélkül nem próbálja újra", /export async function restoreParallaxQueue/.test(cs) && /parallaxRestore/.test(cs) && /restoreParallaxQueue\(/.test(read("./chain-supply.mts")));
 }
 // wiring
 {

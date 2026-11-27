@@ -74,7 +74,9 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the dep
 // 11-27 (ADR-0500 ⑦⑨, supply1): every text on a band reads ≥ 4.5:1 (palette.bandTokens: the Parallax's bottom bar,
 // dock, menu bar, reviews and footer were light-on-light on a dark skin), the button text on the accent, the „Minta”
 // label, and two sections never one heading (render.withUniqueSectionHeadings) — the waiting stock is re-rendered.
-export const MOCK_HEROFIX_STAMP = "2026-11-27-supply1";
+// 11-27 afternoon (ADR-XXXX ⑩–⑬, supply2): the corner date-stamp pass, a band caption is a sentence, a room opens the page
+// only when nothing outside can, the facilities module is always filled — the waiting stock is re-rendered with them.
+export const MOCK_HEROFIX_STAMP = "2026-11-27-supply2";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
   and coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP})`;
 

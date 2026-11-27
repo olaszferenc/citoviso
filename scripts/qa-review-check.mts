@@ -222,7 +222,8 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("nyitókép mobilon: a kivágás a kép részletgazdag oldalára áll", fx != null && fx >= 80, `fx=${fx}`);
   check("parallax: a nyitókép a fókuszpont szerint vág (--cit-hero-fx), a mélységhatás vászna is", /--cit-hero-fx/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")) && /uniform vec2 off,cover,sh/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
   check("parallax mobil: a rögzített réteg is a fókuszpont szerint vág (nem kényszerített center)", /cs\.backgroundPosition\|\|'center'/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
-  check("„Amit kínálunk”: forrás-lista nélkül nem üres keret és nem a kiemelések duplája — kimarad", /if \(!items\.length && \(d\.highlights \?\? \[\]\)\.some\(\(h\) => catalogueIdFor\(h, d\.amenityIconMap\) !== null\)\) return "";/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
+  // ⑬ (owner principle 11-27, „szakasz nem maradhat üres”): the 11-26 drop rules became ONE fill rule (ADR „Feltöltés elhagyás helyett”)
+  check("„Felszereltség”: forrás-lista nélkül sem üres keret és nem elhagyás — standard tételekkel feltöltve (MINTA)", /function withStandardFill/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")) && !/szándékosan nincs kitalált szolgáltatás/.test(readFileSync(new URL("../src/engine/moduleSections.ts", import.meta.url), "utf8")));
   {
     const ph2 = (n: number, kindLabel?: string): PH => ({ url: `https://y.test/${n}.jpg`, alt: "k", provenance: "portal", ...(kindLabel ? { kindLabel } : {}) });
     const c2 = sampleRooms({ name: "S", photos: [ph2(1), ph2(2), ph2(3, "a garden with a terrace"), ph2(4, "a kitchen")], sampleRoomCount: 0 } as unknown as SD)[0];
@@ -252,9 +253,9 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const amenOf = (html: string): string => html.match(/<section[^>]*data-cit-module="amenities"[\s\S]*?<\/section>/)?.[0] ?? "";
     const r = { template: "parallax", skin: "", archetype: "", sections: [] } as never;
     const dup = amenOf(renderSite(r, { ...base, sampleAmenities: ["Parkoló", "Wifi", "Grill"] } as SD, { phase: "mock" }));
-    check("„Amit kínálunk”: a feljebb már látott tételek (szöveg vagy fajta) nem ismétlődnek — ha nem marad új, a blokk elmarad", dup === "", dup.slice(0, 200));
+    check("„Felszereltség”: a feljebb már látott tételek (szöveg vagy fajta) nem ismétlődnek — ha nem marad új, standard tételekkel töltődik (nem marad el)", !/Parkol|Wifi|Grill/.test(dup) && (dup.match(/cit-modsec__item/g) ?? []).length >= 4, dup.slice(0, 200));
     const extra = amenOf(renderSite(r, { ...base, sampleAmenities: ["Parkoló", "Medence"] } as SD, { phase: "mock" }));
-    check("„Amit kínálunk”: 1 új tétel (Medence) a kiemelések mellett → nincs külön blokk (tulaj 2026-11-26: csonka minta-szekció)", !/Medence/.test(extra) && !/Parkol/.test(extra), extra.slice(0, 300));
+    check("„Felszereltség”: 1 új tétel (Medence) a kiemelések mellett → a forrás-tétel elöl, standard tételekkel 4-ig feltöltve (nem csonk, nem elhagyás)", /Medence/.test(extra) && !/Parkol/.test(extra) && (extra.match(/cit-modsec__item/g) ?? []).length >= 4, extra.slice(0, 300));
     const four = amenOf(renderSite(r, { ...base, sampleAmenities: ["Parkoló", "Medence", "Szauna", "Kerékpárkölcsönzés", "Jacuzzi"] } as SD, { phase: "mock" }));
     check("„Amit kínálunk”: 4 új tétel → a blokk áll, a látott (Parkoló) kimarad", /Medence/.test(four) && /Szauna/.test(four) && !/Parkol/.test(four), four.slice(0, 300));
   }
@@ -283,7 +284,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const base2 = { name: "L", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Légkondicionálás", "Wifi", "Grillezési lehetőség"] } as unknown as SD;
     const amenOf2 = (html: string): string => html.match(/<section[^>]*data-cit-module="amenities"[\s\S]*?<\/section>/)?.[0] ?? "";
     const own = amenOf2(renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { ...base2, amenities: ["Légkondicionálás", "Wifi a közösségi terekben", "Grillezési lehetőség", "Kiságy"] } as SD, { phase: "mock" }));
-    check("„Amit kínálunk” a szállás SAJÁT listáján is szűr: 1 új tétel (Kiságy) a kiemelések mellett → nincs külön blokk", !/Kiságy/.test(own) && !/Légkond|Wifi|Grill/.test(own), own.slice(0, 300));
+    check("„Felszereltség” a szállás SAJÁT listáján is szűr: 1 új tétel (Kiságy) a kiemelések mellett → elöl, standard tételekkel 4-ig feltöltve", /Kiságy/.test(own) && !/Légkond|Wifi|Grill/.test(own) && (own.match(/cit-modsec__item/g) ?? []).length >= 4, own.slice(0, 300));
     const own4 = amenOf2(renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { ...base2, amenities: ["Légkondicionálás", "Wifi a közösségi terekben", "Kiságy", "Szauna", "Jacuzzi", "Kerékpárkölcsönzés"] } as SD, { phase: "mock" }));
     check("„Amit kínálunk” a SAJÁT listán: 4 új tétel → a blokk áll, a látottak kimaradnak", /Kiságy/.test(own4) && /Szauna/.test(own4) && !/Légkond|Wifi/.test(own4), own4.slice(0, 300));
     check("éjszakai kültéri kép (sötét ég) le az oldalról; beltéri sötét plafon nem", isNightShot(K("ok", "a garden with a terrace", { quality: { long: 1600, luma: 80, lap: 300, top: 30 } })) && !isNightShot(K("ok", "a living room", { quality: { long: 1600, luma: 80, lap: 300, top: 30 } })) && !isNightShot(K("ok", "a garden with a terrace", { quality: { long: 1600, luma: 120, lap: 300, top: 140 } })));

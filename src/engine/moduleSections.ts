@@ -20,7 +20,7 @@
 import { calendarSyncPortals, countryConfigSync } from "../country.js";
 import type { RenderPhase, SiteData } from "./recipe.js";
 import { T, ctaLabel, esc, roomDetails, roomHint, roomShell, sampleRooms } from "./templateKit.js";
-import { amenityIconSvg, catalogueIdFor } from "./amenityIcon.js";
+import { amenityIconSvg, catalogueIdFor, catalogueLabel, STANDARD_FACILITY_FILL } from "./amenityIcon.js";
 import { matchIcon } from "./icons.js";
 import { sampleAmenityItems } from "./sampleFromSource.js";
 import { mapEmbed } from "./primitives.js";
@@ -662,34 +662,39 @@ export function notShownYet(d: SiteData, items: readonly string[]): string[] {
   });
 }
 
-/** The fewest cards a separate facilities block may stand on when the page's highlights already show facilities. */
+/** The facilities module is topped up to this many cards (sourced first, then STANDARD_FACILITY_FILL) — ⑬. */
 export const SAMPLE_AMENITY_MIN = 4;
+
+/** `items` topped up to SAMPLE_AMENITY_MIN with the standard catalogue items the page does not show yet (⑬). */
+function withStandardFill(d: SiteData, items: readonly string[]): string[] {
+  const out = [...items];
+  if (out.length >= SAMPLE_AMENITY_MIN) return out;
+  const fill = STANDARD_FACILITY_FILL.map((k) => catalogueLabel(k))
+    .filter((l): l is string => !!l)
+    .map((l) => T(d, l))
+    .filter((l) => !(d.sampleAmenityDeny ?? []).some((x) => catalogueIdFor(x) === catalogueIdFor(l)));
+  const kinds = new Set(out.map((t) => catalogueIdFor(t, d.amenityIconMap)));
+  for (const l of notShownYet(d, fill)) {
+    if (out.length >= SAMPLE_AMENITY_MIN) break;
+    const k = catalogueIdFor(l);
+    if (kinds.has(k)) continue;
+    kinds.add(k);
+    out.push(l);
+  }
+  return out;
+}
 
 function amenitiesSampleBlock(d: SiteData): string {
   // Never an item the page already shows (11-26, quality colleague, 31/31 plans: Jázmin's highlights and
   // Kevikincses' about chips came back in „Amit kínálunk”) — the same text, or the same facility kind (icon) —
   // and never one without a facility icon (an empty ring stood beside „Horgászatot kedvelőknek”).
-  const items = notShownYet(d, sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []));
-  // No sourced facility list while the page already shows its highlights → no block at all (11-26, quality
-  // colleague): the empty frame failed every review (Riva, Kiskúti), and filling it from the highlights
-  // printed the same items twice („Egy pillantásra” + „Amit kínálunk”, Sirató).
-  if (!items.length && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null)) return "";
-  // Every sourced item is already on the page → no block (no repeat, no empty frame).
-  if (!items.length && (d.sampleAmenities ?? []).length) return "";
-  // A stub of 1–3 cards next to a page that already shows its facilities („Egy pillantásra”, ADR-0486: the module's
-  // surface on the mock) is a near-empty section, not a module (owner 2026-11-26, Lila Central: two cards and a
-  // 190 px hole above the price table). Fewer than SAMPLE_AMENITY_MIN items → the native grid is the surface.
-  if (items.length && items.length < SAMPLE_AMENITY_MIN && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null)) return "";
-  // Nothing sourced: the module still SHOWS (ADR-0061 all-in — a module the lead buys may
-  // not be silent), as its frame with no item in it, and the note says so — the pricing
-  // sample's pattern („ezen az előnézeten szándékosan nincs egyetlen ár sem”).
-  if (!items.length)
-    return asSample(
-      `<section class="cit-modsec" data-cit-module="amenities">` +
-        `<div class="cit-modsec__in"><h2>${T(d, "Felszereltség")}</h2></div></section>`,
-      d,
-      T(d, "Minta — ide kerülnek a szállás szolgáltatásai, Ön jelöli be őket; ezen az előnézeten szándékosan nincs kitalált szolgáltatás."),
-    );
+  const sourced = notShownYet(d, sampleAmenityItems(d.sampleAmenities ?? [], d.sampleAmenityDeny ?? []));
+  // ALWAYS A FULL SECTION (owner 11-27 via the coordinator, ⑬: „a mock terv, szakasz nem maradhat üres”; Magic Stone
+  // 7c5af613 showed „OPREMA / UZORAK” with only the note). The four 11-26 drop rules (no list next to facility highlights,
+  // every sourced item already shown, a 1–3-card stub, nothing sourced → the empty frame + the „no invented service”
+  // note) are replaced by ONE rule: the sourced items first, then the standard catalogue items the page does not show
+  // yet, up to SAMPLE_AMENITY_MIN — marked as a sample, the owner ticks the real ones after buying.
+  const items = withStandardFill(d, sourced);
   return asSample(
     listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t)),
     d,
@@ -1451,11 +1456,11 @@ export function moduleSectionGroups(
           // (owner order 2026-08-27); free-text falls back to the keyword matcher.
           // On the MOCK: only what the page does not show yet (Laura, BaBo 11-26: „Légkondicionálás”, „Grillezési
           // lehetőség” word for word under „Egy pillantásra” and again here) — nothing new → no block.
+          // ⑬ (owner 11-27): on the mock a short or fully-shown list is TOPPED UP with standard items (marked), never dropped.
           ((items) =>
-            items.length &&
-            !(opts.demo && items.length < SAMPLE_AMENITY_MIN && (d.highlights ?? []).some((h) => catalogueIdFor(h, d.amenityIconMap) !== null))
-              ? listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t, d.amenityIconMap))
-              : "")(opts.demo ? notShownYet(d, d.amenities) : [...d.amenities])
+            items.length ? listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t, d.amenityIconMap)) : "")(
+            opts.demo ? withStandardFill(d, notShownYet(d, d.amenities)) : [...d.amenities],
+          )
         : s.has("amenities")
           ? amenitiesSampleBlock(d)
           : "",

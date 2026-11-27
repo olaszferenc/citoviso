@@ -129,12 +129,14 @@ section{padding:clamp(70px,10vh,124px) 0}
 /* copy sits BOTTOM-LEFT, not centred — this is the reference's stance */
 .w-hero-copy{position:absolute;left:0;right:0;bottom:8%;z-index:3;text-align:left;
   width:min(1140px,88vw);margin-inline:auto;
-  color:var(--cit-on-accent);text-shadow:0 2px 26px rgba(0,0,0,.55)}
+  /* ADR-XXXX ⑮ (Natura c717f8a7: the dark on-accent ink of a light skin stood on a dark lawn): text on a PHOTO is light,
+     over the dark veil below it — never the accent's ink colour (the Parallax hero's own rule) */
+  color:#fff;text-shadow:0 2px 26px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.5)}
 .w-hero-copy h1{font-size:clamp(28px,5.4vw,64px);line-height:1.1;max-width:16ch;margin:0}
 .w-hero-copy .w-hero-line{font-family:var(--cit-font-display);
   font-size:clamp(16px,2.2vw,24px);line-height:1.34;max-width:26ch;margin:.55em 0 0;
-  color:color-mix(in srgb,var(--cit-on-accent) 92%,transparent)}
-.w-hero-copy .w-kick{color:color-mix(in srgb,var(--cit-on-accent) 90%,transparent);margin-bottom:12px}
+  color:color-mix(in srgb,#fff 92%,transparent)}
+.w-hero-copy .w-kick{color:color-mix(in srgb,#fff 90%,transparent);margin-bottom:12px}
 /* LANDSCAPE PHONE (844×390, 2026-09-27): the 420px hero minimum put the bottom-left copy at the fold
    (guest-mobile-check ②főcím-hajtás, +45px on the fixture; −15px on the live mocks — a barely-passing
    value is a dead rule). The hero fits the screen under the one-row nav, the copy sits higher, the

@@ -543,8 +543,40 @@ export function withShowcaseFirst<T>(photos: readonly T[], kinds: readonly (Phot
  * within 0.15 of it (the vision/portal order keeps its say when it is good). Order otherwise kept.
  * Unknown verdicts (no model, unreadable image) never move anything.
  */
+/**
+ * A ROOM INSIDE opens the page only when nothing outside can (ADR-XXXX ⑫, Nyerges 6f9ac931: a bed close-up under „a view
+ * onto the garden”). Measured 11-27 on 60 live heroes: 10 were rooms (bed ≥ 0.35 or room mass ≥ 0.55), 5 of them had
+ * an outdoor / view photo the hero rule accepts. A preference, not a ban: a lead with rooms only keeps its best room.
+ */
+export const HERO_BED_MAX = 0.35;
+export const HERO_ROOM_MASS_MAX = 0.55;
+export function isRoomHero(v: PhotoKind | null): boolean {
+  const p = v?.probs ?? {};
+  const bed = p["a bedroom with a bed"] ?? 0;
+  return bed >= HERO_BED_MAX || bed + (p["a hotel room interior"] ?? 0) + (p["a living room"] ?? 0) >= HERO_ROOM_MASS_MAX;
+}
+/** Index of the best photo the hero rule accepts that is NOT a room inside, or -1. */
+export function bestOutsideHero(kinds: readonly (PhotoKind | null)[]): number {
+  let at = -1;
+  kinds.forEach((v, i) => {
+    if (fitsHero(v) && !isRoomHero(v) && (at < 0 || heroScore(v!) > heroScore(kinds[at]!))) at = i;
+  });
+  return at;
+}
+
 export function withBestHeroFirst<T>(photos: readonly T[], kinds: readonly (PhotoKind | null)[]): T[] {
   if (photos.length < 2) return [...photos];
+  // a room would open the page while an outside / view photo could: the outside one opens it
+  const chosen = withBestHeroFirstByScore(photos, kinds);
+  const firstKind = kinds[photos.indexOf(chosen[0]!)] ?? null;
+  if (isRoomHero(firstKind)) {
+    const out = bestOutsideHero(kinds);
+    if (out >= 0) return [photos[out]!, ...photos.filter((_, i) => i !== out)];
+  }
+  return chosen;
+}
+
+function withBestHeroFirstByScore<T>(photos: readonly T[], kinds: readonly (PhotoKind | null)[]): T[] {
   let best = -1;
   let bestScore = -1;
   kinds.forEach((v, i) => {

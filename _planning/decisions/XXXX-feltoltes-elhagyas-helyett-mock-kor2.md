@@ -1,0 +1,28 @@
+## ADR-XXXX — Feltöltés elhagyás helyett: dátumbélyeg a sarkokon, mondat a sávon, szoba csak végső nyitókép, sötét nyitóképernyő, telt felszereltség, olvasható hős-cím, térkép mindig, Parallax mindig
+
+- **Dátum:** 2026-11-27 (délután)
+- **Státusz:** elfogadva (a koordinátor `cit96bd8170` 10–13., 15–16. pontja, a tulaj elve: „a mock terv, szakasz nem maradhat üres”, „rossz kép helyett a következő jelölt, felirat helyett mondat vagy semmi”)
+- **Érinti:** `src/generator/chainSupply.ts`, `scripts/chain-supply.mts`, `src/media/photoText.ts`, `src/media/photoKind.ts`, `src/outreach/mockRenderGate.ts`, `src/outreach/mockPhotoGate.ts`, `src/engine/templates/{parallax,wordmarkGrow}.ts`, `src/engine/{moduleSections,amenityIcon,primitives,render}.ts`, `src/text/headingKey.ts` (új), `scripts/chain-supply-check.mts`, `scripts/sample-from-source-check.mts`
+- **Előzmény:** ADR-0500 (a lánc saját magát tölti).
+
+### Döntés — szabályok, mind általános, mind feltöltéssel vagy cserével javít
+10. **Dátumbélyeg a sarkokon** (Virágeső 631926c8: a sárga „2011/06/17” egyik fotón sem olvasódott). Ha a teljes képen nincs dátum, egy második OCR-menet a négy sarkot nagyítva (2,5×), sárgaság-csatornán (min(R,G) − B, kifeszítve, invertálva) olvassa. Itt a részleges alak (évszám + elválasztó, pl. „2011/”) is bélyegnek számít, a kép belsejében nem. Mérve: a Virágeső mindkét bélyeges fotója megvan, 150 véletlen éles fotón 0 téves találat (az egyetlen találat valódi bélyeg, a fő menetből). Ára: fotónként kb. 4 kis OCR (letöltéssel ~1,8 s). Egyszeri költség: a fotó-ítélet gyorsítótára a `photoText.ts` változásával érvénytelenül, az első kör mindent újraosztályoz.
+11. **A sávkép felirata mondat** (Grozdana/Fontevita „GALERIJA”, La Playa „FOTÓK A HÁZRÓL”, Jaja, Anikó). Felirat csak ≥ 4 szavas mondat lehet, ami nem szakaszcím (`bandCaption`). Az A-sáv a tagline-t viszi, a galéria címére nem esik vissza. A B-sáv nem ismétli a vélemények címét. Ha nincs mondat, a sáv felirat nélkül marad. Kapu: a nem mondat vagy a címet ismétlő sávfelirat `repeat`.
+12. **Nyitókép.** (a) Szoba (ágy ≥ 0,35 vagy szoba-tömeg ≥ 0,55) csak akkor nyit, ha nincs a hős-szabálynak megfelelő kültéri/kilátásos kép (elsőbbség, nem tiltás). Mérve 60 éles nyitóképen: 10 szoba, 5-nél volt jobb jelölt. A kapu jelez (URL-lel, cserére), ha a lapon van ilyen. (b) A telefonos első képernyő képsávja (a cím nélkül) sötét (luma < 55) → `subject` a nyitókép URL-jével, és az újrapróba a következő jelöltet teszi be. Mérve 41 éles oldalon: a Castor (46,8) bukik, a sötét, de éles képek átmennek. A „sötét és fakó” ágat (< 70 és Laplace < 400) a fixture-kapu buktatta: a Kapunyitás fátyla alatti sima homlokzat (Aranyforrás 59/82) jó nyitókép, a sima fal nem homályos fotó. Az ágy-közelképet a szoba-szabály kezeli. (c) Malom-halszem: nincs mérő, kihagyva.
+13. **A felszereltség-modul mindig telt.** A 11-26-os négy elhagyó szabály (lista nélkül, ha a kiemelések felszereltséget mutatnak; ha minden forrás-tétel már látszik; 1–3 kártyás csonk; forrás nélkül üres keret és „szándékosan nincs kitalált szolgáltatás” mondat) helyett EGY szabály van: forrás-tételek elöl, utána a lapon még nem látszó standard katalógus-tételek (`STANDARD_FACILITY_FILL`, ugyanaz a készlet, mint a Parallax-rácsé) legalább 4-ig, MINTA-jelöléssel. A lead saját listája is így töltődik a mockon.
+15. **A nyitókép címe olvasható a képen** (Natura c717f8a7: sötét serif név sötét gyepen). A Névből növő fotós hős-szövege fehér, árnyékkal (a Parallax hős-szabálya), nem az akcent tintája. Kapu: az első képernyő h1-ét a mögötte lévő kép pixeleihez méri (a szövegszíntől eltérő pixelek mediánja), nagy szövegre 3:1 alatt `contrast`.
+16. **A térkép mindig látszik.** A térkép-iframe azonnal tölt (`eager`), mert a lusta a teljes oldalas képeken (tulaj jóváhagyó lapja, kolléga mintája) soha nem indult, és fehér doboz maradt a tűvel. Kapu: a végiggörgetés után az egyszínű térkép-doboz (szórás < 8) `thin`.
+17. **A Parallax mindig az egyik terv** (tulaj „Parallax ok”, 2026-11-27). Az újragenerálás fő terve Parallax, ha a leadnek van hozzá képe (saját vagy településkép). A 2. terv Kapunyitás vagy Névből növő, a tartaléka soha nem Parallax. Az újrapróba Parallax tervnél csak képkiosztást próbálhat; ha az elfogy, a lead okkal tartva marad, és nem lesz Parallax nélküli pár. Sablont csak a 2. terv cserél (Kapunyitás ↔ Névből növő). A már meglévő Parallax nélküli pár (`restoreParallaxQueue`) a fő terv szövegéből Parallaxot kap, ez lesz a sor fő terve, a régi fő terv 2. tervnek marad. Ha kép híján nem lesz belőle Parallax, a pár marad, és nem próbálja újra (`parallaxRestore`). Scratch-próba: 3-ból 2 pótolva.
+- Bélyeg `2026-11-27-supply2`, render-kapu v18.
+
+### Mérve (vak, 23 új éles várakozó mock, éles DB-másolaton, 0 API)
+- Az új kapuval előtte 4/23 pass, a mai generátorral újrarenderelve 14/23. Kontraszt-lelet 12 → 0, ismétlés 3 → 0, szoba-hős 1 → 0, hős-cím és térkép téves pozitív 0.
+- A bukottakon az automata újrapróba után **16/23 jó (70%)**, 5 okkal tartva (a településnek nincs más jóváhagyott nyitóképe, vagy nincs másik sablon), 2 még bukik (a próbakorlátig folytatja).
+
+### Nem változott, jelzésként (elhagyó szabályok, amelyek képet igényelnének, tulaj-döntés)
+- `moduleSections`: a minta-szobablokk elmarad, ha ≥ 5 saját fotó van, és egyik szobakártyának sincs képe (Jaja 11-26).
+- `templateKit.roomsForMock`: szoba-kép híján beltéri kép, ha az sincs, a szobablokk elmarad.
+- `parallax`: az A- és B-sáv elmarad, ha nincs sávra alkalmas fotó (Vandus 11-26).
+
+### Visszafordíthatóság
+🔄 — minden szabály egy-egy függvény vagy feltétel. Migráció nincs.

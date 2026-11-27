@@ -1086,7 +1086,9 @@ const REVIEWS_BAND_CSS = `  .cit-reviews--band { background: var(--cit-accent); 
 export function mapEmbed(q: string, name: string): string {
   if (!q) return "";
   return (
-    `<iframe class="cit-map__frame cit-map__frame--inline" loading="lazy" ` +
+    // ⑯ eager (11-27, Natura c717f8a7: the approval page's full-page picture and the colleague's sample showed a white box
+    // with the pin — a lazy frame far down the page never starts in a shot that does not scroll). The map is the content.
+    `<iframe class="cit-map__frame cit-map__frame--inline" loading="eager" ` +
     `title="${esc(name)} — térkép" referrerpolicy="no-referrer-when-downgrade" allowfullscreen ` +
     `src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&output=embed"></iframe>`
   );

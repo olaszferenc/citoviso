@@ -41,6 +41,12 @@ const DATE_RE = new RegExp(
   "i",
 );
 
+/**
+ * A PARTIAL stamp at the picture's EDGE (ADR-XXXX ⑩, quality colleague 11-27, Virágeső: a yellow „2011/” in the corner):
+ * a year with its separator, read only in the corner pass — inside the picture a year alone is a sign or a plaque.
+ */
+const PARTIAL_DATE_RE = /(?:^|[^\d])((?:19|20)\d{2}\s?[/.\-]\s?(?:\d{1,2})?)(?=[^\d]|$)/;
+
 function langDir(): string {
   return path.resolve(process.cwd(), path.dirname(config.photoKindModelPath), "tessdata");
 }
@@ -53,7 +59,7 @@ let worker: Promise<Worker> | null = null;
 function getWorker(): Promise<Worker> {
   worker ??= (async () => {
     const w = await createWorker("eng", 1, { langPath: langDir(), cacheMethod: "none", gzip: false, logger: () => undefined });
-    await w.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+    await w.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT, user_defined_dpi: "300" });
     return w;
   })();
   return worker;
@@ -120,5 +126,57 @@ async function readPhotoTextNow(buf: Buffer): Promise<PhotoText | null> {
   }
   const all = (res.data.text ?? "").replace(/\s+/g, " ");
   const area = words.reduce((a, x) => a + x.area, 0) / Math.max(1, w * h);
-  return { dateStamp: DATE_RE.exec(all)?.[0] ?? null, textArea: +area.toFixed(4), words: words.map((x) => x.text) };
+  const full = DATE_RE.exec(all)?.[0] ?? null;
+  return { dateStamp: full ?? (await readCornerStamp(buf)), textArea: +area.toFixed(4), words: words.map((x) => x.text) };
+}
+
+/** The corner a camera prints its stamp in: this share of the width × height, each corner. */
+const CORNER_W = 0.45;
+const CORNER_H = 0.25;
+/** The corner is read this much larger (a 2 % stamp becomes ~40 px tall). */
+const CORNER_SCALE = 2.5;
+
+/**
+ * THE SECOND PASS ON THE CORNERS (ADR-XXXX ⑩). A yellow / orange camera stamp on grass or foliage is a weak contrast in
+ * greyscale (Virágeső: „2011/06/17” read on no photo). In the R − B channel it is bright (R high, B low) while grass,
+ * sky and walls are dark or mid. Each corner: cut, enlarge, R − B stretched and inverted (dark text on light for
+ * Tesseract), read; a full date or a partial one (year + separator) counts.
+ */
+async function readCornerStamp(buf: Buffer): Promise<string | null> {
+  let img: { data: Buffer; info: { width: number; height: number; channels: number } };
+  try {
+    img = await sharp(buf).rotate().resize({ width: READ_WIDTH, withoutEnlargement: true }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  } catch {
+    return null;
+  }
+  const { width: W, height: H, channels: C } = img.info;
+  const cw = Math.round(W * CORNER_W);
+  const ch = Math.round(H * CORNER_H);
+  const corners = [
+    [W - cw, H - ch],
+    [0, H - ch],
+    [W - cw, 0],
+    [0, 0],
+  ] as const;
+  const worker = await getWorker();
+  for (const [x0, y0] of corners) {
+    const out = Buffer.alloc(cw * ch);
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        const i = ((y0 + y) * W + (x0 + x)) * C;
+        const yellow = Math.min(img.data[i]!, img.data[i + 1]!) - img.data[i + 2]!;
+        // stretched: a stamp's ~150–230 becomes white, foliage's ~0–80 black; inverted below
+        out[y * cw + x] = 255 - Math.max(0, Math.min(255, (yellow - 90) * 2));
+      }
+    }
+    const png = await sharp(out, { raw: { width: cw, height: ch, channels: 1 } })
+      .resize({ width: Math.round(cw * CORNER_SCALE) })
+      .png()
+      .toBuffer();
+    const r = await worker.recognize(png);
+    const text = (r.data.text ?? "").replace(/\s+/g, " ");
+    const hit = DATE_RE.exec(text)?.[0] ?? PARTIAL_DATE_RE.exec(text)?.[1] ?? null;
+    if (hit) return hit.trim();
+  }
+  return null;
 }

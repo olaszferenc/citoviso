@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-feltoltes-elhagyas-helyett-mock-kor2.md) — Feltöltés elhagyás helyett: dátumbélyeg a sarkokon, mondat a sávon, szoba csak végső nyitókép, sötét nyitóképernyő, telt felszereltség, olvasható hős-cím, térkép mindig, Parallax mindig
 - [ADR-0502](decisions/0502-honlap-nelkuli-lead-elerhetosege-nyilvanos.md) — Honlap nélküli lead elérhetősége: nyilvános szállásadói jegyzék mint e-mail-forrás, és a böngészős honlap-ítélet maga dönt
 - [ADR-0501](decisions/0501-a-telepuleskep-szabaly-a-kapun-is-a-valaszto.md) — A településkép-szabály a kapun is a választó bemenetén ítél (330 px); bélyeg- vagy verzió-emelés nem üríti ki a tulaj lapját
 - [ADR-0500](decisions/0500-a-lanc-sajat-magat-tolti-regi-mock.md) — A lánc saját magát tölti: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu
