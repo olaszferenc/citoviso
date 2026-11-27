@@ -1,4 +1,4 @@
-// THE RENDER GATE'S REPETITION RULE for a writer's words, before a page is made (ADR-XXXX). The chain's writer
+// THE RENDER GATE'S REPETITION RULE for a writer's words, before a page is made (ADR-0508). The chain's writer
 // (~/rc-briefs/uj-lanc/fo-terv/write.py) asks this after each answer and sends the pairs back for a rewrite — the very
 // rule the gate fails a page on (src/text/textOverlap.ts repeatsText), so the writer never needs a copy of it.
 //

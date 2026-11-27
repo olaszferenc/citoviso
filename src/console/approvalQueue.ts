@@ -451,7 +451,7 @@ function chips(key: string, opts: readonly (readonly [string, string])[], lang: 
 function pageTop(tab: "wait" | "notseen" | "fix", waiting: number, notSeen: number, cfg: MessengerConfig, lang: string, fix: FixLetterCounts = { ready: 0, total: 0 }): string {
   const tabs =
     `<nav class="aq-tabbar"><a href="/jovahagyas"${tab === "wait" ? ' class="on"' : ""}>${esc(T(lang, "Jóváhagyásra vár"))} <span class="n">${waiting}</span></a>` +
-    // ADR-XXXX: the correction letter's tab — only while there is any (approved plan design-refs/console/javito-level)
+    // ADR-0508: the correction letter's tab — only while there is any (approved plan design-refs/console/javito-level)
     (fix.total || tab === "fix" ? `<a href="/jovahagyas?tab=javito"${tab === "fix" ? ' class="on"' : ""}>${esc(T(lang, "Javító levél"))} <span class="n${fix.ready ? " warn" : ""}">${fix.ready}</span></a>` : "") +
     // Owner 2026-11-25: „A messengeres rész kuka” — no messenger tab on the page (the route stays).
     (tab === "notseen" ? `<a href="/jovahagyas?tab=nemnezte" class="on">${esc(T(lang, "Messengeren nem nézte meg"))} <span class="n${notSeen ? " warn" : ""}">${notSeen}</span></a>` : "") +
@@ -699,7 +699,7 @@ export function notSeenPage(
   );
 }
 
-// ── 3. fül: „Javító levél” (ADR-XXXX; approved plan assets/design-refs/console/javito-level/) ──
+// ── 3. fül: „Javító levél” (ADR-0508; approved plan assets/design-refs/console/javito-level/) ──
 
 const FIX_CSS = `<style>
 .fx-cmp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}

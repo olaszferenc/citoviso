@@ -1,4 +1,4 @@
-// THE CORRECTION LETTER (owner 2026-11-27, brief javito-level-20261127, ADR-XXXX).
+// THE CORRECTION LETTER (owner 2026-11-27, brief javito-level-20261127, ADR-0508).
 //
 // Between 11-13 and 11-23 fifty cold letters went out with a mock whose opening picture came from the old town
 // picker: a locomotive (Zalaegerszeg M62, Vasvár M41), a railway / bus station, a space photo (ISS „View of Earth”).

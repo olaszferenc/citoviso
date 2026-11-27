@@ -40,7 +40,7 @@ async function main(): Promise<void> {
       if (px.restored || px.failed) console.log(`Parallax-pótlás: ${JSON.stringify(px)}`);
       const r = await retryFailedQueue(RETRY_BUDGET_MS);
       if (r.tried || r.held) console.log(`render-kapu újrapróba: ${JSON.stringify(r)}`);
-      // the correction letter (ADR-XXXX): select by the rule, make both plans, retry a held one, send the approved —
+      // the correction letter (ADR-0508): select by the rule, make both plans, retry a held one, send the approved —
       // before the gate-backlog pause below (a handful of leads; the owner's „Mehet” must not wait for the old stock)
       const { fixLetterStep } = await import("../src/outreach/fixLetter.js");
       const fx = await fixLetterStep(FIX_BUDGET_MS);

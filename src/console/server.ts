@@ -2189,7 +2189,7 @@ async function handle(
     const { getMessengerConfig, notSeenList } = await import("../mms/messenger.js");
     const { fixLetterCounts } = await import("../outreach/fixLetter.js");
     const [items, notSeen, cfg, fixCounts] = await Promise.all([listPendingApprovals(), notSeenList(), getMessengerConfig(), fixLetterCounts()]);
-    // ADR-XXXX: the correction letter's tab (approved plan design-refs/console/javito-level)
+    // ADR-0508: the correction letter's tab (approved plan design-refs/console/javito-level)
     if (url.searchParams.get("tab") === "javito") {
       const { listFixLetters, fixLetterPreview, planReviewed } = await import("../outreach/fixLetter.js");
       const { fixLetterPage } = await import("./approvalQueue.js");

@@ -77,7 +77,7 @@ const LEAD_CC = `coalesce(nullif(upper(trim(l.raw->>'country')), ''), (select up
 
 let ids: string[] = [];
 if (leadsFile) ids = readFileSync(leadsFile, "utf8").split(/\s+/).filter((x) => /^[0-9a-f-]{36}$/i.test(x));
-// THE CORRECTION LETTER's leads go first (src/outreach/fixLetter.ts, ADR-XXXX): a selected correction waits for its
+// THE CORRECTION LETTER's leads go first (src/outreach/fixLetter.ts, ADR-0508): a selected correction waits for its
 // town's current set, and it is never in the main plan's list the chain passes — without this it would wait forever.
 // A DB without migration 0161 (no fix_letter table) simply adds nothing.
 if (leadsFile) {

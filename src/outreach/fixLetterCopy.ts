@@ -1,4 +1,4 @@
-// THE CORRECTION LETTER'S TEXT (owner 2026-11-27, brief javito-level-20261127, ADR-XXXX). The owner's own sentences,
+// THE CORRECTION LETTER'S TEXT (owner 2026-11-27, brief javito-level-20261127, ADR-0508). The owner's own sentences,
 // letter for letter; after them the part already reviewed for the law: the signature of the cold letter
 // (draft.ts senderParts) and its legal footer (OUTREACH_LETTER_LEGAL_V1 with the privacy notice + advertiserIdentity).
 // ⛔ Do not reword: a change needs the owner's word first (brief: „A levél szövegén ne változtass”).

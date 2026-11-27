@@ -1,4 +1,4 @@
-## ADR-XXXX — Javító levél a hibás nyitóképpel kiküldött és megnézett tervekre + kurált településtár
+## ADR-0508 — Javító levél a hibás nyitóképpel kiküldött és megnézett tervekre + kurált településtár
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (tulaj 11-27: a levél szövege, a „régi és új egymás mellett, leadenként Mehet” rend, „becsületbeli ügy — mindkettő fasza legyen, akár a folyamaton kívül összegyűjtött képekkel”; a lap terve és a 7 új mock „ok”). SUB `cit8acda5c6`, koordinátor `cit96bd8170-a1`, brief `~/rc-briefs/javito-level-20261127.md`.

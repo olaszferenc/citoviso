@@ -1,4 +1,4 @@
-// THE CURATED TOWN LIBRARY (owner 2026-11-27, „becsületbeli ügy”, ADR-XXXX).
+// THE CURATED TOWN LIBRARY (owner 2026-11-27, „becsületbeli ügy”, ADR-0508).
 //
 // The automatic picker (townPick.ts + the subscription judge) finds no „jó” hero for some towns: measured 11-27,
 // Zalaegerszeg, Szarvas, Eszteregnye, Derekegyház and Vaszar — every candidate was a locomotive, a station, a plaque or

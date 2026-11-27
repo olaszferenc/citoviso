@@ -85,7 +85,7 @@ function rowOf(r: {
 }
 
 /**
- * The stored set of a town (any version), or null — with the curated library merged in (townCurated.ts, ADR-XXXX):
+ * The stored set of a town (any version), or null — with the curated library merged in (townCurated.ts, ADR-0508):
  * a curated town reads as a CURRENT set whose curated pictures come first; a stale stored pick contributes nothing.
  */
 export async function readTownPhotoSet(country: string, city: string): Promise<TownPhotoSetRow | null> {

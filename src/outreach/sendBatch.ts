@@ -316,7 +316,7 @@ export async function sendOutreachMail(
   // `sampleTo`: build the letter EXACTLY as the send would, then mail it to this address only (the
   // owner's check of the coded letter, 2026-11-23) — no claim, no stamp, no variant record, every
   // mock link own-view marked, outside the send window. Never set by the dispatcher.
-  // `fixLetter`: THE CORRECTION LETTER (fixLetter.ts, ADR-XXXX) — the id of an APPROVED fix_letter row whose new
+  // `fixLetter`: THE CORRECTION LETTER (fixLetter.ts, ADR-0508) — the id of an APPROVED fix_letter row whose new
   // prospect this is. Every send-time gate below runs; the letter is the owner's text (fixLetterCopy.ts), no experiment,
   // no offer stamp; the address-level one-shot gives way to the row's own once-per-lead stamp (claimed atomically).
   opts: { dryRun?: boolean; probe?: boolean; sampleTo?: string; fixLetter?: string } = {},

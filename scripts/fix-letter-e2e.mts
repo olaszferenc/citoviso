@@ -1,4 +1,4 @@
-// THE CORRECTION LETTER, END TO END on a SCRATCH database restored from a prod dump (ADR-XXXX):
+// THE CORRECTION LETTER, END TO END on a SCRATCH database restored from a prod dump (ADR-0508):
 // selection by the rule → both plans by today's generator through the render gate → the approval page → „Mehet” →
 // the letter through the guarded send path into the MOCK outbox → once per lead. The letter text is measured
 // LETTER FOR LETTER against the owner's sentences as the brief gives them (not against our own copy module).

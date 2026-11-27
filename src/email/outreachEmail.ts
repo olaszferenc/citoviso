@@ -326,7 +326,7 @@ function buildPlainMail(heroSrc: string | null, t: OutreachParts, l: MailLinks, 
 }
 
 /**
- * THE CORRECTION LETTER (src/outreach/fixLetterCopy.ts, ADR-XXXX): the owner's own sentences in the white, logo-less
+ * THE CORRECTION LETTER (src/outreach/fixLetterCopy.ts, ADR-0508): the owner's own sentences in the white, logo-less
  * frame — greeting, p1 (parts.hook) with the bare link, p2 (parts.p1), the opt-out sentence with its link, the
  * three-line signature (no closing formula: the owner's text has none), the legal line with the privacy link and the
  * advertiser identity. No hero, no button, no price. Renders exactly the parts composeFixBody puts in the text.

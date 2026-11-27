@@ -1,6 +1,6 @@
 # 2026-11-27 — Javító levél a hibás nyitóképpel kiküldött 7 leadnek + kurált településtár (SUB `cit8acda5c6`)
 
-Koordinátor `cit96bd8170-a1`, brief `~/rc-briefs/javito-level-20261127.md`, döntés: ADR-XXXX (javító levél). Élesen NINCS — a koordinátor élesít a land után.
+Koordinátor `cit96bd8170-a1`, brief `~/rc-briefs/javito-level-20261127.md`, döntés: ADR-0508 (javító levél). Élesen NINCS — a koordinátor élesít a land után.
 
 ## Elvégezve
 - Kijelölő szabály + `fix_letter` napló (0161), leadenként egyszer; a lépés a lánc-utánpótlás időzítőjében (5 perc): kijelöl, két tervet készít, a jóváhagyottakat a kiküldési ablakban küldi.

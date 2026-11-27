@@ -1,4 +1,4 @@
-// THE CORRECTION LETTER'S REVIEW (Vera) — verdict ONLY (ADR-XXXX). The single-pass checker (~/rc-briefs/egylepes-elo,
+// THE CORRECTION LETTER'S REVIEW (Vera) — verdict ONLY (ADR-0508). The single-pass checker (~/rc-briefs/egylepes-elo,
 // run2.py) judges the correction letter's two new plans exactly as it judges any pair; its MEHET is recorded here as
 // the Vera PASS on both plans — and NOTHING else: no re-render (that would change the files the owner approved), no
 // curator step, no dispatch row (the lead was contacted; the correction goes by its own path, fixLetter.ts).

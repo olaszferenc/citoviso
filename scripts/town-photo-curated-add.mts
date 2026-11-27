@@ -1,5 +1,5 @@
 // Adds hand-picked, freely licensed Wikimedia Commons pictures to the curated town library (src/media/townCurated.json,
-// ADR-XXXX). Reads each file's author, licence, size and a 1920/1280 px thumbnail from the Commons API, computes the
+// ADR-0508). Reads each file's author, licence, size and a 1920/1280 px thumbnail from the Commons API, computes the
 // near-duplicate hash, refuses a non-free licence (NC / ND / none) and a hero under 1600 px or narrower than 1.3:1,
 // and judges every picture with the render gate's own town rule (media/townPick.judgeTownPicture on the 330 px
 // thumbnail the gate re-judges): a hero at its tier as a hero, a gallery picture as the gate judges a local picture.
