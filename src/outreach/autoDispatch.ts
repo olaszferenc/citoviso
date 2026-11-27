@@ -486,6 +486,9 @@ export async function runDispatchTick(now: Date, opts: { force?: boolean } = {})
       .where(sql<boolean>`exists (select 1 from mock_artifact a where a.id = outreach_dispatch.artifact_id and ${MOCK_OWNER_APPROVED_SQL})`)
       // 0155: only the site classes the lead's country row picks (dispatch_sites).
       .where(DISPATCH_SITE_OK)
+      // ADR-0498: an approved test lead (the owner's own walk, to his own address) goes on the next tick, ahead of
+      // the real queue — it takes no real lead's place in the day's cap, only one tick's turn.
+      .orderBy(sql`(not exists (select 1 from lead tl where tl.id = outreach_dispatch.lead_id and ltrim(tl.name) like '[TESZT]%'))`)
       .orderBy(DISPATCH_PRIORITY)
       .orderBy("queued_at")
       .limit(CLAIM_SCAN)

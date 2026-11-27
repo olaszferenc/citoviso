@@ -145,16 +145,23 @@ await db.transaction().execute(async (trx) => {
 });
 
 // Each plan: the source file as the starting point, then the clone's own render from its inputs.
+const failedGate: string[] = [];
 for (const [from, id] of [[mainSrc, mainId], [altSrc, altId]] as const) {
   const row = await db.selectFrom("mock_artifact").select(["id", "lead_id", "path", "inputs", "generated_at"]).where("id", "=", id).executeTakeFirstOrThrow();
   await copyFile(path.resolve(process.cwd(), from.path!), path.resolve(process.cwd(), row.path!));
   const r = await refreshMock(row);
   const g = await renderGateFor(id);
+  if (g.verdict !== "pass") failedGate.push(id.slice(0, 8));
   console.log(`  terv ${id.slice(0, 8)}: újrarenderelve (${r.arm}) · render-kapu: ${g.verdict}${g.findings.length ? ` — ${g.findings.map((f) => f.code).join(", ")}` : ""}`);
 }
 
 const q = await enqueueDispatch({ leadId, artifactId: mainId, by: BY });
 if (!q.ok) fail(`a kiküldési sor elutasította: ${q.reason}`);
 await db.updateTable("outreach_dispatch").set({ status: "held", note: QA_WAIT_NOTE }).where("id", "=", q.id).execute();
-console.log(`\n✓ ${name} kész — a kiküldési sorban, a tulaj /jovahagyas lapjára vár (lead ${leadId})`);
+// A plan the machine gate failed keeps the row off the owner's page (approvalQueue): say so, not "ready".
+console.log(
+  failedGate.length
+    ? `\n⚠️ ${name} a kiküldési sorban, de a render-kapu elbuktatta (${failedGate.join(", ")}) — a tulaj lapjára csak a lánc újratervezése után kerül (lead ${leadId})`
+    : `\n✓ ${name} kész — a kiküldési sorban, a tulaj /jovahagyas lapjára vár (lead ${leadId})`,
+);
 process.exit(0);

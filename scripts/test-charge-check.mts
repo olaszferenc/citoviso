@@ -58,6 +58,11 @@ const billing = src("src/payment/billing.ts");
 check("megújítás: testChargeForTenant + domain/ajánlat nélkül", /testChargeForTenant\(sub\.tenantId, sub\.currency\)/.test(billing) && /domainDue && testCharge === null/.test(billing));
 const ml = src("src/tenant/multilangOrder.ts");
 check("többnyelvűség: testChargeForTenant + terhelt ár", /price: testCharge \?\? price,/.test(ml));
+const disp = src("src/outreach/autoDispatch.ts");
+const iClaim = disp.indexOf('.where("status", "=", "queued")');
+const iTestFirst = disp.indexOf("ltrim(tl.name) like '[TESZT]%'))`)", iClaim);
+check("kiküldés: a jóváhagyott [TESZT]-sor a sor elején (a valódi prioritás előtt)", iClaim > 0 && iTestFirst > iClaim && disp.indexOf(".orderBy(DISPATCH_PRIORITY)", iClaim) > iTestFirst);
+check("másoló: a kapun bukott terv nem „kész”", /failedGate\.length/.test(src("scripts/test-lead-clone.mts")));
 
 console.log(fails ? `\n✗ ${fails} hiba` : "\n✓ minden rendben");
 process.exit(fails ? 1 : 0);
