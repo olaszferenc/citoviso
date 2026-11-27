@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-a-lapon-volt-ajanlat-elobb-a-regi-allomany-utana-bump-or.md) — A lapon volt ajánlat előbb, a régi állomány utána; bélyeg- és kapu-verzió emelés csak szabállyal és indoklással
+- [ADR-0506](decisions/0506-a-lapon-volt-ajanlat-elobb-a-regi-allomany.md) — A lapon volt ajánlat előbb, a régi állomány utána; bélyeg- és kapu-verzió emelés csak szabállyal és indoklással
 - [ADR-0505](decisions/0505-mock-3-kor-a-szobablokk-nem-marad-el-a-cim.md) — Mock 3. kör: a szobablokk nem marad el, a cím doboza a leghosszabb szóhoz igazodik, semleges galériacím kevés saját képnél, feliratos nyitókép helyett a következő jelölt
 - [ADR-0504](decisions/0504-a-fotoszamlalo-a-generator-mert-kepszama-a.md) — A fotószámláló a generátor mért képszáma; a kevés használható képes lead elsőre a településképes útra megy
 - [ADR-0503](decisions/0503-feltoltes-elhagyas-helyett-datumbelyeg-a.md) — Feltöltés elhagyás helyett: dátumbélyeg a sarkokon, mondat a sávon, szoba csak végső nyitókép, sötét nyitóképernyő, telt felszereltség, olvasható hős-cím, térkép mindig, Parallax mindig

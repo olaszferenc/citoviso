@@ -107,7 +107,7 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - a már félretett 26 sor: 9 a településképes úton újraindul, 17 (településképes terv) vissza a kapuhoz.
 - **Lánc:** `atallas-kepszam.sh` (05d1042), a deploy ELŐTT. Élesen mérve: fo-cand 72 = 72.
 
-## Lap-ürülés a 15:50-es deploy után (koordinátor 16:10, ADR-XXXX)
+## Lap-ürülés a 15:50-es deploy után (koordinátor 16:10, ADR-0506)
 - **Ok:** a 9a73a4e2 bélyeget (`supply2`) és kapu-verziót (18) emelt, aznap a negyedik emelés.
 - **Hova lettek a lapon volt sorok:** a 20 HR ajánlatból 2 kész, 7-nél az egyik terv még a régi bélyegen, 11 újrarenderelve, de v17-es ítélettel.
 - **Szűk keresztmetszet:** a kapu 165 s alatt 3 tervet ítélt, közben a régi-mock újragenerálás tüzelésenként 150–313 s-ot vitt.

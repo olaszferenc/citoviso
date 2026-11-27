@@ -1,4 +1,4 @@
-## ADR-XXXX — A lapon volt ajánlat előbb, a régi állomány utána; bélyeg- és kapu-verzió emelés csak szabállyal és indoklással
+## ADR-0506 — A lapon volt ajánlat előbb, a régi állomány utána; bélyeg- és kapu-verzió emelés csak szabállyal és indoklással
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`: „az 1) és a 2) mehet, egy commitban. A 3)-at kódszinten is kérem.”)
