@@ -2535,6 +2535,13 @@ if [ -f scripts/qa-review-check.mts ]; then
   echo "[pre-commit] qa-review-check (minőségi kolléga minden levél előtt, engedélylistás képszűrő)…"
   npx tsx scripts/qa-review-check.mts
 fi
+# bump-guard-check (koordinátor 2026-11-27): bélyeg- (MOCK_HEROFIX_STAMP) vagy kapu-verzió (RENDER_GATE_VERSION) emelés
+#     csak szabály-változással és indokló kommenttel — minden emelés minden átment tervet elavulttá tesz, a tulaj lapja
+#     ~1 órára kiürül. Hermetikus (git), mindig fut.
+if [ -f scripts/bump-guard-check.mts ]; then
+  echo "[pre-commit] bump-guard-check (bélyeg- / kapu-verzió emelés csak szabállyal és indoklással)…"
+  npx tsx scripts/bump-guard-check.mts
+fi
 # approval-chain-e2e (HR jóváhagyási lánc, 2026-11-27): a várakozó sor a tulaj lapjára jut vagy OKKAL félreáll —
 #     a képtelen fő terv újratervezésre megy (egyszer), a bukott render-kapu félretesz, a kettős passz visszaenged,
 #     az országok felváltva kapnak kaput; a fotószám a generátor képei (nem a websiteImages). Saját scratch-DB.

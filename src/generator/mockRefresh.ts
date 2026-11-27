@@ -156,6 +156,17 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
       // A changed mock is a new look for the colleague (and the owner's old yes, if any, is stale by mtime).
       await db.updateTable("outreach_dispatch").set({ status: "held", note: QA_WAIT_NOTE }).where("id", "=", r.dispatchId).where("status", "in", ["queued", "held"]).execute();
       refreshed++;
+      // THE PAIR TOGETHER (coordinator 11-27, 16:10: after the supply2 bump 7 of the 20 HR offers that had been on the
+      // owner's page had one plan re-rendered and judged, the other still on the old stamp): the second plan of the same
+      // offer is re-rendered in the same pass, so the two come back to the gate — and to the page — together.
+      const alt = await secondPlanOf(String(r.lead_id), String(r.id)).catch(() => null);
+      if (alt && !alt.current && Date.now() - started <= budgetMs) {
+        const ar = await db.selectFrom("mock_artifact").select(["id", "lead_id", "path", "inputs", "generated_at"]).where("id", "=", alt.id).executeTakeFirst();
+        if (ar) {
+          await refreshMock(ar, { backupDir });
+          refreshed++;
+        }
+      }
     } catch (e) {
       failed++;
       console.warn(`  ⚠️ mock-frissítés ${r.id}: ${e instanceof Error ? e.message : String(e)}`); // i18n-exempt: operator log
@@ -234,6 +245,30 @@ export const OFFER_PROGRESS_SQL = sql<number>`(select least(count(*), 2) from mo
  * oldest. Aliases `d` = outreach_dispatch, `l` = its lead.
  */
 export const FAIR_ORDER = sql`row_number() over (partition by ${LEAD_COUNTRY_SQL} order by ${OFFER_PROGRESS_SQL} desc, ${sql`(select ${HALF_DONE_SQL})`} desc, d.queued_at), d.queued_at`;
+
+/**
+ * OFFERS THAT WERE ON THE OWNER'S PAGE AND WAIT FOR THEIR NEW VERDICT (coordinator 11-27, 16:10): waiting rows whose two
+ * plans' last verdicts were passes, and at least one of the plans has no pass of the CURRENT rule version yet or is not
+ * on the current generator (a stamp / version bump made it stale). While there are such rows the heavy old-stock
+ * regeneration (chainSupply.regenerateOldQueue) yields the box to the gate — measured: the gate judged 3 plans in a
+ * 165 s firing while the regeneration took 150–313 s a firing on the same 2 cores, so the page stayed nearly empty.
+ */
+export async function pageRejudgePending(): Promise<number> {
+  const r = await db
+    .selectFrom("outreach_dispatch as d")
+    .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
+    .innerJoin("lead as l", "l.id", "d.lead_id")
+    .select(db.fn.countAll().as("n"))
+    .where("d.status", "=", "held")
+    .where("d.note", "in", [...CHAIN_WAIT_NOTES])
+    .where(sql<boolean>`${OFFER_PROGRESS_SQL} >= 2`)
+    .where(sql<boolean>`exists (select 1 from mock_artifact pm where pm.lead_id = d.lead_id and pm.status <> 'rejected'
+      and pm.inputs->'recipe'->>'template' in ('parallax', 'gate-opening', 'wordmark-grow')
+      and (coalesce((pm.inputs->'renderGate'->>'version')::int, 0) <> ${RENDER_GATE_VERSION}
+           or coalesce(pm.inputs->>'terhatasAt', '') < ${MOCK_HEROFIX_STAMP}))`)
+    .executeTakeFirst();
+  return Number(r?.n ?? 0);
+}
 
 /** The waiting rows the refresh / re-gate / re-plan steps work on (alias `d`). */
 const CHAIN_ROWS = (eb: any) =>

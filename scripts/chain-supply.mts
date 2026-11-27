@@ -11,11 +11,13 @@ import { sql } from "kysely";
 import { db } from "../src/db/client.js";
 import { chainSupplyEnabled, enqueueReadyWithoutRow, regenerateOldQueue, regenerateRow, restoreParallaxQueue, retryFailedPlan, retryFailedQueue } from "../src/generator/chainSupply.js";
 import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
-import { syncNoEmailHolds } from "../src/generator/mockRefresh.js";
+import { pageRejudgePending, syncNoEmailHolds } from "../src/generator/mockRefresh.js";
 
 /** One firing's budget (TimeoutStartSec=600, with air): the retry first (a half-done offer), then the old stock. */
 const RETRY_BUDGET_MS = 150_000;
 const REGEN_BUDGET_MS = 300_000;
+/** …while offers that were on the owner's page wait for their new verdict (mockRefresh.pageRejudgePending): one lead. */
+const REGEN_YIELD_BUDGET_MS = 90_000;
 
 async function main(): Promise<void> {
   const [cmd, a, b] = process.argv.slice(2);
@@ -36,8 +38,14 @@ async function main(): Promise<void> {
       if (px.restored || px.failed) console.log(`Parallax-pótlás: ${JSON.stringify(px)}`);
       const r = await retryFailedQueue(RETRY_BUDGET_MS);
       if (r.tried || r.held) console.log(`render-kapu újrapróba: ${JSON.stringify(r)}`);
-      const g = await regenerateOldQueue(Math.max(0, REGEN_BUDGET_MS - (Date.now() - started)));
-      console.log(`régi mock újragenerálás: ${JSON.stringify(g)} · ${Math.round((Date.now() - started) / 1000)} s`);
+      // The offers that were on the owner's page come back first (coordinator 11-27): while some of them wait for their
+      // new verdict, the old stock gets one lead a firing at most — the gate (outreach-dispatch tick) gets the box.
+      const pending = await pageRejudgePending();
+      const g = await regenerateOldQueue(
+        pending > 0 ? Math.min(REGEN_YIELD_BUDGET_MS, Math.max(0, REGEN_BUDGET_MS - (Date.now() - started))) : Math.max(0, REGEN_BUDGET_MS - (Date.now() - started)),
+        pending > 0 ? 1 : undefined,
+      );
+      console.log(`régi mock újragenerálás: ${JSON.stringify({ ...g, ...(pending > 0 ? { yield: pending } : {}) })} · ${Math.round((Date.now() - started) / 1000)} s`);
       return;
     }
     case "regen": {

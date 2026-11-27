@@ -55,7 +55,7 @@ const { refreshCountries } = await import("../src/country.js");
 const { RENDER_GATE_VERSION } = await import("../src/outreach/mockRenderGate.js");
 const { MOCK_HEROFIX_STAMP, DISPATCH_PHOTOS_OK_SQL } = await import("../src/outreach/mockPhotoGate.js");
 const { APPROVAL_PENDING_NOTE, GATE_HOLD_PREFIX, PHOTO_SETASIDE_PREFIX, QA_WAIT_NOTE, REPLAN_NOTE } = await import("../src/outreach/mockQaReview.js");
-const { replanUnfitQueue, regateStaleQueue, FAIR_ORDER } = await import("../src/generator/mockRefresh.js");
+const { replanUnfitQueue, regateStaleQueue, FAIR_ORDER, pageRejudgePending } = await import("../src/generator/mockRefresh.js");
 const { listPendingApprovals } = await import("../src/console/approvalQueue.js");
 const { photoKindAvailable } = await import("../src/media/photoKind.js");
 const { createFixtureParent } = await import("./lib/fixture-parent.mts");
@@ -270,6 +270,19 @@ if (!photoKindAvailable()) {
     check("bélyeg- / verzió-emelés után a lapon volt sor (régi passz mindkét terven) az országa ELSŐ sora, a régebbi, soha át nem ment sorok előtt",
       order2.filter((o) => o.id !== hr)[0]?.id === wasOnPage, order2.map((o) => o.id.slice(0, 6)).join(","));
   }
+}
+
+// ④ the offers that were on the owner's page and wait for their new verdict (the old-stock regeneration yields to them)
+console.log("④ lapon volt ajánlatok újraítélése");
+{
+  const before = await pageRejudgePending();
+  const onPage = await lead("Lapon Volt Elavult", cc2, { placesPhotos: 8 });
+  const om = await plan(onPage, { template: "parallax", photos: 8, verdict: "pass" });
+  const oa = await plan(onPage, { template: "gate-opening", photos: 8, verdict: "pass" });
+  await row(onPage, om, QA_WAIT_NOTE);
+  check("két passzos, mai verziójú terv: nem vár újraítélésre", (await pageRejudgePending()) === before, `${before} → ${await pageRejudgePending()}`);
+  await db.updateTable("mock_artifact").set({ inputs: sql`jsonb_set(inputs, '{renderGate,version}', '1'::jsonb)` as never }).where("id", "=", oa).execute();
+  check("verzió-emelés után (az egyik terv régi verziójú passz): újraítélésre vár → a régi állomány újragenerálása enged neki", (await pageRejudgePending()) === before + 1);
 }
 
 await parent.drop();
