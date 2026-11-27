@@ -129,3 +129,61 @@ export function harmonizeAccent(
   if (contrastRatio(rgb, onAccent) < MIN_CONTRAST) return skinAccentHex;
   return toHex(rgb[0], rgb[1], rgb[2]);
 }
+
+/** CSS `color-mix(in srgb, a p%, b)`: the gamma-encoded channels interpolated (what the browser paints). */
+export function mixSrgb(a: [number, number, number], b: [number, number, number], pa: number): [number, number, number] {
+  return [0, 1, 2].map((i) => a[i]! * pa + b[i]! * (1 - pa)) as [number, number, number];
+}
+
+/** WCAG AA for body text — every text on a coloured band (ADR-XXXX ⑦). */
+export const TEXT_MIN_CONTRAST = 4.5;
+
+/**
+ * The colour `fg` made readable on `bg` (≥ `min`), keeping its hue: mixed step by step towards black on a light
+ * ground, towards white on a dark one — never swapped for a fixed colour. Unchanged when it already reads.
+ */
+export function readableOn(fgHex: string, bgHex: string, min = TEXT_MIN_CONTRAST): string {
+  const fg = parseHex(fgHex);
+  const bg = parseHex(bgHex);
+  if (!fg || !bg) return fgHex;
+  if (contrastRatio(fg, bg) >= min) return toHex(fg[0], fg[1], fg[2]);
+  const toward: [number, number, number] = relativeLuminance(bg) > 0.18 ? [0, 0, 0] : [255, 255, 255];
+  for (let t = 0.04; t <= 1.0001; t += 0.04) {
+    const hex = toHex(...mixSrgb(toward, fg, t));
+    // judged on the ROUNDED colour — the one the page paints
+    if (contrastRatio(parseHex(hex)!, bg) >= min) return hex;
+  }
+  return toHex(toward[0], toward[1], toward[2]);
+}
+
+/**
+ * THE BAND TOKENS (ADR-XXXX ⑦, quality colleague 11-27: Jaja's „4,8 ★ Google-értékelés” light grey and Hullám's name
+ * gold on the beige bottom bar). A template's „ink band” (`color-mix(ink 92–94%, black)`) is dark on a light skin and
+ * LIGHT on a dark one (night-azure-gold: ink #f2ede2), but its text was always „bg mixed with white” and „accent mixed
+ * with white” — light on light. Here the band and its texts are computed from the page's resolved tokens, each text
+ * ≥ 4.5:1 on BOTH band shades (92 % and 94 %).
+ */
+export function bandTokens(tokens: Readonly<Record<string, string>>): Record<string, string> {
+  const ink = parseHex(tokens["--cit-ink"] ?? "");
+  const bg = parseHex(tokens["--cit-bg"] ?? "");
+  const accent = parseHex(tokens["--cit-accent"] ?? "");
+  if (!ink || !bg || !accent) return {};
+  const black: [number, number, number] = [0, 0, 0];
+  const white: [number, number, number] = [255, 255, 255];
+  const band = mixSrgb(ink, black, 0.92);
+  const band2 = mixSrgb(ink, black, 0.94);
+  const hex = (c: [number, number, number]) => toHex(c[0], c[1], c[2]);
+  const onBoth = (fg: [number, number, number]) => readableOn(readableOn(hex(fg), hex(band)), hex(band2));
+  const on = onBoth(mixSrgb(bg, white, 0.92));
+  const onRgb = parseHex(on)!;
+  return {
+    "--cit-band": hex(band),
+    "--cit-on-band": on,
+    // the quieter line (labels, notes, links, the footer): the text half-way to the band, still ≥ 4.5:1
+    "--cit-on-band-soft": onBoth(mixSrgb(onRgb, band, 0.72)),
+    "--cit-accent-on-band": onBoth(mixSrgb(accent, white, 0.6)),
+    // an accent-coloured LABEL on the page itself (the „Minta” pill of a sample section: 3.45:1 measured 11-27) —
+    // the accent tinted towards the ink, readable on the page ground and on its cards
+    "--cit-accent-text": readableOn(readableOn(hex(mixSrgb(accent, ink, 0.7)), hex(bg)), tokens["--cit-surface"] ?? hex(bg)),
+  };
+}

@@ -12,6 +12,7 @@
     "citoviso-events.timer": { "target": "prod" },
     "citoviso-events-pending.timer": { "target": "prod" },
     "citoviso-outreach-dispatch.timer": { "target": "prod" },
+    "citoviso-chain-supply.timer": { "target": "prod" },
     "citoviso-search-console.timer": { "target": "prod" },
     "citoviso-gate-hourly.timer": {
       "target": "dev",

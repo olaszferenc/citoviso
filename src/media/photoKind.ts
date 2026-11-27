@@ -553,7 +553,18 @@ export function withBestHeroFirst<T>(photos: readonly T[], kinds: readonly (Phot
       bestScore = heroScore(v);
     }
   });
-  if (best <= 0) return [...photos];
+  if (best < 0) {
+    // NO photo clears the machine's wow floor (11-27, ADR-XXXX ⑤ blind sample: 3 of 21 failed plans): the first photo
+    // stayed the hero even when the gate's own hero rule (fitsHero) refuses it — an „outside of a house” the gate
+    // fails every time, whatever was taken off. Then the best photo the gate WOULD accept opens the page; none → as is.
+    if (fitsHero(kinds[0] ?? null)) return [...photos];
+    let alt = -1;
+    kinds.forEach((v, i) => {
+      if (fitsHero(v) && (alt < 0 || heroScore(v!) > heroScore(kinds[alt]!))) alt = i;
+    });
+    return alt > 0 ? [photos[alt]!, ...photos.filter((_, i) => i !== alt)] : [...photos];
+  }
+  if (best === 0) return [...photos];
   const first = kinds[0];
   if (first && isHeroWorthy(first) && heroScore(first) >= bestScore - 0.15) return [...photos];
   return [photos[best]!, ...photos.filter((_, i) => i !== best)];

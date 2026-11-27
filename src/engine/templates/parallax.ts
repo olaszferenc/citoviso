@@ -105,32 +105,32 @@ const PARALLAX_CSS = `
 
   /* BOOKING DOCK — the canonical booking slot lives inside this dark band (in flow under the hero;
      the scrolled menu bar below carries the booking button once the hero is gone) */
-  .t-dock{position:relative;z-index:60;background:color-mix(in srgb, var(--cit-ink) 92%, black);box-shadow:0 8px 24px rgba(10,12,14,.25)}
+  .t-dock{position:relative;z-index:60;background:var(--cit-band);box-shadow:0 8px 24px rgba(10,12,14,.25)}
   .t-dock .cit-book{background:none;border:0;box-shadow:none}
   /* the hydrated enquiry form (no booking module) sits on this DARK band: the shared form is
      inked for a light card, so its title read dark-on-dark (measured rgb(13,27,36) on the dock,
      2026-10-04) — re-ink it for the dark ground, the brutalism console's way */
-  .t-dock .cit-book{color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
+  .t-dock .cit-book{color:var(--cit-on-band)}
   .t-dock .cit-book__title{color:inherit;font-family:var(--cit-font-display);text-transform:uppercase;letter-spacing:2px}
-  .t-dock .cit-book__label{color:color-mix(in srgb, var(--cit-bg) 72%, transparent)}
-  .t-dock .cit-book__note,.t-dock .cit-book__note a{color:color-mix(in srgb, var(--cit-bg) 65%, transparent)}
+  .t-dock .cit-book__label{color:var(--cit-on-band-soft)}
+  .t-dock .cit-book__note,.t-dock .cit-book__note a{color:var(--cit-on-band-soft)}
   .t-dock .cit-enquiry-bar-inner{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.05rem 28px}
-  .t-dock .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
+  .t-dock .cit-enquiry-bar-title{margin:0;font-family:var(--cit-font-display);font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:var(--cit-on-band)}
 
   /* SCROLLED MENU BAR (owner pick „A”, 2026-10-04): the masthead scrolls away with the hero, so
      on a desktop this slim bar slides in after it — name · the masthead's section links · booking.
      The dock no longer sticks: in the enquiry state it is a 227px form, too tall to pin. A phone
      keeps the shared menu button + bottom bar (ADR-0253), so the bar is never shown there. */
-  .t-bar{position:fixed;top:0;left:0;right:0;z-index:65;background:color-mix(in srgb, var(--cit-ink) 92%, black);
+  .t-bar{position:fixed;top:0;left:0;right:0;z-index:65;background:var(--cit-band);
     box-shadow:0 8px 24px rgba(10,12,14,.25);transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .3s,opacity .3s}
   .t-bar.t-on{transform:none;opacity:1;pointer-events:auto}
   .t-barin{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:28px;padding:12px 28px}
   .t-barname{min-width:0;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--cit-font-display);
-    font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
+    font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:15px;color:var(--cit-on-band)}
   .t-barlinks{display:flex;gap:24px;margin-left:auto}
-  .t-barlinks a{color:color-mix(in srgb, var(--cit-bg) 72%, transparent);font-size:12px;font-weight:600;text-transform:uppercase;
+  .t-barlinks a{color:var(--cit-on-band-soft);font-size:12px;font-weight:600;text-transform:uppercase;
     letter-spacing:2px;white-space:nowrap;min-height:44px;display:inline-flex;align-items:center;transition:color .2s}
-  .t-barlinks a:hover{color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  .t-barlinks a:hover{color:var(--cit-accent-on-band)}
   .t-barcta{flex:none;display:inline-flex;align-items:center;padding:10px 22px}
   @media(max-width:960px){.t-barlinks{gap:16px}.t-barlinks a{letter-spacing:1px}}
   @media(max-width:700px),(max-height:500px){.t-bar{display:none}}
@@ -154,7 +154,7 @@ const PARALLAX_CSS = `
   .t-rowbody svg{width:34px;height:34px;color:var(--cit-accent);margin-bottom:16px}
   .t-rowbody h3{font-size:clamp(22px,2.6vw,30px);margin-bottom:12px}
   .t-rowbody p{color:var(--cit-muted);margin-bottom:20px}
-  .t-rowbody a{display:inline-block;background:color-mix(in srgb, var(--cit-ink) 92%, black);color:color-mix(in srgb, var(--cit-bg) 92%, #fff);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;padding:12px 24px;border-radius:4px;transition:.25s}
+  .t-rowbody a{display:inline-block;background:var(--cit-band);color:var(--cit-on-band);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;padding:12px 24px;border-radius:4px;transition:.25s}
   .t-rowbody a:hover{background:var(--cit-accent);color:var(--cit-on-accent)}
 
   /* AMENITY GRID with hover lift */
@@ -175,20 +175,20 @@ const PARALLAX_CSS = `
   @media(max-width:760px){.t-gal{grid-template-columns:1fr 1fr;grid-auto-rows:180px}.t-gal figure:nth-child(1){grid-column:span 2}.t-gal figure:nth-child(6){grid-column:span 2}}
 
   /* REVIEW band — dark, contrast-derived from the token pair */
-  .t-rev{background:color-mix(in srgb, var(--cit-ink) 92%, black);color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
-  .t-rev h2{color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
-  .t-rev .t-eyebrow{color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  .t-rev{background:var(--cit-band);color:var(--cit-on-band)}
+  .t-rev h2{color:var(--cit-on-band)}
+  .t-rev .t-eyebrow{color:var(--cit-accent-on-band)}
   .t-revscore{display:flex;align-items:center;gap:16px;margin-bottom:8px}
   .t-revscore b{font-family:var(--cit-font-display);font-size:clamp(38px,5vw,56px);font-weight:800}
   .t-stars{display:flex;gap:4px}
-  .t-stars svg{width:20px;height:20px;color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  .t-stars svg{width:20px;height:20px;color:var(--cit-accent-on-band)}
   .t-revscore span{font-size:14px;opacity:.65}
   .t-revgrid{display:grid;gap:22px;grid-template-columns:1fr;margin-top:44px}
   @media(min-width:840px){.t-revgrid{grid-template-columns:repeat(3,1fr)}}
   .t-rv{background:color-mix(in srgb, var(--cit-ink) 78%, black);border:1px solid color-mix(in srgb, var(--cit-accent) 25%, transparent);border-radius:6px;padding:26px}
   .t-rv p{font-size:15px;opacity:.92;margin-bottom:16px;line-height:1.6}
   .t-rv strong{font-size:13.5px;text-transform:uppercase;letter-spacing:1px}
-  .t-rv em{display:block;font-style:normal;font-size:12px;color:color-mix(in srgb, var(--cit-accent) 60%, #fff);margin-top:2px}
+  .t-rv em{display:block;font-style:normal;font-size:12px;color:var(--cit-accent-on-band);margin-top:2px}
   .t-sample{margin-top:30px;font-size:12.5px;opacity:.55;letter-spacing:.5px;text-align:center}
 
   /* CONTACT split */
@@ -209,20 +209,20 @@ const PARALLAX_CSS = `
   .t-conphoto img{border-radius:6px;box-shadow:var(--cit-shadow);aspect-ratio:4/3;object-fit:cover;width:100%}
 
   /* FOOTER — dark, multi-column */
-  .t-foot{background:color-mix(in srgb, var(--cit-ink) 92%, black);color:color-mix(in srgb, var(--cit-bg) 60%, transparent);padding:64px 0 30px}
+  .t-foot{background:var(--cit-band);color:var(--cit-on-band-soft);padding:64px 0 30px}
   .t-footgrid{display:grid;grid-template-columns:1fr;gap:36px;padding-bottom:44px;border-bottom:1px solid color-mix(in srgb, var(--cit-bg) 12%, transparent)}
   @media(min-width:800px){.t-footgrid{grid-template-columns:2fr 1fr 1fr}}
-  .t-foot .t-fbrand{font-family:var(--cit-font-display);font-weight:800;font-size:20px;text-transform:uppercase;letter-spacing:1px;color:color-mix(in srgb, var(--cit-bg) 92%, #fff)}
+  .t-foot .t-fbrand{font-family:var(--cit-font-display);font-weight:800;font-size:20px;text-transform:uppercase;letter-spacing:1px;color:var(--cit-on-band)}
   .t-foot p{font-size:14.5px;margin-top:12px;max-width:320px}
-  .t-foot h4{color:color-mix(in srgb, var(--cit-bg) 92%, #fff);font-size:12px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;font-family:var(--cit-font-body)}
+  .t-foot h4{color:var(--cit-on-band);font-size:12px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;font-family:var(--cit-font-body)}
   .t-foot a{display:block;font-size:14.5px;padding:5px 0;transition:.25s}
-  .t-foot a:hover{color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  .t-foot a:hover{color:var(--cit-accent-on-band)}
   .t-footlegal{display:flex;justify-content:space-between;gap:16px;padding-top:24px;font-size:12.5px;flex-wrap:wrap}
 
   /* MOBILE fixed CTA bar */
   .t-mobcta{display:none;position:fixed;bottom:var(--citui-consent-h,0px);left:0;right:0;z-index:80;background:color-mix(in srgb, var(--cit-ink) 94%, black);padding:12px 16px;gap:12px;align-items:center;justify-content:space-between}
-  .t-mobcta span{color:color-mix(in srgb, var(--cit-bg) 92%, #fff);font-size:14px}
-  .t-mobcta b{color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  .t-mobcta span{color:var(--cit-on-band);font-size:14px}
+  .t-mobcta b{color:var(--cit-accent-on-band)}
   .t-mobcta .cit-btn{padding:11px 20px}
   @media(max-width:700px){.t-mobcta{display:flex}body{padding-bottom:64px}}
 `;

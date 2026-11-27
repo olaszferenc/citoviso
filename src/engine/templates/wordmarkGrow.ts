@@ -75,7 +75,9 @@ const WORD_CSS = `
 body{margin:0;background:var(--cit-bg);color:var(--cit-ink);font-family:var(--cit-font-body);
   font-size:17px;line-height:1.7}
 img{display:block;max-width:100%}
-a{color:inherit}
+/* ADR-XXXX ⑦: not the buttons — this unlayered rule outranked the shared (layered) .cit-btn colour, and the enquiry bar's
+   button read the page ink on a dark accent (2.4:1, measured 11-27) */
+a:where(:not(.cit-btn)){color:inherit}
 .w-wrap{width:min(1140px,88vw);margin-inline:auto}
 h1,h2,h3{font-family:var(--cit-font-display);font-weight:400;margin:0;letter-spacing:-.01em}
 section{padding:clamp(70px,10vh,124px) 0}

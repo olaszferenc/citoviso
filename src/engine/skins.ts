@@ -11,7 +11,7 @@
 // NB (live-readiness): webfonts load from Google Fonts here (fine for a demo mock). For a live
 // tenant page, self-host the fonts (GDPR) — a later slice; the token contract is unchanged.
 
-import { harmonizeAccent } from "./palette.js";
+import { bandTokens, harmonizeAccent, readableOn } from "./palette.js";
 
 export interface Skin {
   readonly id: string;
@@ -487,7 +487,12 @@ export function renderSkinVars(skin: Skin, accentOverride?: string): string {
           ),
         }
       : skin.tokens;
-  const body = Object.entries(tokens)
+  // ADR-XXXX ⑦: the button text reads ≥ 4.5:1 on the FINAL accent (a photo accent is tuned to 3:1 only — measured
+  // 11-27: „Szabad időpontot kérek” 3.19:1), and the band texts on the page's own band (palette.bandTokens).
+  const onAccent = tokens["--cit-on-accent"];
+  const accent = tokens["--cit-accent"];
+  const fitted = onAccent && accent ? { ...tokens, "--cit-on-accent": readableOn(onAccent, accent) } : tokens;
+  const body = Object.entries({ ...fitted, ...bandTokens(fitted) })
     .map(([k, v]) => `    ${k}: ${v};`)
     .join("\n");
   return `:root {\n${body}\n  }`;

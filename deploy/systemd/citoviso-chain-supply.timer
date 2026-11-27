@@ -1,0 +1,10 @@
+[Unit]
+Description=Citoviso lánc-utánpótlás, 5 percenként (ADR-XXXX)
+
+[Timer]
+# Egy futás legfeljebb ~8 perc; a oneshot egység alatt a következő indítás nem fut rá az előzőre.
+OnCalendar=*:0/5
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

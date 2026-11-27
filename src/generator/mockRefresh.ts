@@ -2,7 +2,7 @@
 // folyamatnak a feladata … Ha te manuálisan javítasz valamit, annak kurvára semmi értelme nincsen.”).
 //
 // When the generator's rules change, the send gates move their bar (mockPhotoGate.ts
-// MOCK_CURRENT_GENERATOR_SQL: generated after MOCK_HEROFIX_LIVE_AT, or re-rendered with stamp
+// MOCK_CURRENT_GENERATOR_SQL: generated after MOCK_MIN_GENERATED_AT and carrying (fresh or re-rendered) stamp
 // MOCK_HEROFIX_STAMP). Until 11-25 a mock below the bar simply waited — for a person to run
 // scripts/rerender-terhatas.mts by hand. Now the dispatcher's own timer (scripts/outreach-dispatch.mts
 // tick) re-renders a small batch of them every firing, from the persisted inputs through the CURRENT
@@ -11,7 +11,10 @@
 // puts it on the owner's approval page — nothing is sent by a refresh.
 //
 // One function, two callers: this timer step and the manual round script (rerender-terhatas.mts).
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import os from "node:os";
+import { chromium } from "playwright-core";
+import { config } from "../config.js";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
@@ -24,7 +27,8 @@ import { DISPATCH_PHOTOS_OK_SQL, LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, M
 import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
 import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, PHOTO_SETASIDE_PREFIX, QA_HOLD_PREFIX, QA_WAIT_NOTE, REPLAN_NOTE, mockFileMtime } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
-import { cachedRenderGate, renderGateFor, stockOkFor, type RenderGateResult } from "../outreach/mockRenderGate.js";
+import { cachedRenderGate, RENDER_GATE_VERSION, renderGateFor, stockOkFor, type RenderGateResult } from "../outreach/mockRenderGate.js";
+import { acquireRenderSlot } from "../outreach/heroShot.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "./depthArm.js";
 import { persistMockLanguage, renderMockMeasured } from "./mockLanguage.js";
 import { secureMockPhotos } from "./photoTransport.js";
@@ -134,8 +138,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where(sql<boolean>`(${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} or a.inputs->'siteData'->'townPhoto' is not null)`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
-    // A half-done offer first (owner 2026-11-26): a lead with one plan already passed by the colleague.
-    .orderBy(sql`exists (select 1 from mock_artifact m where m.lead_id = d.lead_id and m.inputs->'qaReview'->>'verdict' = 'pass') desc`)
+    // A half-done offer first (owner 2026-11-26/27) — inside the countries' turns (FAIR_ORDER, HALF_DONE_SQL).
     // Countries take turns (HR approval chain 2026-11-27): by queue age alone a new market waits behind the
     // home market's whole backlog — the 74 HR rows sat behind ~2 300 older HU rows.
     .orderBy(FAIR_ORDER)
@@ -202,10 +205,20 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
 }
 
 /**
- * Countries take turns (HR approval chain, 2026-11-27): the n-th waiting row of every country before the
- * (n+1)-th of any, oldest first within a country. Aliases `d` = outreach_dispatch, `l` = its lead.
+ * A HALF-DONE OFFER (owner 2026-11-27: „ha egy leadnek már átment egy terve, miért nem a másikkal folytatjuk, hogy kész
+ * legyen?”): the lead has a live plan whose render-gate verdict is a pass under the current rule version. Every chain step
+ * (refresh, re-gate, re-plan, the chain-supply retry and regeneration) takes such a row first — within its country's turn
+ * (FAIR_ORDER), so a new market is not starved by the home market's half-done rows. Alias `d` = outreach_dispatch.
  */
-export const FAIR_ORDER = sql`row_number() over (partition by ${LEAD_COUNTRY_SQL} order by d.queued_at), d.queued_at`;
+export const HALF_DONE_SQL = sql<boolean>`exists (select 1 from mock_artifact hm where hm.lead_id = d.lead_id and hm.status <> 'rejected'
+  and hm.inputs->'renderGate'->>'verdict' = 'pass' and (hm.inputs->'renderGate'->>'version')::int = ${RENDER_GATE_VERSION})`;
+
+/**
+ * Countries take turns (HR approval chain, 2026-11-27): the n-th waiting row of every country before the
+ * (n+1)-th of any; within a country a half-done offer first (HALF_DONE_SQL), then the oldest. Aliases `d` =
+ * outreach_dispatch, `l` = its lead.
+ */
+export const FAIR_ORDER = sql`row_number() over (partition by ${LEAD_COUNTRY_SQL} order by ${sql`(select ${HALF_DONE_SQL})`} desc, d.queued_at), d.queued_at`;
 
 /** The waiting rows the refresh / re-gate / re-plan steps work on (alias `d`). */
 const CHAIN_ROWS = (eb: any) =>
@@ -248,8 +261,10 @@ function gateHoldNote(failed: readonly { k: number; v: RenderGateResult }[]): st
 export async function regateStaleQueue(
   budgetMs: number,
   limit = 40,
-): Promise<{ judged: number; held: number; released: number; left: number }> {
-  if (!photoKindAvailable() || budgetMs <= 0) return { judged: 0, held: 0, released: 0, left: -1 };
+  opts: { readonly concurrency?: number } = {},
+): Promise<{ judged: number; held: number; released: number; left: number; concurrency: number; ms: number }> {
+  const t0 = Date.now();
+  if (!photoKindAvailable() || budgetMs <= 0) return { judged: 0, held: 0, released: 0, left: -1, concurrency: 0, ms: 0 };
   const rows = await db
     .selectFrom("outreach_dispatch as d")
     .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
@@ -260,7 +275,6 @@ export async function regateStaleQueue(
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(MOCK_CURRENT_GENERATOR_SQL)
     .where(DISPATCH_PHOTOS_OK_SQL)
-    .orderBy(sql`(coalesce(a.inputs->'qaReview'->>'verdict', '') = 'pass') desc`)
     .orderBy(FAIR_ORDER)
     .execute();
   const started = Date.now();
@@ -268,19 +282,32 @@ export async function regateStaleQueue(
   let held = 0;
   let released = 0;
   let left = 0;
-  for (let i = 0; i < rows.length; i++) {
-    // Out of time: the rows not reached yet wait for the next firing (the note rules too).
-    if (Date.now() - started > budgetMs) return { judged, held, released, left: left + rows.length - i };
-    const r = rows[i]!;
-    if (!r.mainId) continue;
+  let next = 0;
+  // 11-27 (ADR-XXXX ④): `concurrency` rows at once in ONE shared browser (each audit in its own context) — the
+  // browser launch per plan and the one-at-a-time walk made ~5 plans a firing; the box's free memory caps it.
+  const concurrency = Math.max(1, Math.min(opts.concurrency ?? regateConcurrency(), rows.length || 1));
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let release: (() => void) | null = null;
+  const sharedBrowser = async () => {
+    if (browser) return browser;
+    release = await acquireRenderSlot();
+    browser = await chromium.launch({ executablePath: config.chromiumPath }).catch((e) => {
+      release?.();
+      release = null;
+      throw e;
+    });
+    return browser;
+  };
+  const one = async (r: (typeof rows)[number]): Promise<void> => {
+    if (!r.mainId) return;
     const alt = await secondPlanOf(r.leadId, r.mainId).catch(() => null);
     const plans = [r.mainId, ...(alt ? [alt.id] : [])];
     const verdicts: (RenderGateResult | null)[] = [];
     for (const id of plans) {
       let v = await currentVerdict(id);
       if (!v && Date.now() - started <= budgetMs && judged < limit) {
-        await renderGateFor(id).catch(() => undefined);
         judged++;
+        await renderGateFor(id, { browser: await sharedBrowser() }).catch(() => undefined);
         // A crashed render is not stored (renderGateFor) — unknown, judged again next firing.
         v = await currentVerdict(id);
       }
@@ -288,7 +315,7 @@ export async function regateStaleQueue(
     }
     if (verdicts.some((v) => v === null)) left++;
     // Only a held row waiting for the chain changes its note; a queued (owner-approved) row is the sender's.
-    if (r.status !== "held") continue;
+    if (r.status !== "held") return;
     const failed = verdicts.flatMap((v, k) => (v?.verdict === "fail" ? [{ k, v }] : []));
     if (failed.length) {
       const note = gateHoldNote(failed);
@@ -300,8 +327,67 @@ export async function regateStaleQueue(
       const u = await db.updateTable("outreach_dispatch").set({ note: QA_WAIT_NOTE }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
       released += Number(u.numUpdatedRows ?? 0);
     }
+  };
+  try {
+    await Promise.all(
+      Array.from({ length: concurrency }, async () => {
+        for (;;) {
+          // Out of time: the rows not reached yet wait for the next firing (the note rules too).
+          if (Date.now() - started > budgetMs) return;
+          const i = next++;
+          const r = rows[i];
+          if (!r) return;
+          await one(r);
+        }
+      }),
+    );
+  } finally {
+    const b = browser as Awaited<ReturnType<typeof chromium.launch>> | null;
+    if (b) await b.close().catch(() => undefined);
+    (release as (() => void) | null)?.();
   }
-  return { judged, held, released, left };
+  left += Math.max(0, rows.length - next);
+  return { judged, held, released, left, concurrency, ms: Date.now() - t0 };
+}
+
+/**
+ * How many plans the re-judging step measures at once in ONE shared browser (ADR-XXXX ④, the ~2 800-plan backlog).
+ * Measured 11-27 on 30 blind plans, 2 cores: 1 → 254 plans/hour, 2 → 581, 3 → 732, verdicts identical (30/30).
+ * RENDER_GATE_CONCURRENCY overrides the default; the memory floor always wins.
+ */
+export const REGATE_CONCURRENCY_DEFAULT = 2;
+/** Below this much available memory (MB) one plan at a time — the dispatcher, the console and the scrapers come first. */
+export const REGATE_MIN_FREE_MB = 700;
+/** Each extra parallel audit needs about this much (MB): a context with two pages + its image buffers. */
+export const REGATE_MB_PER_AUDIT = 350;
+
+/**
+ * The parallelism for this firing: the configured value, cut by the memory the box has free. NOT by the load average:
+ * measured 11-27 the CX23 sits at load ~7 on 2 vCPU all day (the HR scout, the send tick, the test clone), so a load cut
+ * would keep the step at one forever. The CPU order is the units' job (CPUWeight / Nice: the console, the send and the
+ * scrapers come first); a parallel audit only takes the cycles they leave.
+ */
+export function regateConcurrency(env: NodeJS.ProcessEnv = process.env, mem = { freeMb: os.freemem() / 1048576, availMb: availableMb() }): number {
+  const wanted = Math.max(1, Math.min(8, Number.parseInt(env.RENDER_GATE_CONCURRENCY ?? "", 10) || REGATE_CONCURRENCY_DEFAULT));
+  const avail = mem.availMb ?? mem.freeMb;
+  if (avail < REGATE_MIN_FREE_MB) return 1;
+  const byMem = 1 + Math.floor((avail - REGATE_MIN_FREE_MB) / REGATE_MB_PER_AUDIT);
+  return Math.max(1, Math.min(wanted, byMem));
+}
+
+/** The box has memory for one more heavy step (a generation, a render) — the send and the scrapers keep theirs. */
+export function memoryHasRoom(mem = { freeMb: os.freemem() / 1048576, availMb: availableMb() }): boolean {
+  return (mem.availMb ?? mem.freeMb) >= REGATE_MIN_FREE_MB;
+}
+
+/** MemAvailable from /proc/meminfo (Linux; the page cache counts as free), null elsewhere. */
+export function availableMb(): number | null {
+  try {
+    const m = /^MemAvailable:\s+(\d+) kB/m.exec(readFileSync("/proc/meminfo", "utf8"));
+    return m ? Number(m[1]) / 1024 : null;
+  } catch {
+    return null;
+  }
 }
 
 /** How many unfit rows one dispatcher firing re-plans at most (each costs the chain one main plan). */

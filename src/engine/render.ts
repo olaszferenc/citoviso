@@ -898,6 +898,46 @@ function withoutRepeatedLines(recipe: Recipe, data: SiteData): { recipe: Recipe;
   return { recipe: sections === recipe.sections ? recipe : { ...recipe, sections }, data: out };
 }
 
+/** A heading's text for comparison: tags out, entities and case folded, punctuation and spaces squeezed. */
+export function headingKey(inner: string): string {
+  return inner
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;|&#160;/g, " ")
+    .replace(/&amp;/g, "&")
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * TWO SECTIONS NEVER CARRY ONE HEADING (ADR-XXXX ⑨, quality colleague 11-27, Anikó Szállás cc48fbb1: „Ami nálunk vár”
+ * over the „Nálunk” section — the curator's title — and again over the „Kiemelt” rows — the template's own). The
+ * sentence rule (withoutRepeatedLines / repeatsText) lets a three-word heading through by design. Here, on the final
+ * page, every template: the LATER <h2> whose text equals an earlier one takes its section's own label (the eyebrow
+ * right above it, which then leaves — it would stand twice), or leaves the page when the section has none.
+ */
+export function withUniqueSectionHeadings(html: string): string {
+  const seen = new Set<string>();
+  return html.replace(
+    /(<p class="[^"]*eyebrow[^"]*"[^>]*>([\s\S]{1,80}?)<\/p>\s*)?<h2(\b[^>]*)>([\s\S]*?)<\/h2>/g,
+    (m, eyebrowBlock: string | undefined, eyebrowText: string | undefined, attrs: string, inner: string) => {
+      const key = headingKey(inner);
+      if (!key || !seen.has(key)) {
+        if (key) seen.add(key);
+        return m;
+      }
+      const label = eyebrowText ? headingKey(eyebrowText) : "";
+      if (label && !seen.has(label)) {
+        seen.add(label);
+        return `<h2${attrs}>${eyebrowText!.trim()}</h2>`;
+      }
+      return eyebrowBlock ?? "";
+    },
+  );
+}
+
 /** The lodging's own photos on the page (not stock, not the town's hero). */
 function ownPhotoCount(data: SiteData): number {
   return data.photos.filter((p) => !isStockPhoto(p) && p.url !== data.townPhoto?.url).length;
@@ -1098,7 +1138,8 @@ export function renderSite(
     // Owner 2026-11-16 („Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): the
     // sample pictures and the town photo the mock showed stay on the trial / live page too, with
     // the same sample note and licence credit, until the owner's own photos replace them.
-    const noted = withLongWordBreak(localizedGeneratedAlts(phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data), data));
+    // ADR-XXXX ⑨: two sections never carry one heading (every template, on the final page)
+    const noted = withUniqueSectionHeadings(withLongWordBreak(localizedGeneratedAlts(phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data), data)));
     // ORSZÁG-RÉTEG 3/6: a Cyrillic/Greek page gets fonts that carry its script (fontScripts.ts);
     // a Latin-script page — the Hungarian mock — is returned untouched.
     return localizeFonts(noted, data.lang);

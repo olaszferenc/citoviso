@@ -157,7 +157,7 @@ const CSS = `<style data-cit-modsec>
 .cit-modsec__minta{display:inline-block;vertical-align:middle;margin-left:12px;
   font-family:var(--cit-font-body);font-size:.58em;font-weight:700;
   letter-spacing:.08em;text-transform:uppercase;
-  color:color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink));
+  color:var(--cit-accent-text, color-mix(in srgb, var(--cit-accent) 70%, var(--cit-ink)));
   border:1px solid color-mix(in srgb, var(--cit-accent) 45%, transparent);
   border-radius:100px;padding:3px 10px;white-space:nowrap}
 /* Per-room price switcher (owner decree 2026-08-23): with several rooms the guest

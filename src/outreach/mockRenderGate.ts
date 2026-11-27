@@ -35,7 +35,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { sql } from "kysely";
-import { chromium } from "playwright-core";
+import { chromium, type Browser, type BrowserContext } from "playwright-core";
 import sharp from "sharp";
 import { config } from "../config.js";
 import { db } from "../db/client.js";
@@ -50,9 +50,11 @@ import { classifyPhotoBuffer, fitsBand, fitsContact, fitsHero, fitsOpening, isOf
 import { createPhotoCache } from "./photoCache.js";
 import { stockUrl } from "../engine/stock.js";
 import { judgeTownPicture } from "../media/townPick.js";
+import { TEXT_MIN_CONTRAST } from "../engine/palette.js";
+import { headingKey } from "../engine/render.js";
 
 /** Bump when the rules change: every cached verdict of an older version is re-checked. */
-export const RENDER_GATE_VERSION = 15;
+export const RENDER_GATE_VERSION = 16;
 /**
  * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty
  * (a background that never painted, a section whose content is missing — the §B no-JS empty-band case). The
@@ -94,12 +96,14 @@ const QUIET_MS = 500;
 /** Vision subjects that never belong on a lodging page shown to its owner. */
 const FORBIDDEN_SUBJECTS = new Set(["ad_banner", "sign_map", "people_doc", "toilet"]);
 
-export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render" | "thin" | "gap";
+export type RenderFindingCode = "repeat" | "subject" | "stock" | "overflow" | "broken" | "render" | "thin" | "gap" | "contrast";
 
 export interface RenderFinding {
   readonly code: RenderFindingCode;
   /** Hungarian, operator-facing: what is wrong and where. */
   readonly detail: string;
+  /** The picture the finding is about (photo findings): the retry step (gateRetry.ts) leaves it out of the next allotment. */
+  readonly url?: string;
 }
 
 export interface RenderGateResult {
@@ -132,13 +136,15 @@ interface PageMeasure {
   readonly innerWidth: number;
   readonly wideText: string[];
   readonly brokenWords: string[];
+  /** Texts on a fixed / sticky bar or in a heading / button under 4.5:1 against their painted ground (ADR-XXXX ⑦). */
+  readonly lowContrast?: { text: string; ratio: number; where: string }[];
   /** The desktop first screen = the letter's picture (filled by auditMockFile, not by MEASURE_JS). */
   readonly desktopBrokenWords?: string[];
   /** The tallest ink-free vertical run (CSS px) and where it starts. */
   readonly maxGap?: number;
   readonly gapAt?: number;
   /** Visible headings / captions in page order. */
-  readonly texts?: { text: string; mod: string; y: number }[];
+  readonly texts?: { text: string; mod: string; y: number; tag?: string }[];
   /** The page title (the lodging's and the town's name): proper names for the text-repeat rule. */
   readonly title?: string;
 }
@@ -250,13 +256,88 @@ const MEASURE_JS = `(() => {
   const texts = [];
   for (const el of Array.from(document.querySelectorAll("h1,h2,h3,.t-quote,figcaption,blockquote"))) {
     if (!shown(el)) continue;
-    const t = (el.textContent || "").trim().replace(/\s+/g, " ");
+    // ⚠️ double backslash (11-27): a single one in this template literal reached the page as /s+/g and took every „s” out of the
+    // measured headings („Mono zlón” for „Monoszlón”) — the text-repeat rule compared mangled strings.
+    const t = (el.textContent || "").trim().replace(/\\s+/g, " ");
     if (t.length < 8) continue;
     const r = el.getBoundingClientRect();
-    texts.push({ text: t.slice(0, 160), mod: modOf(el), y: Math.round(r.top + scrollY) });
+    texts.push({ text: t.slice(0, 160), mod: modOf(el), y: Math.round(r.top + scrollY), tag: el.tagName.toLowerCase() });
     if (texts.length >= 40) break;
   }
-  return { slots, broken, scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wideText, brokenWords, maxGap, gapAt, texts, title: document.title || "" };
+  // CONTRAST (ADR-XXXX ⑦): the text of every fixed / sticky bar on screen, and the h1 / h2 / buttons, against the
+  // background actually painted behind it (the first ancestor with an opaque colour). A text over a picture (an
+  // ancestor with a background image before any colour) is not measured: its legibility is the picture's.
+  const lowContrast = [];
+  {
+    const rgb = (c) => {
+      const m = /rgba?\\(([\\d.]+),\\s*([\\d.]+),\\s*([\\d.]+)(?:,\\s*([\\d.]+))?/.exec(c || "");
+      if (m) return [Number(m[1]), Number(m[2]), Number(m[3]), m[4] == null ? 1 : Number(m[4])];
+      // color-mix() resolves to „color(srgb r g b / a)” with 0..1 channels
+      const k = /color\\(srgb\\s+([\\d.e-]+)\\s+([\\d.e-]+)\\s+([\\d.e-]+)(?:\\s*\\/\\s*([\\d.e-]+))?/.exec(c || "");
+      return k ? [Number(k[1]) * 255, Number(k[2]) * 255, Number(k[3]) * 255, k[4] == null ? 1 : Number(k[4])] : null;
+    };
+    const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+    const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    // What is painted UNDER the text's centre, top to bottom (siblings and positioned layers too, not only the
+    // ancestors): a picture (img / video / svg image / a background image) first → not measured; else the first
+    // opaque colour is the ground.
+    const groundOf = (el) => {
+      const r = el.getBoundingClientRect();
+      const x = Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2));
+      const y = Math.min(innerHeight - 1, Math.max(0, r.top + Math.min(r.height / 2, 20)));
+      const stack = document.elementsFromPoint(x, y);
+      const i = stack.indexOf(el);
+      // the translucent layers above the ground, composited top-down (a 80 % charcoal header over a photo = charcoal)
+      const layers = [];
+      let cover = 0;
+      const composite = (base) => { let c = base; for (let k = layers.length - 1; k >= 0; k--) { const L = layers[k]; c = [0, 1, 2].map((q) => L[q] * L[3] + c[q] * (1 - L[3])); } return c; };
+      for (const e of i >= 0 ? stack.slice(i) : stack) {
+        const cs = getComputedStyle(e);
+        const pic = /^(IMG|VIDEO|PICTURE|CANVAS|IFRAME)$/.test(e.tagName) || e.tagName.toLowerCase() === "image" || (cs.backgroundImage && cs.backgroundImage !== "none" && !/^linear-gradient|^radial-gradient/.test(cs.backgroundImage))
+          || ["::before", "::after"].some((pe) => { const ps = getComputedStyle(e, pe); return ps.content && ps.content !== "none" && ps.backgroundImage && /url\\(/.test(ps.backgroundImage); });
+        if (pic) {
+          // over a picture: measured only when the layers above it already hide it (≥ 75 %), as their colour
+          if (cover < 0.75 || !layers.length) return null;
+          const sum = layers.reduce((s, L) => s + L[3], 0);
+          return [0, 1, 2].map((q) => layers.reduce((s, L) => s + L[q] * L[3], 0) / sum);
+        }
+        const c = rgb(cs.backgroundColor);
+        if (!c || c[3] <= 0.02) continue;
+        if (c[3] >= 0.98) return composite(c);
+        layers.push(c);
+        cover = 1 - (1 - cover) * (1 - c[3]);
+      }
+      return composite([255, 255, 255]);
+    };
+    const fixedBar = (el) => { for (let e = el; e && e.nodeType === 1; e = e.parentElement) { const p = getComputedStyle(e).position; if (p === "fixed" || p === "sticky") return e; } return null; };
+    const seen = new Set();
+    for (const el of document.querySelectorAll("body *")) {
+      if (lowContrast.length >= 5) break;
+      if (!shown(el)) continue;
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 1);
+      if (!own) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.bottom <= 0 || r.top >= innerHeight) continue;
+      const bar = fixedBar(el);
+      const key = el.matches("h1,h2,.cit-btn,a.cit-btn,button") || el.closest("h1,h2,.cit-btn,button");
+      if (!bar && !key) continue;
+      const fg = rgb(getComputedStyle(el).color);
+      const bgc = groundOf(el);
+      if (!fg || !bgc) continue;
+      // a semi-transparent text colour is painted over its ground
+      const a = fg[3];
+      const paint = [0, 1, 2].map((i) => fg[i] * a + bgc[i] * (1 - a));
+      // an element (or ancestor) mid-fade is not measured: a bar sliding in / out runs a 0.3 s opacity transition, and
+      // its half-way frame is no state of the page (measured 11-27: „Foglalás” 4.14:1 on a fading menu bar)
+      let op = 1;
+      for (let e = el; e && e.nodeType === 1; e = e.parentElement) op *= Number(getComputedStyle(e).opacity);
+      if (op < 0.98) continue;
+      const cr = ratio(paint, bgc);
+      const text = el.textContent.trim().replace(/\\s+/g, " ").slice(0, 40);
+      if (cr < ${TEXT_MIN_CONTRAST} && !seen.has(text)) { seen.add(text); lowContrast.push({ text, ratio: Math.round(cr * 100) / 100, where: bar ? "sáv" : el.tagName.toLowerCase() }); }
+    }
+  }
+  return { slots, broken, scrollWidth: document.documentElement.scrollWidth, innerWidth: iw, wideText, brokenWords, maxGap, gapAt, texts, title: document.title || "", lowContrast };
 })()`;
 
 /**
@@ -280,17 +361,36 @@ export async function auditMockFile(
   mockAbs: string,
   town: TownUrls = { gallery: [] },
   /** 0155: the lead's country row's dispatch_stock_ok — false = a marked sample in a gallery / room slot fails too. */
-  opts: { readonly stockOk?: boolean; /** The lodging's and the town's names: never a repeat by themselves. */ readonly proper?: readonly string[] } = {},
+  opts: {
+    readonly stockOk?: boolean;
+    /** The lodging's and the town's names: never a repeat by themselves. */
+    readonly proper?: readonly string[];
+    /**
+     * A browser shared by a pool of audits (regateStaleQueue, 11-27): the caller owns its launch, its close and the
+     * concurrency (one context per audit, so cookies / routes never leak between two mocks). Absent = own browser
+     * behind the process-wide render slot, as before.
+     */
+    readonly browser?: Browser;
+  } = {},
 ): Promise<Omit<RenderGateResult, "mtime" | "at" | "version">> {
   const isTown = (u: string): boolean => (town.hero != null && sizelessPhotoKey(u) === sizelessPhotoKey(town.hero)) || town.gallery.some((g) => sizelessPhotoKey(g) === sizelessPhotoKey(u));
   const photos = createPhotoCache();
   const bodies = new Map<string, Buffer>();
   const failedNet = new Set<string>();
-  const release = await acquireRenderSlot();
-  const browser = await chromium.launch({ executablePath: config.chromiumPath }).catch((e) => {
+  const shared = opts.browser;
+  const release = shared ? () => undefined : await acquireRenderSlot();
+  const browser = shared ?? (await chromium.launch({ executablePath: config.chromiumPath }).catch((e) => {
     release();
     throw e;
-  });
+  }));
+  // On a shared browser every page gets its own context (the page options ARE the context's): two mocks share nothing.
+  const contexts: BrowserContext[] = [];
+  const newPage = async (o: Parameters<Browser["newPage"]>[0]) => {
+    if (!shared) return browser.newPage(o);
+    const c = await shared.newContext(o);
+    contexts.push(c);
+    return c.newPage();
+  };
   let measure: PageMeasure;
   let opening: PageMeasure = { slots: [], broken: [], scrollWidth: 0, innerWidth: 0, wideText: [], brokenWords: [] };
   let heroLightShare = 0;
@@ -299,7 +399,7 @@ export async function auditMockFile(
     // file, the headline then fits where a phone's Fraunces does not (measured 11-24, Crystal
     // Apartment: h1 420 px in a 334 px box on a phone, no overflow under the bot UA). The portal
     // images are fetched below with our honest bot UA (politeness doctrine, heroShot.ts).
-    const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+    const page = await newPage({ viewport: VIEWPORT, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
     // Final state of every section: no intro, no motion (same switches as the letter's hero shot).
     await page.addInitScript(
       "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');document.documentElement.setAttribute('data-cit-no-motion','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
@@ -398,19 +498,27 @@ export async function auditMockFile(
       await page.waitForTimeout(120);
     }
     await networkQuiet(60000);
+    // THE BARS THAT APPEAR ONLY BELOW THE HERO (ADR-XXXX ⑦): the phone's bottom booking bar turns on once the hero has
+    // scrolled away (cit-mobbar--on), so at the top it is hidden and its text was never measured (Jaja, Hullám: the
+    // faint bar passed). One look half-way down the page — its contrast findings join the rest.
+    await page.evaluate(`window.scrollTo(0, ${Math.max(VIEWPORT.height * 1.5, Math.round(height * 0.5))})`);
+    await page.waitForTimeout(700);
+    const midway = (await page.evaluate(MEASURE_JS)) as PageMeasure;
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(300);
-    const walked = (await page.evaluate(MEASURE_JS)) as PageMeasure;
+    const walkedTop = (await page.evaluate(MEASURE_JS)) as PageMeasure;
+    const walked: PageMeasure = { ...walkedTop, lowContrast: [...(walkedTop.lowContrast ?? []), ...(midway.lowContrast ?? [])] };
     measure = {
       ...walked,
       wideText: [...new Set([...opening.wideText, ...walked.wideText])].slice(0, 5),
       brokenWords: [...new Set([...opening.brokenWords, ...walked.brokenWords])].slice(0, 5),
+      lowContrast: [...(opening.lowContrast ?? []), ...(walked.lowContrast ?? [])].filter((c, i, all) => all.findIndex((x) => x.text === c.text) === i).slice(0, 5),
     };
     // THE LETTER'S PICTURE is the desktop first screen (heroShot.ts: 1216×760, our bot UA, finished
     // hero). Measured only on the phone, „BALATONBOGLÁRO / N” went into Villa Aquamarine's letter
     // image (quality colleague, 2026-11-25). Same switches and UA as the shot; images are not needed
     // to measure a heading, so they are not fetched.
-    const desk = await browser.newPage({ viewport: DESKTOP_VIEWPORT, deviceScaleFactor: 1, userAgent: PORTAL_USER_AGENT });
+    const desk = await newPage({ viewport: DESKTOP_VIEWPORT, deviceScaleFactor: 1, userAgent: PORTAL_USER_AGENT });
     await desk.addInitScript(
       "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');document.documentElement.setAttribute('data-cit-no-motion','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
     );
@@ -419,7 +527,8 @@ export async function auditMockFile(
     await desk.waitForTimeout(1200);
     measure = { ...measure, desktopBrokenWords: ((await desk.evaluate(MEASURE_JS)) as PageMeasure).brokenWords.slice(0, 5) };
   } finally {
-    await browser.close().catch(() => undefined);
+    if (shared) for (const c of contexts) await c.close().catch(() => undefined);
+    else await browser.close().catch(() => undefined);
     release();
   }
 
@@ -440,6 +549,22 @@ export async function auditMockFile(
         reported++;
       }
       seen.push({ text: l.text, mod: l.mod });
+    }
+  }
+  // TWO SECTIONS, ONE HEADING (ADR-XXXX ⑨, Anikó cc48fbb1: „Ami nálunk vár” twice): the sentence rule above lets a
+  // short heading through; two visible <h2> with the same normalized text are a repeat, in any module.
+  {
+    const seenH2 = new Map<string, string>();
+    for (const l of measure.texts ?? []) {
+      if (l.tag !== "h2") continue;
+      const key = headingKey(l.text);
+      if (!key) continue;
+      const first = seenH2.get(key);
+      if (first) {
+        findings.push({ code: "repeat", detail: `két szakasz ugyanazzal a címmel: „${l.text.slice(0, 50)}” (${first}, ${l.mod})` });
+        break;
+      }
+      seenH2.set(key, l.mod);
     }
   }
   if ((measure.maxGap ?? 0) > PAGE_MAX_GAP_PX) {
@@ -481,6 +606,7 @@ export async function auditMockFile(
       findings.push({
         code: "repeat",
         detail: `ugyanaz a kép ${places.length} helyen: ${fileOf(places[0]!.u)} (${places.map((p) => p.mod).join(", ")})`,
+        url: places[0]!.u,
       });
     }
   }
@@ -491,7 +617,7 @@ export async function auditMockFile(
   for (const u of urls) {
     const v = scores.get(photoUrlKey(u));
     if (v && FORBIDDEN_SUBJECTS.has(v.subject)) {
-      findings.push({ code: "subject", detail: `nem szállás-kép (${v.subject}): ${fileOf(u)} — ${v.reason.slice(0, 80)}` });
+      findings.push({ code: "subject", detail: `nem szállás-kép (${v.subject}): ${fileOf(u)} — ${v.reason.slice(0, 80)}`, url: u });
     }
   }
 
@@ -509,9 +635,9 @@ export async function auditMockFile(
       // that picked it (media/townPick.ts) — a vehicle, an interior, a road, a dusk field never opens.
       const tv = await judgeTownPicture(await townJudgeBytes(heroUrl, heroBytes), town.heroTier ?? "town", true);
       if (!tv) findings.push({ code: "render", detail: "a településkép-szabály nem futtatható — ellenőrizetlen nyitókép nem mehet ki" });
-      else if (!tv.ok) findings.push({ code: "subject", detail: `a település-nyitókép elbukik a szabályon (${tv.reason}): ${fileOf(heroUrl)}` });
+      else if (!tv.ok) findings.push({ code: "subject", detail: `a település-nyitókép elbukik a szabályon (${tv.reason}): ${fileOf(heroUrl)}`, url: heroUrl });
     } else if (heroUrl && stockUrl(heroUrl)) {
-      findings.push({ code: "stock", detail: `mintakép a nyitóképen: ${fileOf(heroUrl)}` });
+      findings.push({ code: "stock", detail: `mintakép a nyitóképen: ${fileOf(heroUrl)}`, url: heroUrl });
     } else if (heroUrl && heroBytes) {
       const hv = await classifyPhotoBuffer(heroBytes);
       // The HARD no-gos only (kitchen, bathroom, non-lodging, person, vehicle, dark): which of the fit photos is the
@@ -519,7 +645,7 @@ export async function auditMockFile(
       // with the machine pick's score floor (11-26, BaBo: the chosen geranium terrace was blocked as „not a hero”).
       // 11-27: photoKind.fitsHero — the very predicate the generator's hero pick and the colleague's pin pass.
       if (!fitsHero(hv)) {
-        findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv?.label ?? "nincs ítélet"}): ${fileOf(heroUrl)}` });
+        findings.push({ code: "subject", detail: `a nyitókép nem való nyitóképnek (${hv?.label ?? "nincs ítélet"}): ${fileOf(heroUrl)}`, url: heroUrl });
       }
     }
     // THE OPENING SEQUENCE, TOO (11-24, second round): wordmark-grow cycles photos 2–5 in its big
@@ -554,7 +680,7 @@ export async function auditMockFile(
     const heroHash = heroBytes ? await dHashFromBuffer(heroBytes).catch(() => undefined) : undefined;
     for (const u of opening) {
       if (stockUrl(u)) {
-        findings.push({ code: "stock", detail: `mintakép a nyitásban / sávban / kapcsolat-képen: ${fileOf(u)}` });
+        findings.push({ code: "stock", detail: `mintakép a nyitásban / sávban / kapcsolat-képen: ${fileOf(u)}`, url: u });
         continue;
       }
       let b = bodies.get(u) ?? (await photos.read(u))?.body;
@@ -571,25 +697,25 @@ export async function auditMockFile(
           sizelessPhotoKey(u) === sizelessPhotoKey(heroUrl) ||
           (b != null && isSamePicture(heroHash, await dHashFromBuffer(b).catch(() => undefined))));
       if (sameAsHero) {
-        findings.push({ code: "repeat", detail: `a nyitó-animáció a nyitóképet mutatja (önmagára nyílik): ${fileOf(u)}` });
+        findings.push({ code: "repeat", detail: `a nyitó-animáció a nyitóképet mutatja (önmagára nyílik): ${fileOf(u)}`, url: u });
         continue;
       }
       if (!b) continue; // not served → the broken-image rule speaks for it
       if (isTown(u)) {
         // A town page's band shows the town's LOCAL picture (templateKit.allotPhotos): the town rule judges it.
         const tv = await judgeTownPicture(await townJudgeBytes(u, b));
-        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a sávban lévő helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}` });
+        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a sávban lévő helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}`, url: u });
         continue;
       }
       const v = await classifyPhotoBuffer(b);
       const label = v?.label ?? "nincs ítélet";
       if (!fitsOpening(v)) {
-        findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${label}): ${fileOf(u)}` });
+        findings.push({ code: "subject", detail: `a nyitásban / sávban / kapcsolat-képen nem odavaló kép (${label}): ${fileOf(u)}`, url: u });
       } else if (bands.has(u) && !fitsBand(v)) {
         // A band is a screen of its own: a close-up, a dark shot or a thing instead of a place fails (11-25).
-        findings.push({ code: "subject", detail: `a széles sávképen közelkép / sötét / nem a helyet mutató kép (${label}): ${fileOf(u)}` });
+        findings.push({ code: "subject", detail: `a széles sávképen közelkép / sötét / nem a helyet mutató kép (${label}): ${fileOf(u)}`, url: u });
       } else if (contacts.has(u) && !fitsContact(v)) {
-        findings.push({ code: "subject", detail: `a kapcsolat-képen jármű / ember / állat (${label}): ${fileOf(u)}` });
+        findings.push({ code: "subject", detail: `a kapcsolat-képen jármű / ember / állat (${label}): ${fileOf(u)}`, url: u });
       }
     }
     for (const u of urls) {
@@ -599,7 +725,7 @@ export async function auditMockFile(
         // A local picture of the town (gallery) is a sight by design: the town rule judges it.
         if (u === heroUrl) continue;
         const tv = await judgeTownPicture(await townJudgeBytes(u, b));
-        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}` });
+        if (tv && !tv.ok) findings.push({ code: "subject", detail: `a helyi kép elbukik a településkép-szabályon (${tv.reason}): ${fileOf(u)}`, url: u });
         continue;
       }
       const v = await classifyPhotoBuffer(b);
@@ -618,13 +744,16 @@ export async function auditMockFile(
   const heroSlotUrl = slots.find((s) => s.mod === "header#top" || s.y < 10)?.u;
   for (const sl of slots.filter((x) => stockUrl(x.u))) {
     if (sl.u === heroSlotUrl) continue; // reported above
-    if (!SAMPLE_MODULES.has(sl.mod)) findings.push({ code: "stock", detail: `mintakép nem galéria- / szobahelyen (${sl.mod}): ${fileOf(sl.u)}` });
-    else if (!sl.sample) findings.push({ code: "stock", detail: `jelöletlen mintakép („MINTA” nélkül): ${fileOf(sl.u)}` });
-    else if (opts.stockOk === false) findings.push({ code: "stock", detail: `mintakép az ország szabálya szerint nem mehet (galéria- / szobahely): ${fileOf(sl.u)}` });
+    if (!SAMPLE_MODULES.has(sl.mod)) findings.push({ code: "stock", detail: `mintakép nem galéria- / szobahelyen (${sl.mod}): ${fileOf(sl.u)}`, url: sl.u });
+    else if (!sl.sample) findings.push({ code: "stock", detail: `jelöletlen mintakép („MINTA” nélkül): ${fileOf(sl.u)}`, url: sl.u });
+    else if (opts.stockOk === false) findings.push({ code: "stock", detail: `mintakép az ország szabálya szerint nem mehet (galéria- / szobahely): ${fileOf(sl.u)}`, url: sl.u });
   }
 
   if (measure.scrollWidth > measure.innerWidth + 1) {
     findings.push({ code: "overflow", detail: `mobilon az oldal ${measure.scrollWidth - measure.innerWidth} px-szel szélesebb a képernyőnél` });
+  }
+  if (measure.lowContrast?.length) {
+    findings.push({ code: "contrast", detail: `halvány szöveg (WCAG ${TEXT_MIN_CONTRAST}:1 alatt): ${measure.lowContrast.map((c) => `„${c.text}” ${c.ratio}:1 (${c.where})`).join(" · ")}` });
   }
   if (measure.brokenWords.length) {
     findings.push({ code: "overflow", detail: `mobilon két sorba tört szó a címben: ${measure.brokenWords.join(" · ")}` });
@@ -637,7 +766,7 @@ export async function auditMockFile(
   }
 
   const broken = [...new Set([...measure.broken, ...[...failedNet].filter((u) => urls.includes(u))])];
-  for (const u of broken) findings.push({ code: "broken", detail: `nem töltődik be: ${fileOf(u)}` });
+  for (const u of broken) findings.push({ code: "broken", detail: `nem töltődik be: ${fileOf(u)}`, url: u });
 
   return { verdict: findings.length ? "fail" : "pass", findings, slots: slots.length };
 }
@@ -660,7 +789,7 @@ export async function stockOkFor(artifactId: string): Promise<boolean> {
  * The gate for one artifact: cached verdict for the current file, else render, judge and store.
  * A render failure is a FAIL ("render"), never a pass.
  */
-export async function renderGateFor(artifactId: string): Promise<RenderGateResult> {
+export async function renderGateFor(artifactId: string, opts: { readonly browser?: Browser } = {}): Promise<RenderGateResult> {
   const a = await db.selectFrom("mock_artifact").select(["path", "inputs"]).where("id", "=", artifactId).executeTakeFirst();
   const now = new Date().toISOString();
   if (!a?.path) {
@@ -685,7 +814,7 @@ export async function renderGateFor(artifactId: string): Promise<RenderGateResul
       ...(sd?.townPhoto?.pick?.tier ? { heroTier: sd.townPhoto.pick.tier } : {}),
       gallery: (sd?.townGallery ?? []).map((t) => t.url).filter((u): u is string => typeof u === "string"),
     };
-    const r = await auditMockFile(mockAbs, town, { stockOk, proper });
+    const r = await auditMockFile(mockAbs, town, { stockOk, proper, ...(opts.browser ? { browser: opts.browser } : {}) });
     result = { version: RENDER_GATE_VERSION, mtime, at: now, ...r, ...(stockOk ? {} : { stockOk }) };
   } catch (e) {
     // Not stored: a crashed browser is our gap, the next send attempt renders again.

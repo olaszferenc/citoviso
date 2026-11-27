@@ -67,12 +67,14 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the dep
 // 11-27 (slotfit1, one predicate per slot): the generator and the render gate judge every photo slot with the same
 // photoKind function. Since this stamp a FRESH mock carries it too (generateEngine inputs.terhatasAt), so the
 // stamp alone decides — a mock made after MOCK_HEROFIX_LIVE_AT by the older code is refreshed like any other.
-// A plan the quality colleague already PASSED stays current (as at qafix5): its file is what was reviewed.
 // 11-27 morning (owner, approval page: „Egy pillantásra” still there, an own-accent-less parallax): headings1 = the
 // section titles („Amit kínálunk” / „Felszereltség”), no lone service tile — AND the old exception goes: a plan the
 // quality colleague once PASSED no longer stays current on an older stamp (ADR-0495: the colleague is no gate, and the
 // exception kept every later rule — own accent, slotfit1 — out of those files). Current = the stamp, nothing else.
-export const MOCK_HEROFIX_STAMP = "2026-11-27-headings1";
+// 11-27 (ADR-XXXX ⑦⑨, supply1): every text on a band reads ≥ 4.5:1 (palette.bandTokens: the Parallax's bottom bar,
+// dock, menu bar, reviews and footer were light-on-light on a dark skin), the button text on the accent, the „Minta”
+// label, and two sections never one heading (render.withUniqueSectionHeadings) — the waiting stock is re-rendered.
+export const MOCK_HEROFIX_STAMP = "2026-11-27-supply1";
 export const MOCK_CURRENT_GENERATOR_SQL = sql<boolean>`(a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz
   and coalesce(a.inputs->>'terhatasAt', '') >= ${MOCK_HEROFIX_STAMP})`;
 
