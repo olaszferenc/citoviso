@@ -1,4 +1,4 @@
-## ADR-XXXX — A településkép-szabály a kapun is a választó bemenetén ítél (330 px); bélyeg- vagy verzió-emelés nem üríti ki a tulaj lapját
+## ADR-0501 — A településkép-szabály a kapun is a választó bemenetén ítél (330 px); bélyeg- vagy verzió-emelés nem üríti ki a tulaj lapját
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`: „a településkép-választó ugyanazt a szabályt hívja, amit a render-kapu”)

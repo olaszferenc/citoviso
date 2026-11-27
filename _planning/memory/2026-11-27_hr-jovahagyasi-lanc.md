@@ -69,7 +69,7 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - a kapu `MEASURE_JS` „s”-hibája (a sablon-literálban `/\s+/` → a böngészőben `/s+/`);
   - `RENDER_GATE_VERSION` 16.
   A saját, ezekkel átfedő commitomat (be81d673) a land rebase-ütközése után eldobtam; patch a scratchpadben.
-- **Ami hiányzott, és bekerült (ADR-XXXX):** a településkép bemenete.
+- **Ami hiányzott, és bekerült (ADR-0501):** a településkép bemenete.
   - A CLIP méretfüggő. Mérve: Kreuze 330 px jó / 1280 px „sötét”; Podstup 330 px jó / 1280 px „grave”.
   - A kapu a 330 px-es letöltés hibájakor a lap 1280 px-es fájlján ítélt.
   - Most a `townPick.townJudgeInput` 330 px-re kicsinyít, és `RENDER_GATE_VERSION` 17.
