@@ -1,4 +1,4 @@
-## ADR-XXXX — HR lead-képek: a Maps-kártya nyitóképe a leadre, a portál-galéria a linkjeiből, vízjeles host fotóra kizárva
+## ADR-0509 — HR lead-képek: a Maps-kártya nyitóképe a leadre, a portál-galéria a linkjeiből, vízjeles host fotóra kizárva
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`, brief `hr-lead-kepek-20261127`; a tulaj kérdése: „Nem zavar jobban, hogy miért nincsenek képek a leadekhez? Felderítettük már, hogy milyen portálok vannak?”)
