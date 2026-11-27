@@ -473,6 +473,9 @@ export async function resolveGatedPhotos(
       if (live.length < stored.match.photoUrls.length) staleReason = "dead_links";
     }
     let answer: CachedPlaces | null = stored && !staleReason ? stored : null;
+    // A Maps-card answer (the scout read the card, $0) is no PAID answer: the curator's
+    // explicit button may still buy one, which then replaces it.
+    if (answer?.via === "maps_card" && policy === "curator") answer = null;
     if (answer) {
       places = {
         state: "stored",
@@ -521,7 +524,7 @@ export async function resolveGatedPhotos(
         for (const url of m.photoUrls) {
           if (seen.has(photoKey(url))) continue;
           seen.add(photoKey(url));
-          photos.push({ url, provenance: "places", longEdge: PLACES_NOMINAL_LONG_EDGE });
+          photos.push({ url, provenance: m.photoProvenance?.[url] ?? "places", longEdge: PLACES_NOMINAL_LONG_EDGE });
         }
         if (m.rating != null) {
           matchRating = { value: m.rating, ...(m.userRatingCount != null ? { count: m.userRatingCount } : {}) };

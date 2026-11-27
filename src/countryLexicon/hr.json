@@ -23,6 +23,7 @@
   "chainKontaktMultiPropertyRegex": "slični smještaj|ostali smještaj|smještaj u blizini|još smještaja",
   "chainKontaktAddrStreetRegex": "\\b(ulica|ul\\.|ul|cesta|trg|put|obala)\\b",
   "chainKontaktPortalAdapters": [],
+  "chainKontaktWatermarkedPhotoHostRegex": "(smjestaj\\.com\\.hr|ubytovanivchorvatsku\\.cz)$",
   "chainKontaktFreeHeadRegex": "^([^@]+@(?:gmail|googlemail|yahoo|hotmail|outlook|live|icloud|gmx|net|inet|vip|optinet|globalnet|t-com)\\.(?:com|hr|de|at|co\\.uk))\\..+$",
   "chainKontaktEmailQueryWord": "email",
   "chainKontaktSerpAiOverviewRegex": "^(Pregled od umjetne inteligencije|Pregled AI-ja|AI Overview)$",

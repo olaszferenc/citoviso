@@ -41,13 +41,19 @@ export interface CachedPlacesMatch {
   /** Photo Media answers (key-less googleusercontent URLs). Empty for a low band:
    *  photos we would not use are not paid for. */
   readonly photoUrls: readonly string[];
+  /** §A.3 class per photo URL when it is known not to be `places` — a Maps-card photo a
+   *  guest uploaded is `guest` (via "maps_card"). Absent = every photo is `places`. */
+  readonly photoProvenance?: Readonly<Record<string, "places" | "guest">>;
 }
 
 export interface CachedPlaces {
   readonly v: 1;
   readonly identity: PlacesIdentity;
-  /** How the match was found: by the stored place id, or by a Text Search. */
-  readonly via: "details" | "text_search";
+  /** How the match was found: by the stored place id, or by a Text Search — or
+   *  "maps_card": no Places call at all, the scout READ the place's own Maps card in a
+   *  browser (HR lead photos, $0). Its attribution is certain (the scout opened THAT
+   *  place), so it carries a high band; a paying caller may still replace it. */
+  readonly via: "details" | "text_search" | "maps_card";
   /** Who decided to pay: the generation (lead without portal photos) or the curator's
    *  paid button. The lead page words it ("automatikusan lekérve"); older rows lack it. */
   readonly askedBy?: "auto" | "curator";
@@ -91,7 +97,7 @@ export function sameIdentity(a: PlacesIdentity, b: PlacesIdentity): boolean {
 function parseStored(raw: unknown): CachedPlaces | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Partial<CachedPlaces>;
-  if (r.v !== 1 || !r.identity || (r.via !== "details" && r.via !== "text_search")) return null;
+  if (r.v !== 1 || !r.identity || (r.via !== "details" && r.via !== "text_search" && r.via !== "maps_card")) return null;
   if (r.match !== null && (typeof r.match !== "object" || !Array.isArray(r.match.photoUrls))) {
     return null;
   }
