@@ -116,3 +116,11 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - a frissítés párban dolgozik;
   - `bump-guard-check`: emelés csak szabály-változással és indokló kommenttel.
 - **Külön kör:** szelektív elavulás (hatókör-címke, hatókörönkénti bélyeg).
+
+## Maps-csillag szám nélkül (tulaj döntése 11-27: (b) + (a), ADR-XXXX)
+- **A Google EU-s szállás-kártyája** 11-09 óta nem mutat értékelés-számot (sem fejléc, sem lista, sem fül; `gl=us`-sal sem). A lánc emiatt a csillagot is eldobta: HR 4164 friss leadből 1-nek, HU 13 844-ből 7-nek van csillaga.
+- **Javítás:**
+  - az érték szám nélkül megmarad (felderítő + app);
+  - a mockon ≥ 4,5-től látszik, a lefordított „Google-értékelés” felirattal;
+  - pótlás $0: `csillag_potlas.py` → `maps-rating-backfill.mts`. Élesen mérve HR 3674 (3086 ≥ 4,5), HU 11 222.
+- **Lánc:** `atallas-csillag.sh` (6fb4b68).

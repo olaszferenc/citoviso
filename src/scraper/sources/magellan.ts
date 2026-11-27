@@ -27,7 +27,7 @@ export interface ScoutExtra {
   readonly portalLinks: readonly string[];
   /** „van saját honlap" → the first found link (already checked to be an own site). */
   readonly ownSite: string | null;
-  readonly rating: { readonly value: number; readonly count: number } | null;
+  readonly rating: { readonly value: number; readonly count: number | null } | null;
   /** Where the rating can be verified: Google reviews by place_id, else the Maps place card (scoutReviewsUrl). */
   readonly mapsUrl: string | null;
 }
@@ -81,7 +81,8 @@ export class MagellanSource implements LeadSource {
         verdict: r.verdict,
         portalLinks: links.filter((u) => classifyWebsite(u) === "portal_only"),
         ownSite: r.verdict === "own" ? (links[0] ?? null) : null,
-        rating: r.rating != null && r.rating_count != null ? { value: r.rating, count: r.rating_count } : null,
+        // 11-27: the stars without a count are a fact too (EU lodging cards show no count since 11-09)
+        rating: r.rating != null ? { value: r.rating, count: r.rating_count ?? null } : null,
         mapsUrl: scoutReviewsUrl({ ftid: r.ftid, link: r.link, name: r.name, address: r.address, city: r.city }),
       });
       out.push({

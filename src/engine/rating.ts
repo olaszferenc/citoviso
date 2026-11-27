@@ -41,8 +41,16 @@ export const MOCK_RATING_MIN_COUNT = 3;
  * (Castor 1★, Lili 2,5★ — failed by the quality colleague, 2026-11-25). The real rating stays true
  * where it is shown; below the floor, or from a handful of reviews, it is simply not shown.
  */
+/**
+ * Without a review count (owner 2026-11-27, ADR „Maps-csillag szám nélkül”): since 11-09 Google shows a lodging's
+ * Maps card to EU visitors with the stars only — no count, no reviews tab. Such a rating is printed when it is at
+ * least this high; with a count the count rule above stays.
+ */
+export const MOCK_RATING_MIN_NO_COUNT = 4.5;
+
 export function mockRatingShown(d: Pick<SiteData, "rating">): boolean {
   if (!d.rating) return false;
   const count = d.rating.count;
-  return ratingOnFiveStars(d) >= MOCK_RATING_MIN && (count ?? 0) >= MOCK_RATING_MIN_COUNT;
+  if (count == null) return ratingOnFiveStars(d) >= MOCK_RATING_MIN_NO_COUNT;
+  return ratingOnFiveStars(d) >= MOCK_RATING_MIN && count >= MOCK_RATING_MIN_COUNT;
 }

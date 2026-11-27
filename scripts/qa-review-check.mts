@@ -137,6 +137,17 @@ for (const l of ["a locomotive", "a car", "a dog", "a plate of food", "a close-u
 check("1★ / 2,5★ nem kerül a mockra", !mockRatingShown({ rating: { value: 1, count: 40 } }) && !mockRatingShown({ rating: { value: 2.5, count: 12 } }));
 check("4,6★ 2 véleményből sem (kevés vélemény)", !mockRatingShown({ rating: { value: 4.6, count: 2 } }));
 check("4,6★ 30 véleményből marad", mockRatingShown({ rating: { value: 4.6, count: 30 } }));
+// owner 2026-11-27: the Maps card shows no count for EU lodgings since 11-09 → the stars alone from 4,5
+check("szám nélküli Maps-csillag: 4,6★ és 4,5★ kikerül a mockra, 4,4★ nem (tulaj 11-27, küszöb 4,5)",
+  mockRatingShown({ rating: { value: 4.6 } }) && mockRatingShown({ rating: { value: 4.5 } }) && !mockRatingShown({ rating: { value: 4.4 } }));
+check("számmal a régi szabály marad: 4,8★ 2 véleményből nem", !mockRatingShown({ rating: { value: 4.8, count: 2 } }));
+{
+  const { scoutedRating } = await import("../src/generator/generate.js");
+  const sr = scoutedRating({ mapsRating: { value: 4.7, count: null, source: "magellan" } } as never);
+  check("a felderítő szám nélküli csillaga átjut a generátorhoz (érték, szám nélkül)", sr?.rating === 4.7 && sr?.userRatingCount === undefined, JSON.stringify(sr));
+}
+check("a csillag-felirat szám nélkül a lefordított „Google-értékelés” (soha „?” a lapon)",
+  /userRatingCount != null \? T\(dLang, "Google-értékelés · \{n\} vélemény"[^)]*\) : T\(dLang, "Google-értékelés"\)/.test(src("src/generator/generateEngine.ts")));
 check("a renderelés a mockon leveszi a gyenge értékelést (minden hely egy vágással)", /!mockRatingShown\(data\)/.test(src("src/engine/render.ts")));
 check("sávkép: fürdő nem jó", !isBandWorthy(K("ok", "a sauna or jacuzzi", { probs: { "a sauna or jacuzzi": 0.6 } })));
 check("sávkép: a ház kívülről jó", isBandWorthy(K("ok", "the outside of a house")));

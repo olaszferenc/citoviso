@@ -178,7 +178,8 @@ export interface QualifiedLead {
    */
   readonly mapsRating?: {
     readonly value: number;
-    readonly count: number;
+    /** null = the Maps card showed no count (EU lodging cards since 2026-11-09). */
+    readonly count: number | null;
     readonly source: "magellan";
     /** The place's own Google Maps card the number was read from (scout_place.link) —
      *  the badge links here when there is no Places id to build a reviews URL from. */

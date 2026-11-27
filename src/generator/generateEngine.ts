@@ -421,7 +421,8 @@ async function generateEngineMockInner(
           // In the page language's number format (ORSZÁG-RÉTEG 3/6) — Hungarian "4,7" as before.
           value: rating.toLocaleString(dateLocale(lang)),
           // Translated at generation (the pack is ensured above) and persisted — mock=live.
-          label: T(dLang, "Google-értékelés · {n} vélemény", { n: userRatingCount ?? "?" }),
+          // No count on the card (EU lodging cards since 11-09): the label without one — never a „?” on the page.
+          label: userRatingCount != null ? T(dLang, "Google-értékelés · {n} vélemény", { n: userRatingCount }) : T(dLang, "Google-értékelés"),
           icon: "star",
         },
       ]

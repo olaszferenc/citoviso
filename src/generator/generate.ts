@@ -415,10 +415,12 @@ export function attributedRating(m: {
  * The rating the Magellan scout read off the place's own Maps card (ADR-0336, Q2) —
  * the fallback when Places gave no attributable number. Only a sane reading counts.
  */
-export function scoutedRating(lead: QualifiedLead): { rating: number; userRatingCount: number } | null {
+export function scoutedRating(lead: QualifiedLead): { rating: number; userRatingCount: number | undefined } | null {
   const r = lead.mapsRating;
   if (!r || r.source !== "magellan") return null;
   if (!Number.isFinite(r.value) || r.value < 1 || r.value > 5) return null;
+  // 11-27: the card may show no count (EU lodging cards since 11-09) — the stars stand alone (mockRatingShown decides).
+  if (r.count == null) return { rating: r.value, userRatingCount: undefined };
   if (!Number.isInteger(r.count) || r.count < 1) return null;
   return { rating: r.value, userRatingCount: r.count };
 }
