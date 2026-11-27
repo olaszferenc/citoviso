@@ -142,3 +142,8 @@ export function catalogueIdFor(label: string, iconMap?: Readonly<Record<string, 
 export function amenityIconIdFor(sourceLabel: string): string | null {
   return byLabel.get(sourceLabel.trim())?.id ?? null;
 }
+
+/** The catalogue item's Hungarian source label (the i18n key), or null for an unknown id. */
+export function catalogueLabel(id: string): string | null {
+  return byId.get(id)?.label ?? null;
+}

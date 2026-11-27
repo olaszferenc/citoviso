@@ -8,7 +8,7 @@
 // only for the photo scrims (skin-agnostic legibility, same convention as fullbleed).
 
 import { iconSvg, matchIcon, starIcon } from "../icons.js";
-import { amenityIconSvg, catalogueIdFor } from "../amenityIcon.js";
+import { amenityIconSvg, catalogueIdFor, catalogueLabel } from "../amenityIcon.js";
 import { slotMarker } from "../moduleSections.js";
 import { depthHeroAttr, depthHeroJs } from "../depthHero.js";
 import type { Recipe, RenderPhase, SiteData } from "../recipe.js";
@@ -341,10 +341,31 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
     .map((h, i) => ({ h, i, k: catalogueIdFor(h, data.amenityIconMap) }))
     .filter((x) => x.i >= plan.rows.length && x.k !== null && !gridKinds.has(x.k) && Boolean(gridKinds.add(x.k)))
     .slice(0, 8);
-  // A lone tile is no section (11-27, quality colleague: Stéghouse „Wifi” alone, Gyékényes, Kevikincses — one card in a
-  // two-column grid reads as half-empty): under MIN_GRID_TILES the block is left out; its item stays in the highlights.
-  const MIN_GRID_TILES = 2;
-  if (grid.length < MIN_GRID_TILES) grid.length = 0;
+  // A FULL grid, never a dropped or half-empty one (owner 11-27: „inkább basszuk tele, hogy látszódjon — ez egy minta,
+  // techdemo”). When the no-repeat filter above leaves fewer than GRID_FULL tiles, the grid tops up with the lodging's
+  // OWN catalogue items it skipped as already seen higher up (real source items, one per kind — nothing invented).
+  const GRID_FULL = 4;
+  const GRID_FILL = ["wifi", "full_kitchen", "free_parking", "terrace", "garden", "air_conditioning", "flat_tv"] as const;
+  if (grid.length < GRID_FULL) {
+    const inGrid = new Set(grid.map((x) => x.k));
+    for (const [i, h] of data.highlights.entries()) {
+      if (grid.length >= GRID_FULL) break;
+      const k = catalogueIdFor(h, data.amenityIconMap);
+      if (k === null || inGrid.has(k)) continue;
+      inGrid.add(k);
+      grid.push({ h, i, k });
+    }
+    // Still short: standard facility tiles fill the grid. The mock is a PLAN, not a statement of fact (owner 11-27:
+    // „nem valóságkérdés … terv az egész”) — the owner corrects the list in the admin after buying.
+    for (const k of GRID_FILL) {
+      if (grid.length >= GRID_FULL) break;
+      if (inGrid.has(k)) continue;
+      const label = catalogueLabel(k);
+      if (!label) continue;
+      inGrid.add(k);
+      grid.push({ h: T(data, label), i: -1, k });
+    }
+  }
   const heroPhoto = plan.hero?.url;
   const bandAUrl = plan.bandA?.url;
   const bandBUrl = plan.bandB?.url;
@@ -476,7 +497,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
       <h2>${T(data, "Amit kínálunk")}</h2>
       <div class="t-amen">
         ${grid
-          .map(({ h, i }) => `<div class="t-am">${amenityIconSvg(h, data.amenityIconMap)}<p${highlightHook(data, i)}>${esc(h)}</p></div>`)
+          .map(({ h, i, k }) => `<div class="t-am">${amenityIconSvg(h, i < 0 && k ? { ...data.amenityIconMap, [h]: k } : data.amenityIconMap)}<p${i < 0 ? "" : highlightHook(data, i)}>${esc(h)}</p></div>`)
           .join("\n        ")}
       </div>
     </div>
