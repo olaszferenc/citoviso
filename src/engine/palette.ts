@@ -135,7 +135,7 @@ export function mixSrgb(a: [number, number, number], b: [number, number, number]
   return [0, 1, 2].map((i) => a[i]! * pa + b[i]! * (1 - pa)) as [number, number, number];
 }
 
-/** WCAG AA for body text — every text on a coloured band (ADR-XXXX ⑦). */
+/** WCAG AA for body text — every text on a coloured band (ADR-0500 ⑦). */
 export const TEXT_MIN_CONTRAST = 4.5;
 
 /**
@@ -157,7 +157,7 @@ export function readableOn(fgHex: string, bgHex: string, min = TEXT_MIN_CONTRAST
 }
 
 /**
- * THE BAND TOKENS (ADR-XXXX ⑦, quality colleague 11-27: Jaja's „4,8 ★ Google-értékelés” light grey and Hullám's name
+ * THE BAND TOKENS (ADR-0500 ⑦, quality colleague 11-27: Jaja's „4,8 ★ Google-értékelés” light grey and Hullám's name
  * gold on the beige bottom bar). A template's „ink band” (`color-mix(ink 92–94%, black)`) is dark on a light skin and
  * LIGHT on a dark one (night-azure-gold: ink #f2ede2), but its text was always „bg mixed with white” and „accent mixed
  * with white” — light on light. Here the band and its texts are computed from the page's resolved tokens, each text

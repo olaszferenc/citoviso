@@ -136,7 +136,7 @@ interface PageMeasure {
   readonly innerWidth: number;
   readonly wideText: string[];
   readonly brokenWords: string[];
-  /** Texts on a fixed / sticky bar or in a heading / button under 4.5:1 against their painted ground (ADR-XXXX ⑦). */
+  /** Texts on a fixed / sticky bar or in a heading / button under 4.5:1 against their painted ground (ADR-0500 ⑦). */
   readonly lowContrast?: { text: string; ratio: number; where: string }[];
   /** The desktop first screen = the letter's picture (filled by auditMockFile, not by MEASURE_JS). */
   readonly desktopBrokenWords?: string[];
@@ -264,7 +264,7 @@ const MEASURE_JS = `(() => {
     texts.push({ text: t.slice(0, 160), mod: modOf(el), y: Math.round(r.top + scrollY), tag: el.tagName.toLowerCase() });
     if (texts.length >= 40) break;
   }
-  // CONTRAST (ADR-XXXX ⑦): the text of every fixed / sticky bar on screen, and the h1 / h2 / buttons, against the
+  // CONTRAST (ADR-0500 ⑦): the text of every fixed / sticky bar on screen, and the h1 / h2 / buttons, against the
   // background actually painted behind it (the first ancestor with an opaque colour). A text over a picture (an
   // ancestor with a background image before any colour) is not measured: its legibility is the picture's.
   const lowContrast = [];
@@ -498,7 +498,7 @@ export async function auditMockFile(
       await page.waitForTimeout(120);
     }
     await networkQuiet(60000);
-    // THE BARS THAT APPEAR ONLY BELOW THE HERO (ADR-XXXX ⑦): the phone's bottom booking bar turns on once the hero has
+    // THE BARS THAT APPEAR ONLY BELOW THE HERO (ADR-0500 ⑦): the phone's bottom booking bar turns on once the hero has
     // scrolled away (cit-mobbar--on), so at the top it is hidden and its text was never measured (Jaja, Hullám: the
     // faint bar passed). One look half-way down the page — its contrast findings join the rest.
     await page.evaluate(`window.scrollTo(0, ${Math.max(VIEWPORT.height * 1.5, Math.round(height * 0.5))})`);
@@ -551,7 +551,7 @@ export async function auditMockFile(
       seen.push({ text: l.text, mod: l.mod });
     }
   }
-  // TWO SECTIONS, ONE HEADING (ADR-XXXX ⑨, Anikó cc48fbb1: „Ami nálunk vár” twice): the sentence rule above lets a
+  // TWO SECTIONS, ONE HEADING (ADR-0500 ⑨, Anikó cc48fbb1: „Ami nálunk vár” twice): the sentence rule above lets a
   // short heading through; two visible <h2> with the same normalized text are a repeat, in any module.
   {
     const seenH2 = new Map<string, string>();

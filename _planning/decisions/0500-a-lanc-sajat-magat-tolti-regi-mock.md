@@ -1,4 +1,4 @@
-## ADR-XXXX — A lánc saját magát tölti: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu
+## ADR-0500 — A lánc saját magát tölti: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (tulaj „Mehet” 07:35 a négy pontra, 5. pont a tulaj jóváhagyásával; a koordinátoron át, `cit96bd8170`)

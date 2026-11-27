@@ -554,7 +554,7 @@ export function withBestHeroFirst<T>(photos: readonly T[], kinds: readonly (Phot
     }
   });
   if (best < 0) {
-    // NO photo clears the machine's wow floor (11-27, ADR-XXXX ⑤ blind sample: 3 of 21 failed plans): the first photo
+    // NO photo clears the machine's wow floor (11-27, ADR-0500 ⑤ blind sample: 3 of 21 failed plans): the first photo
     // stayed the hero even when the gate's own hero rule (fitsHero) refuses it — an „outside of a house” the gate
     // fails every time, whatever was taken off. Then the best photo the gate WOULD accept opens the page; none → as is.
     if (fitsHero(kinds[0] ?? null)) return [...photos];

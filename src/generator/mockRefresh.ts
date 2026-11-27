@@ -283,7 +283,7 @@ export async function regateStaleQueue(
   let released = 0;
   let left = 0;
   let next = 0;
-  // 11-27 (ADR-XXXX ④): `concurrency` rows at once in ONE shared browser (each audit in its own context) — the
+  // 11-27 (ADR-0500 ④): `concurrency` rows at once in ONE shared browser (each audit in its own context) — the
   // browser launch per plan and the one-at-a-time walk made ~5 plans a firing; the box's free memory caps it.
   const concurrency = Math.max(1, Math.min(opts.concurrency ?? regateConcurrency(), rows.length || 1));
   let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
@@ -351,7 +351,7 @@ export async function regateStaleQueue(
 }
 
 /**
- * How many plans the re-judging step measures at once in ONE shared browser (ADR-XXXX ④, the ~2 800-plan backlog).
+ * How many plans the re-judging step measures at once in ONE shared browser (ADR-0500 ④, the ~2 800-plan backlog).
  * Measured 11-27 on 30 blind plans, 2 cores: 1 → 254 plans/hour, 2 → 581, 3 → 732, verdicts identical (30/30).
  * RENDER_GATE_CONCURRENCY overrides the default; the memory floor always wins.
  */

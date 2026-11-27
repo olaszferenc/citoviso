@@ -1,4 +1,4 @@
-// THE CHAIN FEEDS ITSELF (ADR-XXXX, owner „Mehet” 2026-11-27) — the timer of src/generator/chainSupply.ts.
+// THE CHAIN FEEDS ITSELF (ADR-0500, owner „Mehet” 2026-11-27) — the timer of src/generator/chainSupply.ts.
 //
 //   tsx scripts/chain-supply.mts tick                 # ③ ready mocks → rows · ⑤ failed plans retry · ① old stock regenerated
 //   tsx scripts/chain-supply.mts regen <dispatchId>   # ① one row (a measurement / the blind sample)

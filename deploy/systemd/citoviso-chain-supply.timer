@@ -1,5 +1,5 @@
 [Unit]
-Description=Citoviso lánc-utánpótlás, 5 percenként (ADR-XXXX)
+Description=Citoviso lánc-utánpótlás, 5 percenként (ADR-0500)
 
 [Timer]
 # Egy futás legfeljebb ~8 perc; a oneshot egység alatt a következő indítás nem fut rá az előzőre.

@@ -71,7 +71,7 @@ export const MOCK_HEROFIX_LIVE_AT = "2026-11-26T22:18:00Z"; // set after the dep
 // section titles („Amit kínálunk” / „Felszereltség”), no lone service tile — AND the old exception goes: a plan the
 // quality colleague once PASSED no longer stays current on an older stamp (ADR-0495: the colleague is no gate, and the
 // exception kept every later rule — own accent, slotfit1 — out of those files). Current = the stamp, nothing else.
-// 11-27 (ADR-XXXX ⑦⑨, supply1): every text on a band reads ≥ 4.5:1 (palette.bandTokens: the Parallax's bottom bar,
+// 11-27 (ADR-0500 ⑦⑨, supply1): every text on a band reads ≥ 4.5:1 (palette.bandTokens: the Parallax's bottom bar,
 // dock, menu bar, reviews and footer were light-on-light on a dark skin), the button text on the accent, the „Minta”
 // label, and two sections never one heading (render.withUniqueSectionHeadings) — the waiting stock is re-rendered.
 export const MOCK_HEROFIX_STAMP = "2026-11-27-supply1";

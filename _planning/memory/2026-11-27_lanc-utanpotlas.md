@@ -1,6 +1,6 @@
 # 2026-11-27 — Lánc-utánpótlás: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu, kontraszt, félkész elöl, egyedi szakaszcím
 
-SUB `citf2359c67`, koordinátor `cit96bd8170`, brief `~/rc-briefs/lanc-utanpotlas-20261127.md` (+ a koordinátor 5–9. pontja), ADR-XXXX (`_planning/decisions/*-lanc-utanpotlas-ujrageneralas-ujraproba.md`). Élesen NINCS (a koordinátor viszi ki, tulaj-engedéllyel).
+SUB `citf2359c67`, koordinátor `cit96bd8170`, brief `~/rc-briefs/lanc-utanpotlas-20261127.md` (+ a koordinátor 5–9. pontja), ADR-0500 (`_planning/decisions/*-lanc-utanpotlas-ujrageneralas-ujraproba.md`). Élesen NINCS (a koordinátor viszi ki, tulaj-engedéllyel).
 
 ## Elvégezve
 - ① `src/generator/chainSupply.ts` `regenerateOldQueue`: a régi generátoros várakozó sor mindkét terve a saját kurátori szövegéből (copyManual) újragenerálódik, 0 API. Approved + Vera-PASS csak bájtra azonos copyHash mellett száll át. A régi tervek `superseded_by` rejected-ek. Ha mindkét terv azonos sablonú lenne (kép és településkép nélkül), vagy a generálás hibára fut: a sor okkal tartva.

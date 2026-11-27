@@ -1,4 +1,4 @@
-// gate-runner: land-blocking — kiküldési minőség: a lánc-utánpótlás szabályai (ADR-XXXX, tulaj „Mehet” 2026-11-27)
+// gate-runner: land-blocking — kiküldési minőség: a lánc-utánpótlás szabályai (ADR-0500, tulaj „Mehet” 2026-11-27)
 // gate-scope: no-docs — kód-kapu: a kód-zárlata nem olvas MEMORY.md-t és _planning/-t (gate-scope-check méri)
 //
 // The chain feeds itself (src/generator/chainSupply.ts): ① the old-generator stock is regenerated from its own words,

@@ -912,7 +912,7 @@ export function headingKey(inner: string): string {
 }
 
 /**
- * TWO SECTIONS NEVER CARRY ONE HEADING (ADR-XXXX ⑨, quality colleague 11-27, Anikó Szállás cc48fbb1: „Ami nálunk vár”
+ * TWO SECTIONS NEVER CARRY ONE HEADING (ADR-0500 ⑨, quality colleague 11-27, Anikó Szállás cc48fbb1: „Ami nálunk vár”
  * over the „Nálunk” section — the curator's title — and again over the „Kiemelt” rows — the template's own). The
  * sentence rule (withoutRepeatedLines / repeatsText) lets a three-word heading through by design. Here, on the final
  * page, every template: the LATER <h2> whose text equals an earlier one takes its section's own label (the eyebrow
@@ -1138,7 +1138,7 @@ export function renderSite(
     // Owner 2026-11-16 („Ki mondta, hogy vegye ki bárki is a teszt fotókat!? … így hazudunk”): the
     // sample pictures and the town photo the mock showed stay on the trial / live page too, with
     // the same sample note and licence credit, until the owner's own photos replace them.
-    // ADR-XXXX ⑨: two sections never carry one heading (every template, on the final page)
+    // ADR-0500 ⑨: two sections never carry one heading (every template, on the final page)
     const noted = withUniqueSectionHeadings(withLongWordBreak(localizedGeneratedAlts(phase === "mock" ? withMockNotes(stripTenantLegalLinks(out), data) : withMockNotes(out, data), data)));
     // ORSZÁG-RÉTEG 3/6: a Cyrillic/Greek page gets fonts that carry its script (fontScripts.ts);
     // a Latin-script page — the Hungarian mock — is returned untouched.

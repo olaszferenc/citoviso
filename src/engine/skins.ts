@@ -487,7 +487,7 @@ export function renderSkinVars(skin: Skin, accentOverride?: string): string {
           ),
         }
       : skin.tokens;
-  // ADR-XXXX ⑦: the button text reads ≥ 4.5:1 on the FINAL accent (a photo accent is tuned to 3:1 only — measured
+  // ADR-0500 ⑦: the button text reads ≥ 4.5:1 on the FINAL accent (a photo accent is tuned to 3:1 only — measured
   // 11-27: „Szabad időpontot kérek” 3.19:1), and the band texts on the page's own band (palette.bandTokens).
   const onAccent = tokens["--cit-on-accent"];
   const accent = tokens["--cit-accent"];

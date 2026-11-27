@@ -1,8 +1,8 @@
 [Unit]
-# ADR-XXXX (tulaj „Mehet”, 2026-11-27): a jóváhagyási lánc utánpótlása — a régi generátoros mock
+# ADR-0500 (tulaj „Mehet”, 2026-11-27): a jóváhagyási lánc utánpótlása — a régi generátoros mock
 # újragenerálása a saját szövegéből, a sor nélküli kész mock sorba tétele, a render-kapun bukott terv
 # automata újrapróbája. Semmit nem küld ki; a tulaj lapjáig visz. Leállítás: CHAIN_SUPPLY=off a .env-ben.
-Description=Citoviso lánc-utánpótlás (ADR-XXXX)
+Description=Citoviso lánc-utánpótlás (ADR-0500)
 After=network-online.target
 Wants=network-online.target
 OnFailure=citoviso-alert@%n.service

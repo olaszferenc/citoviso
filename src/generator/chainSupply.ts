@@ -1,4 +1,4 @@
-// THE CHAIN FEEDS ITSELF (owner „Mehet”, 2026-11-27, via the coordinator; ADR-XXXX).
+// THE CHAIN FEEDS ITSELF (owner „Mehet”, 2026-11-27, via the coordinator; ADR-0500).
 //
 // Measured on prod 11-27 06:30 UTC: 2 381 leads waited in the approval chain and 1 621 of them carried a mock made
 // BEFORE the fixed generator (MOCK_MIN_GENERATED_AT). The refresh step (mockRefresh.ts) skips those on purpose: a
