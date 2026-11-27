@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-27_teszt-elofizetesek-lezarasa.md](2026-11-27_teszt-elofizetesek-lezarasa.md) — Teszt-előfizetések lezárása — téves terhelés-riasztás, egy valódi kockázat élesen (2026-11-27)
 - [2026-11-27_lanc-utanpotlas.md](2026-11-27_lanc-utanpotlas.md) — 2026-11-27 — Lánc-utánpótlás: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu, kontraszt, félkész elöl, egyedi szakaszcím
 - [2026-11-27_hr-jovahagyasi-lanc.md](2026-11-27_hr-jovahagyasi-lanc.md) — HR jóváhagyási lánc — a várakozó sor a tulaj lapjára jut, vagy okkal félreáll (2026-11-27)
 - [2026-11-26_piacnyitas_kezi_lepes_nelkul.md](2026-11-26_piacnyitas_kezi_lepes_nelkul.md) — 2026-11-26 — Piacnyitás után nulla kézi lépés (felderítés magától)
