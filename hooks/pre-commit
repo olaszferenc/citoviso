@@ -2528,6 +2528,15 @@ if [ -f scripts/qa-review-check.mts ]; then
   echo "[pre-commit] qa-review-check (minőségi kolléga minden levél előtt, engedélylistás képszűrő)…"
   npx tsx scripts/qa-review-check.mts
 fi
+# approval-chain-e2e (HR jóváhagyási lánc, 2026-11-27): a várakozó sor a tulaj lapjára jut vagy OKKAL félreáll —
+#     a képtelen fő terv újratervezésre megy (egyszer), a bukott render-kapu félretesz, a kettős passz visszaenged,
+#     az országok felváltva kapnak kaput; a fotószám a generátor képei (nem a websiteImages). Saját scratch-DB.
+#     ⚠️ ÖN-TRIGGER: a minta az őr saját fájlját is tartalmazza.
+if [ -f scripts/approval-chain-e2e.mts ] && \
+   changed_files | grep -qE '^src/generator/mockRefresh\.ts$|^src/outreach/(mockPhotoGate|mockQaReview|secondPlan|mockRenderGate)\.ts$|^src/console/approvalQueue\.ts$|^scripts/outreach-dispatch\.mts$|^scripts/approval-chain-e2e\.mts$'; then
+  echo "[pre-commit] approval-chain-e2e (várakozó sor → tulaj lapja vagy félretétel okkal)…"
+  npx tsx scripts/approval-chain-e2e.mts >"$GATE_LOG" || gate_failed
+fi
 # „Országok / Árazás” 5. fázis (0156): the scheduled price change — split, pending raise, renewal at the
 # period start's price, notice once per subscription, daily apply. Own scratch DB (writes the price tables).
 if [ -f scripts/price-change-check.mts ]; then

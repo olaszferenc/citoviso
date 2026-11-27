@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-27_hr-jovahagyasi-lanc.md](2026-11-27_hr-jovahagyasi-lanc.md) — HR jóváhagyási lánc — a várakozó sor a tulaj lapjára jut, vagy okkal félreáll (2026-11-27)
 - [2026-11-26_piacnyitas_kezi_lepes_nelkul.md](2026-11-26_piacnyitas_kezi_lepes_nelkul.md) — 2026-11-26 — Piacnyitás után nulla kézi lépés (felderítés magától)
 - [2026-11-26_orszagok_arazas_megvalositas.md](2026-11-26_orszagok_arazas_megvalositas.md) — 2026-11-26 — „Országok / Árazás” megvalósítás: mind az öt fázis + ünnepnap-forrás
 - [2026-11-26_orszagok_arazas_5_fazis.md](2026-11-26_orszagok_arazas_5_fazis.md) — 2026-11-26 — „Országok / Árazás” 5. fázis: ütemezett árváltozás (B) + árváltozás-értesítő (SUB cita363cd23)

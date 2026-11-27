@@ -67,9 +67,10 @@ const dq = (x: string): string => {
   while (x.includes(`$${tag}$`)) tag += "x";
   return `$${tag}$${x}$${tag}$`;
 };
+// The photos the generator can put on the page — the same sum as mockPhotoGate.LEAD_OWN_PHOTOS_SQL (no
+// material.websiteImages: the site assessment's image count, never a photo the generator receives).
 const OWN_PHOTOS = `(case when jsonb_typeof(l.raw->'material'->'placesPhotos') = 'number' then (l.raw->'material'->>'placesPhotos')::int else 0 end
-  + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end
-  + case when jsonb_typeof(l.raw->'material'->'websiteImages') = 'number' then (l.raw->'material'->>'websiteImages')::int else 0 end)`;
+  + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end)`;
 
 // countryOf in SQL (src/country.ts): raw.country, else the scrape area's country
 const LEAD_CC = `coalesce(nullif(upper(trim(l.raw->>'country')), ''), (select upper(sd.country) from scrape_run sr join scraper_definition sd on sd.id = sr.scraper_definition_id where sr.id = l.scrape_run_id))`;

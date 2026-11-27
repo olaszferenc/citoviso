@@ -24,12 +24,16 @@ export const LEAD_MIN_OWN_PHOTOS_SQL = sql<number>`coalesce(
 export const LEAD_TOWN_MODE_SQL = sql<boolean>`exists (
   select 1 from country c where c.iso2 = ${LEAD_COUNTRY_SQL} and c.dispatch_photo_mode = 'own_town')`;
 
-/** The lead's own-photo count as the scraper measured it — same sum as the console's lead stock
- *  (leadStock.ts). Table alias `l` = lead. */
+/** The lead's own-photo count — the photos the GENERATOR can put on the page: Places + the stored listings
+ *  (portal profiles, the lodging's own site read into one included — attachPhotoLinks, provenance „website”).
+ *  Same sum as the console's lead stock (leadStock.ts). Table alias `l` = lead.
+ *  ⛔ NOT `material.websiteImages` (HR approval chain, 2026-11-27): that is the image count the site ASSESSMENT
+ *  saw on the lodging's page, never a photo the generator receives. Measured on prod: 17 of the 72 waiting HR
+ *  rows (and 8 HU) counted „≥5 own photos” only through it — the main plan skipped the town picture, the mock
+ *  came out photo-less (wordmark, no second plan) and no rule could ever let it reach the owner's page. */
 export const LEAD_OWN_PHOTOS_SQL = sql<number>`(
   case when jsonb_typeof(l.raw->'material'->'placesPhotos') = 'number' then (l.raw->'material'->>'placesPhotos')::int else 0 end
-  + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end
-  + case when jsonb_typeof(l.raw->'material'->'websiteImages') = 'number' then (l.raw->'material'->>'websiteImages')::int else 0 end)`;
+  + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end)`;
 
 /** The mock itself holds at least the country's minimum of the lodging's photos and no town
  *  photo hero. Table aliases `a` = mock_artifact, `l` = its lead. */
@@ -99,10 +103,14 @@ export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`(
 
 /**
  * THE photo rule of a cold letter, lead + mock together (aliases `l` = lead, `a` = mock_artifact):
- *   · a lead with ≥ its country's minimum own photos → its mock shows ≥ that many and no town photo
- *     (the 2026-11-24 Zsejka rule, unchanged);
- *   · a lead with fewer → its mock carries the current town pick (MOCK_TOWN_PICK_OK_SQL).
+ *   · a mock that shows ≥ the country's minimum own photos and no town photo passes (the 2026-11-24
+ *     Zsejka rule: the MAILED mock is what counts) — whatever the lead's stored count says;
+ *   · a lead with fewer own photos → its mock carries the current town pick (MOCK_TOWN_PICK_OK_SQL);
+ *   · a lead with ≥ the minimum whose mock shows fewer fails: the chain re-plans it with its photos
+ *     (mockRefresh.replanUnfitQueue), never sends it with a town filler.
+ * Two-valued (coalesce): a mock without a town photo made the town branch NULL, and `not (…)` of a NULL rule
+ * selects nothing — the re-plan step missed exactly the photo-less mocks it is for (approval-chain-e2e).
  */
-export const DISPATCH_PHOTOS_OK_SQL = sql<boolean>`(
-  case when ${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} then ${MOCK_OWN_PHOTOS_OK_SQL}
-       else ${MOCK_TOWN_PICK_OK_SQL} end)`;
+export const DISPATCH_PHOTOS_OK_SQL = sql<boolean>`coalesce(
+  ${MOCK_OWN_PHOTOS_OK_SQL}
+  or (${LEAD_OWN_PHOTOS_SQL} < ${LEAD_MIN_OWN_PHOTOS_SQL} and ${MOCK_TOWN_PICK_OK_SQL}), false)`;

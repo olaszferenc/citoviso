@@ -52,6 +52,21 @@ export const QA_WAIT_NOTE = "gépi kapura vár — a tulaj lapjára a render-kap
 export const QA_WAIT_NOTE_LEGACY = "minőségi kolléga: még nem nézte át — a tulaj lapjára csak az ő jóváhagyása után kerül";
 /** Every note of a row waiting for the chain (owner's page / refresh / re-gate / messenger presence read). */
 export const CHAIN_WAIT_NOTES: readonly string[] = [APPROVAL_PENDING_NOTE, QA_WAIT_NOTE, QA_WAIT_NOTE_LEGACY];
+/**
+ * HR approval chain (2026-11-27): the machine render gate FAILED a plan of the row on its current file. The
+ * row is set aside with the gate's reason (it used to keep its waiting note and silently never reach the
+ * owner's page). A generator change re-renders it (refreshStaleQueue) and the gate judges it again; a pass
+ * puts it back on the way to the owner's page (regateStaleQueue → QA_WAIT_NOTE).
+ */
+export const GATE_HOLD_PREFIX = "gépi kapu megfogta:";
+/**
+ * The row's main plan cannot carry the lead's photos (fewer than the country's minimum own photos on a lead
+ * that holds more, or no town pick on a lead with fewer): its plans are taken back and the chain's main plan
+ * makes a new one (mockRefresh.replanUnfitQueue; the chain's fill step re-points this row to the new plan).
+ */
+export const REPLAN_NOTE = "új fő tervre vár — a mock nem a lead képeivel készült, a lánc újratervezi";
+/** A re-planned lead whose NEW plan again cannot carry the photos: set aside with the reason, not re-planned again. */
+export const PHOTO_SETASIDE_PREFIX = "TARTVA (képkapu):";
 /** `mock_artifact.inputs` key holding the colleague's non-blocking findings (fault kinds → rule candidates). */
 export const QA_FINDINGS_KEY = "qaFindings";
 /** `mock_artifact.inputs` key holding the owner's approval. */

@@ -105,7 +105,7 @@ check("Lead-állomány: „kiküldhető” csak gépi kapun átment, javított g
 const photoGateSrc = src("src/outreach/mockPhotoGate.ts");
 const townBranch = /export const MOCK_TOWN_PICK_OK_SQL = sql<boolean>`\(\s*\$\{LEAD_TOWN_MODE_SQL\}\s*and /.test(photoGateSrc);
 check("KI kapcsolónál a <N képes ág zárva (az ország sora: dispatch_photo_mode, alapból 'own')",
-  townBranch && /c\.dispatch_photo_mode = 'own_town'/.test(photoGateSrc) && /else \$\{MOCK_TOWN_PICK_OK_SQL\} end/.test(photoGateSrc));
+  townBranch && /c\.dispatch_photo_mode = 'own_town'/.test(photoGateSrc) && /< \$\{LEAD_MIN_OWN_PHOTOS_SQL\} and \$\{MOCK_TOWN_PICK_OK_SQL\}\)/.test(photoGateSrc));
 
 // ── ② the allow-list ──
 const K = (kind: PhotoKind["kind"], label: string, extra: Partial<PhotoKind> = {}): PhotoKind => ({
@@ -261,7 +261,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("gépi kapu: a nyitóképet a kolléga-jelölt szabálya méri (fitsHero = isHeroCandidate), nem írja felül a választását", /!fitsHero\(hv\)/.test(readFileSync(new URL("../src/outreach/mockRenderGate.ts", import.meta.url), "utf8")));
   check("kiemelés: utcacím („Balatonbogláron, a Fiumei utcában”) nem címke, a szolgáltatás marad", isAddressLabel("Balatonbogláron, a Fiumei utcában") && !isAddressLabel("Saját parkoló") && !isAddressLabel("Kilátás a Balatonra") && !isAddressLabel("Közvetlen vízpart"));
   check("nyitókép széles vágásnál a felső harmadra áll (35 %) — mindhárom sablon és a mélységhatás", ["gateOpening.ts", "wordmarkGrow.ts", "parallax.ts"].every((f) => /var\(--cit-hero-fx,50%\) 35%/.test(readFileSync(new URL(`../src/engine/templates/${f}`, import.meta.url), "utf8"))) && /\(0\.35-0\.5\)\*\(1-cy\)/.test(readFileSync(new URL("../src/engine/depthHero.ts", import.meta.url), "utf8")));
-  check("kapu-újramérés: a kiküldő ütem a régebbi kapu-verzióval mért várakozó terveket maga méri újra (a jóváhagyó lapról nem esnek ki)", /regateStaleQueue\(gateBudget\)/.test(readFileSync(new URL("./outreach-dispatch.mts", import.meta.url), "utf8")) && /renderGate\?\.version !== RENDER_GATE_VERSION/.test(readFileSync(new URL("../src/generator/mockRefresh.ts", import.meta.url), "utf8")));
+  check("kapu-újramérés: a kiküldő ütem a régebbi kapu-verzióval mért várakozó terveket maga méri újra (a jóváhagyó lapról nem esnek ki)", /regateStaleQueue\(gateBudget[,)]/.test(readFileSync(new URL("./outreach-dispatch.mts", import.meta.url), "utf8")) && /cachedRenderGate\(a\?\.inputs, mtime/.test(readFileSync(new URL("../src/generator/mockRefresh.ts", import.meta.url), "utf8")));
   {
     const rs = roomsForMock({ name: "A", photos: [], rooms: [{ name: "Kétszemélyes szoba" }, { name: "Kétszemélyes szoba" }, { name: "Családi" }] } as unknown as SD);
     check("azonos nevű szobák sorszámot kapnak (Anda: 3× „Kétszemélyes szoba”)", rs.map((r) => r.name).join("|") === "Kétszemélyes szoba 1|Kétszemélyes szoba 2|Családi", rs.map((r) => r.name).join("|"));

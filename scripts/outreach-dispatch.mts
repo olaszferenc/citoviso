@@ -26,7 +26,7 @@
 
 import { readFile } from "node:fs/promises";
 import { db } from "../src/db/client.js";
-import { refreshStaleQueue, regateStaleQueue } from "../src/generator/mockRefresh.js";
+import { refreshStaleQueue, regateStaleQueue, replanUnfitQueue } from "../src/generator/mockRefresh.js";
 import {
   cancelDispatch,
   DISPATCH_HOME_COUNTRY,
@@ -56,8 +56,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAIN_BUDGET_MS = 8 * 60_000;
 /** The refresh step's share of a firing, and the unit's whole budget (TimeoutStartSec=600, with air). */
 const REFRESH_BUDGET_MS = 75_000;
-/** Re-judging plans after a render-gate rule change: ~15 s a plan, a batch per firing (mockRefresh.regateStaleQueue). */
+/** Re-judging the waiting plans (mockRefresh.regateStaleQueue): ~30 s a plan. At least this much a firing, and since
+ *  2026-11-27 (HR approval chain: 4 105 of 4 137 waiting plans had no current verdict, ~5 judged a firing) whatever
+ *  the unit has left, minus room for the one render still running when the budget ends. */
 const REGATE_BUDGET_MS = 150_000;
+const REGATE_TAIL_MS = 60_000;
 const UNIT_BUDGET_MS = 9 * 60_000;
 
 function needBy(): string {
@@ -100,16 +103,23 @@ async function main(): Promise<void> {
         // THE PIPELINE REFRESHES ITS OWN MOCKS (owner 2026-11-25): a waiting mock below the current
         // generator's bar is re-rendered here, a batch per firing, inside the unit's 600 s — then the
         // quality colleague looks at it again. Sends nothing.
+        // A plan that cannot carry the lead's photos goes back to the chain's main plan (HR approval chain 11-27) —
+        // SQL only, before the refresh, so the refresh and the gate do not spend time on it.
+        if (!opt("now")) {
+          const p = await replanUnfitQueue();
+          if (p.replanned || p.setAside) console.log(`újratervezés: ${JSON.stringify(p)}`);
+        }
         const budget = Math.min(REFRESH_BUDGET_MS, UNIT_BUDGET_MS - (Date.now() - tickStarted));
         if (!opt("now") && budget > 0) {
           const r = await refreshStaleQueue(budget);
           if (r.refreshed || r.failed) console.log(`mock-frissítés: ${JSON.stringify(r)}`);
         }
         // …and re-judges the waiting plans whose render-gate verdict is from an older rule version (11-26).
-        const gateBudget = Math.min(REGATE_BUDGET_MS, UNIT_BUDGET_MS - (Date.now() - tickStarted));
+        const left = UNIT_BUDGET_MS - (Date.now() - tickStarted);
+        const gateBudget = Math.min(left, Math.max(REGATE_BUDGET_MS, left - REGATE_TAIL_MS));
         if (!opt("now") && gateBudget > 0) {
-          const g = await regateStaleQueue(gateBudget);
-          if (g.judged) console.log(`kapu-újramérés: ${JSON.stringify(g)}`);
+          const g = await regateStaleQueue(gateBudget, Number.POSITIVE_INFINITY);
+          if (g.judged || g.held || g.released) console.log(`kapu-újramérés: ${JSON.stringify(g)}`);
         }
       }
       return;

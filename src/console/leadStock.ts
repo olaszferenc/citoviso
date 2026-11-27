@@ -101,8 +101,7 @@ async function classifyAll(): Promise<{ qualified: Classified[]; all: { at: numb
              and l.qualification in ('no_site','outdated')
              and l.contact_block_at is null) as q,
            (case when jsonb_typeof(l.raw->'material'->'placesPhotos') = 'number' then (l.raw->'material'->>'placesPhotos')::int else 0 end
-          + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end
-          + case when jsonb_typeof(l.raw->'material'->'websiteImages') = 'number' then (l.raw->'material'->>'websiteImages')::int else 0 end) as own,
+          + case when jsonb_typeof(l.raw->'material'->'portalPhotos') = 'number' then (l.raw->'material'->>'portalPhotos')::int else 0 end) as own,
            nullif(trim(l.raw->>'email'), '') as email, l.raw->>'phone' as phone,
            l.raw->>'country' as raw_country, sd.country as area_country
       from lead l

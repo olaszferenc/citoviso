@@ -20,10 +20,11 @@ import { db } from "../db/client.js";
 import type { Photo, Recipe, SiteData } from "../engine/recipe.js";
 import { gatePhotoOf } from "../engine/templates/gateOpening.js";
 import { photoKindAvailable } from "../media/photoKind.js";
-import { LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
-import { CHAIN_WAIT_NOTES, QA_HOLD_PREFIX, QA_WAIT_NOTE } from "../outreach/mockQaReview.js";
+import { DISPATCH_PHOTOS_OK_SQL, LEAD_MIN_OWN_PHOTOS_SQL, LEAD_OWN_PHOTOS_SQL, MOCK_CURRENT_GENERATOR_SQL, MOCK_HEROFIX_STAMP, MOCK_MIN_GENERATED_AT } from "../outreach/mockPhotoGate.js";
+import { LEAD_COUNTRY_SQL } from "../db/leadCountrySql.js";
+import { CHAIN_WAIT_NOTES, GATE_HOLD_PREFIX, PHOTO_SETASIDE_PREFIX, QA_HOLD_PREFIX, QA_WAIT_NOTE, REPLAN_NOTE, mockFileMtime } from "../outreach/mockQaReview.js";
 import { secondPlanOf } from "../outreach/secondPlan.js";
-import { RENDER_GATE_VERSION, renderGateFor } from "../outreach/mockRenderGate.js";
+import { cachedRenderGate, renderGateFor, stockOkFor, type RenderGateResult } from "../outreach/mockRenderGate.js";
 import { DEPTH_TEMPLATES, withDepthArm } from "./depthArm.js";
 import { persistMockLanguage, renderMockMeasured } from "./mockLanguage.js";
 import { secureMockPhotos } from "./photoTransport.js";
@@ -126,7 +127,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .select(["a.id as id", "a.lead_id as lead_id", "a.path as path", "a.inputs as inputs", "a.generated_at as generated_at", "d.id as dispatchId"])
     .where("d.status", "in", ["queued", "held"])
     // Not the rows a person or a rule took out (twins, no contact …): only those waiting for the review chain.
-    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where(CHAIN_ROWS)
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     // Since qafix7 (11-26 night) the TOWN-PAGE mocks (<5 own photos, town picture) are refreshed too: the HU
     // row's own_town branch is open, and a stamp bump otherwise strands them (not current, never refreshed).
@@ -135,7 +136,9 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
     // A half-done offer first (owner 2026-11-26): a lead with one plan already passed by the colleague.
     .orderBy(sql`exists (select 1 from mock_artifact m where m.lead_id = d.lead_id and m.inputs->'qaReview'->>'verdict' = 'pass') desc`)
-    .orderBy("d.queued_at")
+    // Countries take turns (HR approval chain 2026-11-27): by queue age alone a new market waits behind the
+    // home market's whole backlog — the 74 HR rows sat behind ~2 300 older HU rows.
+    .orderBy(FAIR_ORDER)
     .limit(limit)
     .execute();
   const started = Date.now();
@@ -163,10 +166,10 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
       .innerJoin("lead as l", "l.id", "d.lead_id")
       .select(["d.lead_id as leadId", "d.artifact_id as mainId"])
       .where("d.status", "in", ["queued", "held"])
-      .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+      .where(CHAIN_ROWS)
       .where(sql<boolean>`${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL}`)
       .where(MOCK_CURRENT_GENERATOR_SQL)
-      .orderBy("d.queued_at")
+      .orderBy(FAIR_ORDER)
       .execute();
     for (const w of waiting) {
       if (Date.now() - started > budgetMs) break;
@@ -189,7 +192,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     .innerJoin("lead as l", "l.id", "d.lead_id")
     .select(db.fn.countAll().as("n"))
     .where("d.status", "in", ["queued", "held"])
-    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where(CHAIN_ROWS)
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(sql<boolean>`(${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} or a.inputs->'siteData'->'townPhoto' is not null)`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
@@ -199,46 +202,193 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
 }
 
 /**
- * RE-JUDGE AFTER A RULE CHANGE (11-26): a new render-gate version makes every cached verdict stale, and the
- * owner's page shows only plans whose verdict is current — Erzsébet's two passed plans dropped off the page
- * after the gate went 12 → 13, and nothing re-ran the gate. Here the waiting rows' plans (main + second) with a
- * stale or missing verdict are judged again, a batch per firing; the ones the quality colleague already passed
- * first, so a ready offer returns to the owner's page soonest.
+ * Countries take turns (HR approval chain, 2026-11-27): the n-th waiting row of every country before the
+ * (n+1)-th of any, oldest first within a country. Aliases `d` = outreach_dispatch, `l` = its lead.
  */
-export async function regateStaleQueue(budgetMs: number, limit = 40): Promise<{ judged: number; left: number }> {
-  if (!photoKindAvailable() || budgetMs <= 0) return { judged: 0, left: -1 };
+export const FAIR_ORDER = sql`row_number() over (partition by ${LEAD_COUNTRY_SQL} order by d.queued_at), d.queued_at`;
+
+/** The waiting rows the refresh / re-gate / re-plan steps work on (alias `d`). */
+const CHAIN_ROWS = (eb: any) =>
+  eb.or([
+    eb("d.status", "=", "queued"),
+    eb("d.note", "in", [...CHAIN_WAIT_NOTES]),
+    eb("d.note", "like", `${QA_HOLD_PREFIX}%`),
+    eb("d.note", "like", `${GATE_HOLD_PREFIX}%`),
+  ]);
+
+/** The cached verdict of a plan's CURRENT file (rule version, mtime and stock rule), null when there is none. */
+async function currentVerdict(artifactId: string): Promise<RenderGateResult | null> {
+  const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", artifactId).executeTakeFirst();
+  const mtime = await mockFileMtime(artifactId);
+  if (mtime == null) return null;
+  return cachedRenderGate(a?.inputs, mtime, await stockOkFor(artifactId));
+}
+
+/** One-line reason of the failed plans for the dispatch note (k = 0: the main plan, 1: the second). */
+function gateHoldNote(failed: readonly { k: number; v: RenderGateResult }[]): string {
+  const why = failed
+    .map(({ k, v }) => `${k === 0 ? "fő terv" : "2. terv"}: ${v.findings.slice(0, 3).map((f) => f.detail).join(" · ")}${v.findings.length > 3 ? ` (+${v.findings.length - 3})` : ""}`)
+    .join(" | ");
+  return `${GATE_HOLD_PREFIX} ${why} — egy generátor-szabály után a gép újrarendereli és újraítéli`.slice(0, 1000);
+}
+
+/**
+ * THE MACHINE RENDER GATE ON THE WAITING ROWS (11-26 rule change; 11-27 HR approval chain). The owner's page
+ * shows only a row whose two plans hold a pass on their CURRENT file. Here every waiting row's plans (main +
+ * second) without one are judged — a missing, older-rule OR older-file verdict alike (the file changes on every
+ * refresh) — a batch per firing within `budgetMs`, countries taking turns (FAIR_ORDER), the rows with a
+ * colleague's pass first. Then the row's note follows the verdicts:
+ *   · a plan FAILED → the row is set aside with the gate's reason (GATE_HOLD_PREFIX) instead of waiting
+ *     silently; a generator change re-renders it (refreshStaleQueue) and it is judged again;
+ *   · both plans passed on a set-aside row → back on the way to the owner's page (QA_WAIT_NOTE).
+ * A row the photo rule fails is the re-plan's (replanUnfitQueue), not the gate's. Measured on prod
+ * 2026-11-27: of 4 137 waiting plans 32 had a current verdict (HR 10 of 118); the step judged ~5 a firing,
+ * oldest first, so the HR rows (queued last) were never reached.
+ */
+export async function regateStaleQueue(
+  budgetMs: number,
+  limit = 40,
+): Promise<{ judged: number; held: number; released: number; left: number }> {
+  if (!photoKindAvailable() || budgetMs <= 0) return { judged: 0, held: 0, released: 0, left: -1 };
   const rows = await db
     .selectFrom("outreach_dispatch as d")
     .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
-    .select(["d.lead_id as leadId", "d.artifact_id as mainId", "a.inputs as inputs"])
+    .innerJoin("lead as l", "l.id", "d.lead_id")
+    .select(["d.id as dispatchId", "d.status as status", "d.note as note", "d.lead_id as leadId", "d.artifact_id as mainId"])
     .where("d.status", "in", ["queued", "held"])
-    .where((eb) => eb.or([eb("d.status", "=", "queued"), eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${QA_HOLD_PREFIX}%`)]))
+    .where(CHAIN_ROWS)
     .where(sql<string>`a.inputs->'recipe'->>'template'`, "in", [...DEPTH_TEMPLATES])
     .where(MOCK_CURRENT_GENERATOR_SQL)
+    .where(DISPATCH_PHOTOS_OK_SQL)
     .orderBy(sql`(coalesce(a.inputs->'qaReview'->>'verdict', '') = 'pass') desc`)
-    .orderBy("d.queued_at")
-    .limit(limit * 3)
+    .orderBy(FAIR_ORDER)
     .execute();
-  const stale = (inputs: unknown): boolean => (inputs as { renderGate?: { version?: number } } | null)?.renderGate?.version !== RENDER_GATE_VERSION;
   const started = Date.now();
   let judged = 0;
+  let held = 0;
+  let released = 0;
   let left = 0;
-  for (const r of rows) {
-    const ids: string[] = [];
-    if (stale(r.inputs)) ids.push(r.mainId);
+  for (let i = 0; i < rows.length; i++) {
+    // Out of time: the rows not reached yet wait for the next firing (the note rules too).
+    if (Date.now() - started > budgetMs) return { judged, held, released, left: left + rows.length - i };
+    const r = rows[i]!;
+    if (!r.mainId) continue;
     const alt = await secondPlanOf(r.leadId, r.mainId).catch(() => null);
-    if (alt) {
-      const ai = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", alt.id).executeTakeFirst();
-      if (stale(ai?.inputs)) ids.push(alt.id);
-    }
-    for (const id of ids) {
-      if (Date.now() - started > budgetMs || judged >= limit) {
-        left++;
-        continue;
+    const plans = [r.mainId, ...(alt ? [alt.id] : [])];
+    const verdicts: (RenderGateResult | null)[] = [];
+    for (const id of plans) {
+      let v = await currentVerdict(id);
+      if (!v && Date.now() - started <= budgetMs && judged < limit) {
+        await renderGateFor(id).catch(() => undefined);
+        judged++;
+        // A crashed render is not stored (renderGateFor) — unknown, judged again next firing.
+        v = await currentVerdict(id);
       }
-      await renderGateFor(id).catch(() => undefined);
-      judged++;
+      verdicts.push(v);
+    }
+    if (verdicts.some((v) => v === null)) left++;
+    // Only a held row waiting for the chain changes its note; a queued (owner-approved) row is the sender's.
+    if (r.status !== "held") continue;
+    const failed = verdicts.flatMap((v, k) => (v?.verdict === "fail" ? [{ k, v }] : []));
+    if (failed.length) {
+      const note = gateHoldNote(failed);
+      if (note !== r.note) {
+        const u = await db.updateTable("outreach_dispatch").set({ note }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
+        held += Number(u.numUpdatedRows ?? 0);
+      }
+    } else if (r.note?.startsWith(GATE_HOLD_PREFIX) && alt && verdicts.every((v) => v?.verdict === "pass")) {
+      const u = await db.updateTable("outreach_dispatch").set({ note: QA_WAIT_NOTE }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
+      released += Number(u.numUpdatedRows ?? 0);
     }
   }
-  return { judged, left };
+  return { judged, held, released, left };
+}
+
+/** How many unfit rows one dispatcher firing re-plans at most (each costs the chain one main plan). */
+export const REPLAN_BATCH = 40;
+
+/**
+ * A MAIN PLAN THAT CANNOT CARRY THE LEAD'S PHOTOS GOES BACK TO THE MAIN PLAN (HR approval chain, 2026-11-27).
+ * Measured on prod: 39 of the 74 waiting HR rows (HU: 39 current-generator ones) could never reach the owner's
+ * page, whatever the render gate said —
+ *   A · the lead holds ≥ its country's minimum own photos, the mock shows fewer (the own-site photos were read
+ *       into the lead AFTER the plan was made — 20:49 vs 19:43 —, or the count had included the site
+ *       assessment's image count): a photo-less wordmark plan without a second plan, or a town-photo plan;
+ *   B · the lead holds fewer and the mock carries no town pick at all.
+ * The refresh cannot help (it re-renders the persisted photo set). So the lead's plans are taken back
+ * (status 'rejected', undo data in lead.raw.replan), the row waits with REPLAN_NOTE, and the chain's main plan
+ * (fo-cand.sql: a lead without a live plan) plans it again with what it holds now — its photos (A) or its
+ * town's judged picture set (B; no good picture anywhere → set aside by the town-picture step). The chain's fill
+ * step re-points this row to the new plan. A lead re-planned once whose NEW plan fails again is set aside with
+ * the reason (PHOTO_SETASIDE_PREFIX) — never re-planned twice. Only current-generator plans (MOCK_MIN_GENERATED_AT).
+ */
+export async function replanUnfitQueue(limit = REPLAN_BATCH): Promise<{ replanned: number; setAside: number }> {
+  const rows = await db
+    .selectFrom("outreach_dispatch as d")
+    .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
+    .innerJoin("lead as l", "l.id", "d.lead_id")
+    .select([
+      "d.id as dispatchId",
+      "d.note as note",
+      "d.lead_id as leadId",
+      "a.generated_at as generatedAt",
+      sql<number>`(case when jsonb_typeof(a.inputs->'siteData'->'photos') = 'array' then jsonb_array_length(a.inputs->'siteData'->'photos') else 0 end)`.as("mockPhotos"),
+      sql<number>`${LEAD_OWN_PHOTOS_SQL}`.as("own"),
+      sql<number>`${LEAD_MIN_OWN_PHOTOS_SQL}`.as("min"),
+      sql<boolean>`a.inputs->'siteData'->'townPhoto' is not null`.as("town"),
+      sql<string | null>`l.raw->'replan'->>'at'`.as("replanAt"),
+    ])
+    .where("d.status", "=", "held")
+    .where((eb) => eb.or([eb("d.note", "in", [...CHAIN_WAIT_NOTES]), eb("d.note", "like", `${GATE_HOLD_PREFIX}%`)]))
+    .where("a.status", "<>", "rejected")
+    .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
+    .where(sql<boolean>`not ${DISPATCH_PHOTOS_OK_SQL}`)
+    .where(
+      sql<boolean>`((${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL})
+        or (a.inputs->'siteData'->'townPhoto' is null and a.inputs->'siteData'->'townGallery' is null))`,
+    )
+    .orderBy(FAIR_ORDER)
+    .limit(limit)
+    .execute();
+  let replanned = 0;
+  let setAside = 0;
+  for (const r of rows) {
+    const own = Number(r.own);
+    const min = Number(r.min);
+    const shown = Number(r.mockPhotos);
+    const reason =
+      own >= min
+        ? `a lead ${own} saját képe helyett a mockon ${shown}${r.town ? " és településkép" : ""} van (min. ${min})`
+        : `a leadnek ${own} saját képe van (min. ${min}), a mockon nincs településkép`;
+    if (r.replanAt && new Date(String(r.generatedAt)) > new Date(r.replanAt)) {
+      // Re-planned once and the NEW plan fails the same rule: the lead's photos do not make a page — set aside.
+      const note = `${PHOTO_SETASIDE_PREFIX} ${reason} — újratervezés után is; nem tervezzük újra`.slice(0, 1000);
+      const u = await db.updateTable("outreach_dispatch").set({ note }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
+      if (Number(u.numUpdatedRows ?? 0)) {
+        await db
+          .updateTable("lead")
+          .set({ raw: sql`jsonb_set(raw, '{replan,final}', to_jsonb(now()::text))` as never })
+          .where("id", "=", r.leadId)
+          .execute();
+        setAside++;
+      }
+      continue;
+    }
+    if (r.replanAt) continue; // taken back already; the chain's main plan has not made the new one yet
+    await db.transaction().execute(async (tx) => {
+      const live = await tx.selectFrom("mock_artifact").select("id").where("lead_id", "=", r.leadId).where("status", "<>", "rejected").execute();
+      const ids = live.map((m) => m.id);
+      const u = await tx.updateTable("outreach_dispatch").set({ note: REPLAN_NOTE }).where("id", "=", r.dispatchId).where("status", "=", "held").where("note", "=", r.note).executeTakeFirst();
+      if (!Number(u.numUpdatedRows ?? 0) || !ids.length) return;
+      await tx.updateTable("mock_artifact").set({ status: "rejected" }).where("id", "in", ids).execute();
+      const replan = { at: new Date().toISOString(), reason, rejectedMocks: ids, note: r.note, leadPhotos: own, mockPhotos: shown };
+      await tx
+        .updateTable("lead")
+        .set({ raw: sql`coalesce(raw, '{}'::jsonb) || jsonb_build_object('replan', ${JSON.stringify(replan)}::jsonb)` as never })
+        .where("id", "=", r.leadId)
+        .execute();
+      replanned++;
+    });
+  }
+  return { replanned, setAside };
 }
