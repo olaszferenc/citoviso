@@ -2537,7 +2537,7 @@ if [ -f scripts/approval-chain-e2e.mts ] && \
   echo "[pre-commit] approval-chain-e2e (várakozó sor → tulaj lapja vagy félretétel okkal)…"
   npx tsx scripts/approval-chain-e2e.mts >"$GATE_LOG" || gate_failed
 fi
-# The chain feeds itself (ADR-XXXX, owner 2026-11-27): old stock regenerated from its own words, a ready mock without a
+# The chain feeds itself (lánc-utánpótlás, owner 2026-11-27 — see chain-supply-check.mts): old stock regenerated from its own words, a ready mock without a
 # row queued, a failed plan re-tries by itself (photos → template → hold, counted). Hermetic.
 if [ -f scripts/chain-supply-check.mts ]; then
   echo "[pre-commit] chain-supply-check (lánc-utánpótlás: újragenerálás, sor nélküli mock, render-kapu újrapróba)…"
