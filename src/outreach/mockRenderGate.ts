@@ -81,8 +81,6 @@ export const HERO_SCREEN_DARK = 55;
  *  sharp forest (62.6), a dusk garden (67.1) and the fixture's shaded facade (59) pass. */
 export const HERO_SCREEN_DIM = 70;
 
-/** A map box whose grey pixels vary less than this (standard deviation) shows no map (⑯). */
-export const MAP_MIN_STDEV = 8;
 
 /** The hero title is large text: WCAG's 3:1 for large text, against the picture behind it (⑮). */
 export const HERO_TITLE_MIN_CONTRAST = 3;
@@ -497,6 +495,9 @@ export async function auditMockFile(
       }
     };
     const hostChain = new Map<string, Promise<void>>();
+    // ⑯b SPEED (quantity, 11-27: the eager map frame added ~2.3 s a plan to every networkidle wait — 12.5 → 14.8 s measured):
+    // the measuring browser never loads the third-party map; whether the box HAS a map is read from its frame below.
+    await page.route(/^https:\/\/(?:maps\.google\.com|www\.google\.com\/maps)\//, (route) => route.abort());
     await page.route("**/*", async (route) => {
       if (route.request().resourceType() !== "image") return route.continue();
       const url = route.request().url();
@@ -581,16 +582,8 @@ export async function auditMockFile(
     const midway = (await page.evaluate(MEASURE_JS)) as PageMeasure;
     // ⑯ THE MAP BOX ACTUALLY SHOWS A MAP: after the walk (the frame had its chance to load) the box's pixels are measured
     // — a near-uniform box is the white pin card or a grey error page, not a map.
-    const mapBox = await page.$(".cit-map-box");
-    if (mapBox) {
-      await mapBox.scrollIntoViewIfNeeded().catch(() => undefined);
-      await page.waitForTimeout(1500);
-      const shot = await mapBox.screenshot().catch(() => null);
-      if (shot) {
-        const st = await sharp(shot).greyscale().stats();
-        mapBlank = (st.channels[0]?.stdev ?? 99) < MAP_MIN_STDEV;
-      }
-    }
+    // the map box carries its map frame (a real browser loads it — primitives.mapEmbed is eager); a box without one is empty
+    if (await page.$(".cit-map-box")) mapBlank = !(await page.$(".cit-map-box iframe[src]"));
     await page.evaluate("window.scrollTo(0, 0)");
     await page.waitForTimeout(300);
     const walkedTop = (await page.evaluate(MEASURE_JS)) as PageMeasure;
@@ -609,7 +602,7 @@ export async function auditMockFile(
     await desk.addInitScript(
       "(function(){function set(){document.documentElement.setAttribute('data-cit-no-intro','');document.documentElement.setAttribute('data-cit-no-motion','');}if(document.documentElement){set();return;}new MutationObserver(function(_m,o){if(document.documentElement){set();o.disconnect();}}).observe(document,{childList:true});})();",
     );
-    await desk.route("**/*", (route) => (route.request().resourceType() === "image" ? route.abort() : route.continue()));
+    await desk.route("**/*", (route) => (route.request().resourceType() === "image" || /^https:\/\/(?:maps\.google\.com|www\.google\.com\/maps)\//.test(route.request().url()) ? route.abort() : route.continue()));
     await desk.goto(`file://${mockAbs}`, { waitUntil: "networkidle", timeout: 60000 });
     await desk.waitForTimeout(1200);
     measure = { ...measure, desktopBrokenWords: ((await desk.evaluate(MEASURE_JS)) as PageMeasure).brokenWords.slice(0, 5) };

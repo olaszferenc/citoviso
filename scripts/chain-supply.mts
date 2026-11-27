@@ -11,7 +11,7 @@ import { sql } from "kysely";
 import { db } from "../src/db/client.js";
 import { chainSupplyEnabled, enqueueReadyWithoutRow, regenerateOldQueue, regenerateRow, restoreParallaxQueue, retryFailedPlan, retryFailedQueue } from "../src/generator/chainSupply.js";
 import { MOCK_MIN_GENERATED_AT } from "../src/outreach/mockPhotoGate.js";
-import { pageRejudgePending, syncNoEmailHolds } from "../src/generator/mockRefresh.js";
+import { pageRejudgePending, syncNoEmailHolds, gateWorkBacklog, REGEN_MAX_GATE_BACKLOG } from "../src/generator/mockRefresh.js";
 
 /** One firing's budget (TimeoutStartSec=600, with air): the retry first (a half-done offer), then the old stock. */
 const RETRY_BUDGET_MS = 150_000;
@@ -41,6 +41,13 @@ async function main(): Promise<void> {
       // The offers that were on the owner's page come back first (coordinator 11-27): while some of them wait for their
       // new verdict, the old stock gets one lead a firing at most — the gate (outreach-dispatch tick) gets the box.
       const pending = await pageRejudgePending();
+      // QUANTITY (11-27 evening): with work queued for the gate (refresh / verdict), the regeneration does not run at all —
+      // one lead a firing still cost ~3 min of the 2 vCPU the gate needs; it resumes when the gate has caught up.
+      const backlog = await gateWorkBacklog();
+      if (backlog > REGEN_MAX_GATE_BACKLOG) {
+        console.log(`régi mock újragenerálás: szünetel — a kapu sora ${backlog} (> ${REGEN_MAX_GATE_BACKLOG}) · ${Math.round((Date.now() - started) / 1000)} s`);
+        return;
+      }
       const g = await regenerateOldQueue(
         pending > 0 ? Math.min(REGEN_YIELD_BUDGET_MS, Math.max(0, REGEN_BUDGET_MS - (Date.now() - started))) : Math.max(0, REGEN_BUDGET_MS - (Date.now() - started)),
         pending > 0 ? 1 : undefined,

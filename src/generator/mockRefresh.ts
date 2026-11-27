@@ -270,6 +270,29 @@ export async function pageRejudgePending(): Promise<number> {
   return Number(r?.n ?? 0);
 }
 
+/**
+ * QUANTITY BRAKE (coordinator 11-27 evening: „a te dolgod mostantól a MENNYISÉG”). Measured on prod 17:35 UTC: the gate
+ * judged ~60 plans an hour at ~47 s a plan (the same page 12.5 s on an idle box — load 25 on 2 vCPU), while the old-stock
+ * regeneration spent ~3 min of CPU on ONE lead every firing. The work already queued for the owner's page comes first:
+ * this many e-mail chain rows still need a refresh (old stamp) or a gate verdict on their main plan.
+ */
+export async function gateWorkBacklog(): Promise<number> {
+  const r = await db
+    .selectFrom("outreach_dispatch as d")
+    .innerJoin("mock_artifact as a", "a.id", "d.artifact_id")
+    .innerJoin("lead as l", "l.id", "d.lead_id")
+    .select(db.fn.countAll().as("n"))
+    .where("d.status", "in", ["queued", "held"])
+    .where(CHAIN_ROWS)
+    .where(LEAD_HAS_EMAIL_SQL)
+    .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
+    .where(sql<boolean>`(not ${MOCK_CURRENT_GENERATOR_SQL} or coalesce((a.inputs->'renderGate'->>'version')::int, 0) < 15)`)
+    .executeTakeFirst();
+  return Number(r?.n ?? 0);
+}
+/** Above this backlog the old-stock regeneration does not run at all (it would take the gate's CPU). */
+export const REGEN_MAX_GATE_BACKLOG = 30;
+
 /** The waiting rows the refresh / re-gate / re-plan steps work on (alias `d`). */
 const CHAIN_ROWS = (eb: any) =>
   eb.or([

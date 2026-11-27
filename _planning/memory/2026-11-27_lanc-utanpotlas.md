@@ -33,3 +33,6 @@ Dátumbélyeg sarok-OCR (sárgaság-csatorna, részleges alak a sarkon), a sávf
 
 ## 3. kör (⑱ ⑳ ㉑ ㉒) — ADR-0505 „Mock 3. kör”
 A szobablokk mindig áll (stock hálószoba a kép nélküli kártyán), a cím doboza a leghosszabb szóhoz igazodik (`--cit-hero-wmeasure`, `heroWordFit`), semleges „Galéria” cím 3 saját kép alatt, feliratos nyitókép (forgatott OCR: „A2(2+2)”) helyett a következő jelölt. A ⑲ (mondatos sáv fotó nélkül) a tulaj kérésére KIMARADT („2, ok”). Bélyeg supply3, kapu v19. Vak 12: 2 → 8/12. Következő körre: a településkép-tárból a „satellite photo” tiltása; a ⑲ csak valódi mondattal és akcentszínen.
+
+## Mennyiség (11-27 este, a koordinátor STOP-ja után: „a te dolgod mostantól a MENNYISÉG”)
+Éles mérés 17:35 UTC: a tulaj lapjára óránként ~10–14 lead jut (tervszinten 26–29 kapu-pass/óra), a tulaj mindent elvisz, ami odaér. A lánc kapacitása: frissítés ~130/óra, kapu ~60 terv/óra (47 s/terv élesen, helyben ugyanaz 12,5 s — load 25 / 2 vCPU), régi-mock-újragenerálás ~12 lead/óra (~3 perc CPU/lead). A 811 lánc-sorból 683 fő tervének nem volt v15+ ítélete. Legnagyobb akadály: a mai 4 bélyeg-emelés (mindegyik ~800 frissítés + ~1600 kapu ≈ 25 óra kapukapacitás) — megszűnt (STOP + „v15+ pass marad”). Szabály: a régi mock újragenerálása szünetel, amíg a frissítés/kapu sora > 30 (`gateWorkBacklog`); a mérő-böngésző nem tölti a Google-térképet (−2,8 s/terv).

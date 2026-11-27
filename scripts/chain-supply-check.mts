@@ -149,6 +149,13 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   check("㉒ feliratos nyitókép: forgatott OCR (0°, ±28°) címke-mintára, a nyitókép-választás a következő jelöltre lép, a kapu jelez (URL-lel)", /export async function readOverlayLabels/.test(pt2) && /for \(const deg of \[0, 28, -28\]\)/.test(pt2) && /photoOverlayLabels\(hero\.url\)/.test(read("../src/generator/photoCurate.ts")) && /feliratos nyitókép/.test(read("../src/outreach/mockRenderGate.ts")));
   check("㉑ a semleges „Galéria” cím a saját képek számán dől el (< 3), nem a lefordított szövegen", /const GALLERY_OWN_MIN = 3;/.test(read("../src/engine/render.ts")) && /if \(ownPhotoCount\(data\) >= GALLERY_OWN_MIN\) return recipe;/.test(read("../src/engine/render.ts")));
 }
+// QUANTITY (coordinator 11-27 evening): the gate's CPU first
+{
+  const cs = read("./chain-supply.mts");
+  check("mennyiség: a régi mock újragenerálása szünetel, amíg a frissítés / kapu sora > REGEN_MAX_GATE_BACKLOG", /const backlog = await gateWorkBacklog\(\);\s*if \(backlog > REGEN_MAX_GATE_BACKLOG\)/.test(cs) && /export async function gateWorkBacklog/.test(read("../src/generator/mockRefresh.ts")));
+  const g = read("../src/outreach/mockRenderGate.ts");
+  check("mennyiség: a mérő-böngésző nem tölti a Google-térképet (mobil + asztali), a térkép-dobozt az iframe megléte dönti el", (g.match(/maps\\\.google\\\.com\|www\\\.google\\\.com\\\/maps/g) ?? []).length >= 2 && /mapBlank = !\(await page\.\$\("\.cit-map-box iframe\[src\]"\)\)/.test(g));
+}
 // wiring
 {
   const tick = read("./chain-supply.mts");
