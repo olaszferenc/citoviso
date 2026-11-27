@@ -1,4 +1,4 @@
-## ADR-XXXX — Honlap nélküli lead elérhetősége: nyilvános szállásadói jegyzék mint e-mail-forrás, és a böngészős honlap-ítélet maga dönt
+## ADR-0502 — Honlap nélküli lead elérhetősége: nyilvános szállásadói jegyzék mint e-mail-forrás, és a böngészős honlap-ítélet maga dönt
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva a jegyzék-részre (koordinátor `cit9b4690e3` briefje, `~/rc-briefs/hr-honlapnelkuli-email-20261127.md`); a honlap-rész élesítése a minőség-kapuhoz kötött (lent)

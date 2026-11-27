@@ -1,6 +1,6 @@
 # 2026-11-27 — HR honlap nélküli leadek elérhetősége: jegyzék-forrás + döntő honlap-ítélet (SUB `cit2031c8a8`)
 
-Koordinátor `cit9b4690e3`, brief `~/rc-briefs/hr-honlapnelkuli-email-20261127.md`, döntés: ADR-XXXX (jegyzék + v2).
+Koordinátor `cit9b4690e3`, brief `~/rc-briefs/hr-honlapnelkuli-email-20261127.md`, döntés: ADR-0502 (jegyzék + v2).
 
 ## Elvégezve
 - Diagnózis (éles, olvasva): a 850 GYANUS = böngészős NINCS lefokozva (Brave 402 óta); a 961 ellenőrizetlen friss lead, az átfutás a szűk keresztmetszet (Startpage-tiltás, közös IP a tömeges kontaktgyűjtővel).
