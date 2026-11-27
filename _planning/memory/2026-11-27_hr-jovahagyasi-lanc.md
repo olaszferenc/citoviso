@@ -47,3 +47,17 @@ Session `cit9d514f15`, koordinátor `cit9b4690e3`. Kiinduló jelzés: a végpró
 - **283 régi generátoros (11-23 előtti) HU várakozó sor:** fotó-hiány miatt ugyanígy elakadna, ez a szabály szándékosan nem nyúl hozzá. Külön döntés kell (költség: egy fő terv leadenként).
 - **Jó kép nélküli település:** az újratervezett (B) leadet a településkép-lépés `felre.tsv`-be teszi, de a dispatch sora `REPLAN_NOTE`-tal marad (az ok a lánc fájljában él, nem a DB-ben).
 - **Áteresztés:** a kiküldő tick a hosszabb újramérés miatt tovább fut (≤9 perc), így egy jóváhagyott sor küldése legfeljebb ennyit késhet.
+
+## Vak mérés élesen (10:50, 90 perccel a 9e76855d / prod/20261127-0932 után)
+Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül.
+- **Előtte:** 3 a lapon · 45 ítéletre vár · 24-nek nincs második terve · 2 ok nélküli bukás.
+- **Utána:** 8 a lapon · 36 újratervezésre vár · 18 okkal félretéve (render-kapu) · 7 kapura vár · 0 néma.
+- **Napló:**
+  - újratervezés HR 40 / HU 41; a HU-ból 23-nak már új terve van;
+  - kapu-újramérés 6–17 terv/tüzelés (előtte 3–6);
+  - a `replan.py` 10:01-kor 82 leadet tett vissza;
+  - a `fo-cand` 39 HR jelöltet ad.
+- **A bukások oka:**
+  - ~9 sor: a településkép-választó olyan helyi képet enged át, amit a render-kapu településkép-szabálya buktat (sötét, „grave or cemetery”, közeli tető, gyenge minőség). A választó és a kapu szabálya eltér → szabály-jelölt;
+  - 3–4 sor: a nyitókép nem való nyitóképnek;
+  - 2 sor: ismétlődő szöveg.
