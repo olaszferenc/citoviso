@@ -86,3 +86,11 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - a keret a lépés elejétől számol;
   - render csak teljes 60 s-os hellyel indul.
   - Az e2e mérve: a lapon volt sor az országa első sora.
+
+## Mérés 1 órával a v17 deploy után (14:05) + a tick-kilövés
+- **72 HR sor:** 15 a lapon (reggel 3, a deploy előtt 0) · 35 újratervezésen · 19 kapura vár · 2 okkal félre (újrapróba kimerült: nyitókép „hotel room interior”; TARTVA képkapu: 6 saját kép helyett 0) · 0 néma.
+- **A tick-kilövés:** a kiküldő tick minden második tüzelését a systemd 600 s-nál kilőtte (12:04–12:51 UTC). A terhelt 2 magon egy audit (OCR-rel) 3 percnél is tovább tart, a 60 s-os render-hely ezért kevés.
+- **Javítás:**
+  - a kapu-újramérésnek kemény határideje van (`REGATE_GRACE_MS`: a keret + 15 s után a böngésző zár, a lépés visszatér, a késő audit nem ír);
+  - a tick folyamata a parancs végén `process.exit`-tel lép ki (stdout kiürítve);
+  - őr a `chain-supply-check`-ben.

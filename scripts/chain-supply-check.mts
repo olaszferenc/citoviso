@@ -64,6 +64,8 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   const mr = read("../src/generator/mockRefresh.ts");
   check("⑧ félkész ajánlat elöl, az országok felváltásán belül (FAIR_ORDER: országon belül a lapon volt / félkész (bármely kapu-verzió), a mai passz, aztán a kor)", /partition by \$\{LEAD_COUNTRY_SQL\} order by \$\{OFFER_PROGRESS_SQL\} desc, \$\{sql`\(select \$\{HALF_DONE_SQL\}\)`\} desc, d\.queued_at/.test(mr) && /renderGate'->>'verdict' = 'pass' and \(hm\.inputs->'renderGate'->>'version'\)::int = \$\{RENDER_GATE_VERSION\}/.test(mr));
   check("⑧ a frissítés és a kapu nem tesz globális kulcsot a FAIR_ORDER elé (az országok felváltva maradnak)", !/qaReview'->>'verdict' = 'pass'\) desc`\)\s*\n?\s*\.orderBy\(FAIR_ORDER\)/.test(mr) && !/m\.inputs->'qaReview'->>'verdict' = 'pass'\) desc/.test(mr));
+  check("a kapu-újramérésnek kemény határideje van (keret + türelem után a böngésző zár, a lépés visszatér) és a kiküldő tick folyamata a parancs végén kilép (a 600 s-os systemd-kilövés ellen, 11-27)",
+    /REGATE_GRACE_MS/.test(mr) && /Promise\.race\(\[/.test(mr) && /cut = true/.test(mr) && /process\.exit\(process\.exitCode \?\? 0\)/.test(read("./outreach-dispatch.mts")));
   check("⑧ a lánc-utánpótlás lépései is a FAIR_ORDER-t használják", (read("../src/generator/chainSupply.ts").match(/orderBy\(FAIR_ORDER\)/g) ?? []).length >= 2);
   check("a regate közös böngészőt ad a kapunak (nem mérésenként indít)", /renderGateFor\(id, \{ browser: await sharedBrowser\(\) \}\)/.test(read("../src/generator/mockRefresh.ts")));
 }

@@ -315,9 +315,17 @@ async function main(): Promise<void> {
   }
 }
 
+// The process ENDS when the command ends (coordinator 11-27): a render-gate audit cut at its deadline (an OCR worker,
+// a page still loading) must not keep the oneshot unit alive until systemd kills it at TimeoutStartSec — stdout is
+// drained first so the step's log line reaches the journal.
+const drained = (): Promise<void> => new Promise((resolve) => process.stdout.write("", () => resolve()));
 main()
   .catch((e) => {
     console.error((e as Error).message);
     process.exitCode = 1;
   })
-  .finally(() => db.destroy());
+  .finally(async () => {
+    await db.destroy().catch(() => undefined);
+    await drained();
+    process.exit(process.exitCode ?? 0);
+  });

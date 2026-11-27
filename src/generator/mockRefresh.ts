@@ -277,7 +277,7 @@ export async function regateStaleQueue(
   budgetMs: number,
   limit = 40,
   opts: { readonly concurrency?: number } = {},
-): Promise<{ judged: number; held: number; released: number; left: number; concurrency: number; ms: number }> {
+): Promise<{ judged: number; held: number; released: number; left: number; concurrency: number; ms: number; cut?: boolean }> {
   const t0 = Date.now();
   if (!photoKindAvailable() || budgetMs <= 0) return { judged: 0, held: 0, released: 0, left: -1, concurrency: 0, ms: 0 };
   const rows = await db
@@ -317,8 +317,10 @@ export async function regateStaleQueue(
     });
     return browser;
   };
+  // Past the hard deadline nothing is written any more (a straggling audit's result is not a verdict of this firing).
+  let cut = false;
   const one = async (r: (typeof rows)[number]): Promise<void> => {
-    if (!r.mainId) return;
+    if (!r.mainId || cut) return;
     const alt = await secondPlanOf(r.leadId, r.mainId).catch(() => null);
     const plans = [r.mainId, ...(alt ? [alt.id] : [])];
     const verdicts: (RenderGateResult | null)[] = [];
@@ -335,7 +337,7 @@ export async function regateStaleQueue(
     }
     if (verdicts.some((v) => v === null)) left++;
     // Only a held row waiting for the chain changes its note; a queued (owner-approved) row is the sender's.
-    if (r.status !== "held") return;
+    if (r.status !== "held" || cut) return;
     const failed = verdicts.flatMap((v, k) => (v?.verdict === "fail" ? [{ k, v }] : []));
     if (failed.length) {
       const note = gateHoldNote(failed);
@@ -348,26 +350,41 @@ export async function regateStaleQueue(
       released += Number(u.numUpdatedRows ?? 0);
     }
   };
+  // THE HARD DEADLINE (coordinator 11-27, after the 13:05 deploy: every other dispatcher firing was still killed at
+  // TimeoutStartSec=600 — one audit on the loaded 2-core box took 3+ minutes, its OCR still running when the room
+  // estimate had long run out). At budget + REGATE_GRACE_MS the shared browser closes (the audits in flight fail and are
+  // not stored — renderGateFor), and the step returns without waiting for them.
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const timeUp = new Promise<void>((resolve) => {
+    deadline = setTimeout(() => {
+      cut = true;
+      resolve();
+    }, Math.max(0, budgetMs + REGATE_GRACE_MS - (Date.now() - started)));
+  });
   try {
-    await Promise.all(
-      Array.from({ length: concurrency }, async () => {
-        for (;;) {
-          // Out of time: the rows not reached yet wait for the next firing (the note rules too).
-          if (Date.now() - started + REGATE_RENDER_ROOM_MS > budgetMs) return;
-          const i = next++;
-          const r = rows[i];
-          if (!r) return;
-          await one(r);
-        }
-      }),
-    );
+    await Promise.race([
+      Promise.all(
+        Array.from({ length: concurrency }, async () => {
+          for (;;) {
+            // Out of time: the rows not reached yet wait for the next firing (the note rules too).
+            if (cut || Date.now() - started + REGATE_RENDER_ROOM_MS > budgetMs) return;
+            const i = next++;
+            const r = rows[i];
+            if (!r) return;
+            await one(r).catch(() => undefined);
+          }
+        }),
+      ),
+      timeUp,
+    ]);
   } finally {
+    clearTimeout(deadline);
     const b = browser as Awaited<ReturnType<typeof chromium.launch>> | null;
     if (b) await b.close().catch(() => undefined);
     (release as (() => void) | null)?.();
   }
   left += Math.max(0, rows.length - next);
-  return { judged, held, released, left, concurrency, ms: Date.now() - t0 };
+  return { judged, held, released, left, concurrency, ms: Date.now() - t0, ...(cut ? { cut: true } : {}) };
 }
 
 /**
@@ -377,6 +394,8 @@ export async function regateStaleQueue(
  */
 /** One plan's render-gate audit at most (measured 11-27: ~30 s, ~60 s under load) — no render starts without this much left. */
 export const REGATE_RENDER_ROOM_MS = 60_000;
+/** After the budget the step waits at most this long for the audits in flight, then closes the browser and returns. */
+export const REGATE_GRACE_MS = 15_000;
 export const REGATE_CONCURRENCY_DEFAULT = 2;
 /** Below this much available memory (MB) one plan at a time — the dispatcher, the console and the scrapers come first. */
 export const REGATE_MIN_FREE_MB = 700;
