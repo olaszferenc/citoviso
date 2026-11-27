@@ -95,7 +95,7 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - a tick folyamata a parancs végén `process.exit`-tel lép ki (stdout kiürítve);
   - őr a `chain-supply-check`-ben.
 
-## Képszám-szabály (koordinátor „mehet”, 11-27 délután, ADR-XXXX)
+## Képszám-szabály (koordinátor „mehet”, 11-27 délután, ADR-0504)
 - **Mérés, 22 „TARTVA (képkapu)” lead, a generátor szűrői helyben:**
   - 100 tárolt kép → 96 élő → **57 a kurálás után** (`curateMockPhotos`). A méret- és duplikátum-szűrő 0-t ejtett.
   - A `material.portalPhotos` gyakran több, mint a tárolt kép (9 vs 5).

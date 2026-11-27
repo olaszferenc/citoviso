@@ -1,4 +1,4 @@
-## ADR-XXXX — A fotószámláló a generátor mért képszáma; a kevés használható képes lead elsőre a településképes útra megy
+## ADR-0504 — A fotószámláló a generátor mért képszáma; a kevés használható képes lead elsőre a településképes útra megy
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`: „mehet a képszám-szabály… az a lead, amelyiknek nincs ≥5 használható képe, menjen településképes útra, vagy előre álljon félre okkal, ne a második újratervezés után”)
