@@ -155,9 +155,14 @@ for (const [from, id] of [[mainSrc, mainId], [altSrc, altId]] as const) {
   console.log(`  terv ${id.slice(0, 8)}: újrarenderelve (${r.arm}) · render-kapu: ${g.verdict}${g.findings.length ? ` — ${g.findings.map((f) => f.code).join(", ")}` : ""}`);
 }
 
+// The chain's own timers may have queued the fresh lead meanwhile (measured 2026-11-27: the refresh step
+// took it while the plans rendered) — that row is the clone's row, not a refusal.
 const q = await enqueueDispatch({ leadId, artifactId: mainId, by: BY });
-if (!q.ok) fail(`a kiküldési sor elutasította: ${q.reason}`);
-await db.updateTable("outreach_dispatch").set({ status: "held", note: QA_WAIT_NOTE }).where("id", "=", q.id).execute();
+const rowId = q.ok
+  ? q.id
+  : (await db.selectFrom("outreach_dispatch").select("id").where("lead_id", "=", leadId).executeTakeFirst())?.id;
+if (!rowId) fail(`a kiküldési sor elutasította: ${q.ok ? "" : q.reason}`);
+await db.updateTable("outreach_dispatch").set({ status: "held", note: QA_WAIT_NOTE }).where("id", "=", rowId!).where("status", "in", ["queued", "held"]).execute();
 // A plan the machine gate failed keeps the row off the owner's page (approvalQueue): say so, not "ready".
 console.log(
   failedGate.length
