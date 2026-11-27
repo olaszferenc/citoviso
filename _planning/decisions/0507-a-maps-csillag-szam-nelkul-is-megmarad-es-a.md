@@ -1,4 +1,4 @@
-## ADR-XXXX — A Maps-csillag szám nélkül is megmarad, és a mockon 4,5-től látszik
+## ADR-0507 — A Maps-csillag szám nélkül is megmarad, és a mockon 4,5-től látszik
 
 - **Dátum:** 2026-11-27
 - **Státusz:** elfogadva. **Tulaj döntése, 2026-11-27** (a koordinátoron át, `cit9b4690e3`): a (b) változat. A jelvény szám nélkül is megjelenik, ha az érték ≥ 4,5, és a Maps-kártyára linkel. Ha van szám, a meglévő szabály marad. Az (a) adatmegtartás és pótlás is kell hozzá. A (c) (más forrásból vett szám) elvetve.

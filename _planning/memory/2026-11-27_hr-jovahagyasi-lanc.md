@@ -117,7 +117,7 @@ Minta: mind a 69 horvát sor a lánc sorában, a 4 kézzel nézett lead nélkül
   - `bump-guard-check`: emelés csak szabály-változással és indokló kommenttel.
 - **Külön kör:** szelektív elavulás (hatókör-címke, hatókörönkénti bélyeg).
 
-## Maps-csillag szám nélkül (tulaj döntése 11-27: (b) + (a), ADR-XXXX)
+## Maps-csillag szám nélkül (tulaj döntése 11-27: (b) + (a), ADR-0507)
 - **A Google EU-s szállás-kártyája** 11-09 óta nem mutat értékelés-számot (sem fejléc, sem lista, sem fül; `gl=us`-sal sem). A lánc emiatt a csillagot is eldobta: HR 4164 friss leadből 1-nek, HU 13 844-ből 7-nek van csillaga.
 - **Javítás:**
   - az érték szám nélkül megmarad (felderítő + app);
