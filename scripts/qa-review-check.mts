@@ -268,7 +268,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     const html = renderSite({ template: "parallax", skin: "", archetype: "", sections: [] } as never, { name: "J", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Napozóágyak és", "Wifi"] } as unknown as SD, { phase: "mock" });
     check("csonka címke („Napozóágyak és”) a lógó kötőszó nélkül jelenik meg", />Napozóágyak</.test(html) && !/Napozóágyak és/.test(html));
     check("parallax nyitókép-cím árnyékot kap (világos homlokzaton is olvasható kiemelés)", /\.t-hero h1\{[^}]*text-shadow/.test(readFileSync(new URL("../src/engine/templates/parallax.ts", import.meta.url), "utf8")));
-    check("generátor-bélyeg qafix5+; a kolléga által átengedett qafix4-es terv aktuális marad (nem esik le a tulaj lapjáról)", /qafix5/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /'2026-11-26-qafix4'\)\s*and a\.inputs->'qaReview'->>'verdict' = 'pass'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
+    check("generátor-bélyeg: az aktuális mock = bélyeg ≥ MOCK_HEROFIX_STAMP, a kolléga régi passza nem tart meg régi fájlt (11-27)", /MOCK_HEROFIX_STAMP = "2026-11-27-headings1"/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && !/qaReview'->>'verdict' = 'pass' and a\.inputs->>'heroDepthArm'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
   }
   {
     const base2 = { name: "L", intro: "x.", tagline: "x", contact: { phone: "+36 30 111 2222" }, photos: [], highlights: ["Légkondicionálás", "Wifi", "Grillezési lehetőség"] } as unknown as SD;
@@ -284,7 +284,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
   check("két kolléga megosztja a sort: qa-review queue --half 0-7 | 8-f (nincs dupla renderelés)", /--half/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /inHalf\(r\.artifactId\)/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
   check("kolléga-sor: félkész ajánlat elöl (az egyik terve már átment), több kollégánál --shard k/n", /exists \(select 1 from mock_artifact m where m\.lead_id = outreach_dispatch\.lead_id/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")) && /--shard/.test(readFileSync(new URL("./qa-review.mts", import.meta.url), "utf8")));
   check("nyitókép csak mozgatható méretű kép (≥ 1000 × 700 px) — jelölt és gépi választás is", !heroSized(K("ok", "the outside of a house", { quality: { long: 960, short: 640, luma: 120, lap: 300 } })) && heroSized(K("ok", "the outside of a house", { quality: { long: 1440, short: 960, luma: 120, lap: 300 } })) && !isHeroCandidate(K("ok", "the outside of a house", { quality: { long: 960, short: 640, luma: 120, lap: 300 } })));
-  check("qafix7: az átengedett, de nem mozgó nyitóképű terv is újragenerálódik", /qafix7/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")) && /heroDepthArm' = 'depth'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
+  check("qafix7 óta az átengedett terv is újragenerálódik (11-27: a kivétel kivéve)", !/heroDepthArm' = 'depth'/.test(readFileSync(new URL("../src/outreach/mockPhotoGate.ts", import.meta.url), "utf8")));
   {
     const sr = roomsForMock({ name: "Z", photos: [1, 2, 3, 4, 5].map((n) => ({ url: `https://z.test/${n}.jpg`, alt: "z", provenance: "portal", kindLabel: "the outside of a house" })) } as unknown as SD);
     check("szálláskártya: nincs szoba-kép → beltéri kép, ha az sincs, a szoba-blokk elmarad (nem szöveges kártya)", sr.every((r) => !r.photo) && /rooms\.every\(\(r\) => !r\.photo\)\) return null/.test(readFileSync(new URL("../src/engine/templateKit.ts", import.meta.url), "utf8")));
@@ -348,7 +348,7 @@ check("a kiemelt sor képe a szövegéhez illik (ROW_LABELS), nem illőnél ninc
     bad === 0 && filled.opening > 0 && filled.band > 0 && filled.contact > 0 && filled.hero > 0);
   const none = slotMarks(null, null);
   check("friss mock a generátor bélyegét viseli (a bélyeg-emelés egymagában frissíti a régebbi kóddal készült állományt)",
-    /terhatasAt: MOCK_HEROFIX_STAMP,/.test(src("src/generator/generateEngine.ts")) && /\(coalesce\(a\.inputs->>'terhatasAt', ''\) >= \$\{MOCK_HEROFIX_STAMP\}\s*or \(\(a\.generated_at >= \$\{MOCK_HEROFIX_LIVE_AT\}/.test(src("src/outreach/mockPhotoGate.ts")));
+    /terhatasAt: MOCK_HEROFIX_STAMP,/.test(src("src/generator/generateEngine.ts")) && /and coalesce\(a\.inputs->>'terhatasAt', ''\) >= \$\{MOCK_HEROFIX_STAMP\}\)`/.test(src("src/outreach/mockPhotoGate.ts")));
   check("slot-predikátum: ítélet nélküli kép egyik slotra sem alkalmas (generátor és kapu)", !none.okOpening && !none.okBand && !none.okContact && !fitsOpening(null) && !fitsBand(null) && !fitsContact(null) && !fitsHero(null));
   check("sáv: egy luma-küszöb (a 70/85 kettősség megszűnt)", !/BAND_GOOD_LUMA/.test(kindSrc) && /export const BAND_MIN_LUMA = 85;/.test(kindSrc));
   // Through the templates' own slot pickers: random photo sets, marked by slotMarks, each filled slot re-judged by the gate's rule.
