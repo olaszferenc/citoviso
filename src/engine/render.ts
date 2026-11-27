@@ -934,7 +934,7 @@ function ownPhotoCount(data: SiteData): number {
 
 /** No own photo → the gallery's editorial heading / eyebrow give way to the neutral „Galéria” (see renderSite). */
 /**
- * Below this many own photos the gallery shows NONE of them (ADR-XXXX ㉑, Marijan d1d0ecd9: one own photo, taken by the
+ * Below this many own photos the gallery shows NONE of them (ADR-0505 ㉑, Marijan d1d0ecd9: one own photo, taken by the
  * opening / about; the gallery opened on Baška Voda and MINTA rooms under „Fotografije apartmana i obale”). The decision
  * reads the photo count, never the (translated) heading text; the neutral title is the translated „Galéria” key.
  */

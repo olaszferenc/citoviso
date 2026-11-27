@@ -1,4 +1,4 @@
-## ADR-XXXX — Mock 3. kör: a szobablokk nem marad el, a cím doboza a leghosszabb szóhoz igazodik, semleges galériacím kevés saját képnél, feliratos nyitókép helyett a következő jelölt
+## ADR-0505 — Mock 3. kör: a szobablokk nem marad el, a cím doboza a leghosszabb szóhoz igazodik, semleges galériacím kevés saját képnél, feliratos nyitókép helyett a következő jelölt
 
 - **Dátum:** 2026-11-27 (este)
 - **Státusz:** elfogadva (a koordinátor `cit96bd8170` 18–22. pontja, a tulaj elve: „a mock terv, tölts, ne hagyj el; ez nem tényállítás”)

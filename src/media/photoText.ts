@@ -182,7 +182,7 @@ async function readCornerStamp(buf: Buffer): Promise<string | null> {
 }
 
 /**
- * LABELS PAINTED ONTO A PHOTO (ADR-XXXX ㉒, Reljic feb441b0: rotated tags „A2(2+2)”, „A5(2+1)” over the facade). They are
+ * LABELS PAINTED ONTO A PHOTO (ADR-0505 ㉒, Reljic feb441b0: rotated tags „A2(2+2)”, „A5(2+1)” over the facade). They are
  * tilted, so the horizontal pass reads nothing; read again turned ±28° at 2000 px. A label is a unit / bed-configuration
  * token: digit + digit („2+2”) or a capital with digits before a bracket („A2(”), read with ≥ 60 confidence.
  * Measured 11-27: Reljic caught at +28°, 60 live heroes 0 false alarms. Used for the HERO only (three OCR runs).

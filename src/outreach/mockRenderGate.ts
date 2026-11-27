@@ -58,7 +58,7 @@ import { headingKey } from "../text/headingKey.js";
 // the same input for the same rule; the page's 1280 px file had failed pictures the picker had passed at 330 px.
 // 18 (11-27, ADR-0503 „Feltöltés elhagyás helyett”): the dim phone first screen, a room hero with an outside alternative,
 // the hero title on its picture, the empty map box, a band caption that is no sentence.
-// 19 (11-27, ADR-XXXX ㉒): a hero with painted labels („A2(2+2)”).
+// 19 (11-27, ADR-0505 ㉒): a hero with painted labels („A2(2+2)”).
 export const RENDER_GATE_VERSION = 19;
 /**
  * The tallest ink-free vertical run a phone page may have (CSS px at 390). Above it a whole band rendered empty

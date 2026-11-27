@@ -1160,7 +1160,7 @@ export function heroFit(text: string): string {
   return `data-cit-hero-fit="${n <= 28 ? "s" : n <= 48 ? "m" : n <= 72 ? "l" : "xl"}"${w}`;
 }
 /**
- * The same width cap and floor for a MIXED-CASE display title (Névből növő: „Magánszálláshely”, ADR-XXXX ⑳): a lowercase
+ * The same width cap and floor for a MIXED-CASE display title (Névből növő: „Magánszálláshely”, ADR-0505 ⑳): a lowercase
  * serif letter measures ~.50–.58em, .62em leaves room for accents and bold. Inline, so it needs no stylesheet. The attribute
  * comes with its leading space (`<h1${heroWordFit(name)}>`): a short name leaves the tag untouched.
  */
@@ -1180,7 +1180,7 @@ const HERO_WORD_MAX = 30;
  */
 const HERO_WORD_CSS = Array.from(
   { length: HERO_WORD_MAX - HERO_WORD_MIN + 1 },
-  // …and a WIDTH FLOOR for the title box (ADR-XXXX ⑳, 11-27: „Balatonszárszón,” broke at 18 px — the fitter shrank the
+  // …and a WIDTH FLOOR for the title box (ADR-0505 ⑳, 11-27: „Balatonszárszón,” broke at 18 px — the fitter shrank the
   // font, but the box was `16ch`, which shrinks with it; the word never fitted). In em, so it follows any font size.
   (_, i) => `h1[data-cit-hero-word="${HERO_WORD_MIN + i}"]{--cit-hero-wcap:calc((100vw - 56px) / ${((HERO_WORD_MIN + i) * 0.78).toFixed(2)});--cit-hero-wmeasure:${((HERO_WORD_MIN + i) * 0.78 + 0.6).toFixed(2)}em}`,
 ).join("\n  ");
