@@ -10,7 +10,8 @@ updated: 2026-11-26
 A **„Jóváhagyás”** lapon döntöd el, hogy egy megkeresés kimehet-e a leadnek. A listán csak az a lead
 jelenik meg, amelyiknek **mindkét terve** végigment a teljes láncon: a mostani generátorral készült
 (a folyamat a régebbieket magától újragenerálja), legalább 5 saját fotója van, és a gépi ellenőrzésen
-(a render-kapun) átment. A minőségi kolléga jóváhagyása nem feltétel; ha viszont ő egy változatot
+(a render-kapun) átment, és van e-mail-címe. E-mail-cím nélküli lead nem kerül ide, mert levelet nem
+kaphat; ha később kerül hozzá e-mail-cím, magától visszalép. A minőségi kolléga jóváhagyása nem feltétel; ha viszont ő egy változatot
 rossznak ítélt, az addig nem kerül ide, amíg újra nem készül. Második terv nélkül
 megkeresés nem megy ki. Ami ezek közül bármelyiken elakadt, az nem kerül ide, és a menüben látható
 szám sem számolja. Megkeresés csak a te jóváhagyásod után megy ki. Hogy egy országban a te
@@ -31,10 +32,9 @@ lista felül áll, alatta a kiválasztott lead.
 
 - **A kiválasztott lead fejlécében** a neve és a települése mellett a **„Keresés”** gomb új ablakban
   megnyitja a Google-t a szállás nevével, a településsel és az e-mail-címmel; alatta az
-  elérhetőségei jelvényként, benne az adattal. A megkeresés e-mailben megy. Külföldi
-  leadnél akkor sem megy üzenet a mobilszámra, ha van: a lead országában nincs engedélyezett
-  mobil-csatorna (a magyar SIM-es modem külföldi számra nem küld), ezért csak e-mail megy, a mobil
-  megkeresés tartva marad. Ezzel nincs teendőd — a „Mehet” az e-mailt engedi ki.
+  elérhetőségei jelvényként, benne az adattal. A megkeresés mindig e-mailben megy,
+  országtól függetlenül. SMS, MMS és Viber nem megy ki, akkor sem, ha a leadnek van mobilszáma.
+  Ezzel nincs teendőd — a „Mehet” az e-mailt engedi ki.
 - **A megkeresés szövege** (alapból összecsukva, a címére kattintva nyílik le): a levél tárgya és
   bekezdései, szerkeszthetően. Ha átírsz valamit, nyomd meg a **„Mentés”** gombot, mielőtt a
   **„Mehet”**-re koppintasz — a „Mehet” a szöveget nem menti el. Üresen hagyott mező = a gépi szöveg megy; ha már elmentettél saját szöveget, a **„Vissza a gépi szövegre”** gomb visszaállítja. Ha a mentés nem sikerül, piros
