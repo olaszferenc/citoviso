@@ -15,6 +15,7 @@ import { sql } from "kysely";
 import { db } from "../db/client.js";
 import { OVERPASS_ENDPOINTS } from "../scraper/sources/osm.js";
 import { fold, haversineKm } from "./gates.js";
+import { settlementNameTag } from "./eventLexicon.js";
 
 export const RADIUS_KM = 30;
 export const MIN_POPULATION = 1000;
@@ -28,6 +29,9 @@ export interface Settlement {
   readonly lat: number;
   readonly lon: number;
   readonly population: number | null;
+  /** ISO-2 of the CIRCLE the settlement was fetched for: its name is that country's OSM name
+   *  tag and its weekly query runs in that country's language (src/events/eventLexicon.ts). */
+  readonly country: string;
 }
 
 interface OverpassNode {
@@ -79,7 +83,10 @@ export async function fetchSettlementsAround(
   lat: number,
   lon: number,
   radiusKm = RADIUS_KM,
+  country: string,
 ): Promise<Settlement[]> {
+  // The local-language name (a Croatian circle reads "name:hr", not "name:hu"), then "name".
+  const tag = settlementNameTag(country);
   const ql = [
     "[out:json][timeout:35];",
     `node["place"~"^(city|town|village)$"](around:${Math.round(radiusKm * 1000)},${lat},${lon});`,
@@ -88,7 +95,7 @@ export async function fetchSettlementsAround(
   const nodes = await overpass(ql);
   const out: Settlement[] = [];
   for (const n of nodes) {
-    const name = n.tags?.["name:hu"] ?? n.tags?.name;
+    const name = (tag ? n.tags?.[tag] : undefined) ?? n.tags?.name;
     if (!name) continue;
     out.push({
       osmId: String(n.id),
@@ -96,18 +103,40 @@ export async function fetchSettlementsAround(
       lat: n.lat,
       lon: n.lon,
       population: parsePopulation(n.tags?.population),
+      country,
     });
+  }
+  // A settlement fetched before in ANOTHER country's language (until 2026-11-27 every circle
+  // was "HU"): its finished runs searched in the wrong language, so they stop counting as
+  // "gathered" — the pending run (5 min) then gathers it again in the right one, without
+  // waiting for Monday. Cost history stays (status only).
+  if (out.length) {
+    const before = await db
+      .selectFrom("settlement")
+      .select(["osm_id", "country"])
+      .where("osm_id", "in", out.map((s) => s.osmId))
+      .execute();
+    const relang = before.filter((r) => r.country !== country).map((r) => r.osm_id);
+    if (relang.length) {
+      await db
+        .updateTable("event_gather_run")
+        .set({ status: "stale_lang" })
+        .where("settlement_osm_id", "in", relang)
+        .where("status", "=", "done")
+        .execute();
+    }
   }
   for (const s of out) {
     await db
       .insertInto("settlement")
-      .values({ osm_id: s.osmId, name: s.name, lat: s.lat, lon: s.lon, population: s.population })
+      .values({ osm_id: s.osmId, name: s.name, lat: s.lat, lon: s.lon, population: s.population, country })
       .onConflict((oc) =>
         oc.column("osm_id").doUpdateSet({
           name: s.name,
           lat: s.lat,
           lon: s.lon,
           population: s.population,
+          country,
           refreshed_at: sql`now()`,
         }),
       )
@@ -158,7 +187,7 @@ export async function cachedSettlementsAround(
   const dLon = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
   const rows = await db
     .selectFrom("settlement")
-    .select(["osm_id", "name", "lat", "lon", "population", "refreshed_at"])
+    .select(["osm_id", "name", "lat", "lon", "population", "country", "refreshed_at"])
     .where("lat", ">=", lat - dLat)
     .where("lat", "<=", lat + dLat)
     .where("lon", ">=", lon - dLon)
@@ -174,6 +203,7 @@ export async function cachedSettlementsAround(
     lat: r.lat,
     lon: r.lon,
     population: r.population,
+    country: r.country,
   }));
 }
 
@@ -182,12 +212,16 @@ export async function cachedSettlementsAround(
  * else a fetch now. The page render keeps reading `cachedSettlementsAround` (it never
  * fetches); once the gathering has refetched a circle, the render sees the full set.
  */
-export async function settlementsAround(lat: number, lon: number, radiusKm = RADIUS_KM): Promise<Settlement[]> {
+export async function settlementsAround(lat: number, lon: number, radiusKm: number, country: string): Promise<Settlement[]> {
   if (circleCovered(await freshCoversNear(lat, lon, radiusKm), lat, lon, radiusKm)) {
     const cached = await cachedSettlementsAround(lat, lon, radiusKm);
-    if (cached) return cached;
+    // A cache fetched for ANOTHER country's circle carries that language's names (until
+    // 2026-11-27 every circle was fetched as "HU" with "name:hu"): refetch, it self-heals.
+    // ⚠️ Known: a settlement in two countries' circles (a border pair) takes the language of
+    // the last fetch — one Overpass call per flip, no extra API spend.
+    if (cached && cached.every((s) => s.country === country)) return cached;
   }
-  return fetchSettlementsAround(lat, lon, radiusKm);
+  return fetchSettlementsAround(lat, lon, radiusKm, country);
 }
 
 /**

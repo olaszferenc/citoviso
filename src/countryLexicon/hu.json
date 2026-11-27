@@ -1,6 +1,10 @@
 {
   "iso2": "HU",
   "osmNameTag": "name:hu",
+  "eventSearchQuery": "{settlement} programok rendezvények {year} {months}",
+  "eventMonthNames": ["január","február","március","április","május","június","július","augusztus","szeptember","október","november","december"],
+  "eventMonthWords": [["január","jan"],["február","febr","feb"],["március","márc"],["április","ápr"],["május","máj"],["június","jún"],["július","júl"],["augusztus","aug"],["szeptember","szept","szep"],["október","okt"],["november","nov"],["december","dec"]],
+  "eventDateOrder": "md",
   "chainFelderitoAddressOrder": "city-first",
   "chainKontaktGenericWords": ["szallas","szallashely","szallashelyek","apartman","apartmanok","apartmanhaz","kemping","camping","udulo","vendeghaz","vendeghazak","haz","panzio","hotel","tabor","hely","ifjusagi","turistahaz","motel","resort","villa","vendeglo","etterem","szoba","szobak","parton","vadkempingezo","diakszallas","kozossegi","faluhaz","porta","birtok","kiado","balaton","wifi","apartment","apartments","apartmanhazak","house","houses","guesthouse","guest","pension","family","suite","suites","room","rooms","breakfast","holiday","residence","home","homes","wellness","lake","view","with","terrace","camp","resorts","hotels","bungalow","bungalows","szallo","turistaszallo","tanya","nyaralo","nyaralohaz","udulohaz","udulotabor","kft","ltd","medences","vendegszoba","vendegszobak","lakasapartman","faház","fahaz","pihenohaz","and","the","es","a","az","one","two","three","bedroom","double","standard","deluxe","large","small","garden","apartmanhaz"],
   "chainKontaktFreemailRegex": "@(gmail|googlemail|freemail|citromail|t-online|hotmail|outlook|live|yahoo|icloud|me|gmx|vipmail|chello|invitel|upcmail|indamail|mailbox)\\.",

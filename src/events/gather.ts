@@ -43,6 +43,7 @@ import {
   type DropReason,
 } from "./gates.js";
 import type { Settlement } from "./settlements.js";
+import { eventLanguage, eventQuery, type EventLanguage } from "./eventLexicon.js";
 
 export const EXTRACT_MODEL = "claude-haiku-4-5";
 /** ⛔ Measured bottleneck — see trap 1. Do not raise it to save calls. */
@@ -51,11 +52,6 @@ export const BATCH_PAGES = 5;
 export const CHARS_PER_PAGE = 3000;
 export const RESULTS_PER_QUERY = 10;
 export const BRAVE_USD_PER_QUERY = 5 / 1000;
-
-const MONTHS_HU = [
-  "január", "február", "március", "április", "május", "június",
-  "július", "augusztus", "szeptember", "október", "november", "december",
-];
 
 export interface GatheredEvent {
   readonly name: string;
@@ -272,13 +268,6 @@ export function resolveSettlement(
 
 /* ------------------------------------------------------------------ run ----- */
 
-function queryFor(s: Settlement, today: string, windowEnd: string): string {
-  const m1 = Number(today.slice(5, 7)) - 1;
-  const m2 = Number(windowEnd.slice(5, 7)) - 1;
-  const months = m1 === m2 ? MONTHS_HU[m1] : `${MONTHS_HU[m1]} ${MONTHS_HU[m2]}`;
-  return `${s.name} programok rendezvények ${today.slice(0, 4)} ${months}`;
-}
-
 async function store(e: GatheredEvent): Promise<void> {
   const lo = addDays(e.start, -MAX_SPAN_DAYS);
   const hi = e.end ?? e.start;
@@ -316,7 +305,11 @@ async function store(e: GatheredEvent): Promise<void> {
  * One settlement's weekly run: query → fetch (batch-cached) → extract → gate →
  * dedup → store. Writes its own `event_gather_run` row (cost and yield, measured).
  */
-export async function gatherSettlement(batch: GatherBatch, target: Settlement): Promise<RunSummary> {
+export async function gatherSettlement(batch: GatherBatch, target: Settlement): Promise<RunSummary | null> {
+  // The circle's language (query, search language, page request, date spellings). A country
+  // without one is NOT gathered (fail closed) — no run row, no spend; the caller reports it.
+  const lang: EventLanguage | null = await eventLanguage(target.country);
+  if (!lang) return null;
   const today = batch.today;
   const windowEnd = addDays(today, WINDOW_DAYS);
   const sum: RunSummary = {
@@ -332,9 +325,10 @@ export async function gatherSettlement(batch: GatherBatch, target: Settlement): 
 
   try {
     // 1. Brave — URL discovery only; WE decide what reaches the model.
-    // The query template is Hungarian (MONTHS_HU, "programok rendezvények") — the search
-    // language is the template's own, not a country parameter (events module, ADR-0437 later).
-    const results = await webSearch(queryFor(target, today, windowEnd), undefined, undefined, RESULTS_PER_QUERY, "hu");
+    // Query, search language and page request are the circle country's (eventLexicon.ts).
+    const results = await webSearch(
+      eventQuery(lang, target.name, today, windowEnd), undefined, undefined, RESULTS_PER_QUERY, lang.searchLang,
+    );
     sum.queries = 1;
     sum.costUsd += BRAVE_USD_PER_QUERY;
 
@@ -350,8 +344,9 @@ export async function gatherSettlement(batch: GatherBatch, target: Settlement): 
         continue;
       }
       if ((batch.hostPages.get(host) ?? 0) >= MAX_PAGES_PER_HOST) continue;
-      // Hungarian query template → Hungarian page request (see the webSearch call above).
-      const { page } = await fetchPortalPage(r.link, { locale: { acceptLanguage: "hu,en;q=0.6", browserLocale: "hu-HU" } });
+      const { page } = await fetchPortalPage(r.link, {
+        locale: { acceptLanguage: lang.acceptLanguage, browserLocale: lang.browserLocale },
+      });
       if (!page) continue;
       batch.hostPages.set(host, (batch.hostPages.get(host) ?? 0) + 1);
       batch.seenUrls.add(page.finalUrl);
@@ -385,7 +380,7 @@ export async function gatherSettlement(batch: GatherBatch, target: Settlement): 
       if (!e.sourceUrl) { drop("no_source"); continue; }
       const w = windowGate(e.start, e.end, today);
       if (!w.ok) { drop(w.reason); continue; }
-      if (e.via === "llm" && !dateMentioned(e.text ?? "", w.start)) { drop("date_not_in_text"); continue; }
+      if (e.via === "llm" && !dateMentioned(e.text ?? "", w.start, lang.date)) { drop("date_not_in_text"); continue; }
       const at = resolveSettlement(e.city, batch.known, target);
       if (!at) { drop("unknown_place"); continue; }
       const ev: GatheredEvent = {

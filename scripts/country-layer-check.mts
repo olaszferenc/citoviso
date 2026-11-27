@@ -303,6 +303,12 @@ const SCOPE = [
   "src/scraper/sources/portals/extract.ts",
   "src/scraper/sources/portals/registry.ts",
   "src/scraper/sources/webSearchBrowser.ts",
+  // Nemzetközi (2026-11-27): the weekly program gathering searched only in Hungarian.
+  "src/events/gather.ts",
+  "src/events/settlements.ts",
+  "src/events/gates.ts",
+  "src/events/eventLexicon.ts",
+  "scripts/gather-events.mts",
 ];
 const BURNED = new RegExp(
   [
@@ -322,6 +328,9 @@ const BURNED = new RegExp(
 // file → exact code fragment that may stay, and WHY.
 const ALLOW: ReadonlyArray<{ file: string; frag: string; why: string }> = [
   { file: "src/outreach/draft.ts", frag: 'return !currency || currency.toUpperCase() === "HUF";', why: "ADR-0456: a FORINT-mondat ága („… forinttól”) — pénznem szerinti szöveg-ág, nem ország; más pénznem a saját jelével (formatMinor)" },
+  { file: "src/events/gates.ts", frag: '"esemeny", "hu", "ev", "evi", "edik", "the", "and",', why: "a dedup töltelékszava (a programnév „.hu” tokenje), nem ország-paraméter; a keresés nyelve a lexikonból jön (eventLexicon.ts)" },
+  { file: "scripts/gather-events.mts", frag: 'timeZone: "Europe/Budapest"', why: "a heti gyűjtés PLATFORM-órája (a timer órája, a hét hétfője) — nem a lead országa" },
+  { file: "scripts/gather-events.mts", frag: "date_trunc('week', now() AT TIME ZONE 'Europe/Budapest') AT TIME ZONE 'Europe/Budapest'", why: "ugyanaz: a heti ütem hétfője a platform órájában" },
   { file: "src/scraper/persist.ts", frag: 'new Intl.DateTimeFormat("hu-HU"', why: "az operátori napló órája (platform-idő, APP_TZ) — nem a lead országa" },
   { file: "src/i18n/lang.ts", frag: 'const UI_LANGS: readonly string[] = ["hu"', why: "a saját felületeink lefordított NYELVEI (nem ország)" },
   { file: "src/i18n/lang.ts", frag: 'export const DEFAULT_LANG = "hu"', why: "a forrásnyelv (a T() kulcsa magyar) — nyelv, nem ország" },

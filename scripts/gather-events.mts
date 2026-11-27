@@ -5,13 +5,20 @@
  *   npx tsx scripts/gather-events.mts [--dry-run] [--site <slug>] [--settlement <name>] [--max <n>]
  *                                     [--no-render] [--no-mail] [--pending]
  *
- * --pending  (citoviso-events-pending.timer, every 5 minutes): ONLY the tenants whose own
- *            settlement was never gathered — i.e. who just bought (or re-activated) the
- *            module on ANY activation path. Gathers their circle, re-renders their site,
- *            sends no mail. Owner ruling 2026-09-23: "különben dühös lesz a tenant" — a
+ * --pending  (citoviso-events-pending.timer, every 5 minutes): ONLY the tenants whose circle
+ *            has a query settlement that was never gathered — i.e. who just bought, started a
+ *            trial, or re-activated the module on ANY activation path (2026-11-27: also a
+ *            circle that only PARTLY overlaps an old one). Gathers those settlements,
+ *            re-renders their site, sends no mail. A settlement with ANY run in the last
+ *            PENDING_COOLDOWN_H hours is left to the daily run — a failing one must not be
+ *            retried (and paid for) every 5 minutes. Owner ruling 2026-09-23: "különben dühös lesz a tenant" — a
  *            buyer must not wait until the next morning for a module they paid for.
  *            A Postgres advisory lock keeps the daily run and this one from gathering (and
  *            paying for) the same settlements twice: a second run exits quietly.
+ *
+ * LANGUAGE (Nemzetközi, 2026-11-27): a circle is fetched and searched in its TENANT's country
+ * (countryOfLead → src/events/eventLexicon.ts). A country without an event lexicon is not
+ * gathered (fail closed): its settlements are listed as "nincs nyelvi lexikon" and cost nothing.
  *
  * Three phases, one run:
  *  1. GATHER — once a WEEK: a settlement is gathered when its last finished run is older
@@ -54,11 +61,13 @@ const MAX = val("--max") ? Number(val("--max")) : Infinity;
 const NO_RENDER = flag("--no-render");
 const NO_MAIL = flag("--no-mail");
 const PENDING = flag("--pending");
+const PENDING_COOLDOWN_H = 6;
 
 const { db, pool } = await import("../src/db/client.js");
 const { tenantRendersModule } = await import("../src/tenant/modules.js");
 const { siteLocation } = await import("../src/events/pool.js");
-const { settlementsAround, ownSettlement, querySettlements } = await import("../src/events/settlements.js");
+const { countryOfLead } = await import("../src/country.js");
+const { settlementsAround, ownSettlement, querySettlements, RADIUS_KM } = await import("../src/events/settlements.js");
 const { GatherBatch, gatherSettlement } = await import("../src/events/gather.js");
 const { fold } = await import("../src/events/gates.js");
 const { rerenderTenantSnapshot } = await import("../src/tenant/editor.js");
@@ -84,11 +93,23 @@ const everDone = new Set(
   (await db.selectFrom("event_gather_run").select("settlement_osm_id").where("status", "=", "done").distinct().execute())
     .map((r) => r.settlement_osm_id),
 );
+// Any run (done / failed / running) within the cooldown: the pending mode leaves it alone.
+const coolingDown = new Set(
+  (
+    await db
+      .selectFrom("event_gather_run")
+      .select("settlement_osm_id")
+      .where(sql<boolean>`started_at > now() - make_interval(hours => ${PENDING_COOLDOWN_H})`)
+      .distinct()
+      .execute()
+  ).map((r) => r.settlement_osm_id),
+);
 
 const sites = await db
   .selectFrom("site")
-  .select(["id", "slug", "tenant_id"])
-  .$if(Boolean(ONLY_SITE), (q) => q.where("slug", "=", ONLY_SITE!))
+  .innerJoin("tenant", "tenant.id", "site.tenant_id")
+  .select(["site.id as id", "site.slug as slug", "site.tenant_id as tenant_id", "tenant.lead_id as lead_id"])
+  .$if(Boolean(ONLY_SITE), (q) => q.where("site.slug", "=", ONLY_SITE!))
   .execute();
 
 const targets = new Map<string, Settlement>();
@@ -101,11 +122,19 @@ for (const s of sites) {
     if (!PENDING) console.log(`  ${s.slug}: nincs koordináta — kimarad`);
     continue;
   }
-  const around = await settlementsAround(loc.lat, loc.lon);
+  const country = s.lead_id ? await countryOfLead(s.lead_id) : null;
+  if (!country) {
+    if (!PENDING) console.log(`  ${s.slug}: ismeretlen ország — kimarad`);
+    continue;
+  }
+  const around = await settlementsAround(loc.lat, loc.lon, RADIUS_KM, country);
   const own = ownSettlement(around, loc.lat, loc.lon, loc.address);
-  const q = querySettlements(around, own);
+  let q = querySettlements(around, own);
   for (const x of around) known.set(x.osmId, x);
-  if (PENDING && own && everDone.has(own.osmId)) continue;
+  if (PENDING) {
+    q = q.filter((x) => !everDone.has(x.osmId) && !coolingDown.has(x.osmId));
+    if (!q.length) continue;
+  }
   console.log(`  ${s.slug}: ${around.length} település a körben, ${q.length} lekérdezve (saját: ${own?.name ?? "?"})`);
   poiTenants.push({ tenantId: s.tenant_id, slug: s.slug });
   for (const x of q) targets.set(x.osmId, x);
@@ -148,6 +177,10 @@ const drops: Record<string, number> = {};
 for (const s of list) {
   try {
     const r = await gatherSettlement(batch, s);
+    if (!r) {
+      console.log(`  ${s.name.padEnd(22)} nincs nyelvi lexikon (${s.country}) — kimarad, költség nincs`);
+      continue;
+    }
     usd += r.costUsd;
     kept += r.kept.length;
     for (const [k, v] of Object.entries(r.drops)) drops[k] = (drops[k] ?? 0) + (v ?? 0);

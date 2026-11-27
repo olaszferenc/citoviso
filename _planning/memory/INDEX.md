@@ -7,6 +7,7 @@
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
 - [2026-11-27_teszt-elofizetesek-lezarasa.md](2026-11-27_teszt-elofizetesek-lezarasa.md) — Teszt-előfizetések lezárása — téves terhelés-riasztás, egy valódi kockázat élesen (2026-11-27)
+- [2026-11-27_programajanlo-nemzetkozi.md](2026-11-27_programajanlo-nemzetkozi.md) — Programajánló (poi) nemzetközi — az ország nyelvén keres, az új vevő azonnal kap (2026-11-27)
 - [2026-11-27_production_lanc_es_mennyiseg.md](2026-11-27_production_lanc_es_mennyiseg.md) — 2026-11-27 — Production: lánc-utánpótlás, kinézeti szabálykörök, mennyiségi fordulat
 - [2026-11-27_levelnyitas-riport.md](2026-11-27_levelnyitas-riport.md) — Levél-megnyitás a Riport-tölcsérben (2026-11-27)
 - [2026-11-27_lanc-utanpotlas.md](2026-11-27_lanc-utanpotlas.md) — 2026-11-27 — Lánc-utánpótlás: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu, kontraszt, félkész elöl, egyedi szakaszcím

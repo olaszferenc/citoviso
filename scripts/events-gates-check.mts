@@ -16,6 +16,7 @@ import {
 } from "../src/events/gates.js";
 import { circleCovered, ownSettlement, querySettlements, type Settlement } from "../src/events/settlements.js";
 import { resolveSettlement } from "../src/events/gather.js";
+import { eventLexicon, eventQuery } from "../src/events/eventLexicon.js";
 
 let fails = 0;
 function ok(cond: boolean, msg: string): void {
@@ -44,14 +45,38 @@ ok((windowGate("2026-09-01", "2026-12-31", T) as { reason?: string }).reason ===
 ok(!windowGate("", null, T).ok, "empty date refused");
 
 console.log("dateMentioned");
+const HU = eventLexicon("HU")!.date;
+const HR = eventLexicon("HR")!.date;
 const page = "Szüreti napok: szeptember 26–27. Koncert 2026.10.03. Piac: 10. 04. Futás szept. 28 reggel";
-ok(dateMentioned(page, "2026-09-26"), "'szeptember 26–27.' carries the 26th");
-ok(dateMentioned(page, "2026-10-03"), "'2026.10.03.' carries 10-03");
-ok(dateMentioned(page, "2026-10-04"), "'10. 04.' carries 10-04");
-ok(dateMentioned(page, "2026-09-28"), "'szept. 28' carries 09-28");
-ok(!dateMentioned(page, "2026-09-29"), "a date the text never states is refused");
-ok(!dateMentioned("Ár: 2 690 Ft, 126 fő", "2026-09-26"), "'126' is not the 26th of anything");
-ok(!dateMentioned("szeptember 260 méter", "2026-09-26"), "digit run is not a day");
+ok(dateMentioned(page, "2026-09-26", HU), "'szeptember 26–27.' carries the 26th");
+ok(dateMentioned(page, "2026-10-03", HU), "'2026.10.03.' carries 10-03");
+ok(dateMentioned(page, "2026-10-04", HU), "'10. 04.' carries 10-04");
+ok(dateMentioned(page, "2026-09-28", HU), "'szept. 28' carries 09-28");
+ok(!dateMentioned(page, "2026-09-29", HU), "a date the text never states is refused");
+ok(!dateMentioned("Ár: 2 690 Ft, 126 fő", "2026-09-26", HU), "'126' is not the 26th of anything");
+ok(!dateMentioned("szeptember 260 méter", "2026-09-26", HU), "digit run is not a day");
+// HU stays month-first: "05.12." is May 12, never the 5th of December.
+ok(dateMentioned("Koncert 05.12.", "2026-05-12", HU) && !dateMentioned("Koncert 05.12.", "2026-12-05", HU), "HU numeric = month.day");
+
+console.log("dateMentioned — HR (day first, lexicon words)");
+const hr = "Advent u Makarskoj: 28. studenoga. Koncert 5.12.2026. Sajam 12. – 14. prosinca. Izložba 19. i 20. prosinca. Šetnja 07. 12.";
+ok(dateMentioned(hr, "2026-11-28", HR), "'28. studenoga' carries 11-28");
+ok(dateMentioned(hr, "2026-12-05", HR), "'5.12.2026.' carries 12-05");
+ok(dateMentioned(hr, "2026-12-12", HR), "'12. – 14. prosinca' carries the 12th");
+ok(dateMentioned(hr, "2026-12-19", HR), "'19. i 20. prosinca' carries the 19th");
+ok(dateMentioned(hr, "2026-12-07", HR), "'07. 12.' carries 12-07");
+ok(!dateMentioned(hr, "2026-05-12", HR), "HR numeric = day.month: '5.12.' is not May 12");
+ok(!dateMentioned(hr, "2026-12-01", HR), "a date the HR text never states is refused");
+ok(!dateMentioned("Cijena 128 kuna", "2026-11-28", HR), "'128' is not the 28th");
+ok(!dateMentioned("svi 12 izlagača", "2026-05-12", HR), "'svi' (= all) is not May — the abbreviation is not in the lexicon");
+ok(!dateMentioned("28. studenoga", "2026-11-28", HU), "the HU spec does not read Croatian months");
+
+console.log("eventQuery (lexicon template)");
+ok(eventQuery(eventLexicon("HU")!, "Tihany", "2026-09-23", "2026-10-07") === "Tihany programok rendezvények 2026 szeptember október",
+  "HU query byte-identical to the pre-lexicon template");
+ok(eventQuery(eventLexicon("HU")!, "Tihany", "2026-09-10", "2026-09-24") === "Tihany programok rendezvények 2026 szeptember", "one month once");
+ok(eventQuery(eventLexicon("HR")!, "Makarska", "2026-11-27", "2026-12-11") === "Makarska događanja manifestacije 2026 studeni prosinac", "HR query");
+ok(eventLexicon("ZZ") === null, "unknown country → no event language (fail closed)");
 
 console.log("dedup (measured pairs)");
 ok(
@@ -144,7 +169,7 @@ ok(nameTokens("Balatoni Borhét", "Balatonfüred").join(" ") === "balatoni borhe
 
 console.log("locality");
 const S = (osmId: string, name: string, lat: number, lon: number, population: number | null): Settlement => ({
-  osmId, name, lat, lon, population,
+  osmId, name, lat, lon, population, country: "HU",
 });
 const revfulop = S("1", "Révfülöp", 46.8257, 17.6199, 1100);
 const kovagoors = S("2", "Kővágóörs", 46.8446, 17.6036, 800);

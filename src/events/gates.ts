@@ -76,20 +76,29 @@ export function windowGate(
   return { ok: true, start: s, end: e };
 }
 
-const MONTHS_HU = [
-  ["január", "jan"], ["február", "febr", "feb"], ["március", "márc"], ["április", "ápr"],
-  ["május", "máj"], ["június", "jún"], ["július", "júl"], ["augusztus", "aug"],
-  ["szeptember", "szept", "szep"], ["október", "okt"], ["november", "nov"], ["december", "dec"],
-] as const;
+/**
+ * How a country writes a calendar day — from its lexicon (src/events/eventLexicon.ts), never
+ * burned in here: the month spellings (all forms a date uses, lower case, abbreviations without
+ * the dot) and whether the day stands before the month ("dm": "28. studenoga", "28.11.") or
+ * after it ("md": "november 28.", "11.28.").
+ */
+export interface DateSpec {
+  readonly monthWords: readonly (readonly string[])[];
+  readonly order: "md" | "dm";
+}
+
+const reEsc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * Does the page text actually carry this calendar day? The second fact-fidelity
  * gate: the model may produce a well-formed date that no sentence of the page
  * states (§B.17 — "only if the date is IN the text" is a prompt wish, this is the
- * check). Accepted spellings: 2026-09-26 · 2026.09.26. · 09.26. · 09. 26. ·
+ * check). The ISO day itself always counts. "md" (HU): 2026.09.26. · 09.26. · 09. 26. ·
  * szeptember 26. · szept. 26 — and a range start ("szeptember 25–27.") matches 25.
+ * "dm" (HR …): 26.09.2026. · 26. 9. · 26. rujna · 25.–27. rujna · 25. i 26. rujna ·
+ * 28 de noviembre · 1er novembre — a range start matches here too.
  */
-export function dateMentioned(text: string, iso: string): boolean {
+export function dateMentioned(text: string, iso: string, spec: DateSpec): boolean {
   const m = ISO.exec(iso);
   if (!m) return false;
   const [, y, mm, dd] = m;
@@ -97,13 +106,28 @@ export function dateMentioned(text: string, iso: string): boolean {
   const day = Number(dd);
   const d = `0?${day}`;
   const t = text.toLowerCase();
-  const numeric = new RegExp(
-    `(?:^|[^0-9])(?:${y}\\s*[.\\-/]\\s*)?0?${mon}\\s*[.\\-/]\\s*${d}(?:[^0-9]|$)`,
-  );
-  if (t.includes(iso) || numeric.test(t)) return true;
-  const names = MONTHS_HU[mon - 1]!.map((n) => n.replace(".", "\\.")).join("|");
-  const named = new RegExp(`(?:${names})\\.?\\s*${d}(?:[^0-9]|$)`);
-  return named.test(t);
+  if (t.includes(iso)) return true;
+  const words = spec.monthWords[mon - 1] ?? [];
+  const names = words.map(reEsc).join("|");
+  if (spec.order === "md") {
+    const numeric = new RegExp(
+      `(?:^|[^0-9])(?:${y}\\s*[.\\-/]\\s*)?0?${mon}\\s*[.\\-/]\\s*${d}(?:[^0-9]|$)`,
+    );
+    if (numeric.test(t)) return true;
+    if (!names) return false;
+    return new RegExp(`(?:${names})\\.?\\s*${d}(?:[^0-9]|$)`).test(t);
+  }
+  // Day first. A range's first day may be followed by "–27." / "i 27." / "do 27." / "al 27"
+  // before the month; an ordinal or "de" may stand between day and month name.
+  const range = `(?:\\s*(?:[-–—/]|i|do|al|au|a|et|e|y)\\s*\\d{1,2}\\.?)?`;
+  // The numeric form needs a separator between day and month (26.09, 26/9, 26. 9.).
+  const numeric = new RegExp(`(?:^|[^0-9])${d}\\s*[.\\-/]${range}\\s*0?${mon}(?:[^0-9]|$)`);
+  if (numeric.test(t)) return true;
+  if (!names) return false;
+  return new RegExp(
+    `(?:^|[^0-9])${d}(?:\\.|er|º|ª)?${range}\\s*(?:de\\s+|del\\s+)?(?:${names})(?:\\.|[^\\p{L}]|$)`,
+    "u",
+  ).test(t);
 }
 
 /* ------------------------------------------------------------------ dedup ----- */

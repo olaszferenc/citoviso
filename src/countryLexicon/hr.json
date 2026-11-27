@@ -1,6 +1,10 @@
 {
   "iso2": "HR",
   "osmNameTag": "name:hr",
+  "eventSearchQuery": "{settlement} događanja manifestacije {year} {months}",
+  "eventMonthNames": ["siječanj","veljača","ožujak","travanj","svibanj","lipanj","srpanj","kolovoz","rujan","listopad","studeni","prosinac"],
+  "eventMonthWords": [["siječanj","siječnja","siječnju"],["veljača","veljače","veljači"],["ožujak","ožujka","ožujku"],["travanj","travnja","travnju"],["svibanj","svibnja","svibnju"],["lipanj","lipnja","lipnju"],["srpanj","srpnja","srpnju"],["kolovoz","kolovoza","kolovozu"],["rujan","rujna","rujnu"],["listopad","listopada","listopadu"],["studeni","studenoga","studenog","studenom"],["prosinac","prosinca","prosincu"]],
+  "eventDateOrder": "dm",
   "chainFelderitoAddressOrder": "street-first",
   "chainKontaktGenericWords": ["smjestaj","privatni","apartman","apartmani","apartmana","apartment","apartments","apartmenti","soba","sobe","rooms","room","kuca","kuce","odmor","holiday","home","homes","house","houses","vila","villa","villas","pansion","pension","hotel","hoteli","hotels","hostel","motel","kamp","camp","camping","mobilne","kucice","studio","studios","guesthouse","guest","rezidencija","residence","resort","obiteljski","seoski","turizam","bed","breakfast","lux","luxury","more","sea","view","beach","plaza","wifi","suite","suites","family","with","terrace","garden","pool","bazen","doo","obrt","ltd","i","and","the","one","two","three","bedroom","double","standard","deluxe","large","small","ferienwohnung","zimmer","appartamenti","camere"],
   "chainKontaktFreemailRegex": "@(gmail|googlemail|yahoo|hotmail|outlook|live|icloud|me|gmx|net|inet|vip|optinet|globalnet|t-com|email\\.t-com|[a-z]{2}\\.t-com)\\.",
