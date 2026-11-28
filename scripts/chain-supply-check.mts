@@ -156,6 +156,13 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   const g = read("../src/outreach/mockRenderGate.ts");
   check("mennyiség: a mérő-böngésző nem tölti a Google-térképet (mobil + asztali), a térkép-dobozt az iframe megléte dönti el", (g.match(/maps\\\.google\\\.com\|www\\\.google\\\.com\\\/maps/g) ?? []).length >= 2 && /mapBlank = !\(await page\.\$\("\.cit-map-box iframe\[src\]"\)\)/.test(g));
 }
+// QUANTITY 11-28 (new box): the brake counts the real work; a stale town pick is taken again from the current set
+{
+  const mr = read("../src/generator/mockRefresh.ts");
+  check("mennyiség: a fék csak a valódi munkát számolja (frissítés vagy a fotószabályon átmenő, ítélet nélküli aktuális terv)", /\(\$\{DISPATCH_PHOTOS_OK_SQL\} and coalesce\(\(a\.inputs->'renderGate'->>'version'\)::int, 0\) < 15\)/.test(mr));
+  check("mennyiség: az elavult (bélyeg nélküli) településkép-választás frissítésre kerül, és a mai készletből újraválasztódik, naponta egyszer próbálva", /export const TOWN_PICK_STALE_SQL/.test(mr) && /not \$\{MOCK_CURRENT_GENERATOR_SQL\} or \$\{TOWN_PICK_STALE_SQL\}/.test(mr) && /await townPhotosForMock\(/.test(mr) && /townRepickAt/.test(mr));
+  check("az eszkalációs utánkövető az elutasító válaszolót is kihagyja (bármely prospect leiratkozása, vagy Poe „elutasító / nem érintett” minősítése)", /export async function leadRejected/.test(read("../src/outreach/escalationFollowup.ts")) && /suggestion_basis\[1\] ilike 'elutasító%'/.test(read("../src/outreach/escalationFollowup.ts")));
+}
 // wiring
 {
   const tick = read("./chain-supply.mts");

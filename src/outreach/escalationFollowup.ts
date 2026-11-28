@@ -11,6 +11,7 @@
 // same percent, same single-transaction validity, same deadline — the mail and
 // the page it links to must not disagree (§I).
 
+import { sql } from "kysely";
 import { db } from "../db/client.js";
 import {
   claimFollowup,
@@ -88,6 +89,25 @@ export function escalationFollowupOn(country: string | null): boolean {
   return countryConfigSync(country)?.dispatch.escalationFollowup ?? false;
 }
 
+/** The lead said no: any of its prospects opted out, or a reply's basis starts „elutasító” / „nem érintett”. */
+export async function leadRejected(leadId: string): Promise<boolean> {
+  const r = await db
+    .selectFrom("lead as l")
+    .select("l.id")
+    .where("l.id", "=", leadId)
+    .where((eb) =>
+      eb.or([
+        eb.exists(eb.selectFrom("prospect as px").select("px.id").whereRef("px.lead_id", "=", "l.id").where("px.unsubscribed_at", "is not", null)),
+        eb.exists(
+          eb.selectFrom("outreach_reply as r").select("r.id").whereRef("r.lead_id", "=", "l.id")
+            .where(sql<boolean>`(r.suggestion_basis[1] ilike 'elutasító%' or r.suggestion_basis[1] ilike 'nem érintett%')`), // i18n-exempt: Poe's basis marker (machine key, RUNBOOK §6b), never shown
+        ),
+      ]),
+    )
+    .executeTakeFirst();
+  return Boolean(r);
+}
+
 export async function sendEscalationFollowups(
   now: Date = new Date(),
   opts: { readonly sender?: EmailSender; readonly onlyProspects?: ReadonlySet<string> } = {},
@@ -119,6 +139,13 @@ export async function sendEscalationFollowups(
     // NEMZETKÖZI B védőháló: „ne keressük” on the LEAD (lead.contact_block_at) stops it too — a
     // prospect created after the block carries no unsubscribed_at of its own.
     if (!email || p?.unsubscribed_at || p?.contact_block_at || (await isEmailSuppressed(email))) {
+      skipped++;
+      continue;
+    }
+    // ⛔ A REJECTER NEVER GETS ANYTHING MORE (owner 2026-10-26, ADR-0421) — not even this reminder, whether or not someone
+    // clicked the block mark: an opt-out on ANY of the lead's prospects, or a reply Poe classed „elutasító / nem érintett”
+    // (the first line of the suggestion's basis, Poe RUNBOOK §6b — language-independent, always Hungarian).
+    if (await leadRejected(p!.lead_id)) {
       skipped++;
       continue;
     }

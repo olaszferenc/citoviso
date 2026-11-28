@@ -339,6 +339,22 @@ try {
     }
   }
 
+  // ⑨c ⛔ A REJECTER NEVER GETS ANYTHING MORE (owner 2026-10-26, ADR-0421): a reply Poe classed „elutasító / nem érintett”
+  // holds the reminder even without the block mark; with the reply gone, the reminder goes (next step).
+  {
+    const rep = await db.insertInto("outreach_reply").values({
+      source_key: `esc-config-check-rej-${process.pid}`, channel: "email", lead_id: joinLead.id, prospect_id: fp.id,
+      sender: `esc-config-check-${process.pid}@example.invalid`, received_at: new Date(), body: "Köszönöm, nem kérem.",
+      suggestion_basis: ["elutasító — nem kéri, udvariasan lezárjuk"],
+    } as never).returning("id").executeTakeFirstOrThrow();
+    try {
+      await sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine });
+      check("⑨c elutasító válaszoló (Poe: „elutasító — …”): ablakon belül sem megy ki emlékeztető", [sent.filter((m) => JSON.stringify(m).includes(`esc-config-check-${process.pid}@`)).length, await stamp()], [0, null]);
+    } finally {
+      await db.deleteFrom("outreach_reply").where("id", "=", rep.id).execute();
+    }
+  }
+
   const [r1, r2] = await Promise.all([
     sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine }),
     sendEscalationFollowups(inWindow, { sender: fake, onlyProspects: mine }),

@@ -34,6 +34,10 @@ import { persistMockLanguage, renderMockMeasured } from "./mockLanguage.js";
 import { secureMockPhotos } from "./photoTransport.js";
 import { curateMockPhotos } from "./photoCurate.js";
 import { getHeroPin } from "./heroOverride.js";
+import { townPhotosForMock } from "./townHero.js";
+import { loadLead } from "./persist.js";
+import { countryOfLead } from "../country.js";
+import { TOWN_PICK_VERSION } from "../media/townPick.js";
 import { accentFromPhotoUrls } from "../media/photoAccent.js";
 
 export interface RefreshRow {
@@ -71,6 +75,22 @@ export async function refreshMock(row: RefreshRow, opts: { readonly backupDir?: 
   }
   const { heroDepth: _old, ...base } = stored;
   let siteData = base as SiteData;
+  // A stale town picture (no / an old picker stamp): the town's CURRENT judged set, the generator's own reader (townHero.ts).
+  // None yet → the old one stays and the next try is a day later (TOWN_PICK_STALE_SQL reads townRepickAt).
+  let townRepickAt: string | undefined;
+  const tp = (siteData as { townPhoto?: { pick?: { version?: number } } }).townPhoto;
+  if (tp && String(tp.pick?.version ?? "") !== String(TOWN_PICK_VERSION)) {
+    townRepickAt = new Date().toISOString();
+    const lead = (await loadLead(String(row.lead_id)).catch(() => null))?.lead;
+    if (lead) {
+      const own = ((siteData.photos ?? []) as Photo[]).filter((p) => p.url !== (tp as { url?: string }).url);
+      const town = await townPhotosForMock({ leadId: String(row.lead_id), city: lead.city, country: await countryOfLead(String(row.lead_id)), lat: lead.lat, lon: lead.lon, email: lead.email, ownPhotos: own }).catch(() => null);
+      if (town && (town.hero || town.gallery.length)) {
+        const { townPhoto: _t, townGallery: _g, ...rest } = siteData as SiteData & { townPhoto?: unknown; townGallery?: unknown };
+        siteData = { ...rest, photos: own, ...(town.hero ? { townPhoto: town.hero } : {}), ...(town.gallery.length ? { townGallery: town.gallery } : {}), ...(town.style ? { townStyle: town.style } : {}) } as SiteData;
+      }
+    }
+  }
   let duplicates = 0;
   let offPage = 0;
   let heroMoved = false;
@@ -107,7 +127,7 @@ export async function refreshMock(row: RefreshRow, opts: { readonly backupDir?: 
   await writeFile(row.path, secured.html, "utf8");
   await db
     .updateTable("mock_artifact")
-    .set({ inputs: JSON.stringify({ ...inputs, siteData, heroDepthArm: depth.arm, terhatasAt: MOCK_HEROFIX_STAMP }) } as never)
+    .set({ inputs: JSON.stringify({ ...inputs, siteData, heroDepthArm: depth.arm, terhatasAt: MOCK_HEROFIX_STAMP, ...(townRepickAt ? { townRepickAt } : {}) }) } as never)
     .where("id", "=", row.id)
     .execute();
   await persistMockLanguage(String(row.id), language);
@@ -122,6 +142,17 @@ export const REFRESH_BATCH = 30;
  * that are below the current generator's bar, re-rendered a batch at a time within `budgetMs`.
  * Their dispatch rows go back to the quality colleague. Returns the counts for the timer log.
  */
+/**
+ * A TOWN PAGE WITH A STALE TOWN PICTURE (quantity, 11-28: 422 waiting town pages carried a town photo with NO picker stamp —
+ * the single Wikipedia lookup before ADR-0479 — so the photo rule (MOCK_TOWN_PICK_OK_SQL) could never pass them, while the
+ * town picture library held a current set for ~146 of their towns). Such a mock is refreshed and its town pictures are taken
+ * again from the town's CURRENT set (refreshMock); a town without one is tried again a day later (inputs.townRepickAt).
+ * Alias `a` = mock_artifact.
+ */
+export const TOWN_PICK_STALE_SQL = sql<boolean>`(a.inputs->'siteData'->'townPhoto' is not null
+  and coalesce(a.inputs->'siteData'->'townPhoto'->'pick'->>'version', '') <> ${String(TOWN_PICK_VERSION)}
+  and coalesce((a.inputs->>'townRepickAt')::timestamptz, 'epoch'::timestamptz) < now() - interval '24 hours')`;
+
 export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH): Promise<{ refreshed: number; failed: number; left: number }> {
   if (!photoKindAvailable() || budgetMs <= 0) return { refreshed: 0, failed: 0, left: -1 };
   const stale = await db
@@ -138,7 +169,7 @@ export async function refreshStaleQueue(budgetMs: number, limit = REFRESH_BATCH)
     // row's own_town branch is open, and a stamp bump otherwise strands them (not current, never refreshed).
     .where(sql<boolean>`(${LEAD_OWN_PHOTOS_SQL} >= ${LEAD_MIN_OWN_PHOTOS_SQL} or a.inputs->'siteData'->'townPhoto' is not null)`)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
-    .where(sql<boolean>`not ${MOCK_CURRENT_GENERATOR_SQL}`)
+    .where(sql<boolean>`(not ${MOCK_CURRENT_GENERATOR_SQL} or ${TOWN_PICK_STALE_SQL})`)
     // A half-done offer first (owner 2026-11-26/27) — inside the countries' turns (FAIR_ORDER, HALF_DONE_SQL).
     // Countries take turns (HR approval chain 2026-11-27): by queue age alone a new market waits behind the
     // home market's whole backlog — the 74 HR rows sat behind ~2 300 older HU rows.
@@ -286,7 +317,10 @@ export async function gateWorkBacklog(): Promise<number> {
     .where(CHAIN_ROWS)
     .where(LEAD_HAS_EMAIL_SQL)
     .where(sql<boolean>`a.generated_at >= ${MOCK_MIN_GENERATED_AT}::timestamptz`)
-    .where(sql<boolean>`(not ${MOCK_CURRENT_GENERATOR_SQL} or coalesce((a.inputs->'renderGate'->>'version')::int, 0) < 15)`)
+    // 11-28 (measured on the new box: „a kapu sora 297” while the gate had NOTHING to judge): only the work the steps
+    // really take — a refresh (not current, or a stale town pick) or a verdict on a current plan the photo rule passes.
+    .where(sql<boolean>`((not ${MOCK_CURRENT_GENERATOR_SQL} or ${TOWN_PICK_STALE_SQL})
+      or (${DISPATCH_PHOTOS_OK_SQL} and coalesce((a.inputs->'renderGate'->>'version')::int, 0) < 15))`)
     .executeTakeFirst();
   return Number(r?.n ?? 0);
 }
