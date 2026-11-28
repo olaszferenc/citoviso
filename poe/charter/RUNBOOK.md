@@ -118,6 +118,15 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
 1. Nyisd meg a jegy linkjét: a konzol irányítópultján a beszélgetés nyílik (a mi üzenetünk és a
    válasz). Olvasd el mindkettőt — a hangnemet a válaszhoz igazítod.
 2. Írd meg a választ:
+   - 📚 **Előbb nézd meg a kiment mintákat** (tulaj, 2026-11-28): `~/poe/mintak/kikuldott-valaszok.md`
+     (a válasz-gyűjtő frissíti, a legújabb elöl; benne: mit írt a szállásadó, mit javasoltál, mi ment ki,
+     és ⚠ jel, ahol az operátor átírta). Keress 2–3 hasonlót (azonos típus: érdeklődő / kérdező /
+     elutasító, azonos nyelv), és a hangot, hosszt, szerkezetet ezekhez igazítsd. A minta nem forrás
+     tényre és árra. Amíg a fájl nincs meg (az élesítésig), a konzol irányítópultján a „Mind” fülön
+     olvasd a már megválaszolt beszélgetéseket.
+   - ✍️ **Az átírásból tanulsz:** ahol a fájl szerint az operátor ÁTÍRTA a javaslatodat, nézd meg, min
+     változtatott, és ha általános szabály (nem levélre szóló), írd fel egy sorban a `tanulsagok.md`-be,
+     ha még nincs ott. Hetente egyszer (vagy ha a fájl tetején új átírt tétel van) nézd át.
    - **Forrás nélkül tényt nem.** Ami a lead Forrás-csomagjában és a beszélgetésben nincs, az nem
      kerül bele.
    - **Árat CSAK az élő árlistából** (a konzol árazás-lapja) — soha emlékezetből, soha régi jegyből.

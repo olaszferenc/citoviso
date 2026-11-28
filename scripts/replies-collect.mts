@@ -21,6 +21,10 @@
 // that exists is skipped). The link is the server's own console URL when it knows it,
 // else REPLIES_CONSOLE_URL (default: the prod console).
 //
+// Poe's samples (owner 2026-11-28, 0162): the ingest answer also carries the answers that went out
+// (with Poe's suggestion beside each) whenever something new went out since the file's mark; the
+// collector rewrites ~/poe/mintak/kikuldott-valaszok.md from it (src/replies/sampleFile.ts).
+//
 //   tsx scripts/replies-collect.mts --sms|--email [--dry]
 
 import { createHash } from "node:crypto";
@@ -31,6 +35,8 @@ import { config } from "../src/config.js";
 import { assembleInbox, oursBefore, readInbox, readSent } from "../src/replies/gammu.js";
 import { coldImapCreds, ImapReader, imapCreds, imapDate, imapQuote, notAReply, parseInternalDate, type ImapCreds } from "../src/replies/imap.js";
 import { parseMail, stripQuoted } from "../src/replies/mime.js";
+import { renderSampleFile, sampleMarkOf } from "../src/replies/sampleFile.js";
+import type { SentReplySample } from "../src/replies/store.js";
 
 const args = process.argv.slice(2);
 const MODE = args.includes("--sms") ? "sms" : args.includes("--email") ? "email" : null;
@@ -96,12 +102,14 @@ interface IngestReply {
   answered: number;
   needsSuggestion: NeedsSuggestion[];
   needsTranslation: NeedsTranslation[];
+  /** Owner 2026-11-28: the answers that went out (Poe's samples); items null = nothing new since our mark. */
+  sentSamples: { mark: string; items: SentReplySample[] | null } | null;
 }
 
-async function post(body: { items: Item[]; checked: string[]; answered?: { key: string; at: string }[] }): Promise<IngestReply> {
+async function post(body: { items: Item[]; checked: string[]; answered?: { key: string; at: string }[]; samplesMark?: string | null }): Promise<IngestReply> {
   if (DRY) {
     console.log(JSON.stringify(body, null, 2));
-    return { accepted: body.items.map((i) => i.key), dropped: 0, answered: 0, needsSuggestion: [], needsTranslation: [] };
+    return { accepted: body.items.map((i) => i.key), dropped: 0, answered: 0, needsSuggestion: [], needsTranslation: [], sentSamples: null };
   }
   const resp = await fetch(`${BASE}/api/replies/ingest`, {
     method: "POST",
@@ -116,22 +124,26 @@ async function post(body: { items: Item[]; checked: string[]; answered?: { key: 
     answered: Number(r.answered ?? 0),
     needsSuggestion: Array.isArray(r.needsSuggestion) ? r.needsSuggestion : [],
     needsTranslation: Array.isArray(r.needsTranslation) ? r.needsTranslation : [],
+    sentSamples: r.sentSamples && typeof r.sentSamples.mark === "string" ? r.sentSamples : null,
   };
 }
 
 /** Post in batches (the endpoint's body cap); `checked` rides on the last one. */
 async function postAll(items: Item[], checked: string[], answered: { key: string; at: string }[] = []): Promise<IngestReply> {
-  const out: IngestReply = { accepted: [], dropped: 0, answered: 0, needsSuggestion: [], needsTranslation: [] };
+  const out: IngestReply = { accepted: [], dropped: 0, answered: 0, needsSuggestion: [], needsTranslation: [], sentSamples: null };
+  const samplesMark = currentSampleMark();
   for (let i = 0; i < items.length || i === 0; i += BATCH) {
     const last = i + BATCH >= items.length;
-    const r = await post({ items: items.slice(i, i + BATCH), checked: last ? checked : [], answered: last ? answered : [] });
+    const r = await post({ items: items.slice(i, i + BATCH), checked: last ? checked : [], answered: last ? answered : [], samplesMark });
     out.accepted.push(...r.accepted);
     out.dropped += r.dropped;
     out.answered += r.answered;
     out.needsSuggestion = r.needsSuggestion;
     out.needsTranslation = r.needsTranslation;
+    out.sentSamples = r.sentSamples;
   }
   await writePoeTickets(out.needsSuggestion);
+  writePoeSamples(out.sentSamples);
   await writeBabelTickets(out.needsTranslation);
   return out;
 }
@@ -210,6 +222,35 @@ async function writePoeTickets(list: NeedsSuggestion[]): Promise<void> {
     }
   }
   if (made) console.log(`[replies-${MODE}] ${made} új Poe-jegy a ${POE_INBOX}-ban.`);
+}
+
+// ── Poe's sample file (owner 2026-11-28) ─────────────────────────────────────────────────
+
+const POE_SAMPLES = process.env.POE_SAMPLES_FILE || path.join(os.homedir(), "poe", "mintak", "kikuldott-valaszok.md");
+
+function currentSampleMark(): string | null {
+  try {
+    return sampleMarkOf(fs.readFileSync(POE_SAMPLES, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/** Rewrites the file only when the server sent items (something new went out since our mark). */
+function writePoeSamples(s: IngestReply["sentSamples"]): void {
+  if (!s?.items) return;
+  const poeHome = path.dirname(path.dirname(POE_SAMPLES));
+  if (!fs.existsSync(poeHome)) return;
+  const md = renderSampleFile(s.mark, s.items);
+  if (DRY) {
+    console.log(`[replies-${MODE}] (dry) Poe-minták: ${s.items.length} → ${POE_SAMPLES}`);
+    return;
+  }
+  fs.mkdirSync(path.dirname(POE_SAMPLES), { recursive: true });
+  const tmp = `${POE_SAMPLES}.tmp-${process.pid}`;
+  fs.writeFileSync(tmp, md);
+  fs.renameSync(tmp, POE_SAMPLES);
+  console.log(`[replies-${MODE}] Poe-minták frissítve: ${s.items.length} kiment válasz → ${POE_SAMPLES}`);
 }
 
 // ── Bábel's translation tickets (plan orszag-szuro-forditas ⑫, ADR-0412) ─────────────────

@@ -570,6 +570,88 @@ export async function repliesNeedingSuggestion(): Promise<
   return out;
 }
 
+/** One answer that actually went out, with what Poe had proposed for it — Poe's sample (owner 2026-11-28). */
+export interface SentReplySample {
+  readonly replyId: string;
+  readonly lead: string;
+  readonly channel: ReplyChannel;
+  readonly lang: string | null;
+  /** What the lodging owner wrote to us. */
+  readonly incoming: string;
+  readonly receivedAt: string;
+  /** What went out (the operator's final text). */
+  readonly sentSubject: string | null;
+  readonly sentBody: string;
+  readonly sentAt: string;
+  readonly sentBy: string;
+  /** Poe's suggestion as it stood at the send (null = none, or a send before 0162). */
+  readonly suggestion: { readonly text: string; readonly subject: string | null; readonly by: string | null; readonly basis: readonly string[] } | null;
+}
+
+export const SENT_SAMPLES_LIMIT = 50;
+
+/**
+ * The last answers that went out (one per reply: its latest 'sent'), newest first, with Poe's
+ * suggestion beside each. `mark` is the collector's last seen fingerprint: while nothing new went
+ * out the answer is `items: null` (the call rides on the once-a-minute ingest — no 50-row payload
+ * every minute).
+ */
+export async function sentReplySamples(mark: string | null, limit = SENT_SAMPLES_LIMIT): Promise<{ readonly mark: string; readonly items: readonly SentReplySample[] | null }> {
+  const head = await db
+    .selectFrom("outreach_reply_send")
+    .select([db.fn.countAll<string>().as("n"), sql<string | null>`max(updated_at)::text`.as("at")])
+    .where("status", "=", "sent")
+    .executeTakeFirstOrThrow();
+  const now = `${head.n}:${head.at ?? "-"}`;
+  if (mark === now) return { mark: now, items: null };
+  const rows = await db
+    .selectFrom("outreach_reply_send as s")
+    .innerJoin("outreach_reply as r", "r.id", "s.reply_id")
+    .innerJoin("lead as l", "l.id", "r.lead_id")
+    .distinctOn("s.reply_id")
+    .select([
+      "s.reply_id",
+      "l.name as lead",
+      "r.channel",
+      "r.lang",
+      "r.body as incoming",
+      "r.received_at",
+      "s.subject",
+      "s.body",
+      "s.sent_at",
+      "s.created_at",
+      "s.sent_by",
+      "s.suggestion_text",
+      "s.suggestion_subject",
+      "s.suggestion_by",
+      "s.suggestion_basis",
+    ])
+    .where("s.status", "=", "sent")
+    .orderBy("s.reply_id")
+    .orderBy("s.created_at", "desc")
+    .execute();
+  const iso = (v: unknown): string => new Date(v as Date).toISOString();
+  const items = rows
+    .map((r) => ({
+      replyId: r.reply_id,
+      lead: r.lead,
+      channel: r.channel,
+      lang: r.lang,
+      incoming: r.incoming,
+      receivedAt: iso(r.received_at),
+      sentSubject: r.subject,
+      sentBody: r.body,
+      sentAt: iso(r.sent_at ?? r.created_at),
+      sentBy: r.sent_by,
+      suggestion: r.suggestion_text
+        ? { text: r.suggestion_text, subject: r.suggestion_subject, by: r.suggestion_by, basis: r.suggestion_basis ?? [] }
+        : null,
+    }))
+    .sort((a, b) => b.sentAt.localeCompare(a.sentAt))
+    .slice(0, limit);
+  return { mark: now, items };
+}
+
 /** Poe's current suggestion on one reply (the editor's poll), or null while there is none. */
 export async function getReplySuggestion(id: string): Promise<{ readonly text: string; readonly subject: string | null } | null> {
   const r = await db

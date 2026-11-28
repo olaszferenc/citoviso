@@ -172,7 +172,7 @@ export async function sendAnswer(
 ): Promise<SendOutcome> {
   const r = await db
     .selectFrom("outreach_reply")
-    .select(["id", "channel", "sender", "subject", "ours_subject", "lead_id"])
+    .select(["id", "channel", "sender", "subject", "ours_subject", "lead_id", "suggestion_text", "suggestion_subject", "suggestion_by", "suggestion_basis"])
     .where("id", "=", replyId)
     .executeTakeFirst();
   if (!r) return { ok: false, status: "failed", message: "Nincs ilyen válasz." };
@@ -209,6 +209,12 @@ export async function sendAnswer(
       scheduled_for: when ?? now,
       sent_by: by.slice(0, 200),
       parts: r.channel === "sms" ? smsParts(text) : null,
+      // 0162 (owner 2026-11-28): Poe's suggestion travels with the send — the reply's own copy is
+      // retired once it goes out, and Poe learns from „what he proposed → what actually went out”.
+      suggestion_text: r.suggestion_text,
+      suggestion_subject: r.suggestion_subject,
+      suggestion_by: r.suggestion_by,
+      suggestion_basis: r.suggestion_basis ?? [],
     })
     .returning("id")
     .executeTakeFirstOrThrow();

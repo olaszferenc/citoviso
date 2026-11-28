@@ -2395,6 +2395,11 @@ export interface OutreachReplySendTable {
   created_at: Generated<Timestamp>;
   sent_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
+  /** 0162: Poe's suggestion as it stood when this answer was sent (NULL = none / before 0162) — his sample. */
+  suggestion_text: string | null;
+  suggestion_subject: string | null;
+  suggestion_by: string | null;
+  suggestion_basis: Generated<string[]>;
 }
 
 /**

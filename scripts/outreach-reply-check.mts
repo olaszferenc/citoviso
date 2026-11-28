@@ -28,6 +28,10 @@
 //      answered BY THE OPERATOR and retires the used suggestion (after a „Visszavonás” it must
 //      not stand there behind a one-tap „Elküldöm” again); a 'failed' outbox row leaves the
 //      reply OPEN (→ „Újraküldés”).
+//   ⑨ Poe's samples (owner 2026-11-28, 0162) — the suggestion standing at „Elküldöm” travels
+//      onto the send row (the reply's own copy is still retired); the sample file marks a
+//      rewritten answer, an unchanged one, and one without a suggestion; the fingerprint
+//      round-trips through the file, and an unchanged fingerprint returns no items.
 //
 //   npx tsx scripts/outreach-reply-check.mts            (the checks)
 //   npx tsx scripts/outreach-reply-check.mts --self-test (each check must go RED on a broken input)
@@ -50,6 +54,8 @@ import { answerTextError, nextWindowStart, smsParts, SMS_MAX_PARTS } from "../sr
 import { sendAnswer, settleReplySends } from "../src/replies/answer.js";
 import { MOCK_OUTREACH_WINDOW } from "../src/sms/sendWindow.js";
 import { countryConfigSync } from "../src/country.js";
+import { sentReplySamples, type SentReplySample } from "../src/replies/store.js";
+import { renderSampleFile, sampleMarkOf, sampleVerdict } from "../src/replies/sampleFile.js";
 
 const SELF_TEST = process.argv.includes("--self-test");
 
@@ -261,8 +267,16 @@ async function sendCases(send: typeof sendAnswer, settle: typeof settleReplySend
   const outbox: string[] = [];
   const res: boolean[] = [];
   try {
+    await db.updateTable("outreach_reply").set({ suggestion_text: "Poe önteszt-javaslata", suggestion_by: "Poe", suggestion_at: new Date(), suggestion_basis: ["önteszt"] }).where("id", "=", a.id).execute();
     const out = await send(a.id, { text: "Köszönjük a választ! A Citoviso csapata" }, "Teszt Operátor", SAT_1000);
-    const row = await db.selectFrom("outreach_reply_send").select(["status", "scheduled_for"]).where("reply_id", "=", a.id).executeTakeFirst();
+    const row = await db.selectFrom("outreach_reply_send").select(["status", "scheduled_for", "suggestion_text", "suggestion_by", "suggestion_basis"]).where("reply_id", "=", a.id).executeTakeFirst();
+    res.push(
+      check(
+        "⑨ az „Elküldöm” a küldés sorára menti Poe akkori javaslatát (szöveg, szerző, alap)",
+        row?.suggestion_text === "Poe önteszt-javaslata" && row?.suggestion_by === "Poe" && JSON.stringify(row?.suggestion_basis) === JSON.stringify(["önteszt"]),
+        JSON.stringify(row),
+      ),
+    );
     res.push(
       check(
         "⑧ ablakon kívül (szombat) az „Elküldöm” csak sorba állít, hétfő ablaknyitásra",
@@ -308,6 +322,40 @@ async function sendCases(send: typeof sendAnswer, settle: typeof settleReplySend
   return res;
 }
 
+function sampleCases(render: typeof renderSampleFile): boolean[] {
+  const base: SentReplySample = {
+    replyId: "00000000-0000-0000-0000-000000000001",
+    lead: "Minta Panzió",
+    channel: "email",
+    lang: "hu",
+    incoming: "Érdekelne, csütörtökön hívjanak.",
+    receivedAt: "2026-11-28T07:41:00.000Z",
+    sentSubject: "Re: Ez az Ön szállása?",
+    sentBody: "Tisztelt Úr!\n\nCsütörtökön hívjuk.\n\nÜdvözlettel,\nCitoviso",
+    sentAt: "2026-11-28T09:00:00.000Z",
+    sentBy: "Teszt Operátor",
+    suggestion: { text: "Tisztelt Úr!\n\nCsütörtökön hívjuk, és mindent írásban rögzítünk.\n\nÜdvözlettel,\nCitoviso", subject: "Re: Ez az Ön szállása?", by: "Poe", basis: ["beszélgetés"] },
+  };
+  const same: SentReplySample = { ...base, replyId: "00000000-0000-0000-0000-000000000002", suggestion: { ...base.suggestion!, text: "Tisztelt Úr!\n\nCsütörtökön   hívjuk.\nÜdvözlettel,\nCitoviso" } };
+  const none: SentReplySample = { ...base, replyId: "00000000-0000-0000-0000-000000000003", suggestion: null };
+  const md = render("7:2026-11-28 09:00:00+00", [base, same, none]);
+  return [
+    check("⑨ átírt / változatlan (csak sortörés) / javaslat nélküli", sampleVerdict(base) === "rewritten" && sampleVerdict(same) === "unchanged" && sampleVerdict(none) === "no-suggestion"),
+    check("⑨ a fájl az átírtnál mindkét szöveget mutatja, és jelzi az átírást", md.includes("ÁTÍRTA") && md.includes("mindent írásban rögzítünk") && md.includes("> Csütörtökön hívjuk.")),
+    check("⑨ az ujjlenyomat a fájl első sorából visszaolvasható", sampleMarkOf(md) === "7:2026-11-28 09:00:00+00"),
+    check("⑨ összesítő: 1 átírva · 1 változatlanul · 1 javaslat nélkül", md.includes("átírva 1 · változatlanul 1 · javaslat nélkül 1")),
+  ];
+}
+
+async function sampleFeedCases(feed: typeof sentReplySamples): Promise<boolean[]> {
+  const first = await feed(null, 3);
+  const again = await feed(first.mark, 3);
+  return [
+    check("⑨ jel nélkül tételeket ad (legfeljebb a kért számút)", Array.isArray(first.items) && first.items.length <= 3),
+    check("⑨ változatlan ujjlenyomatra nincs tétel (a percenkénti hívás nem viszi a 50 mintát)", again.items === null && again.mark === first.mark),
+  ];
+}
+
 // ---------- run ----------
 async function runAll(): Promise<void> {
   matcherCases(matchReply);
@@ -318,6 +366,8 @@ async function runAll(): Promise<void> {
   blockCases(repliesBlockHtml);
   ruleCases(smsParts, nextWindowStart);
   await sendCases(sendAnswer, settleReplySends);
+  sampleCases(renderSampleFile);
+  await sampleFeedCases(sentReplySamples);
 }
 
 /** Every family must go RED on a deliberately broken implementation. */
@@ -342,6 +392,9 @@ async function selfTest(): Promise<void> {
     ],
     // A send that ignores the window (reports 'sent', stores nothing), and a settle that never runs.
     ["⑧", () => sendCases(async () => ({ ok: true, status: "sent", message: "" }), async () => {})],
+    // A renderer that hides the rewrite (never shows Poe's text), and a feed that always resends.
+    ["⑨ minta", () => sampleCases((m, items) => renderSampleFile(m, items.map((i) => ({ ...i, suggestion: null }))))],
+    ["⑨ jel", () => sampleFeedCases(async (_m, n) => sentReplySamples(null, n))],
     ["⑥", () => blockCases((b, q, lang, now) => repliesBlockHtml({ ...b, replies: q.filter === "open" ? b.replies.filter((r) => !r.answeredAt) : b.replies }, q, lang, now))],
   ];
   for (const [fam, run] of reds) {

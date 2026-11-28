@@ -4584,7 +4584,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // Plan orszag-szuro-forditas ⑫ (ADR-0412): the conversation parts Bábel still owes a translation for.
     const { repliesNeedingTranslation } = await import("../replies/translation.js");
     const needsTranslation = (await repliesNeedingTranslation()).map((n) => ({ ...n, url: config.consoleUrl ? replyConsoleUrl(n.id) : null }));
-    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: auto, needsSuggestion, needsTranslation });
+    // Owner 2026-11-28: the answers that actually went out, with Poe's suggestion beside each — Poe's
+    // sample file. Only when something new went out since the collector's last `samplesMark`.
+    const { sentReplySamples } = await import("../replies/store.js");
+    const sentSamples = await sentReplySamples(typeof b.samplesMark === "string" ? b.samplesMark : null);
+    return sendJson(res, 200, { accepted: r.accepted, dropped: r.dropped, answered: auto, needsSuggestion, needsTranslation, sentSamples });
   }
 
   // ── ADR-0282 MMS-relay API: the same Debian-box modem, the same bearer secret. ──
