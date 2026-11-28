@@ -1508,15 +1508,21 @@ async function handleOrderRequest(
         `terhelés (a szolgáltató minimuma, ADR-0498) — az ársor változatlan`,
     );
   }
+  // ADR-0498 (owner 2026-11-27): a test lead's order NEVER registers a real domain — the "own address"
+  // tick is dropped here, so the order is a plain platform-address one (no registration, no hold, no
+  // commitment); the registrar-side guard (provisionDomain.ts) stands behind it.
+  const dropTestDomain = testCharge !== null && effectiveDomainType === "citoviso_registered";
+  if (dropTestDomain) console.log(`[console] TESZT-RENDELÉS: a saját domain (${domainName ?? "—"}) nem kerül a rendelésre — teszt-lead valódi domaint nem vásárol (ADR-0498)`);
+  const orderDomainType = dropTestDomain ? "citoviso_sub" : effectiveDomainType;
   // ADR-0093: operator-set commitment (pricing_config; loadPricing ran above).
-  const commitmentMonths = domainEligible ? getDomainMinCommitmentMonths(region) : null;
+  const commitmentMonths = domainEligible && !dropTestDomain ? getDomainMinCommitmentMonths(region) : null;
   // ADR-0094 ④ / ADR-0109 ④: a custom-domain order freezes the package floor AT
   // ORDER TIME — during the hűségidő the tenant may not sink below the entry
   // threshold. Now EVERY custom-domain order carries the floor (there is no
   // free/paid split any more: the threshold is the entry condition itself).
   // ADR-0360 ④: a threshold of 0 is "no threshold" — and then there is no floor either.
   const committedMinMonthly =
-    domainEligible && getDomainMinPackageMonthly(region) > 0 ? getDomainMinPackageMonthly(region) : null;
+    domainEligible && !dropTestDomain && getDomainMinPackageMonthly(region) > 0 ? getDomainMinPackageMonthly(region) : null;
   // ⛔ ADR-0366 ⑥ (Elek 5. kör K2): two simultaneous submits (two tabs, a double tap) each
   // recorded an order AND minted a payable pay-link — the money could move twice. Per lead,
   // record → approve → pay-link now run ONE AT A TIME, and an identical, still-open first
@@ -1524,7 +1530,7 @@ async function handleOrderRequest(
   // requestPayment's pending-reuse) instead of a second one being opened. A DIFFERENT order
   // (the buyer changed the basket) still opens its own: handing back the old link would charge
   // an amount the screen no longer shows (ADR-0032).
-  const storedDomainName = domainEligible || domainType === "citoviso_sub" ? domainName : null;
+  const storedDomainName = dropTestDomain ? null : domainEligible || domainType === "citoviso_sub" ? domainName : null;
   const storedPlatformLabel = domainEligible ? platformLabel : null;
   const lockLead = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
   const releaseOrderLock = await acquireOrderLock(lockLead?.lead_id ?? artifactId);
@@ -1535,7 +1541,7 @@ async function handleOrderRequest(
         modules,
         billingPeriod,
         price: chargedPrice,
-        domainType: effectiveDomainType,
+        domainType: orderDomainType,
         domainName: storedDomainName,
         platformLabel: storedPlatformLabel,
         buyerEmail: buyer.buyerEmail,
@@ -1554,7 +1560,7 @@ async function handleOrderRequest(
     billingPeriod,
     price: chargedPrice,
     money,
-    domainType: effectiveDomainType,
+    domainType: orderDomainType,
     // Elek3 B1 (ADR-0032 / ADR-0356): a freely-chosen platform subdomain is a domain NAME
     // too — dropping it here meant activation never saw the buyer's choice. A custom-domain
     // name refused for the package (or an "own" one) is NOT carried onto the free subdomain.
@@ -6178,7 +6184,10 @@ async function handle(
     const preview =
       paid && previewTenantId
         ? {
-            shotUrl: (await siteShotPath(previewTenantId))
+            // ADR-0498 (owner 2026-11-28 „ez így nem bizalomgerjesztő”): right after paying the live
+            // shot is not built yet, and a lead without own photos has no cover — the buyer saw an
+            // empty gradient. The bought plan's own hero shot (cached when the letter went out) stands in.
+            shotUrl: (await payPreviewImage(previewTenantId, ref))
               ? `/pay/preview?paymentId=${encodeURIComponent(ref)}`
               : null,
             photoUrl: (await tenantCoverPhoto(previewTenantId).catch(() => null))?.url ?? null,
@@ -6261,11 +6270,11 @@ async function handle(
     // column — see the note at /pay/done above.
     const tenantId = (await getActivationSummary(ref))?.tenantId ?? null;
     if (!tenantId) return send(res, 404, "not found");
-    const shot = await siteShotPath(tenantId);
-    if (!shot) return send(res, 404, "not found");
-    const png = await readFile(shot);
+    const img = await payPreviewImage(tenantId, ref);
+    if (!img) return send(res, 404, "not found");
+    const png = await readFile(img.path);
     res.writeHead(200, {
-      "content-type": "image/png",
+      "content-type": img.type,
       "content-length": String(png.byteLength),
       // Private: it is one buyer's page, and the file name already carries the
       // snapshot mtime, so a re-render produces a different URL anyway.
@@ -6588,4 +6597,29 @@ async function pricingArgs(
     getPackageAssignment(),
     embed,
   ];
+}
+
+
+/**
+ * The /pay/done preview picture (ADR-0498): the live site's cached shot when it is built, else the hero
+ * shot of the plan this payment bought (cached when the cold letter went out). Never renders on request.
+ */
+async function payPreviewImage(tenantId: string, gatewayRef: string): Promise<{ path: string; type: string } | null> {
+  const shot = await siteShotPath(tenantId);
+  if (shot) return { path: shot, type: "image/png" };
+  const oi = await db
+    .selectFrom("payment")
+    .innerJoin("order_intent", "order_intent.id", "payment.order_intent_id")
+    .select(["order_intent.plan_artifact_id as planId"])
+    .where("payment.gateway_ref", "=", gatewayRef)
+    .executeTakeFirst();
+  const planId = oi?.planId ?? (await db.selectFrom("site").select("source_artifact_id").where("tenant_id", "=", tenantId).executeTakeFirst())?.source_artifact_id ?? null;
+  if (!planId) return null;
+  const state = await heroShotState(planId).catch(() => null);
+  if (!state || state.kind !== "ready") return null;
+  try {
+    return { path: await ensureCardJpeg(state.path), type: "image/jpeg" };
+  } catch {
+    return null;
+  }
 }

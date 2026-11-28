@@ -34,7 +34,8 @@ import { renderDraft } from "../src/outreach/draft.js";
 import { buildOutreachEmail, HERO_CID } from "../src/email/outreachEmail.js";
 import { checkOutreachDraft } from "../src/outreach/outreachCheck.js";
 import { markOwnViewLinks } from "../src/console/prospectPath.js";
-import { loadPricing } from "../src/pricing.js";
+import { getPackageAssignment, getTlds, loadPricing, overridePricingStateInProcess } from "../src/pricing.js";
+import { DOMAIN_PSEUDO_MODULE } from "../src/packages.js";
 import { lastWeek, verdictOf, pBetter, type VariantRow } from "../src/console/experimentReport.js";
 import { weeklyText, weekEndDay } from "../src/console/experimentViews.js";
 import { composeBody } from "../src/outreach/draft.js";
@@ -255,7 +256,25 @@ console.log("⑩ személyes levél — a tulaj végleges szövege (kikapcsolt v�
   const lang = await prepareMailLang("hu");
   check("tárgy településsel", subjectIsThisYours(lang, "Piszkeri Vendégház", "Cece") === "Ez az Ön szállása? (Piszkeri Vendégház, Cece)");
   check("tárgy település nélkül", subjectIsThisYours(lang, "Piszkeri Vendégház", "  ") === "Ez az Ön szállása? (Piszkeri Vendégház)");
-  check("ár-mondat HU: saját .hu címmel", priceSentence(lang, "3 660", "HU") === "Ha tetszik: havi 3 660 Ft-tól, saját .hu címmel.");
+  // ADR-0498: the „.hu” rides along only when the domain is the CHEAPEST package's content (pinned here,
+  // not read from the shared DB's live composition).
+  {
+    const live = getPackageAssignment();
+    const withDom = new Map([...live].filter(([id]) => id !== DOMAIN_PSEUDO_MODULE));
+    withDom.set(DOMAIN_PSEUDO_MODULE, "alap");
+    const huFree = getTlds("hu").map((t) => (t.tld === ".hu" ? { ...t, offered: true, freeInPackage: true } : t));
+    overridePricingStateInProcess({ assignment: withDom, region: "hu", tlds: huFree, domainFreeInPackage: true });
+    check("ár-mondat HU: saját .hu címmel (a domain az Alap csomag tartalma)", priceSentence(lang, "3 660", "HU") === "Ha tetszik: havi 3 660 Ft-tól, saját .hu címmel.");
+    const noDom = new Map([...live].filter(([id]) => id !== DOMAIN_PSEUDO_MODULE));
+    overridePricingStateInProcess({ assignment: noDom, region: "hu", tlds: huFree, domainFreeInPackage: true });
+    check("ár-mondat HU: a domain egyik csomagban sincs → nincs .hu-ígéret", priceSentence(lang, "3 660", "HU") === "Ha tetszik: havi 3 660 Ft-tól, saját címmel.");
+    const highDom = new Map(noDom);
+    highDom.set(DOMAIN_PSEUDO_MODULE, "teljes");
+    overridePricingStateInProcess({ assignment: highDom, region: "hu", tlds: huFree, domainFreeInPackage: true });
+    check("ár-mondat HU: a domain csak a Teljesben → a legolcsóbb árhoz nincs .hu-ígéret", priceSentence(lang, "3 660", "HU") === "Ha tetszik: havi 3 660 Ft-tól, saját címmel.");
+    overridePricingStateInProcess(null);
+    await loadPricing();
+  }
   check("ár-mondat nem-HU: „saját címmel” (nincs .hu)", priceSentence(lang, "3 660", "HR") === "Ha tetszik: havi 3 660 Ft-tól, saját címmel.");
   const input = { leadName: "Piszkeri Vendégház", region: "", qualification: null, segment: "nincs_honlap", rating: { value: 4.8, count: 15 }, token: "abcdefghijklmnopqrstuvwx", lang, planCount: 1, trialDays: 14 } as Parameters<typeof personalParts>[0];
   const base = renderDraft(input);

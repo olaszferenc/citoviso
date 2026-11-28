@@ -3764,7 +3764,8 @@
     return (
       '<span class="cit-cfg-off-l1">' + tr("Most fizetendő") +
       ' <s class="cit-cfg-off-list">' + fmt(recurring) + "</s></span>" +
-      '<b>' + fmt(firstCharge) + "</b> " + perLabel + " " + permoHtml +
+      // ADR-0498: a "[TESZT]" lead's card shows the amount really charged (syncStrapAmount's rule).
+      '<b>' + fmt(window.CIT_TEST_CHARGE && typeof window.CIT_TEST_CHARGE[PRICING.currency] === "number" ? window.CIT_TEST_CHARGE[PRICING.currency] : firstCharge) + "</b> " + perLabel + " " + permoHtml +
       // ⛔ The discount is ONE-OFF; saying only the discounted figure under a
       // "/ hó" label reads as the standing price. Name what comes after it.
       '<span class="cit-cfg-off-l3' + (OFFER.kind === "escalation" ? " cit-cfg-off-l3--hot" : "") + '">' + l3 + "</span>" +
@@ -3858,11 +3859,23 @@
    * divergence visible on the screen itself.
    */
   function syncStrapAmount() {
-    var amt = fmt(currentCharge());
+    // ADR-0498: a "[TESZT]" lead's card is charged the provider minimum (configurator.ts injects it only
+    // for such a lead) — the strap and the button name THAT amount, the note keeps the list figure.
+    var tc = window.CIT_TEST_CHARGE && window.CIT_TEST_CHARGE[PRICING.currency];
+    var amt = fmt(typeof tc === "number" ? tc : currentCharge());
     var s = panel.querySelector(".cit-cfg-strap-amt");
     if (s) s.textContent = amt;
     if (payBtn && !payBtn.getAttribute("data-busy")) {
       payBtn.textContent = tr("Fizetek") + " — " + amt;
+    }
+    if (typeof tc === "number" && payBtn) {
+      var note = panel.querySelector(".cit-cfg-testnote");
+      if (!note) {
+        note = document.createElement("p");
+        note.className = "cit-cfg-testnote";
+        payBtn.parentNode.insertBefore(note, payBtn.nextSibling);
+      }
+      note.textContent = "[TESZT] — terhelés: " + fmt(tc) + ", listaár: " + fmt(currentCharge()); // i18n-exempt: the owner's own test marker, shown only on a [TESZT] lead's page
     }
   }
 

@@ -40,6 +40,17 @@ export function testChargeMinor(leadName: string | null | undefined, currency: s
   return explicit !== null ? Math.max(explicit, min) : min;
 }
 
+/** Every currency's test charge for this lead (the order page shows the real charge), or null for a real lead. */
+export function testChargeMap(leadName: string | null | undefined): Record<string, number> | null {
+  if (!isTestLeadName(leadName)) return null;
+  const out: Record<string, number> = {};
+  for (const cur of Object.keys(providerCaps(activeProvider())?.currencies ?? {})) {
+    const m = testChargeMinor(leadName, cur);
+    if (m !== null) out[cur] = m;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 /** testChargeMinor() for the lead behind a tenant (upsell, renewal). */
 export async function testChargeForTenant(tenantId: string, currency: string | null | undefined): Promise<number | null> {
   const row = await db
@@ -49,6 +60,20 @@ export async function testChargeForTenant(tenantId: string, currency: string | n
     .where("tenant.id", "=", tenantId)
     .executeTakeFirst();
   return testChargeMinor(row?.name ?? null, currency);
+}
+
+/**
+ * Is this tenant a test lead's ("[TESZT] …")? Such a tenant never buys a real domain (ADR-0498, owner
+ * 2026-11-27): its order carries no registration, and the registrar is never called for it.
+ */
+export async function isTestTenant(tenantId: string): Promise<boolean> {
+  const row = await db
+    .selectFrom("tenant")
+    .innerJoin("lead", "lead.id", "tenant.lead_id")
+    .select("lead.name as name")
+    .where("tenant.id", "=", tenantId)
+    .executeTakeFirst();
+  return isTestLeadName(row?.name ?? null);
 }
 
 /** testChargeMinor() for a lead id (the first purchase). */

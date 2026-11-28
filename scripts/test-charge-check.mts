@@ -63,6 +63,16 @@ const iClaim = disp.indexOf('.where("status", "=", "queued")');
 const iTestFirst = disp.indexOf("ltrim(tl.name) like '[TESZT]%'))`)", iClaim);
 check("kiküldés: a jóváhagyott [TESZT]-sor a sor elején (a valódi prioritás előtt)", iClaim > 0 && iTestFirst > iClaim && disp.indexOf(".orderBy(DISPATCH_PRIORITY)", iClaim) > iTestFirst);
 check("másoló: a kapun bukott terv nem „kész”", /failedGate\.length/.test(src("scripts/test-lead-clone.mts")));
+const prov = src("src/domains/provisionDomain.ts");
+check("domain: [TESZT]-tenantnak nincs beszerzés-sor (startDomainProvisioning)", /export async function startDomainProvisioning[\s\S]{0,200}if \(await isTestTenant\(input\.tenantId\)\)/.test(prov));
+check("domain: a regisztrátor-hívás előtt is elutasít", /if \(await isTestTenant\(p\.tenantId\)\) throw new Error[^\n]*\n\s*const reg = await registrar\.register/.test(prov));
+check("domain: a [TESZT]-rendelés citoviso_sub, domain-név és elköteleződés nélkül", /const orderDomainType = dropTestDomain \? "citoviso_sub" : effectiveDomainType;/.test(server) && /domainType: orderDomainType,[\s\S]{0,40}domainName: storedDomainName/.test(server) && /const storedDomainName = dropTestDomain \? null/.test(server) && /domainEligible && !dropTestDomain \? getDomainMinCommitmentMonths/.test(server));
+const cfgTs = src("src/generator/configurator.ts");
+const cfgJs = src("assets/runtime/cit-configurator.js");
+check("kijelzés: a terhelt összeg csak [TESZT]-leadnek kerül a lapra", /testChargeMap\(row\?\.name \?\? null\)/.test(cfgTs) && /map \? `<script data-cit-test-charge>/.test(cfgTs));
+check("kijelzés: a fejléc-összeg, a gomb és az összesítő a terhelt összeg; megjegyzés a listaárral", /var amt = fmt\(typeof tc === "number" \? tc : currentCharge\(\)\);/.test(cfgJs) && /"\[TESZT\] — terhelés: " \+ fmt\(tc\) \+ ", listaár: "/.test(cfgJs) && /window\.CIT_TEST_CHARGE\[PRICING\.currency\] : firstCharge/.test(cfgJs));
+check("kijelzés: a beküldött ár változatlan (a szerver ár-ellenőrzése a listaárat várja)", !/price: *tc\b|price: *window\.CIT_TEST_CHARGE/.test(cfgJs));
+check("köszönőoldal: az előnézet az élő kép, különben a megvett terv hero-képe (nem üres színátmenet)", /async function payPreviewImage\(tenantId: string, gatewayRef: string\)[\s\S]{0,900}heroShotState\(planId\)/.test(server) && /shotUrl: \(await payPreviewImage\(previewTenantId, ref\)\)/.test(server) && /const img = await payPreviewImage\(tenantId, ref\);/.test(server));
 check("másoló: a lánc által közben felvett sor a másolat sora (nem bukás)", /executeTakeFirst\(\)\)\?\.id;\s*if \(!rowId\)/.test(src("scripts/test-lead-clone.mts")));
 
 console.log(fails ? `\n✗ ${fails} hiba` : "\n✓ minden rendben");

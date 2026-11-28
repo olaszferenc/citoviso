@@ -23,6 +23,7 @@
 // re-rendereli a snapshotot, hogy a canonical/og:url az új domainre álljon
 // (reference_snapshot_rerender_propagation: a canonical a statikus HTML-be van sütve).
 
+import { isTestTenant } from "../payment/testCharge.js";
 import { regionOfTenant } from "../payment/orderRegion.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
@@ -389,6 +390,11 @@ async function escalateStuckSetup(
  * losing that race is the same refusal, never a raw `duplicate key` and a stuck hold.
  */
 export async function startDomainProvisioning(input: StartDomainInput): Promise<string | null> {
+  // ADR-0498: no registration row at all for a test lead's tenant (the registrar-side guard stays as well).
+  if (await isTestTenant(input.tenantId)) {
+    console.warn(`[domain] beszerzés ELUTASÍTVA (${input.domain}): [TESZT]-lead valódi domaint nem vásárol (ADR-0498)`);
+    return null;
+  }
   const running = await db
     .selectFrom("domain_provisioning")
     .select(["id", "order_intent_id", "domain", "site_id"])
@@ -588,6 +594,9 @@ export async function runDomainProvisioning(
         return "registering";
       }
       await setStatus(p.id, p.siteId, "registering");
+      // ADR-0498: a test lead's tenant never buys a real domain — refused BEFORE the purchase, so the
+      // failure path below releases any hold (ADR-0251) and nothing is bought.
+      if (await isTestTenant(p.tenantId)) throw new Error("[TESZT]-lead: valódi domain nem vásárolható (ADR-0498)");
       const reg = await registrar.register(p.domain, { years });
       registrarRef = reg.registrarRef;
       await db

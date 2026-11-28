@@ -25,7 +25,8 @@ import { collectFallbacks } from "../i18n/packs.js";
 import { config } from "../config.js";
 import { pricingRegionForCountry } from "../country.js";
 import { carriesCurrencySign } from "../email/outreachEmail.js";
-import { getDomainFreeInPackage, offeredTlds } from "../pricing.js";
+import { getDomainFreeInPackage, getPackageAssignment, offeredTlds } from "../pricing.js";
+import { TIERS, domainTier } from "../packages.js";
 import { composeBody, type DraftInput, type OutreachDraft, type OutreachParts } from "./draft.js";
 import type { OwnerLayout } from "../email/outreachEmail.js";
 
@@ -57,6 +58,11 @@ export function packageDomainTld(country: string | null | undefined): string | n
   try {
     const region = pricingRegionForCountry(country);
     if (!getDomainFreeInPackage(region)) return null;
+    // ADR-0498 (HR live run 2026-11-27): the sentence quotes the CHEAPEST package's price („havi X-tól”) —
+    // the ending rides along only when the domain is that package's content (the package composition's
+    // domain tier = the lowest tier). With the domain in no package (or a higher one) the order page asks
+    // the ending's fee next to that price, so the letter must not promise it.
+    if (domainTier(getPackageAssignment()) !== TIERS[0]) return null;
     return offeredTlds(region).find((t) => t.freeInPackage)?.tld ?? null;
   } catch {
     return null;
@@ -69,7 +75,11 @@ export function packageDomainTld(country: string | null | undefined): string | n
  * fromPricePair → formatMinor, so no „Ft” after it) and the ending is the region's package domain.
  */
 export function priceSentence(lang: string, offerPrice: string, country: string | null | undefined = "HU"): string {
-  if ((country ?? "").toUpperCase() === "HU") return T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját .hu címmel.", { offerPrice });
+  if ((country ?? "").toUpperCase() === "HU") {
+    return packageDomainTld("HU")
+      ? T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját .hu címmel.", { offerPrice })
+      : T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját címmel.", { offerPrice });
+  }
   if (!carriesCurrencySign(offerPrice)) return T(lang, "Ha tetszik: havi {offerPrice} Ft-tól, saját címmel.", { offerPrice });
   const tld = packageDomainTld(country);
   return tld
@@ -154,7 +164,7 @@ export function ownerLetter(
     const priceLine = priceSentence(lang, base.parts.priceOffer ?? "", country);
     const pp = personalParts(d, base, priceLine, sender);
     const cc = (country ?? "").toUpperCase();
-    const tld = cc === "HU" ? ".hu" : packageDomainTld(country);
+    const tld = packageDomainTld(cc === "HU" ? "HU" : country);
     const priceTail = tld ? T(lang, "saját {tld} címmel", { tld }) : T(lang, "saját címmel");
     const layout: OwnerLayout = { priceTail, researchUrl: CORNELL_BILLBOARD_URL, researchWords: T(lang, "A Cornell Egyetem kutatása") };
     const subject = subjectIsThisYours(lang, d.leadName, city);

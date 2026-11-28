@@ -716,7 +716,7 @@ export async function injectConfigurator(
     `<script type="application/json" data-cit-configurator>` +
     jsonForScript(manifest) +
     `</script>\n`;
-  const block = manifestTag + (await phoneScriptForArtifact(artifactId)) + (await configuratorBlock());
+  const block = manifestTag + (await phoneScriptForArtifact(artifactId)) + (await testChargeScriptForArtifact(artifactId)) + (await configuratorBlock());
   if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, `${block}</body>`);
   return html + "\n" + block; // no </body> — append as a safe fallback
 }
@@ -728,6 +728,23 @@ export async function injectConfigurator(
  * number for the placeholder and the error. Hungarian plan / no row → nothing: the page keeps
  * the Hungarian rule of the cached block.
  */
+/**
+ * ADR-0498 (owner 2026-11-27, twice „nem 0,1 EUR”): a "[TESZT]" lead's order page names the amount the
+ * card is REALLY charged (the provider minimum, testCharge.ts) next to the list price. A real lead gets
+ * nothing here — its page stays byte-identical.
+ */
+async function testChargeScriptForArtifact(artifactId: string): Promise<string> {
+  const { db } = await import("../db/client.js");
+  const row = await db
+    .selectFrom("mock_artifact")
+    .innerJoin("lead", "lead.id", "mock_artifact.lead_id")
+    .select("lead.name as name")
+    .where("mock_artifact.id", "=", artifactId)
+    .executeTakeFirst();
+  const map = (await import("../payment/testCharge.js")).testChargeMap(row?.name ?? null);
+  return map ? `<script data-cit-test-charge>window.CIT_TEST_CHARGE=${jsonForScript(map)};</script>\n` : "";
+}
+
 async function phoneScriptForArtifact(artifactId: string): Promise<string> {
   const { db } = await import("../db/client.js");
   const a = await db.selectFrom("mock_artifact").select("lead_id").where("id", "=", artifactId).executeTakeFirst();
