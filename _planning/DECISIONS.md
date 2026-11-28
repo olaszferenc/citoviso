@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-photo-links-idegen-oldal-adatlapkent-es-gepi-dontes-a-kozepes-savon.md) — photo-links: idegen oldal adatlapként, kemény azonosítóval; gépi döntés a közepes sávon
 - [ADR-0510](decisions/0510-konverzios-mechanizmusfa-a-megkereses-vevo-ut.md) — Konverziós mechanizmusfa: a megkeresés → vevő út egyetlen közös modellje
 - [ADR-0509](decisions/0509-hr-lead-kepek-a-maps-kartya-nyitokepe-a-leadre.md) — HR lead-képek: a Maps-kártya nyitóképe a leadre, a portál-galéria a linkjeiből, vízjeles host fotóra kizárva
 - [ADR-0508](decisions/0508-javito-level-a-hibas-nyitokeppel-kikuldott-es.md) — Javító levél a hibás nyitóképpel kiküldött és megnézett tervekre + kurált településtár

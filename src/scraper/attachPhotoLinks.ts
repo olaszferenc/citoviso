@@ -53,6 +53,9 @@ import { isNonCaption } from "../engine/photoCaption.js";
 
 /** One request may carry this many links — Neo batches leads, not 50 links per lead. */
 export const MAX_LINKS = 10;
+/** readOwnSitePhotos' identity refusal — attachPhotoLinks then tries the page as a listing (ADR-XXXX). */
+export const OWN_SITE_UNPROVEN =
+  "nem igazolható, hogy ez a szállás saját honlapja (nem a leadnél tárolt honlap; a domain nem a szállás nevét viseli, vagy az oldalon nincs a települése; a telefonszáma sincs rajta) — nem kötöttük a leadhez";
 /** Own-site pages read per supplied link: the page itself + its gallery pages. */
 const MAX_GALLERY_PAGES = 2;
 /** Photos kept from one own site (a portal listing keeps its own cap in extract.ts). */
@@ -358,7 +361,7 @@ export async function readOwnSitePhotos(
   if (!identityOf(page.html)) {
     return {
       skipped: brandTokens(lead.name, loc.iso2).length
-        ? "nem igazolható, hogy ez a szállás saját honlapja (nem a leadnél tárolt honlap; a domain nem a szállás nevét viseli, vagy az oldalon nincs a települése; a telefonszáma sincs rajta) — nem kötöttük a leadhez"
+        ? OWN_SITE_UNPROVEN
         : "a lead neve csupa általános szó, az oldal nem azonosítható vele — nem kötöttük a leadhez",
     };
   }
@@ -604,6 +607,26 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
       } else {
         const r = await readOwnSitePhotos(url, before, region);
         if (r.profile) siteProfiles.push(r.profile);
+        // NOT THE OWN SITE → maybe SOMEONE ELSE'S PAGE ABOUT THIS LEAD (ADR-XXXX, 2026-11-28): prod,
+        // 118 HR links refused here were travel agencies' / portals' listings the registry does not
+        // know (ceskekormidlo.cz, geovita.cz, check24.de). Such a link goes through the portal
+        // reader's entity gate (name, town, pin, phone, house number) like any listing — never as
+        // an owner asset, and never the lead's stored website (that one is the own site by rule).
+        if (!r.profile && r.skipped === OWN_SITE_UNPROVEN && !sameStoredSite(before.website ?? "", url)) {
+          const p = await readPortalListing(url, before, region, { unknownHostAsListing: true });
+          if (p.profile) {
+            portalProfiles.push(p.profile);
+            outcomes.push({
+              url,
+              kind: "portal",
+              photos: p.profile.photos.length,
+              ...(p.profile.needsReview ? { skipped: `nem saját honlap, adatlapként: ${p.profile.matchReasons?.slice(-1)[0] ?? "közepes egyezés"}` } : {}),
+            });
+            continue;
+          }
+          outcomes.push({ url, kind, photos: 0, skipped: `${OWN_SITE_UNPROVEN}; adatlapként sem: ${p.skipped ?? "nem azonosítható"}` });
+          continue;
+        }
         outcomes.push({
           url,
           kind,

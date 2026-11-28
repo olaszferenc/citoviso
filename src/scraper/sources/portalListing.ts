@@ -272,7 +272,17 @@ export async function readPortalListing(
    * hold — photos and reviews are attributed — but never a low band: what the score threw
    * away is not offered for approval. Vivien 1108db5a (2026-10-26) waited forever on it.
    */
-  opts: { readonly curatorApproved?: boolean } = {},
+  opts: {
+    readonly curatorApproved?: boolean;
+    /**
+     * `unknownHostAsListing` (ADR-XXXX, 2026-11-28): read a host the registry does not know as
+     * a listing ANYWAY — only for a link that already FAILED the own-site identity check
+     * (attachPhotoLinks), i.e. someone else's page about this lead (ceskekormidlo.cz,
+     * geovita.cz, check24.de — prod: 118 HR photo-links refused as „not the own site”). The
+     * entity gate below decides it like any portal listing; a site root is never a listing.
+     */
+    readonly unknownHostAsListing?: boolean;
+  } = {},
 ): Promise<PortalReadResult> {
   const host = hostOf(url);
   if (!host) return { url, skipped: "értelmezhetetlen URL" };
@@ -294,7 +304,12 @@ export async function readPortalListing(
   // site is only read when the registry explicitly knows it as a portal.
   const knownPortal = adapter.id !== "generic_portal";
   if (!knownPortal && classifyWebsite(url) === "has_own") {
-    return { url, skipped: "nem ismert portál-host (a platform-registry még nem tartalmazza)" };
+    if (!opts.unknownHostAsListing) {
+      return { url, skipped: "nem ismert portál-host (a platform-registry még nem tartalmazza)" };
+    }
+    let path = "/";
+    try { path = new URL(url).pathname.replace(/\/+$/, ""); } catch { /* parsed above */ }
+    if (path.split("/").filter(Boolean).length < 1) return { url, skipped: "egy idegen oldal főoldala nem adatlap" };
   }
   if (!looksLikeListingUrl(url)) {
     return { url, skipped: "nem adatlap-URL (kategória/keresőoldal)" };
@@ -387,6 +402,13 @@ export async function readPortalListing(
       : phoneOnPage
         ? true
         : undefined;
+  // SOMEONE ELSE'S PAGE needs a HARD place identifier (ADR-XXXX, vak 2026-11-28): an unknown host
+  // has no listing structure we know, and a town / travel article („Sutivan auf Brač — Ruhiges
+  // Inseldorf”) matched the lead „Insel Brac” on name + town alone. Its phone, its house number
+  // or its pin within 150 m prove ONE house; a town page carries none of them.
+  if (opts.unknownHostAsListing && !(phoneMatch === true || streetMatch === true || (distance !== undefined && distance <= 150))) {
+    return { url, skipped: "idegen oldal, kemény azonosító nélkül (se telefon, se házszám, se tű ≤ 150 m) — nem adatlapja a leadnek" };
+  }
   const confidence = scorePortalMatch({
     nameCoverage: coverage,
     cityMatch: cityMatches(lead.city, [extracted.city, extracted.address, extracted.title]),
@@ -433,7 +455,18 @@ export async function readPortalListing(
   // shared phone is evidence of a shared owner, not of a shared building; the address is.
   const conflictResolved = conflict && streetMatch === true;
   const held = confidence.band === "medium" || (conflict && !conflictResolved);
-  const approved = held && opts.curatorApproved === true;
+  // MACHINE DECISION ON A MEDIUM BAND (ADR-XXXX, §2c — no console button as the way): the name
+  // covers the lead (≥ 0.8) and the PLACE is proven — the house number, the pin within 50 m, or
+  // the lead's phone with the pin within 150 m — and nothing contradicts it (a different phone;
+  // a different street with the pin not on top). A shared phone alone is one owner, not one house
+  // (the Rózsakő case above), so it never decides on its own. An unresolved type-word conflict
+  // stays with the curator. Weak → the photos stay off, with the reason.
+  const near = (m: number) => distance !== undefined && distance <= m;
+  const placeProven = streetMatch === true || near(50) || (phoneMatch === true && near(150));
+  const contradicted = phoneMatch === false || (streetMatch === false && !near(50));
+  const machineApproved =
+    confidence.band === "medium" && !(conflict && !conflictResolved) && coverage >= 0.8 && placeProven && !contradicted;
+  const approved = held && (opts.curatorApproved === true || machineApproved);
   const needsReview = held && !approved;
   const reasons = [...confidence.reasons];
   if (typoIdentity) reasons.push(`elírt név a portálon (${typoHits.join(", ")} ≈ 1 betű) — település + kemény azonosító igazolja`);
@@ -445,9 +478,15 @@ export async function readPortalListing(
     );
   }
   if (needsReview) {
-    reasons.push("közepes sáv — kurátori jóváhagyás kell, fotók NEM tulajdonítva");
+    reasons.push(
+      confidence.band === "medium"
+        ? `közepes sáv, gépi döntés: GYENGE (${coverage < 0.8 ? `név ${coverage.toFixed(2)} < 0,80` : contradicted ? "ellentmondó telefon/cím" : "a hely nincs igazolva: se házszám, se tű ≤ 50 m, se telefon + tű ≤ 150 m"}) — fotók NEM tulajdonítva`
+        : "közepes sáv — kurátori jóváhagyás kell, fotók NEM tulajdonítva",
+    );
   }
-  if (approved) {
+  if (machineApproved && opts.curatorApproved !== true) {
+    reasons.push(`közepes sáv, gépi döntés: ERŐS (név ${coverage.toFixed(2)}, ${streetMatch === true ? "házszám ✓" : near(50) ? "tű ≤ 50 m" : "telefon ✓ + tű ≤ 150 m"}) — fotók tulajdonítva`);
+  } else if (approved) {
     reasons.push(`kurátor jóváhagyta az egyezést (${new Date().toISOString().slice(0, 10)}) — fotók tulajdonítva`);
   }
 
