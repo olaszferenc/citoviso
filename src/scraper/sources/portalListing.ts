@@ -275,7 +275,7 @@ export async function readPortalListing(
   opts: {
     readonly curatorApproved?: boolean;
     /**
-     * `unknownHostAsListing` (ADR-XXXX, 2026-11-28): read a host the registry does not know as
+     * `unknownHostAsListing` (ADR-0511, 2026-11-28): read a host the registry does not know as
      * a listing ANYWAY — only for a link that already FAILED the own-site identity check
      * (attachPhotoLinks), i.e. someone else's page about this lead (ceskekormidlo.cz,
      * geovita.cz, check24.de — prod: 118 HR photo-links refused as „not the own site”). The
@@ -402,7 +402,7 @@ export async function readPortalListing(
       : phoneOnPage
         ? true
         : undefined;
-  // SOMEONE ELSE'S PAGE needs a HARD place identifier (ADR-XXXX, vak 2026-11-28): an unknown host
+  // SOMEONE ELSE'S PAGE needs a HARD place identifier (ADR-0511, vak 2026-11-28): an unknown host
   // has no listing structure we know, and a town / travel article („Sutivan auf Brač — Ruhiges
   // Inseldorf”) matched the lead „Insel Brac” on name + town alone. Its phone, its house number
   // or its pin within 150 m prove ONE house; a town page carries none of them.
@@ -455,7 +455,7 @@ export async function readPortalListing(
   // shared phone is evidence of a shared owner, not of a shared building; the address is.
   const conflictResolved = conflict && streetMatch === true;
   const held = confidence.band === "medium" || (conflict && !conflictResolved);
-  // MACHINE DECISION ON A MEDIUM BAND (ADR-XXXX, §2c — no console button as the way): the name
+  // MACHINE DECISION ON A MEDIUM BAND (ADR-0511, §2c — no console button as the way): the name
   // covers the lead (≥ 0.8) and the PLACE is proven — the house number, the pin within 50 m, or
   // the lead's phone with the pin within 150 m — and nothing contradicts it (a different phone;
   // a different street with the pin not on top). A shared phone alone is one owner, not one house

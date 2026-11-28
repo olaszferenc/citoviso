@@ -101,7 +101,7 @@ try {
   const reader = readFileSync(path.join(import.meta.dirname, "../src/scraper/sources/portalListing.ts"), "utf8");
   const lowReturn = reader.indexOf('if (confidence.band === "low")');
   check("a gyenge sáv a jóváhagyás ELŐTT kiesik", lowReturn > 0 && lowReturn < reader.indexOf("const approved = held && (opts.curatorApproved === true || machineApproved)"));
-  // ADR-XXXX (2026-11-28): a medium band is decided by the machine rule too — strong place proof, no contradiction
+  // ADR-0511 (2026-11-28): a medium band is decided by the machine rule too — strong place proof, no contradiction
   check("gépi döntés a közepes sávon: név ≥ 0,8 + hely igazolva + nincs ellentmondás, típus-ütközés a kurátoré",
     /const machineApproved =\s*confidence\.band === "medium" && !\(conflict && !conflictResolved\) && coverage >= 0\.8 && placeProven && !contradicted/.test(reader) &&
       /const placeProven = streetMatch === true \|\| near\(50\) \|\| \(phoneMatch === true && near\(150\)\)/.test(reader));

@@ -1,4 +1,4 @@
-## ADR-XXXX — photo-links: idegen oldal adatlapként, kemény azonosítóval; gépi döntés a közepes sávon
+## ADR-0511 — photo-links: idegen oldal adatlapként, kemény azonosítóval; gépi döntés a közepes sávon
 
 - **Dátum:** 2026-11-28
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`: „mindkét tartalékra általános szabállyal, kézi jóváhagyás nélkül (§2c)”)

@@ -53,7 +53,7 @@ import { isNonCaption } from "../engine/photoCaption.js";
 
 /** One request may carry this many links — Neo batches leads, not 50 links per lead. */
 export const MAX_LINKS = 10;
-/** readOwnSitePhotos' identity refusal — attachPhotoLinks then tries the page as a listing (ADR-XXXX). */
+/** readOwnSitePhotos' identity refusal — attachPhotoLinks then tries the page as a listing (ADR-0511). */
 export const OWN_SITE_UNPROVEN =
   "nem igazolható, hogy ez a szállás saját honlapja (nem a leadnél tárolt honlap; a domain nem a szállás nevét viseli, vagy az oldalon nincs a települése; a telefonszáma sincs rajta) — nem kötöttük a leadhez";
 /** Own-site pages read per supplied link: the page itself + its gallery pages. */
@@ -607,7 +607,7 @@ export async function attachPhotoLinks(leadId: string, rawLinks: string): Promis
       } else {
         const r = await readOwnSitePhotos(url, before, region);
         if (r.profile) siteProfiles.push(r.profile);
-        // NOT THE OWN SITE → maybe SOMEONE ELSE'S PAGE ABOUT THIS LEAD (ADR-XXXX, 2026-11-28): prod,
+        // NOT THE OWN SITE → maybe SOMEONE ELSE'S PAGE ABOUT THIS LEAD (ADR-0511, 2026-11-28): prod,
         // 118 HR links refused here were travel agencies' / portals' listings the registry does not
         // know (ceskekormidlo.cz, geovita.cz, check24.de). Such a link goes through the portal
         // reader's entity gate (name, town, pin, phone, house number) like any listing — never as
