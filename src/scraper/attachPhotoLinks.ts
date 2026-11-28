@@ -25,6 +25,7 @@
 // a stale one, the rest stay); curator edits on `raw` are carried across verbatim.
 
 import { leadCountryConfig } from "../country.js";
+import { lexList } from "../countryLexicon.js";
 import type { PortalLocale } from "./sources/portals/politeness.js";
 import { sql } from "kysely";
 import { db } from "../db/client.js";
@@ -298,7 +299,7 @@ function galleryLinks(html: string, pageUrl: string): string[] {
   return out;
 }
 
-type LeadFacts = Pick<QualifiedLead, "name" | "city" | "phone" | "website" | "websiteStatus" | "country">;
+type LeadFacts = Pick<QualifiedLead, "name" | "city" | "phone" | "website" | "websiteStatus" | "country" | "address">;
 
 /**
  * Read the business's OWN website for photos. The identity check is lighter than a
@@ -331,21 +332,28 @@ export async function readOwnSitePhotos(
   // the stored website WAS this link, the status said „none”, the link was refused).
   const stored = lead.website && classifyWebsite(lead.website) === "has_own" ? lead.website : null;
   const knownOwn = stored !== null && (sameStoredSite(stored, url) || sameStoredSite(stored, page.finalUrl));
-  const hostCompact = host.replace(/[^a-z0-9]/g, "");
-  const compactName = deaccent(lead.name.toLowerCase()).replace(/[^a-z0-9]/g, "");
-  const nameInDomain =
-    (compactName.length >= 6 && hostCompact.includes(compactName)) ||
-    brandTokens(lead.name, loc.iso2).some((t) => hostCompact.includes(t.replace(/[^a-z0-9]/g, "")));
+
+  // A PLACE NAME IS NO BRAND (ADR-XXXX) — ownSitePlaceRule below decides when only a HARD identifier may prove the site.
+  const placeRule = ownSitePlaceRule(lead, url, page.finalUrl, loc.iso2);
+  const brands = brandTokens(lead.name, loc.iso2);
+  const nameInDomain = placeRule.nameInDomain;
+  const addressOnPage = (hay: string): boolean => {
+    const a = deaccent((lead.address ?? "").toLowerCase());
+    const num = /\b(\d{1,4}[a-z]?)\b/.exec(a)?.[1];
+    const street = a.replace(/\d.*$/, "").split(/[^a-z]+/).filter((w) => w.length >= 4).sort((x, y) => y.length - x.length)[0];
+    return !!num && !!street && hay.includes(street) && new RegExp(`\\b${num}\\b`).test(hay);
+  };
   const identityOf = (html: string): boolean => {
     if (knownOwn) return true;
     const hay = deaccent(textOf(html).toLowerCase());
-    // The lead's OWN town only (ADR-0043) — never the region fallback of geoTerms.
-    const townTokens = deaccent((lead.city ?? "").toLowerCase()).split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
-    if (nameInDomain && townTokens.some((t) => hay.includes(t))) return true;
     // The lead's number in ITS country's plan (the HU key is the historic last 9 digits).
     const key = listingPhoneKey(lead.phone ?? undefined, loc);
     const phoneOnPage = key !== undefined && textOf(html).replace(/\D/g, "").includes(key);
-    return phoneOnPage && brandTokens(lead.name, loc.iso2).some((t) => hasNameWord(hay, t));
+    if (placeRule.hardOnly) return phoneOnPage || addressOnPage(hay);
+    // The lead's OWN town only (ADR-0043) — never the region fallback of geoTerms.
+    const townTokens = deaccent((lead.city ?? "").toLowerCase()).split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
+    if (nameInDomain && townTokens.some((t) => hay.includes(t))) return true;
+    return phoneOnPage && brands.some((t) => hasNameWord(hay, t));
   };
 
   let candidates = ownSiteImages(page.html, page.finalUrl);
@@ -463,6 +471,41 @@ function readableFailure(reason: string | undefined): string {
   if (reason === "HTTP 404") return "az oldal nem létezik (HTTP 404) — ellenőrizd a linket";
   if (/^HTTP 5/.test(reason)) return `az oldal szervere hibát adott (${reason}) — később újrapróbálható`;
   return reason;
+}
+
+/**
+ * A PLACE NAME IS NO BRAND (ADR-XXXX, 2026-11-28). „Insel Brac” ↔ bracinfo.com/de/sutivan and „Villa Lapis Hvar” ↔
+ * hvar.com/hvar-beaches/… passed as own sites: a brand word in the domain + the town on the page — but the word was a
+ * place. `hardOnly`: the site may be proven only by the lead's phone or its street + house number on the page — when
+ * the page is shaped like a destination / tourist portal (lexicon touristPortalPatterns, host + path), or when every
+ * brand word of the lead is a place (lexicon placeNameWords, or a word of its own town) and the domain does not carry
+ * the lead's FULL name (villamorepucisca.se is „Villa More Pucisca”'s own). `nameInDomain` counts only the lead's
+ * non-place brand words (or its full name). Pure — the recheck script asks the very same rule.
+ */
+export function ownSitePlaceRule(
+  lead: Pick<QualifiedLead, "name" | "city">,
+  url: string,
+  finalUrl: string,
+  iso: string | null,
+): { hardOnly: boolean; nameInDomain: boolean; why: string | null } {
+  const host = hostOf(url) ?? "";
+  const hostCompact = host.replace(/[^a-z0-9]/g, "");
+  const compactName = deaccent(lead.name.toLowerCase()).replace(/[^a-z0-9]/g, "");
+  const fullNameInDomain = compactName.length >= 6 && hostCompact.includes(compactName);
+  const townWords = deaccent((lead.city ?? "").toLowerCase()).split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+  const placeWords = new Set([...lexList(iso, "placeNameWords").map((w) => deaccent(w.toLowerCase())), ...townWords]);
+  const brands = brandTokens(lead.name, iso);
+  const isPlace = (t: string) => placeWords.has(deaccent(t.toLowerCase()));
+  const nameInDomain = fullNameInDomain || brands.some((t) => !isPlace(t) && hostCompact.includes(t.replace(/[^a-z0-9]/g, "")));
+  const touristRe = lexList(iso, "touristPortalPatterns");
+  const tourist = (u: string): boolean => {
+    let hp = u;
+    try { const x = new URL(u); hp = x.hostname + x.pathname; } catch { /* the raw string */ }
+    return touristRe.some((p) => new RegExp(p, "i").test(deaccent(hp.toLowerCase())));
+  };
+  if (tourist(url) || tourist(finalUrl)) return { hardOnly: true, nameInDomain, why: "turisztikai/úti-portál alakú oldal" };
+  if (brands.length > 0 && brands.every(isPlace) && !fullNameInDomain) return { hardOnly: true, nameInDomain, why: "a lead neve csupa helynév" };
+  return { hardOnly: false, nameInDomain, why: null };
 }
 
 /** Portal or own site? The registry decides for known portals; qualify.ts for the rest. */

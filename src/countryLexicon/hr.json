@@ -27,6 +27,8 @@
   "chainKontaktMultiPropertyRegex": "slični smještaj|ostali smještaj|smještaj u blizini|još smještaja",
   "chainKontaktAddrStreetRegex": "\\b(ulica|ul\\.|ul|cesta|trg|put|obala)\\b",
   "chainKontaktPortalAdapters": [],
+  "placeNameWords": ["brac", "hvar", "vis", "korcula", "krk", "cres", "losinj", "pag", "rab", "solta", "mljet", "lastovo", "ciovo", "ugljan", "pasman", "murter", "silba", "olib", "susak", "dugi", "otok", "otoka", "insel", "island", "isola", "ostrov", "dalmacija", "dalmatia", "dalmatien", "dalmazia", "istra", "istria", "istrien", "kvarner", "zagorje", "slavonija", "peljesac", "riviera", "rivijera", "makarska", "split", "dubrovnik", "zadar", "sibenik", "trogir", "omis", "hrvatska", "croatia", "kroatien", "croazia", "chorvatsko", "horvatorszag", "chorwacja", "adriatic", "adria", "jadran", "jadranska", "more"],
+  "touristPortalPatterns": ["(^|[.-])info\\.", "info\\.[a-z]{2,4}/", "[.-]tours?\\.", "-info[.-]", "insel-", "island-", "kroatien", "croatia-", "chorvatsko", "/destinations?/", "(^|[.-])visit", "turist", "tourism", "touristik", "reisen", "urlaub", "travel", "guide"],
   "chainKontaktWatermarkedPhotoHostRegex": "(smjestaj\\.com\\.hr|ubytovanivchorvatsku\\.cz)$",
   "chainKontaktFreeHeadRegex": "^([^@]+@(?:gmail|googlemail|yahoo|hotmail|outlook|live|icloud|gmx|net|inet|vip|optinet|globalnet|t-com)\\.(?:com|hr|de|at|co\\.uk))\\..+$",
   "chainKontaktEmailQueryWord": "email",
