@@ -48,7 +48,8 @@ const photo = (n: number) => ({
   url: `https://hovamenjek.hu/upload/places/1_x/fullHd/vivien-${n}.jpg`, width: 1600, height: 1067,
   provenance: "portal", sourceUrl: URL_HELD, portalHost: "hovamenjek.hu", vouched: true,
 });
-const approvedRead: typeof readPortalListing = async (url, _lead, _region, opts) => ({
+let approveOpts: Parameters<typeof readPortalListing>[3] | undefined;
+const approvedRead: typeof readPortalListing = async (url, _lead, _region, opts) => (approveOpts = opts, {
   url,
   profile: {
     ...held, needsReview: !opts?.curatorApproved, matchBand: opts?.curatorApproved ? "high" : "medium",
@@ -92,6 +93,7 @@ try {
   const ok = await approvePortalMatch(leadId, URL_HELD, approvedRead);
   const after = await load();
   check("jóváhagyva, a válasz a fotószámot mondja (0 → 3)", ok.ok && ok.before === 0 && ok.after === 3, ok);
+  check("az újraolvasás az idegen-adatlap úton is megy (unknownHostAsListing, ADR-0511)", approveOpts?.unknownHostAsListing === true && approveOpts?.curatorApproved === true, approveOpts);
   check("a profil cserélődött, nem duplikálódott", (after.portalProfiles ?? []).filter((p) => p.url === URL_HELD).length === 1, after.portalProfiles?.length);
   check("a profil már nem vár, a fotói a leadhez tartoznak", profilesAwaitingApproval(after).length === 0 && portalPhotoCount(after) === 3);
   const twice = await approvePortalMatch(leadId, URL_HELD, approvedRead);

@@ -828,7 +828,10 @@ export async function approvePortalMatch(
   } catch {
     return fail(`Ismeretlen régió: „${before.region}" — a régiónak léteznie kell a region táblában.`);
   }
-  const r = await read(held.url, before, region, { curatorApproved: true });
+  // unknownHostAsListing: a held profile may be a foreign site read as a listing (ADR-0511) — the
+  // re-read must take the same path, or every such approval dead-ends in „nem ismert portál-host".
+  // The hard-identifier rule of that path still applies; the curator's word lifts only the medium band.
+  const r = await read(held.url, before, region, { curatorApproved: true, unknownHostAsListing: true });
   if (!r.profile) return fail(`Az adatlap újraolvasása nem sikerült: ${r.skipped ?? "ismeretlen ok"} — a jóváhagyás nem történt meg.`);
   if (r.profile.needsReview) return fail("Az adatlap továbbra is jóváhagyásra vár — a jóváhagyás nem történt meg.");
   const beforeCount = portalPhotoCount(before);

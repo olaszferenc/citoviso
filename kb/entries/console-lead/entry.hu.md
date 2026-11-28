@@ -347,9 +347,22 @@ mezőbe másold be a portál-adatlap vagy a saját honlap linkjét (díjmentes).
 ### Közepes egyezés: „Jóváhagyom az egyezést”
 
 Ha a beolvasott portál-adatlap csak **közepes egyezést** ad (pl. a név alig egyezik, de a
-település és a cím igen), az adatlapot rögzítjük, a fotóit viszont nem adjuk a leadhez, amíg
-valaki meg nem nézi. Ilyenkor a Fotók fülön, a link-mező alatt ez áll: *Közepes egyezés —
-kurátori jóváhagyásra vár:* és az adatlap linkje, mellette az egyezés pontszáma és az okai.
+település és a cím igen), előbb a gép dönt. **Erősnek** veszi az egyezést, ha a név legalább
+0,80-ig egyezik, és a hely az alábbi három út egyikén igazolódik:
+
+- egyezik a **házszám**, vagy
+- a térképi pont legfeljebb **50 m**-re van, vagy
+- egyezik a **telefonszám**, és a térképi pont legfeljebb **150 m**-re van.
+
+Akkor sem erős, ha a telefonszám eltér, vagy más az utca és a pont nincs 50 m-en belül; a
+feloldatlan típusszó-eltérés (pl. „panzió” ↔ „apartman”) is a kurátornál marad. Erős egyezésnél a
+fotók kérdés nélkül a leadhez kerülnek, és az okok között ez áll: *„közepes sáv, gépi döntés: ERŐS
+(…) — fotók tulajdonítva”*.
+
+Ha a gép **gyengének** ítéli (*„közepes sáv, gépi döntés: GYENGE (…) — fotók NEM tulajdonítva”*),
+az adatlapot rögzítjük, a fotóit viszont nem adjuk a leadhez, amíg valaki meg nem nézi. Ilyenkor
+a Fotók fülön, a link-mező alatt ez áll: *Közepes egyezés — kurátori jóváhagyásra vár:* és az
+adatlap linkje, mellette az egyezés pontszáma és az okai.
 
 1. Nyisd meg a linket, és nézd meg: tényleg ennek a szállásnak az adatlapja? (név, cím, képek)
 2. Ha igen, kattints a **„Jóváhagyom az egyezést”** gombra. A rendszer újraolvassa az adatlapot
@@ -466,8 +479,17 @@ gombra.
   ha az a leadnél tárolt honlap; ha a **domain neve** viseli a szállás nevét, és az oldalon
   szerepel a szállás települése; vagy ha az oldalon a szállás neve mellett a lead
   **telefonszáma** is ott áll. Az nem elég, hogy a szállás neve szerepel valahol az oldalon —
-  egy település- vagy gyűjtőoldal több szállást is felsorolhat. Ezek a képek a rácsban
+  egy település- vagy gyűjtőoldal több szállást is felsorolhat. ⚠️ Turisztikai vagy úti-portál
+  jellegű oldalnál, és ha a szállás neve csak helynevekből áll, a „domain + település” nem elég:
+  ilyenkor csak a **telefonszám** vagy az **utca és házszám** igazolja. Ezek a képek a rácsban
   **„saját honlap”** forrással jelennek meg.
+- **Ha a link nem igazolódik saját honlapként,** a rendszer **idegen adatlapként** olvassa újra,
+  és ehhez kemény azonosító kell: telefonszám, házszám vagy legfeljebb 150 m-es térképi pont.
+  Az eredménysorban ilyenkor ezek állhatnak: *„nem saját honlap, adatlapként: …”* (idegen adatlapnak
+  elfogadva, de csak közepes egyezéssel: a fotók a **„Jóváhagyom az egyezést”** után kerülnek a
+  leadhez; ha az adatlap egyértelműen átmegy, nincs üzenet, csak nő a fotószám), *„…; adatlapként sem: …”* (egyik úton sem
+  igazolódott), *„idegen oldal, kemény azonosító nélkül …”* vagy *„egy idegen oldal főoldala nem
+  adatlap”* — ilyenkor az adatlap pontos linkjét másold be, ne a főoldalt.
 - **Az eredményt a lap tetején egy sor mondja meg:** hány fotója volt a leadnek előtte és
   utána, és melyik link miért nem adott képet (például *„az oldal elutasította a gépi
   olvasást”*, *„az oldal nem létezik”*, vagy hogy az oldal nem igazolja a szállás nevét és a
