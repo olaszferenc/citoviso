@@ -447,7 +447,10 @@ worker_continue_check() {
 scrape_gate "deploy eleje"
 
 # Current prod version (first sync: no .git yet).
-PROD_SHA="$($SSH "git -C $APP rev-parse HEAD 2>/dev/null" </dev/null || true)"
+# Read as the app owner: on citoviso-2 (2026-11-28) root gets "dubious ownership" for the
+# citoviso-owned tree, the error went to /dev/null and the empty answer was taken for
+# "no git yet" — the first-sync branch would then git-init a live repo and fail mid-deploy.
+PROD_SHA="$($SSH "cd $APP && sudo -u citoviso git rev-parse HEAD 2>/dev/null" </dev/null || true)"
 if [ -z "$PROD_SHA" ]; then
   echo "── az éles fán MÉG NINCS git (első szinkron) — a diff-alap a mért kollázs, nem egy commit"
 else
