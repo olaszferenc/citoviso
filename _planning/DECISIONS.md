@@ -16,7 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
-- [ADR-XXXX](decisions/XXXX-sajat-oldal-igazolas-helynev-nem-marka-turisztikai-portal-kemeny-azonositoval.md) — Saját-oldal igazolás: a helynév nem márka; turisztikai portál csak kemény azonosítóval
+- [ADR-0512](decisions/0512-sajat-oldal-igazolas-a-helynev-nem-marka.md) — Saját-oldal igazolás: a helynév nem márka; turisztikai portál csak kemény azonosítóval
 - [ADR-0511](decisions/0511-photo-links-idegen-oldal-adatlapkent-kemeny.md) — photo-links: idegen oldal adatlapként, kemény azonosítóval; gépi döntés a közepes sávon
 - [ADR-0510](decisions/0510-konverzios-mechanizmusfa-a-megkereses-vevo-ut.md) — Konverziós mechanizmusfa: a megkeresés → vevő út egyetlen közös modellje
 - [ADR-0509](decisions/0509-hr-lead-kepek-a-maps-kartya-nyitokepe-a-leadre.md) — HR lead-képek: a Maps-kártya nyitóképe a leadre, a portál-galéria a linkjeiből, vízjeles host fotóra kizárva

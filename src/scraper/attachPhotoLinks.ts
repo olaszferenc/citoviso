@@ -333,7 +333,7 @@ export async function readOwnSitePhotos(
   const stored = lead.website && classifyWebsite(lead.website) === "has_own" ? lead.website : null;
   const knownOwn = stored !== null && (sameStoredSite(stored, url) || sameStoredSite(stored, page.finalUrl));
 
-  // A PLACE NAME IS NO BRAND (ADR-XXXX) — ownSitePlaceRule below decides when only a HARD identifier may prove the site.
+  // A PLACE NAME IS NO BRAND (ADR-0512) — ownSitePlaceRule below decides when only a HARD identifier may prove the site.
   const placeRule = ownSitePlaceRule(lead, url, page.finalUrl, loc.iso2);
   const brands = brandTokens(lead.name, loc.iso2);
   const nameInDomain = placeRule.nameInDomain;
@@ -474,7 +474,7 @@ function readableFailure(reason: string | undefined): string {
 }
 
 /**
- * A PLACE NAME IS NO BRAND (ADR-XXXX, 2026-11-28). „Insel Brac” ↔ bracinfo.com/de/sutivan and „Villa Lapis Hvar” ↔
+ * A PLACE NAME IS NO BRAND (ADR-0512, 2026-11-28). „Insel Brac” ↔ bracinfo.com/de/sutivan and „Villa Lapis Hvar” ↔
  * hvar.com/hvar-beaches/… passed as own sites: a brand word in the domain + the town on the page — but the word was a
  * place. `hardOnly`: the site may be proven only by the lead's phone or its street + house number on the page — when
  * the page is shaped like a destination / tourist portal (lexicon touristPortalPatterns, host + path), or when every

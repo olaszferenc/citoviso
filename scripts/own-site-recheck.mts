@@ -1,6 +1,6 @@
 /**
  * SAJÁT-OLDAL ÚJRAELLENŐRZÉS — a leadhez már kiírt „saját honlap” képtársítások (portalProfiles, portal "own_site")
- * újraolvasása a mai identitás-szabállyal (ADR-XXXX, 2026-11-28), és a már nem igazolhatók levétele, mentéssel.
+ * újraolvasása a mai identitás-szabállyal (ADR-0512, 2026-11-28), és a már nem igazolhatók levétele, mentéssel.
  *
  * MIÉRT: a saját-oldal igazolás egy turisztikai oldalt is elfogadott, ha a domain a lead nevének egy szavát viselte,
  * és az oldalon ott volt a település. Földrajzi nevű leadnél ez helynév: „Insel Brac” ↔ bracinfo.com/de/sutivan,

@@ -1,4 +1,4 @@
-## ADR-XXXX — Saját-oldal igazolás: a helynév nem márka; turisztikai portál csak kemény azonosítóval
+## ADR-0512 — Saját-oldal igazolás: a helynév nem márka; turisztikai portál csak kemény azonosítóval
 
 - **Dátum:** 2026-11-28
 - **Státusz:** elfogadva (koordinátor `cit9b4690e3`: „a rossz kép rosszabb a hiányzónál … általános szabállyal”)
