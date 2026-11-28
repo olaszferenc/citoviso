@@ -6,6 +6,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [2026-11-28_konverzios-fa-riport.md](2026-11-28_konverzios-fa-riport.md) — 2026-11-28 — Konverziós mechanizmusfa a Riportban (ADR-0510 felülete, SUB `cit0fe2afff`)
 - [2026-11-27_teszt-elofizetesek-lezarasa.md](2026-11-27_teszt-elofizetesek-lezarasa.md) — Teszt-előfizetések lezárása — téves terhelés-riasztás, egy valódi kockázat élesen (2026-11-27)
 - [2026-11-27_programajanlo-nemzetkozi.md](2026-11-27_programajanlo-nemzetkozi.md) — Programajánló (poi) nemzetközi — az ország nyelvén keres, az új vevő azonnal kap (2026-11-27)
 - [2026-11-27_production_lanc_es_mennyiseg.md](2026-11-27_production_lanc_es_mennyiseg.md) — 2026-11-27 — Production: lánc-utánpótlás, kinézeti szabálykörök, mennyiségi fordulat

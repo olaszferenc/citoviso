@@ -2869,6 +2869,17 @@ if [ -f scripts/contract-drift-check.mts ] && \
   npx tsx scripts/contract-drift-check.mts
 fi
 
+if [ -f scripts/conversion-tree-check.mts ] && \
+   changed_files | grep -qE '^_planning/DOMAIN/07-CONVERSION-TREE\.md$|^src/console/conversionTree\.ts$|^scripts/conversion-tree-check\.mts$'; then
+  echo "[pre-commit] conversion-tree-check (a konverziós fa doksija és kódmodulja ugyanazt mondja, ADR-0510)…"
+  npx tsx scripts/conversion-tree-check.mts >"$GATE_LOG" || gate_failed
+fi
+if [ -f scripts/conversion-tree-fold-check.mts ] && \
+   changed_files | grep -qE '^src/console/(conversionTree|conversionTreeViews|reportData|reportViews)\.ts$|^public/assets/ui/citui-console\.css$|^scripts/conversion-tree-fold-check\.mts$'; then
+  echo "[pre-commit] conversion-tree-fold-check (a fa szekció a befagyasztott terv szerint számol és rajzol, animáció nélkül)…"
+  npx tsx scripts/conversion-tree-fold-check.mts >"$GATE_LOG" || gate_failed
+fi
+
 if [ -f scripts/exit-reason-check.mts ] && \
    changed_files | grep -qE '^src/analytics/exitReason\.ts$|^scripts/exit-reason-check\.mts$'; then
   echo "[pre-commit] exit-reason-check (a kilépés-ok szabályai a rögzített látogatásokat ugyanúgy címkézik)…"

@@ -22,6 +22,10 @@ A bal menüben **„Riport”** → **„Megkeresés-tölcsér”**, **„Viselk
 
 ![Képernyőkép: a Tölcsér lap telefonon — szűrősor és az első kérdés-kártyák](assets/hu/screen.png)
 
+A Tölcsér lap legtetején, a kérdés-kártyák felett a **„Konverziós mechanizmusfa”** doboza áll: hol vész
+el a lead lépésről lépésre, miért, és melyik javításon ki dolgozik. Külön súgója van (a doboz
+fejlécében a kérdőjel); a fenti kép a fa alatti részt mutatja.
+
 ## A szűrősor — minden szám erre számolódik
 
 Egy sorban: az **időszak** chipjei (**„Ma”** · 7 · 30 · 90 nap vagy **„Összes”**; a lap a

@@ -14,6 +14,7 @@ import { T } from "../i18n/mail.js";
 import type { LeadStock } from "./leadStock.js";
 import { leadStockReportBody, stockChips, type StockPreset } from "./leadStockViews.js";
 import { consoleLang } from "./i18nCtx.js";
+import { conversionTreeSection, type TreeViewOpts } from "./conversionTreeViews.js";
 import { SKINS } from "../engine/skins.js";
 import { allCountriesSync, countryConfigSync } from "../country.js";
 import { countryDisplayName } from "../i18n/lang.js";
@@ -178,7 +179,9 @@ const PRESET_LABEL = (k: ReportPresetKey, lang: string): string => (k === "today
 const periodParams = (p: ReportPeriod): Record<string, string> =>
   p.key === "custom" ? { from: p.from!, to: p.to! } : { days: p.key };
 const qs = (d: ReportData, extra: Record<string, string> = {}): string => {
-  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...ctryParam(d), ...(d.round === "re" ? { kor: "ujra" } : {}) };
+  // mb = the conversion tree's mailbox filter (ADR-0510): it rides along so the page's other filters keep it.
+  const mb: Record<string, string> = d.tree && d.tree.mailbox !== "all" ? { mb: d.tree.mailbox } : {};
+  const base: Record<string, string> = { ...periodParams(d.period), dim: d.dim, ...(d.seg === "all" ? {} : { seg: d.seg }), ...ctryParam(d), ...(d.round === "re" ? { kor: "ujra" } : {}), ...mb };
   // A preset chip in `extra` replaces a custom window (and vice versa).
   if ("days" in extra) { delete base.from; delete base.to; }
   const p = new URLSearchParams({ ...base, ...extra });
@@ -649,9 +652,23 @@ function openSourcePanel(d: ReportData, lang: string): string {
   );
 }
 
-export function reportFunnelPage(d: ReportData, today: string): string {
+export function reportFunnelPage(d: ReportData, today: string, tree: TreeViewOpts = { sel: null, view: "tree" }): string {
   const lang = consoleLang();
+  // The conversion tree (ADR-0510, frozen plan design-refs/console/konverzios-fa/): top of the page.
+  const treeHref = (set: Readonly<Record<string, string | null>>): string => {
+    const p = new URLSearchParams(qs(d).slice(1));
+    if (tree.sel) p.set("fa", tree.sel);
+    if (tree.view === "tasks") p.set("nezet", "feladatok");
+    for (const [k, v] of Object.entries(set)) {
+      if (v === null) p.delete(k);
+      else p.set(k, v);
+    }
+    // A preset and a custom window never ride together (reportPeriod would prefer the window).
+    if ("days" in set && set.days !== null) { p.delete("from"); p.delete("to"); }
+    return `/report?${p.toString()}`;
+  };
   const body =
+    conversionTreeSection(d, tree, treeHref, lang) +
     hypothesisCards(d, lang) +
     `<div class="rp-grid2 rp-grid2--stack">${returnsPanel(d, lang)}${dimPanel(d, lang)}</div>` +
     openSourcePanel(d, lang) +

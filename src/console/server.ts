@@ -102,7 +102,7 @@ import {
 } from "./partnerMessages.js";
 import { MESSAGE_FILTERS, messageBubble, messagesTab, type ComposeState, type MessageFilter } from "./partnerMessageViews.js";
 import { reportFunnelPage, reportBehaviourPage, reportMockPage, reportLeadStockPage, type ReasonMode } from "./reportViews.js";
-import { addNote, getMockReport, getReportData, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, reportPeriod, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
+import { addNote, getMockReport, getReportData, parseTreeMailbox, MOCK_CHANNELS, MOCK_PAGE, MOCK_SORTS, PANEL_FILTERS, REPORT_DIMS, REPORT_SEGS, reportPeriod, type MockChannelFilter, type MockSort, type PanelFilter, type ReportDays, type ReportDim, type ReportSeg } from "./reportData.js";
 import { todayIn, APP_TZ } from "../text/zoneTime.js";
 import { huTaxNumberProblem, normalizeHuTaxNumber, parseEuVat } from "../billing/taxId.js";
 import { loadLead } from "../generator/persist.js";
@@ -3577,8 +3577,10 @@ async function handle(
     // only the Tölcsér page switches rounds, Viselkedés stays on the first outreach.
     const round = url.searchParams.get("kor") === "ujra" ? "re" : "first";
     // ctry = the lead's country (ISO-2, "-" = unknown; ország-réteg 3/3) — scopes every metric like seg.
-    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined, reportCtry);
-    if (path === "/report") return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ)));
+    // mb = the conversion tree's mailbox filter (ADR-0510): all / gmail / other.
+    const d = await getReportData(days, dim, seg, undefined, path === "/report" ? round : undefined, reportCtry, parseTreeMailbox(url.searchParams.get("mb")));
+    if (path === "/report")
+      return send(res, 200, reportFunnelPage(d, todayIn(APP_TZ), { sel: url.searchParams.get("fa"), view: url.searchParams.get("nezet") === "feladatok" ? "tasks" : "tree" }));
     const rsRaw = url.searchParams.get("rs") ?? "inf";
     const rs: ReasonMode = rsRaw === "said" || rsRaw === "both" ? rsRaw : "inf";
     // pv = the Rendelés-panel's own chip filter (how the panel was opened); default „Mind”.

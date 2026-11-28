@@ -29,6 +29,14 @@
 //              hides a real open, so the measure UNDERCOUNTS outside Gmail. First round only: the
 //              follow-up letter carries no remote image. An 'open' within 60 s of the send is the
 //              Gmail scanner (emailOpen.ts MAIL_OPEN_MIN_DELAY_MS) and counts as a bot, old rows too.
+// Conversion tree (ADR-0510, 07-CONVERSION-TREE.md §B; section on the Tölcsér page) — the e-mail cohort
+// (an e-mail went out: mailDomain set), every state counted as „reached at least this far”, so the flow
+// never runs uphill (a lead that touched the offer without scrolling half-way still passed 6):
+//   5 tervet nyitott = opened · 6 végignézte = a visit with scroll ≥ 50 % (`halfViewedAt`) ·
+//   7 ajánlathoz nyúlt = mock_event trial_open · plan_view_click · pkg_open · panel_open · checkout_step
+//   (`offerAt`) · 8 próba / rendelés = trialed or ordered · 9 fizetett = paid · 4 levelet nyitott = the
+//   letter-open measure above (partial) · visszatérő = visits on ≥ 2 different days (`visitDays`, the
+//   lead's own calendar). 0, 2, 3 and 10 are blind spots: no number, never zero.
 // trialed is a SIDE stage, not a rung between deep and ordered: a buyer may never trial, and
 // a trialist who continues DOES submit an order_intent (/p/:token/folytatas posts to
 // /p/:token/request), so it also counts as ordered/paid. `ordered`/`paid` keep their
@@ -57,6 +65,7 @@ import { sql } from "kysely";
 import { partsIn, APP_TZ, addIsoDays, isoDayDiff, isoDayIn, midnightIn, todayIn } from "../text/zoneTime.js";
 import { countryConfig, countryConfigSync, countryOf } from "../country.js";
 import { tooSoonAfterSend } from "../outreach/emailOpen.js";
+import { BLIND_TRANSITIONS, TASK_AFTER_MIN_PARENT, TASK_AFTER_WAIT_DAYS } from "./conversionTree.js";
 import {
   EXIT_REASONS,
   EXPECTED_STATED,
@@ -262,6 +271,12 @@ export interface ProspectFacts {
   readonly mailPrefetch?: boolean;
   /** A scanner/bot fetched the image (informational, not an open). */
   readonly mailBot?: boolean;
+  /** Conversion tree 6 (ADR-0510): first visit that scrolled ≥ 50 %; absent in old fixtures = none. */
+  readonly halfViewedAt?: Date | null;
+  /** Conversion tree 7: first offer event (TREE_OFFER_EVENTS); absent = none. */
+  readonly offerAt?: Date | null;
+  /** Distinct local days with a visit (the returner side exit: ≥ 2); absent = derived from visits. */
+  readonly visitDays?: number;
 }
 
 /** Recipient mailbox group for the letter-open split: Gmail reports opens well, the rest less so. */
@@ -506,6 +521,8 @@ export interface ReportData {
   readonly mailByDomain: Readonly<Record<MailDomain, StageCounts>>;
   /** ISO day (app zone) the letter-open measurement started; null = no open measured yet. */
   readonly mailSince: string | null;
+  /** Konverziós fa (ADR-0510) — first round only; absent = not folded (the follow-up round, fixtures). */
+  readonly tree?: TreeData;
   readonly returns: readonly ReturnRow[];
   /** „Honnan nyitották” (0132, frozen plan design-refs/console/honnan-nyitottak/ B). */
   readonly openSources: readonly OpenSourceRow[];
@@ -844,6 +861,8 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
       }
     }
     const paidAt = firstPaid.get(r.id) ?? null;
+    const tz = countryConfigSync(countryOf({ country: r.raw_country }, r.area_country) ?? "")?.timeZone ?? APP_TZ;
+    const tree = treeVisitFacts(visits, tz);
     const lastVisit = visits[visits.length - 1];
     const verdict = paidAt || !lastVisit ? null : inferExitReason(signalsFromEvents(lastVisit.events, false));
     const country = countryOf({ country: r.raw_country }, r.area_country) ?? "";
@@ -876,6 +895,7 @@ export async function loadProspectFacts(round: ReportRound = "first"): Promise<P
       exitConfidence: verdict?.confidence ?? null,
       stated: feedback.get(r.id) ?? null,
       replied: replied.has(r.id),
+      ...tree,
       ...mailFactsOf(r, mail),
     };
   });
@@ -1452,6 +1472,217 @@ export function summarizePanel(all: readonly PanelSession[], via: PanelFilter): 
  * `round` given (the Tölcsér page) → that round's numbers plus the other round's headline
  * (`peer`); omitted (Viselkedés) → the first round alone.
  */
+// ── Konverziós fa (ADR-0510; frozen plan: assets/design-refs/console/konverzios-fa/) ──────────
+
+/** The tree's own filter: the recipient's mailbox (Gmail reports letter opens well, the rest less). */
+export type TreeMailbox = "all" | MailDomain;
+export const TREE_MAILBOXES: readonly TreeMailbox[] = ["all", "gmail", "other"];
+export const parseTreeMailbox = (raw: string | null | undefined): TreeMailbox =>
+  raw === "gmail" ? "gmail" : raw === "other" || raw === "egyeb" ? "other" : "all";
+
+/** State 7 · Ajánlathoz nyúlt — any of these mock events (README „Adat-definíciók”). */
+export const TREE_OFFER_EVENTS: readonly string[] = ["trial_open", "plan_view_click", "pkg_open", "panel_open", "checkout_step"];
+
+/** The tree facts of one prospect's visits (pure; the loader and the fixtures share it). */
+export function treeVisitFacts(visits: readonly Visit[], timeZone: string): Pick<ProspectFacts, "halfViewedAt" | "offerAt" | "visitDays"> {
+  let half: Date | null = null;
+  let offer: Date | null = null;
+  const days = new Set<string>();
+  for (const v of visits) {
+    days.add(isoDayIn(v.startedAt, timeZone));
+    if (!half && v.maxScroll >= 50) half = v.startedAt;
+    if (!offer) {
+      const e = v.events.find((x) => TREE_OFFER_EVENTS.includes(x.type));
+      if (e) offer = e.occurredAt ? new Date(e.occurredAt) : v.startedAt;
+    }
+  }
+  return { halfViewedAt: half, offerAt: offer, visitDays: days.size };
+}
+
+/** The tree's numbers for one cohort. States are „reached at least this far” (see the header). */
+export interface TreeCounts {
+  /** 1 · Kiküldve: e-mails sent. */
+  readonly sent: number;
+  /** 4 · Levelet nyitott (partial): letters sent while the open measurement ran / opened by a person. */
+  readonly mailTracked: number;
+  readonly mailOpened: number;
+  readonly s5: number;
+  readonly s6: number;
+  readonly s7: number;
+  readonly s8: number;
+  readonly s9: number;
+  /** Of s8: started a trial / submitted an order (a lead may do both). */
+  readonly trialed: number;
+  readonly ordered: number;
+  /** Side exits — any level. */
+  readonly replied: number;
+  readonly unsubscribed: number;
+  /** Visited on ≥ 2 different days (of s5). */
+  readonly returned: number;
+}
+
+/** Only the e-mail cohort is on the tree (07 §A: the other channels join at 5 later). */
+export const inTreeCohort = (p: ProspectFacts, mb: TreeMailbox = "all"): boolean =>
+  !!p.mailDomain && (mb === "all" || p.mailDomain === mb);
+
+export function treeCounts(ps: readonly ProspectFacts[]): TreeCounts {
+  let mailTracked = 0, mailOpened = 0, s5 = 0, s6 = 0, s7 = 0, s8 = 0, s9 = 0, trialed = 0, ordered = 0, replied = 0, unsub = 0, returned = 0;
+  for (const p of ps) {
+    if (p.mailTracked) {
+      mailTracked++;
+      if (p.mailOpenedAt) mailOpened++;
+    }
+    const r9 = !!p.paidAt;
+    const r8 = r9 || !!p.trialedAt || !!p.orderedAt;
+    const r7 = r8 || !!p.offerAt;
+    const r6 = r7 || !!p.halfViewedAt;
+    const r5 = r6 || !!p.openedAt;
+    if (r5) s5++;
+    if (r6) s6++;
+    if (r7) s7++;
+    if (r8) s8++;
+    if (r9) s9++;
+    if (p.trialedAt) trialed++;
+    if (p.orderedAt) ordered++;
+    if (p.replied) replied++;
+    if (p.unsubscribedAt) unsub++;
+    if (r5 && (p.visitDays ?? new Set(p.visits.map((v) => isoDayIn(v.startedAt, p.timeZone ?? APP_TZ))).size) >= 2) returned++;
+  }
+  return { sent: ps.length, mailTracked, mailOpened, s5, s6, s7, s8, s9, trialed, ordered, replied, unsubscribed: unsub, returned };
+}
+
+/** A spine state's count; null = blind spot (0, 2, 3, 10) or partial (4 — read mailTracked/mailOpened). */
+export function treeStateCount(c: TreeCounts, n: number): number | null {
+  switch (n) {
+    case 1: return c.sent;
+    case 5: return c.s5;
+    case 6: return c.s6;
+    case 7: return c.s7;
+    case 8: return c.s8;
+    case 9: return c.s9;
+    default: return null;
+  }
+}
+
+/**
+ * The parent → child counts a transition's rate is read on. The flow's 1→5 and the tree's 4→5 both read
+ * 1→5 (4 is only partly measured, so 4→5 is not computed — the panel says so); blind transitions → null.
+ */
+export function treeTransitionCounts(c: TreeCounts, key: string): { from: number; to: number } | null {
+  if (key === "1-5" || key === "4-5") return { from: c.sent, to: c.s5 };
+  const [a, b] = key.split("-").map(Number) as [number, number];
+  const from = treeStateCount(c, a);
+  const to = treeStateCount(c, b);
+  return from === null || to === null ? null : { from, to };
+}
+
+/** One row of conversion_task, as the console shows it. */
+export interface TreeTask {
+  readonly id: string;
+  readonly node: string;
+  readonly leverId: string;
+  readonly owner: string;
+  readonly startedAt: Date;
+  /** Parent rate before the lever, percent; null = blind spot. */
+  readonly beforeRate: number | null;
+  readonly note: string | null;
+}
+export interface TreeTaskRow extends TreeTask {
+  /**
+   * „Után”: the parent rate on the sends since the lever started — ONLY once that cohort is measured
+   * (TASK_AFTER_WAIT_DAYS old, ≥ TASK_AFTER_MIN_PARENT at the parent). `wait` = runs, nothing yet;
+   * `blind` = the transition has no rate today.
+   */
+  readonly after: { readonly rate: number; readonly from: number; readonly to: number } | "wait" | "blind";
+}
+
+export interface TreeWeek {
+  /** Monday of the send week (app zone). */
+  readonly week: string;
+  readonly sent: number;
+  readonly opened: number;
+  /** The week is still running (or its sends are younger than 7 days): the rate will still grow. */
+  readonly open: boolean;
+}
+
+export interface TreeData {
+  readonly mailbox: TreeMailbox;
+  readonly counts: TreeCounts;
+  readonly tasks: readonly TreeTaskRow[];
+  /** The task table could not be read (not migrated yet): the section says so instead of „no tasks”. */
+  readonly tasksUnavailable: boolean;
+  /** Mérési napló: plan opens / e-mails sent per send week, last 6 weeks, live from the fold. */
+  readonly weekly: readonly TreeWeek[];
+}
+
+export interface TreeTasksLoad {
+  readonly tasks: readonly TreeTask[];
+  readonly unavailable: boolean;
+}
+
+/** Open conversion tasks; a missing table (migration not applied yet) is „unavailable”, not an error page. */
+export async function loadTreeTasks(): Promise<TreeTasksLoad> {
+  try {
+    const rows = await db
+      .selectFrom("conversion_task")
+      .select(["id", "node", "lever_id", "owner", "started_at", "before_rate", "note"])
+      .where("status", "=", "open")
+      .orderBy("started_at", "asc")
+      .execute();
+    return {
+      tasks: rows.map((r) => ({
+        id: r.id,
+        node: r.node,
+        leverId: r.lever_id,
+        owner: r.owner,
+        startedAt: toDate(r.started_at)!,
+        beforeRate: r.before_rate === null ? null : Number(r.before_rate),
+        note: r.note,
+      })),
+      unavailable: false,
+    };
+  } catch (e) {
+    if ((e as { code?: string }).code === "42P01") return { tasks: [], unavailable: true };
+    throw e;
+  }
+}
+
+const mondayOf = (d: Date): string => {
+  const day = isoDayIn(d, APP_TZ);
+  const dow = (new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7;
+  return addIsoDays(day, -dow);
+};
+
+/** The tree section's data — the SAME fold facts as every other panel (README ②). */
+export function foldTree(
+  cohortAll: readonly ProspectFacts[],
+  inRange: readonly ProspectFacts[],
+  mailbox: TreeMailbox,
+  tasks: TreeTasksLoad,
+  now: Date,
+): TreeData {
+  const counts = treeCounts(inRange.filter((p) => inTreeCohort(p, mailbox)));
+  const cohort = cohortAll.filter((p) => inTreeCohort(p, mailbox));
+  const rows: TreeTaskRow[] = tasks.tasks.map((t) => {
+    if (BLIND_TRANSITIONS.includes(t.node)) return { ...t, after: "blind" as const };
+    const ripe = now.getTime() - TASK_AFTER_WAIT_DAYS * DAY;
+    const since = cohort.filter((p) => p.sentAt.getTime() >= t.startedAt.getTime() && p.sentAt.getTime() <= ripe);
+    const tc = treeTransitionCounts(treeCounts(since), t.node);
+    if (!tc) return { ...t, after: "blind" as const };
+    if (t.startedAt.getTime() > ripe || tc.from < TASK_AFTER_MIN_PARENT) return { ...t, after: "wait" as const };
+    return { ...t, after: { rate: (tc.to / tc.from) * 100, from: tc.from, to: tc.to } };
+  });
+  const thisMonday = mondayOf(now);
+  const weekly: TreeWeek[] = [];
+  for (let w = 5; w >= 0; w--) {
+    const week = addIsoDays(thisMonday, -7 * w);
+    const ps = cohort.filter((p) => mondayOf(p.sentAt) === week);
+    const end = midnightIn(addIsoDays(week, 7), APP_TZ).getTime();
+    weekly.push({ week, sent: ps.length, opened: ps.filter((p) => p.openedAt).length, open: now.getTime() - end < 7 * DAY });
+  }
+  return { mailbox, counts, tasks: rows, tasksUnavailable: tasks.unavailable, weekly };
+}
+
 export async function getReportData(
   days: ReportDays | ReportPeriod,
   dim: ReportDim,
@@ -1459,10 +1690,12 @@ export async function getReportData(
   now = new Date(),
   round?: ReportRound,
   country: ReportCountry = "all",
+  mailbox: TreeMailbox = "all",
 ): Promise<ReportData> {
   const cur = round ?? "first";
-  const [all, targets, notes] = await Promise.all([loadProspectFacts(cur), loadTargets(), loadNotes()]);
-  const main = foldReport(all, targets, notes, days, dim, now, seg, country);
+  // The tree reads the first cold touch only (its letter-open step is the first letter's).
+  const [all, targets, notes, tasks] = await Promise.all([loadProspectFacts(cur), loadTargets(), loadNotes(), cur === "first" ? loadTreeTasks() : Promise.resolve(null)]);
+  const main = foldReport(all, targets, notes, days, dim, now, seg, country, tasks ? { mailbox, tasks } : undefined);
   if (!round) return main;
   const other: ReportRound = round === "re" ? "first" : "re";
   const o = foldReport(await loadProspectFacts(other), targets, notes, days, dim, now, seg, country);
@@ -1479,6 +1712,7 @@ export function foldReport(
   now: Date,
   seg: ReportSeg = "all",
   country: ReportCountry = "all",
+  tree?: { readonly mailbox: TreeMailbox; readonly tasks: TreeTasksLoad },
 ): ReportData {
   const period = typeof range === "number" ? reportPeriod(range, null, null, now) : range;
   const days = period.spanDays;
@@ -1688,6 +1922,7 @@ export function foldReport(
     hypotheses,
     mailByDomain: { gmail: stageCounts(inRange.filter((p) => p.mailDomain === "gmail")), other: stageCounts(inRange.filter((p) => p.mailDomain === "other")) },
     mailSince: mailSinceOf(everyone),
+    ...(tree ? { tree: foldTree(all, inRange, tree.mailbox, tree.tasks, now) } : {}),
     returns,
     openSources: foldOpenSources(inRange),
     escalation,

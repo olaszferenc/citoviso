@@ -306,6 +306,25 @@ export interface ReportNoteTable {
   created_at: Generated<Timestamp>;
 }
 
+/** ADR-0510 (0163): who works on which lever of the conversion tree — written by
+ *  scripts/conversion-task.mts, read by the Riport → Tölcsér tree section. */
+export interface ConversionTaskTable {
+  id: Generated<string>;
+  /** Tree transition the lever acts on, "a-b" (e.g. "6-7"). */
+  node: string;
+  /** src/console/conversionTree.ts lever id. */
+  lever_id: string;
+  owner: string;
+  started_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  /** Parent rate before the lever started, percent; null = blind spot. */
+  before_rate: ColumnType<string | null, number | string | null | undefined, number | string | null>;
+  status: Generated<"open" | "closed">;
+  closed_at: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
+  note: string | null;
+  created_by: string | null;
+  created_at: Generated<Timestamp>;
+}
+
 /** ADR-0322 ⑧ (0087): verdict targets, operator-editable. Seeded: open_rate 40,
  *  return_rate 30, deep_rate 20, order_rate 4, paid_rate 75, first_open_hours 24.
  *  `target` is numeric → node-postgres reads it as a STRING. */
@@ -2523,6 +2542,7 @@ export interface Database {
   prospect_feedback: ProspectFeedbackTable;
   report_note: ReportNoteTable;
   report_target: ReportTargetTable;
+  conversion_task: ConversionTaskTable;
   site_visit: SiteVisitTable;
   order_intent: OrderIntentTable;
   offer: OfferTable;

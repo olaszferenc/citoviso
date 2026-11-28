@@ -79,9 +79,12 @@ Négyféle csomópont, egy fában:
 
 ## D. Aktív feladatok (mi melyik csomóponton dolgozik)
 
-| csomópont | kar | ki | mióta | szülő-arány előtte |
-|---|---|---|---|---|
-| — | (a tulajjal választjuk ki az elsőt) | | | |
+2026-11-28 óta a DB-ben élnek (`conversion_task`, 0163), nem itt: a koordinátor írja
+(`npx tsx scripts/conversion-task.mts add --node 6-7 --lever <id> --owner <ki>` · `close <id>` · `list`;
+a kar-azonosítók: `list --levers`), a konzol mutatja (Riport → Tölcsér → Konverziós mechanizmusfa →
+Feladatok). A kar szövege és azonosítója a `src/console/conversionTree.ts`-ben, ami e fájl §B/§C-jét
+tükrözi (őr: `scripts/conversion-tree-check.mts` — ha itt átírsz egy okot vagy kart, a modult is írd át).
+Az elsőt a tulajjal választjuk ki.
 
 ## E. Mérési napló (újabb elöl; minden sor: dátum · kohorsz · számok · forrás)
 

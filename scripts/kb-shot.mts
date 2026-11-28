@@ -79,7 +79,7 @@ import { testLogPage } from "../src/console/testLogViews.js";
 import { findScenario } from "../src/elek/fkParse.js";
 import type { FunnelCounts, FunnelReport, LeadDetail, LeadListRow } from "../src/console/data.js";
 import { reportBehaviourPage, reportFunnelPage, reportMockPage } from "../src/console/reportViews.js";
-import { DEFAULT_TARGETS, foldMockReport, foldReport, type ProspectFacts, type Visit } from "../src/console/reportData.js";
+import { DEFAULT_TARGETS, foldMockReport, foldReport, treeVisitFacts, type ProspectFacts, type Visit } from "../src/console/reportData.js";
 import { foldTrialReport, type RawTrial } from "../src/console/trialReport.js";
 import { reportTrialPage } from "../src/console/trialReportViews.js";
 import { behaviorMessagePage } from "../src/console/behaviorMessagePage.js";
@@ -2460,6 +2460,16 @@ await shootConsole(
   reportBehaviourPage(rpData, "inf"),
   path.join(ROOT, "kb/entries", "console-report", "assets", "hu", "behaviour.png"),
 );
+// ADR-0510: the conversion tree section at the top of the Tölcsér page (frozen plan
+// design-refs/console/konverzios-fa/, B · Folyam) — element shot of the section, one running task.
+{
+  const treeFacts = rpFacts.map((p) => ({ ...p, ...treeVisitFacts(p.visits, "Europe/Budapest") }));
+  const rpTree = foldReport(treeFacts, DEFAULT_TARGETS, rpNotes, 30, "segment", rpNow, "all", "all", {
+    mailbox: "all",
+    tasks: { unavailable: false, tasks: [{ id: "kb-t1", node: "7-8", leverId: "trial_form_fields", owner: "Lánc-SUB", startedAt: new Date(rpNow.getTime() - 3 * 86_400_000), beforeRate: 14.3, note: null }] },
+  });
+  await shootConsole(reportFunnelPage(rpTree, "2026-10-04"), path.join(ROOT, "kb/entries", "console-report-tree", "assets", "hu", "screen.png"), undefined, ".kf");
+}
 // The Rendelés-panel (README rendeles-panel): the whole panel as an element shot — its list
 // runs far below the fold, and the entry explains every part of it.
 await shootConsole(

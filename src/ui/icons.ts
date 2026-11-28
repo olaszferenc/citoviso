@@ -184,6 +184,15 @@ export const ICON_THIN: Readonly<Record<string, string>> = {
   layout: `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>`,
   desktop: `<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>`,
   phone: `<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>`,
+  // ADR-0510 — the conversion tree section (Riport → Tölcsér; read through icAdmin): measure states + side exits.
+  eyeoff: `<path d="M3 3l18 18"/><path d="M10.6 6.2A9.8 9.8 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.4.8-1.3 2-2.6 3.3M6.4 7.6C4.6 8.9 3.2 10.7 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/>`,
+  halfc: `<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" stroke="none"/>`,
+  reply: `<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>`,
+  revisit: `<path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/>`,
+  user: `<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.9-3.6 3.6-5.5 7-5.5s6.1 1.9 7 5.5"/>`,
+  flag: `<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>`,
+  inbox: `<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5z"/>`,
+  notes: `<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>`,
 };
 
 /** The tenant-admin icon (ADR-0224): thin line, no accent dot. Unknown thin name →

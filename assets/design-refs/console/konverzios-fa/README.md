@@ -10,10 +10,21 @@ C · Térkép elvetve; közvetlenül: `konverzios-fa.html#v=B`), képek: `B-aszt
 kellő rövid átmenet (panel nyitás-csukás, sávszélesség-váltás szűrésre), `prefers-reduced-motion` alatt
 az sem.
 
-**Hatókör:** `src/console/reportViews.ts` · `src/console/reportData.ts`
+**Hatókör:** `src/console/reportViews.ts` · `src/console/reportData.ts` · `src/console/conversionTreeViews.ts` · `src/console/conversionTree.ts` · `scripts/conversion-task.mts` · `migrations/0163_conversion_task.sql` · `kb/entries/console-report-tree/entry.hu.md`
 
-A megvalósításkor ide kerül még: a fa szerkezetét hordozó új modul, az aktív feladatok táblája és a
-tudásbázis-entry (a Hatókör-sort a megvalósító bővíti).
+Megvalósítva 2026-11-28: a szekció (`conversionTreeViews.ts`), a fa szerkezete egy helyen
+(`conversionTree.ts`, őr: `scripts/conversion-tree-check.mts` — a doksi §B/§C és a modul nem térhet el),
+az aktív feladatok táblája (`conversion_task`, írja: `scripts/conversion-task.mts add|close|list`),
+a működés őre (`scripts/conversion-tree-fold-check.mts`) és a súgó (`console-report-tree`).
+
+**Megvalósítási pontosítások (a terv szellemében, nem új döntés):**
+- Az állapotok „legalább idáig jutott” értelemben számolódnak (a 7-be jutó, félig nem görgető lead a
+  6-ban is számít), különben a folyam felfelé futna. Élesen 2026-11-28: 3 ilyen lead.
+- A „megnyitva” a riport meglévő definíciója (bot-nyitás nélkül), ezért a terv 339 / 229 számából a
+  megvalósításban 328 / 224 lett (éles fold, csak olvasás, 11-09…11-28: 1797 → 328 → 224 → 32 → 1 → 0).
+- A postafiók × ország kombináció mindig kiszámolható (élő fold), ezért a vázlat „nincs kiszámolva”
+  állapota nem fordul elő; az üres állapot („nem ment ki levél”) megmaradt.
+- Csak az első megkeresés (a „Melyik kör?” Újrakeresés nézetében a fa nem jelenik meg).
 
 ## Miért létezik
 A konverzió javítása addig ötletenként ment. A fa (`_planning/DOMAIN/07-CONVERSION-TREE.md`, ADR-0510)
