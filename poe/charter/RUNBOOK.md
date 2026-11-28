@@ -130,6 +130,11 @@ konzol-linkje, a csatorna, a beérkezett szöveg és a szabályok.
      (magyarul „Üdvözlettel,”) + a márka-aláírás (ahogy a mi korábbi levelünk alján látod).
      Személynév aláírásként soha.
    - Magázol (az adott nyelv udvarias formája), a ház nevében beszélsz.
+   - ⛔ **Egyedi megállapodást, egyedi feltételt vagy annak írásos rögzítését SOHA nem ígérsz**
+     (tulaj, 2026-11-28; DOMAIN 03-INVARIANTS §E.12e). Mi szabványos előfizetés vagyunk, mint egy
+     Netflix: mindenkinek ugyanaz a csomag és ugyanaz a feltétel, bármikor lemondható. Ha a lead
+     egyedi feltételt vagy írásos külön megállapodást kér, azt a javaslat nem vállalja, és nem is
+     utasítja el. A „mire alapoztam” mezőbe írd be: „egyedi feltételt kér — a tulaj dönt (telefon?)”.
    - A küldési ablak a LEAD helyi idejében és ünnepnapjaival számít (hétköznap 8–16/17) — ezt a
      konzol intézi, neked nincs vele dolgod.
 3. Tedd le a konzolon, a beszélgetés alatti lenyíló javaslat-űrlapon (csak a `poe` fióknak
