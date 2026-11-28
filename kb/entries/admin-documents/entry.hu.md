@@ -52,8 +52,8 @@ nem derülne ki, melyik mire szólt. A tétel nevével egy pillantással kivála
 Minden soron van egy **„PDF”** gomb — egy koppintás, és letöltődik a számla.
 Ezt küldheti tovább a könyvelőjének.
 
-Ha egy soron **„Számlázás folyamatban”** felirat áll a **„Még nincs bizonylat”** címkével,
-az azt jelenti, hogy a számla kiállítása még tart. Ilyenkor a tétel neve a felirat alatti
+Ha egy soron **„Fizetve — a számla készül”** felirat áll a **„Még nincs bizonylat”** címkével,
+az azt jelenti, hogy a fizetés megérkezett, csak a számla kiállítása tart még. Ilyenkor a tétel neve a felirat alatti
 halvány sorban áll, mert ennek a sornak még nincs számlaszáma. Ez nem hiba és nem az Ön teendője:
 amint elkészül, itt megjelenik, és e-mailben is megküldjük.
 
