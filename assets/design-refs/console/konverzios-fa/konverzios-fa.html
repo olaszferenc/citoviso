@@ -1,0 +1,968 @@
+<!doctype html><html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Konverziós fa — terv-kör 1 (A / B / C)</title>
+<style>
+  :root{
+    /* Inlined from public/assets/ui/citui.css — the ONLY place raw color values live. */
+    --citui-navy-950:#0a1f36; --citui-navy-900:#0e2a47; --citui-navy-800:#16283f; --citui-navy-700:#203a59;
+    --citui-cyan-500:#1fb6d6; --citui-cyan-400:#35c4e0; --citui-cyan-300:#6fd8eb; --citui-white:#ffffff;
+    --citui-ink:#10243a; --citui-ink-inverse:#eaf3f8; --citui-muted:#5a6d82; --citui-ink-brand:var(--citui-navy-900);
+    --citui-panel:#ffffff; --citui-surface:#f6fbfd; --citui-surface-2:#eef7fa; --citui-bg:#f1f6f9; --citui-hover:#f2f3f5;
+    --citui-line:rgba(14,42,71,.12); --citui-line-strong:rgba(14,42,71,.22);
+    --citui-ok:#2fa96b; --citui-ok-soft:#e7f8ef; --citui-warn:#d29922; --citui-bad:#e5484d;
+    --citui-ok-ink:#19733f; --citui-bad-ink:#b3262b; --citui-warn-ink:#7d5a12; --citui-link-ink:#10697a;
+    --citui-accent-soft:color-mix(in srgb, var(--citui-cyan-500) 12%, transparent);
+    --citui-radius-sm:14px; --citui-radius:22px; --citui-radius-pill:999px;
+    --citui-shadow-sm:0 10px 30px rgba(14,42,71,.08);
+    --citui-font-display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --citui-font-text:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --citui-transition:220ms ease;
+    /* chart roles — tokens / color-mix of tokens only */
+    --viz-1:var(--citui-link-ink); --viz-2:var(--citui-cyan-500);
+    --viz-ghost:color-mix(in srgb, var(--citui-muted) 20%, var(--citui-panel));
+    --hatch:color-mix(in srgb, var(--citui-muted) 22%, transparent);
+    --hole-bg:repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 11px);
+    --open-ease:cubic-bezier(.2,.7,.2,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 var(--citui-font-text);background:var(--citui-bg);color:var(--citui-ink);overflow-x:hidden}
+  button{font-family:inherit}
+  svg.ic{flex:none;vertical-align:-2px}
+
+  /* ── mock control bar (not part of the design) ── */
+  .bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:9px 14px;background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .bar b{font-size:13px} .bar .sp{flex:1}
+  .bar .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap} .bar .grp>span{font-size:11px;opacity:.75;margin-right:2px}
+  .bar button{border:1px solid color-mix(in srgb, var(--citui-white) 25%, transparent);background:transparent;color:var(--citui-ink-inverse);padding:7px 12px;border-radius:var(--citui-radius-pill);font:600 12.5px/1 var(--citui-font-text);cursor:pointer}
+  .bar button.on{background:var(--citui-cyan-500);border-color:var(--citui-cyan-500);color:var(--citui-navy-950)}
+  .note{max-width:1100px;margin:10px auto 0;padding:0 14px;font-size:12.5px;color:var(--citui-muted)}
+  .note b{color:var(--citui-ink)}
+
+  .stage{margin:8px auto 40px;container-type:inline-size;width:100%;max-width:1100px;transition:max-width .3s var(--open-ease);padding:0 12px}
+  .stage.m{max-width:390px;padding:0 8px}
+
+  /* ── console shell (riport-1kor vocabulary) ── */
+  .crumb{font-size:12px;color:var(--citui-muted);margin:10px 2px 4px} .crumb b{color:var(--citui-ink);font-weight:600}
+  h1{font:600 20px/1.2 var(--citui-font-text);letter-spacing:-.01em;margin:0 2px 10px}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--citui-line);margin:0 0 12px;overflow-x:auto}
+  .tabs button{appearance:none;border:0;background:none;padding:9px 14px;font:600 13px/1 var(--citui-font-text);color:var(--citui-muted);cursor:default;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+  .tabs button.on{color:var(--citui-ink);border-bottom-color:var(--citui-cyan-500)}
+  .tabs button[disabled]{opacity:.5}
+  .panel{background:var(--citui-panel);border:1px solid var(--citui-line);border-radius:10px;padding:14px 16px;margin:0 0 12px;min-width:0}
+  .panel h3{margin:0 0 8px;font:600 13.5px/1.3 var(--citui-font-text)}
+  .mut{color:var(--citui-muted)} .small{font-size:12px} .tiny{font-size:11px}
+  .stub{border-style:dashed;color:var(--citui-muted);font-size:12.5px;display:flex;gap:8px;align-items:center}
+
+  /* ── section header (openable) ── */
+  .sec{padding:0;overflow:hidden}
+  .sec-head{display:flex;gap:10px;align-items:flex-start;width:100%;padding:14px 16px;border:0;background:none;text-align:left;cursor:pointer;color:inherit}
+  .sec-head:hover{background:var(--citui-surface)}
+  .sec-head .ttl{font:600 15px/1.3 var(--citui-font-text);letter-spacing:-.01em;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sec-head .ttl .q{font-weight:500;color:var(--citui-muted);font-size:12.5px}
+  .sec-head .sum{font-size:12px;color:var(--citui-muted);margin-top:4px;font-variant-numeric:tabular-nums}
+  .sec-head .chev{margin-left:auto;transition:transform .3s var(--open-ease);color:var(--citui-muted);margin-top:2px}
+  .sec.closed .sec-head .chev{transform:rotate(-90deg)}
+  .coll{display:grid;grid-template-rows:1fr;transition:grid-template-rows .38s var(--open-ease)}
+  .coll>.in{overflow:hidden;min-height:0}
+  .coll.shut{grid-template-rows:0fr}
+  .sec-body{padding:0 16px 16px}
+
+  /* filters */
+  .filt{display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+  .fg{display:flex;flex-direction:column;gap:3px}
+  .fg>span{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted)}
+  .chips{display:inline-flex;border:1px solid var(--citui-line);border-radius:var(--citui-radius-pill);overflow:hidden;background:var(--citui-panel)}
+  .chips button{appearance:none;border:0;background:none;padding:7px 11px;font:600 12px/1 var(--citui-font-text);color:var(--citui-muted);cursor:pointer;min-height:32px;white-space:nowrap}
+  .chips button.on{background:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .chips button:focus-visible,.bar button:focus-visible{outline:2px solid var(--citui-cyan-500);outline-offset:1px}
+  .facts{font-size:11.5px;color:var(--citui-muted);margin:0 0 12px;display:flex;gap:6px 12px;flex-wrap:wrap}
+  .facts b{color:var(--citui-ink);font-variant-numeric:tabular-nums}
+  .viewsw{align-self:flex-end}
+
+  /* badges & chips */
+  .kb{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:10.5px;font-weight:700;letter-spacing:.02em;border:1px solid var(--citui-line);color:var(--citui-muted);background:var(--citui-panel);white-space:nowrap}
+  .kb.k-state{color:var(--citui-navy-700)}
+  .kb.k-igazolt{color:var(--citui-ok-ink);border-color:color-mix(in srgb,var(--citui-ok) 40%,transparent);background:var(--citui-ok-soft)}
+  .kb.k-felteves{color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 45%,transparent);background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel))}
+  .kb.k-kar{color:var(--citui-link-ink);border-color:color-mix(in srgb,var(--citui-cyan-500) 45%,transparent);background:var(--citui-accent-soft)}
+  .mchip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--citui-radius-pill);font-size:10.5px;font-weight:700;white-space:nowrap;border:1px solid}
+  .mchip.m-merve{color:var(--citui-ok-ink);border-color:color-mix(in srgb,var(--citui-ok) 40%,transparent);background:var(--citui-panel)}
+  .mchip.m-reszben{color:var(--citui-warn-ink);border-color:color-mix(in srgb,var(--citui-warn) 50%,transparent);background:var(--citui-panel)}
+  .mchip.m-vakfolt{color:var(--citui-muted);border:1px dashed var(--citui-line-strong);background:var(--hole-bg)}
+  .minta{display:inline-block;padding:0 5px;border-radius:4px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--citui-muted);border:1px dashed var(--citui-line-strong)}
+  .task{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;color:var(--citui-navy-900);background:color-mix(in srgb,var(--citui-cyan-500) 18%,var(--citui-panel));border:1px solid color-mix(in srgb,var(--citui-cyan-500) 50%,transparent)}
+  .task .tx{min-width:0} .task .minta{flex:none}
+  .task .pulse{flex:none;width:7px;height:7px;border-radius:50%;background:var(--citui-cyan-500);box-shadow:0 0 0 0 color-mix(in srgb,var(--citui-cyan-500) 60%,transparent);animation:pulse 2s infinite}
+  .task.none{color:var(--citui-warn-ink);background:color-mix(in srgb,var(--citui-warn) 10%,var(--citui-panel));border-color:color-mix(in srgb,var(--citui-warn) 45%,transparent)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--citui-cyan-500) 55%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .tcount{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:var(--citui-link-ink)}
+  .tcount i{width:7px;height:7px;border-radius:50%;background:var(--citui-cyan-500)}
+  .tcount.none{color:var(--citui-warn-ink)} .tcount.none i{background:var(--citui-warn)}
+
+  /* causes */
+  .causes{display:grid;gap:8px}
+  .cause{border:1px solid var(--citui-line);border-radius:9px;padding:10px 11px;background:var(--citui-panel);min-width:0}
+  .cause.fel{border-left:3px solid color-mix(in srgb,var(--citui-warn) 60%,transparent)}
+  .cause.igaz{border-left:3px solid color-mix(in srgb,var(--citui-ok) 60%,transparent)}
+  .cause .ch{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .cause .ct{font-weight:600;font-size:13px;line-height:1.3;margin:5px 0 2px}
+  .cause .ev{font-size:11.5px;color:var(--citui-muted)}
+  .levers{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+  .lever{position:relative;padding:7px 9px 7px 12px;border-radius:7px;background:var(--citui-surface);border:1px solid var(--citui-line)}
+  .lever::before{content:"";position:absolute;left:-1px;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--citui-cyan-500)}
+  .lever .lt{font-size:12.5px;font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .lever .ld{font-size:11.5px;color:var(--citui-muted)}
+  .lever .lh{font-size:11px;color:var(--citui-link-ink);margin-top:2px}
+  .lever .task{margin-top:6px}
+  .nolever{font-size:11.5px;color:var(--citui-muted);margin-top:6px;font-style:italic}
+  .tsum{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12px;margin:0 0 10px;font-variant-numeric:tabular-nums}
+  .tsum b{font-family:var(--citui-font-display)}
+  .blindnote{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;border:1px dashed var(--citui-line-strong);background:var(--hole-bg);font-size:12px;margin:0 0 10px}
+  .subhd{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);margin:12px 0 6px;display:flex;gap:8px;align-items:center}
+  .subhd:first-child{margin-top:0}
+
+  /* ── A · Gerinc ── */
+  .gerinc{display:grid;gap:14px}
+  .g-list{min-width:0}
+  .g-row{display:grid;grid-template-columns:40px minmax(0,1fr);gap:0 10px}
+  .g-sp{display:flex;flex-direction:column;align-items:center}
+  .g-num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 var(--citui-font-display);background:var(--citui-navy-900);color:var(--citui-ink-inverse);flex:none;position:relative;z-index:1}
+  .g-num.hole{background:var(--citui-panel);color:var(--citui-muted);border:2px dashed var(--citui-line-strong)}
+  .g-num.part{background:var(--citui-panel);color:var(--citui-navy-900);border:2px solid var(--citui-warn)}
+  .g-seg{flex:1;min-height:14px;border-radius:3px;background:var(--viz-1);transition:width .55s var(--open-ease)}
+  .g-seg.hole{background:var(--hole-bg);border:1px dashed var(--citui-line-strong);width:12px!important}
+  .g-state{padding:3px 0 6px;min-width:0}
+  .g-card{border:1px solid var(--citui-line);border-radius:9px;padding:9px 11px;background:var(--citui-panel)}
+  .g-card.hole{background:var(--hole-bg);border:1px dashed var(--citui-line-strong)}
+  .g-top{display:flex;gap:6px 8px;align-items:baseline;flex-wrap:wrap}
+  .g-name{font-weight:600;font-size:13.5px}
+  .g-sub{font-size:11.5px;color:var(--citui-muted)}
+  .g-val{margin-left:auto;font:700 18px/1 var(--citui-font-display);color:var(--citui-ink-brand);font-variant-numeric:tabular-nums}
+  .g-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:5px;font-size:11.5px;color:var(--citui-muted)}
+  .g-rate{font-weight:700;color:var(--citui-ink);font-variant-numeric:tabular-nums}
+  .trk{position:relative;height:6px;background:var(--viz-ghost);border-radius:3px;overflow:hidden;margin-top:7px}
+  .trk i{position:absolute;inset:0 auto 0 0;background:var(--viz-1);border-radius:3px;transition:width .55s var(--open-ease)}
+  .holetxt{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--citui-muted);margin-top:4px}
+  .g-tr{padding:2px 0 8px;min-width:0}
+  .g-trbtn{display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap;width:100%;border:1px solid transparent;background:none;border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left;color:var(--citui-ink);font-size:12px}
+  .g-trbtn:hover{background:var(--citui-surface);border-color:var(--citui-line)}
+  .g-trbtn .lbl{font-weight:600}
+  .g-trbtn .drop{font-weight:700;font-variant-numeric:tabular-nums;color:var(--citui-bad-ink)}
+  .g-trbtn .drop.blind{color:var(--citui-muted);font-weight:600}
+  .g-trbtn .chev{margin-left:auto;color:var(--citui-muted);transition:transform .3s var(--open-ease)}
+  .g-tr.open .g-trbtn{background:var(--citui-surface);border-color:var(--citui-line)}
+  .g-tr.open .g-trbtn .chev{transform:rotate(180deg)}
+  .g-tr .coll{margin-top:0}
+  .g-tr .detail{padding:8px 2px 4px}
+  .g-tr.biggest .g-trbtn .lbl::after{content:" · legnagyobb mért esés";color:var(--citui-bad-ink);font-weight:700}
+  .g-rail{display:grid;gap:12px;align-content:start;min-width:0}
+  .g-rail .panel{margin:0}
+
+  /* side exits */
+  .exits{display:grid;gap:6px}
+  .exit{display:flex;gap:8px;align-items:center;font-size:12.5px}
+  .exit b{margin-left:auto;font-variant-numeric:tabular-nums;font-family:var(--citui-font-display)}
+  .exit .r{font-size:11px;color:var(--citui-muted);min-width:44px;text-align:right}
+
+  /* ── B · Folyam ── */
+  .folyam{min-width:0}
+  .sk-wrap{position:relative;width:100%}
+  .sk-wrap svg{display:block;width:100%;height:auto;overflow:visible}
+  .sk-band{fill:var(--viz-1)}
+  .sk-node{fill:var(--citui-navy-900)}
+  .sk-node0{fill:none;stroke:var(--citui-line-strong);stroke-dasharray:3 3;stroke-width:1.5}
+  .sk-drop{fill:var(--viz-ghost);stroke:transparent;stroke-width:1;cursor:pointer;transition:fill .2s}
+  .sk-drop:hover{fill:color-mix(in srgb,var(--citui-cyan-500) 30%,var(--citui-panel))}
+  .sk-drop.sel{fill:color-mix(in srgb,var(--citui-cyan-500) 45%,var(--citui-panel));stroke:var(--citui-link-ink)}
+  .sk-drop.hole{fill:url(#skHatch)}
+  .sk-drop.hole.sel{fill:url(#skHatchSel);stroke:var(--citui-link-ink)}
+  .sk-hatchbg{fill:color-mix(in srgb,var(--citui-muted) 9%,var(--citui-panel))}
+  .sk-hatchln{fill:var(--hatch)}
+  .sk-hatchsel{fill:color-mix(in srgb,var(--citui-cyan-500) 22%,var(--citui-panel))}
+  .sk-hm{fill:var(--citui-panel);stroke:var(--citui-muted);stroke-dasharray:2.5 2.5;stroke-width:1.3}
+  .sk-t{font:600 11.5px var(--citui-font-text);fill:var(--citui-ink)}
+  .sk-t.m{font-weight:500;fill:var(--citui-muted);font-size:10.5px}
+  .sk-t.v{font:700 14px var(--citui-font-display);fill:var(--citui-ink-brand)}
+  .sk-t.d{font:700 11.5px var(--citui-font-text);fill:var(--citui-bad-ink);cursor:pointer}
+  .sk-t.d.blind{fill:var(--citui-muted)}
+  .sk-t.h{font:700 10px var(--citui-font-text);fill:var(--citui-muted)}
+  .sk-t.halo{paint-order:stroke;stroke:var(--citui-panel);stroke-width:3px;stroke-linejoin:round}
+  .sk-legend{font-size:11.5px;color:var(--citui-muted);margin:6px 0 10px;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center}
+  .sk-legend .sw{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+  .dropchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .dropchips button{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--citui-line);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:6px 10px;font:600 12px/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink);min-height:32px}
+  .dropchips button .dv{color:var(--citui-bad-ink);font-variant-numeric:tabular-nums}
+  .dropchips button.blind .dv{color:var(--citui-muted)}
+  .dropchips button.on{border-color:var(--citui-link-ink);background:var(--citui-accent-soft)}
+  .bpanel .causes{grid-template-columns:1fr}
+
+  /* ── C · Térkép ── */
+  .terkep{display:grid;gap:12px}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-content:start}
+  .tile{position:relative;overflow:hidden;border:1px solid var(--citui-line);border-radius:9px;background:var(--citui-panel);padding:8px 9px 9px;text-align:left;cursor:pointer;color:var(--citui-ink);min-height:104px;display:flex;flex-direction:column;gap:2px;transition:border-color .2s, box-shadow .2s}
+  .tile:hover{border-color:var(--citui-line-strong)}
+  .tile.sel{border-color:var(--citui-link-ink);box-shadow:0 0 0 2px color-mix(in srgb,var(--citui-cyan-500) 40%,transparent)}
+  .tile .fill{position:absolute;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--citui-cyan-500) 16%,transparent);transition:height .55s var(--open-ease);pointer-events:none}
+  .tile.hole{background:var(--hole-bg);border-style:dashed;border-color:var(--citui-line-strong)}
+  .tile>*{position:relative}
+  .tile .tn{font:700 11px/1 var(--citui-font-display);color:var(--citui-muted);display:flex;gap:6px;align-items:center}
+  .tile .tnm{font-weight:600;font-size:12px;line-height:1.25}
+  .tile .tv{font:700 17px/1.1 var(--citui-font-display);color:var(--citui-ink-brand);margin-top:auto;font-variant-numeric:tabular-nums}
+  .tile .tv.hole{font-size:12px;color:var(--citui-muted);font-family:var(--citui-font-text);font-weight:600}
+  .tile .tdrop{position:absolute;top:6px;right:6px;font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--citui-radius-pill);background:var(--citui-panel);border:1px solid var(--citui-line);color:var(--citui-bad-ink);font-variant-numeric:tabular-nums}
+  .tile .tdrop.blind{color:var(--citui-muted);border-style:dashed}
+  .tile .tdot{position:absolute;bottom:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--citui-cyan-500)}
+  .tile .tdot.none{background:var(--citui-warn)}
+  .tile.exitt{cursor:default;background:var(--citui-surface)}
+  .tpanel{min-width:0}
+  .tpanel .panel{margin:0}
+  .tpanel h3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .fadein{animation:fade .32s var(--open-ease)}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* empty / conflict */
+  .empty{border:1px dashed var(--citui-line-strong);border-radius:10px;padding:22px 16px;text-align:center;background:var(--citui-surface)}
+  .empty .ei{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;margin:0 auto 8px;background:var(--citui-panel);border:1px solid var(--citui-line);color:var(--citui-link-ink)}
+  .empty h4{margin:0 0 4px;font-size:14.5px}
+  .empty p{margin:0 auto 12px;max-width:440px;font-size:12.5px;color:var(--citui-muted)}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--citui-line-strong);background:var(--citui-panel);border-radius:var(--citui-radius-pill);padding:8px 14px;font:600 12.5px/1 var(--citui-font-text);cursor:pointer;color:var(--citui-ink);margin:3px}
+  .btn.pri{background:var(--citui-navy-900);border-color:var(--citui-navy-900);color:var(--citui-ink-inverse)}
+  .ghostspine{display:flex;gap:6px;justify-content:center;margin:14px 0 0;flex-wrap:wrap}
+  .ghostspine span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 11px var(--citui-font-display);color:var(--citui-muted);border:1px dashed var(--citui-line-strong)}
+
+  /* tasks view */
+  .ttable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .ttable th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--citui-muted);padding:5px 6px;border-bottom:1px solid var(--citui-line)}
+  .ttable td{padding:9px 6px;border-bottom:1px solid var(--citui-line);vertical-align:top}
+  .ttable tr:last-child td{border-bottom:0}
+  .tcards{display:grid;gap:8px}
+  .tcard{border:1px solid var(--citui-line);border-radius:9px;padding:10px 11px}
+  .tcard dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:8px 0 0;font-size:12px}
+  .tcard dt{color:var(--citui-muted)} .tcard dd{margin:0;font-weight:600}
+  .linkbtn{white-space:nowrap;border:0;background:none;padding:0;color:var(--citui-link-ink);font:600 12px var(--citui-font-text);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .tasks-desk{display:none} .tasks-mob{display:block}
+
+  /* measurement log */
+  .log{border-top:1px solid var(--citui-line);margin-top:14px;padding-top:4px}
+  .loghead{display:flex;gap:8px;align-items:center;width:100%;border:0;background:none;padding:8px 0;cursor:pointer;color:var(--citui-ink);font:600 13px var(--citui-font-text);text-align:left}
+  .loghead .chev{margin-left:auto;color:var(--citui-muted);transition:transform .3s var(--open-ease)}
+  .log.open .loghead .chev{transform:rotate(180deg)}
+  .logentry{border-left:2px solid var(--citui-cyan-500);padding:2px 0 2px 10px;margin:4px 0 10px;font-size:12px}
+  .logentry .ld{font-weight:700;font-size:12px}
+  .logentry ul{margin:4px 0 0;padding-left:16px}
+  .logentry li{margin:1px 0}
+  .trend{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;align-items:end;height:118px;margin:8px 0 4px;max-width:420px}
+  .trend .tb{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+  .trend .tb i{display:block;width:100%;max-width:46px;border-radius:4px 4px 0 0;background:var(--viz-1);transition:height .55s var(--open-ease)}
+  .trend .tb:last-child i{background:var(--citui-bad-ink)}
+  .trend .tb b{font-size:11.5px;font-variant-numeric:tabular-nums}
+  .trend .tb span{font-size:10.5px;color:var(--citui-muted)}
+
+  /* ── desktop decisions (container, not viewport) ── */
+  @container (min-width: 720px){
+    .gerinc{grid-template-columns:minmax(0,1fr) 290px;align-items:start}
+    .g-row{grid-template-columns:52px minmax(0,1fr)}
+    .g-tr .causes{grid-template-columns:1fr 1fr}
+    .g-card{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:4px 18px;align-items:center}
+    .g-card .trk{grid-column:2;grid-row:1 / span 2;margin:0;height:10px}
+    .g-card .g-meta{grid-column:1}
+    .g-rail{position:sticky;top:60px}
+    .terkep{grid-template-columns:minmax(0,1fr) 370px;align-items:start}
+    .tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+    .tile{min-height:122px;padding:10px 11px}
+    .tile .tv{font-size:20px}
+    .tpanel{position:sticky;top:60px}
+    .bpanel .causes{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .tasks-desk{display:block} .tasks-mob{display:none}
+    .viewsw{margin-left:auto}
+    .logwrap{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>Konverziós fa — terv-kör 1</b>
+  <div class="grp"><span>Méret</span><button data-size="m">Mobil 390px</button><button data-size="d">Asztali</button></div>
+  <div class="grp"><span>Változat</span><button data-var="A">A · Gerinc</button><button data-var="B">B · Folyam</button><button data-var="C">C · Térkép</button></div>
+</div>
+<div class="note" id="note"></div>
+
+<div class="stage" id="stage">
+  <div class="crumb">Riport › <b>Megkeresés-tölcsér</b></div>
+  <h1>Megkeresés-riport</h1>
+  <div class="tabs"><button class="on">Tölcsér</button><button>Viselkedés</button><button disabled>Pénzügy</button><button disabled>Tenantok</button></div>
+
+  <section class="panel sec" id="sec">
+    <button class="sec-head" id="secHead" aria-expanded="true" aria-controls="secColl">
+      <div style="min-width:0">
+        <div class="ttl">Konverziós mechanizmusfa <span class="q">— hol vész el a lead, miért, és mivel javítjuk</span></div>
+        <div class="sum" id="secSum"></div>
+      </div>
+      <svg class="ic chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="coll" id="secColl"><div class="in"><div class="sec-body">
+      <div class="filt" id="filt"></div>
+      <div class="facts" id="facts"></div>
+      <div id="body"></div>
+      <div class="log" id="log"></div>
+    </div></div></div>
+  </section>
+
+  <div class="panel stub">
+    <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 20h16"/><rect x="5.5" y="11" width="3.4" height="6" rx="1.2"/><rect x="10.3" y="8.5" width="3.4" height="8.5" rx="1.2"/><rect x="15.1" y="6" width="3.4" height="11" rx="1.2"/></svg>
+    A Tölcsér lap meglévő panelei (kérdés-kártyák, visszatérés, bontás, kohorsz, pilot-napló) változatlanul ez alatt következnek.
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ───────────── real data (prod, read-only SQL, 2026-11-28) ───────────── */
+const CSV = `per,mb,c,sent,tracked,mopen,v5,v6,v7,tr,od,ret,rep,unsub
+30d,egyeb,mind,729,13,7,81,54,6,0,0,10,5,9
+30d,gmail,mind,1144,108,61,281,192,27,1,0,41,42,15
+30d,mind,HU,1873,121,68,362,246,33,1,0,51,47,24
+30d,mind,mind,1873,121,68,362,246,33,1,0,51,47,24
+7d,egyeb,mind,57,13,7,3,3,1,0,0,0,0,0
+7d,gmail,mind,138,108,61,23,17,2,0,0,2,6,1
+7d,mind,HU,195,121,68,26,20,3,0,0,2,6,1
+7d,mind,mind,195,121,68,26,20,3,0,0,2,6,1
+pilot,egyeb,mind,696,13,7,75,50,6,0,0,7,3,9
+pilot,gmail,mind,1101,108,61,264,179,26,1,0,38,41,13
+pilot,mind,HU,1797,121,68,339,229,32,1,0,45,44,22
+pilot,mind,mind,1797,121,68,339,229,32,1,0,45,44,22`;
+const ROWS = {};
+(function parse(){
+  const lines = CSV.trim().split("\n"); const head = lines.shift().split(",");
+  for (const ln of lines){
+    const c = ln.split(","); const o = {};
+    head.forEach((h,i)=>{ o[h] = i < 3 ? c[i] : Number(c[i]); });
+    ROWS[o.per+"|"+o.mb+"|"+o.c] = o;
+  }
+})();
+const NUMKEYS = ["sent","tracked","mopen","v5","v6","v7","s8","s9","ret","rep","unsub"];
+
+/* ───────────── icons (inline SVG, no emoji) ───────────── */
+const svg = (p, s=14, w=1.9) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const IC = {
+  chev: s => svg('<path d="m6 9 6 6 6-6"/>', s||16, 2),
+  check: () => svg('<path d="m5 12.5 4.2 4.2L19 7"/>', 11, 2.4),
+  half: () => svg('<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15" /><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor" stroke="none"/>', 11, 2),
+  eyeoff: s => svg('<path d="M3 3l18 18"/><path d="M10.6 6.2A9.8 9.8 0 0 1 12 6c5 0 8.5 4.2 9.5 6-.4.8-1.3 2-2.6 3.3M6.4 7.6C4.6 8.9 3.2 10.7 2.5 12c1 1.8 4.5 6 9.5 6 1.5 0 2.9-.4 4.1-1"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/>', s||12, 1.9),
+  user: () => svg('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.9-3.5 3.7-5.4 7-5.4s6.1 1.9 7 5.4"/>', 12, 2),
+  flag: () => svg('<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>', 12, 2),
+  inbox: () => svg('<path d="M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5"/><path d="M5.5 5.5h13l2 8v5h-17v-5z"/><circle cx="18.5" cy="5.5" r="2" fill="var(--citui-cyan-500)" stroke="none"/>', 22, 1.7),
+  split: () => svg('<path d="M6 4v6a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v2"/><path d="M18 4v6a4 4 0 0 1-4 4"/><circle cx="6" cy="20" r="2" fill="var(--citui-cyan-500)" stroke="none"/>', 22, 1.7),
+  reply: () => svg('<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/>', 14, 1.9),
+  out: () => svg('<path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h9"/>', 14, 1.9),
+  back: () => svg('<path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/>', 14, 1.9),
+  log: () => svg('<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>', 15, 1.8),
+  list: () => svg('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="5" cy="6" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="5" cy="18" r="1"/>', 13, 2),
+};
+
+/* ───────────── the tree (07-CONVERSION-TREE.md §B–§D) ───────────── */
+const STATES = [
+  {n:0, name:"Kiválasztott lead", short:"Kiválasztott", sub:"működik, nincs jó honlapja, a cím a gazdáé", m:"vakfolt", src:"csak válaszból látjuk (outreach_reply, prospect_feedback)"},
+  {n:1, name:"Kiküldve", short:"Kiküldve", sub:"az e-mail elment", m:"mérve", src:"prospect.email_sent_at", k:"sent"},
+  {n:2, name:"Megérkezett a beérkezők közé", short:"Megérkezett", sub:"nem pattant vissza, nem spam", m:"vakfolt", src:"a visszapattanót ma eldobjuk"},
+  {n:3, name:"Észrevette", short:"Észrevette", sub:"látta a levelet a listában", m:"vakfolt", src:"nem mérhető közvetlenül"},
+  {n:4, name:"Megnyitotta a levelet", short:"Levelet nyitott", sub:"emberi nyitás, ≥60 mp", m:"részben", src:"email_open (saját nyitás nem számít)", k:"mopen"},
+  {n:5, name:"Megnyitotta a tervet", short:"Tervet nyitott", sub:"a levélből nyitotta a mockot", m:"mérve", src:"mock_view (open_via=email)", k:"v5"},
+  {n:6, name:"Végignézte", short:"Végignézte", sub:"legalább félig legörgetett", m:"mérve", src:"mock_event scroll / section_seen", k:"v6"},
+  {n:7, name:"Ajánlathoz nyúlt", short:"Ajánlathoz nyúlt", sub:"próba-ablak, csomag, ajánlat-kattintás", m:"mérve", src:"mock_event trial_open · pkg_open · checkout_step", k:"v7"},
+  {n:8, name:"Próba / rendelés", short:"Próba / rendelés", sub:"elindított próba vagy leadott rendelés", m:"mérve", src:"free_trial, order_intent.submitted_at", k:"s8"},
+  {n:9, name:"Fizetett", short:"Fizetett", sub:"sikeres fizetés", m:"mérve", src:"payment.status='paid'", k:"s9"},
+  {n:10, name:"Megmaradt", short:"Megmaradt", sub:"előfizetőként marad", m:"vakfolt", src:"nincs még vevő — az első fizetés után mérhető"},
+];
+const TR = {
+  "0-1": {lbl:"rossz kiválasztás", causes:[
+    {k:"igazolt", t:"Nem működik már", m:"részben", ev:"8 válasz + 5 leiratkozási ok (11-09…27)", lev:[{name:"Csak friss működési jellel küldünk", d:"a kiválasztás kér egy friss jelet, hogy a szállás működik"}]},
+    {k:"igazolt", t:"Van honlapja", m:"részben", ev:"9 válasz + 5 leiratkozási ok", lev:[{name:"Honlapcím a kapu igazság-mintájába", d:"a válaszban talált honlapcím a saját-honlap kapu igazság-mintájába kerül"}]},
+    {k:"igazolt", t:"A cím nem a gazdáé", m:"részben", ev:"4 válasz + 1 leiratkozási ok", lev:[{name:"Kontakt-egyezés pontosságának mérése", d:"mennyi a kontakt-egyezés pontossága, mintán mérve"}]},
+  ]},
+  "1-2": {lbl:"nem érkezik meg", causes:[
+    {k:"felteves", t:"Halott cím", m:"vakfolt", ev:"ma nem látjuk: a visszapattanót eldobjuk", lev:[{id:"bounce", name:"Visszapattanó rögzítése", d:"domainenként rögzítjük; halott címre többé nem küldünk"}]},
+    {k:"igazolt", t:"Spam", m:"vakfolt", ev:"a 11-16…18 ablakban igazolva; azóta vakfolt", lev:[{name:"Napi 3–5 saját próbacím", d:"a gép nézi, melyik mappába érkezik a levél"}]},
+  ]},
+  "2-3": {lbl:"nem veszi észre", causes:[
+    {k:"felteves", t:"Elsüllyed", m:"részben", ev:"közvetett: a tervnyitás 40%-a 1 órán, 80%-a 1 napon belül", lev:[{name:"Kiküldési óra", d:"a küldés idejét a nyitási időzítéshez igazítjuk"}]},
+    {k:"felteves", t:"Nem olvasott postafiók", m:"vakfolt", ev:"régi freemail, citromail", lev:[{name:"Nyitás domainenként", d:"a nyitási arányt postafiók-domainenként mérjük"}]},
+  ]},
+  "3-4": {lbl:"észreveszi, nem nyitja", causes:[
+    {k:"felteves", t:"A feladó / tárgy nem érdekes", m:"vakfolt", ev:"", lev:[{name:"Tárgy- és feladó-A/B", d:"ADR-0462 motor, ma csak a kontroll fut"}]},
+    {k:"felteves", t:"Az előnézet alapján spamnek hiszi", m:"vakfolt", ev:"nincs előnézeti sor", lev:[{name:"Saját előnézeti sor, A/B", d:"a levél elejére saját előnézeti szöveg, változatokkal"}]},
+  ]},
+  "4-5": {lbl:"megnyitja, nem kattint", causes:[
+    {k:"igazolt", t:"Nem az ő szállása", m:"részben", ev:"4 válasz", lev:[]},
+    {k:"igazolt", t:"Spamnek / átverésnek hiszi", m:"részben", ev:"3 válasz + 1 „distrust”", lev:[{name:"Mondat arról, honnan az adat", d:"a levélben kimondjuk, honnan vettük az adatait"}]},
+    {k:"felteves", t:"Nem ad jó ígéretet", m:"vakfolt", ev:"minek honlap · nem foglalkozok vele · a kép rossz · ár?? · átverés · nem kértem, nem dőlök be (tulaj skicce)", lev:[{name:"Első mondat és ársor A/B", d:"változatok a levél első mondatára és az ár sorára"},{name:"Kép nélküli személyes változat", d:"rövid, személyes levél kép nélkül"}]},
+    {k:"felteves", t:"Most nincs ideje", m:"vakfolt", ev:"", lev:[{name:"Második levél a nyitó-nem-kattintónak", d:"ma nincs ilyen levél"}]},
+  ]},
+  "5-6": {lbl:"rögtön kilép", causes:[
+    {k:"igazolt", t:"Rossz nyitókép", m:"részben", ev:"javító levél ügye, ADR-0508", lev:[{name:"Render-kapu szabályok", d:"a gép nem enged ki rossz nyitóképet"},{name:"Kilépés képfajtánként", d:"a rögtön-kilépést a nyitókép fajtája szerint mérjük"}]},
+    {k:"felteves", t:"Nem ismeri fel a saját szállását", m:"vakfolt", ev:"", lev:[]},
+  ]},
+  "6-7": {lbl:"végignézi, nem nyúl az ajánlathoz", causes:[
+    {k:"igazolt", t:"Most nem aktuális", m:"részben", ev:"„érdekel, de költözöm” (not_now)", retNote:true, lev:[{name:"A visszatérőkre reagáló üzenet", d:"ma KI van kapcsolva"}]},
+    {k:"felteves", t:"Az ár · nem érti az ajánlatot / a teendőt · nem hiszi, hogy megéri", m:"vakfolt", ev:"", lev:[{id:"pricequestion", name:"Kérdés az árak alatt", d:"egy kérdés az árak alatt / kilépéskor, 4 gombbal, mint a leiratkozási kérdőív"},{name:"Ajánlat-változatok A/B-ben", d:"több ajánlat-változat, véletlen elosztással"}]},
+  ]},
+  "7-8": {lbl:"az ajánlatig jut, nem próbáz", causes:[
+    {k:"felteves", t:"A próba-űrlap", m:"mérve", ev:"13 megnyitás → 1 indítás", lev:[{name:"Mezőnkénti mérés, kevesebb mező", d:"melyik mezőnél áll meg; a felesleges mezők kikerülnek"}]},
+  ]},
+  "8-9": {lbl:"próbázik, nem fizet", causes:[
+    {k:"felteves", t:"A próba után nem rendel / a fizetésnél elakad", m:"vakfolt", ev:"", lev:[]},
+  ]},
+  "9-10": {lbl:"fizetett, nem marad", causes:[]},
+};
+const TASKS = [
+  {t:"6-7", lever:"pricequestion", name:"Kérdés az árak alatt", cause:"Az ár · nem érti · nem hiszi", who:"Lánc-SUB", since:"11-29", before:"7%"},
+  {t:"1-2", lever:"bounce", name:"Visszapattanó rögzítése", cause:"Halott cím", who:null, since:null, before:null},
+];
+const BLIND_TR = {"0-1":1,"1-2":1,"2-3":1,"3-4":1,"9-10":1};
+
+/* ───────────── state ───────────── */
+const S = {v:"A", size:"m", per:"pilot", mb:"mind", c:"mind", view:"fa", open:new Set(["6-7"]), sel:"6-7", selB:"6-7", secOpen:true, logOpen:false};
+let prevD = null;
+const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ───────────── helpers ───────────── */
+const fmtInt = n => Math.round(n).toLocaleString("hu-HU");
+const fmtPct = r => {
+  if (r == null || !isFinite(r)) return "—";
+  const p = r * 100;
+  return (p > 0 && p < 10 ? p.toFixed(1).replace(".", ",") : String(Math.round(p))) + "%";
+};
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+function getD(){
+  if (S.c === "HR") return {kind:"hr"};
+  if (S.mb !== "mind" && S.c !== "mind") return {kind:"conflict"};
+  const r = ROWS[S.per+"|"+S.mb+"|"+S.c];
+  return Object.assign({kind:"ok"}, r, {s8:r.tr + r.od, s9:0});
+}
+const cnt = (n, d) => { const k = STATES[n].k; return k ? d[k] : null; };
+/* Transition statistics: parent rate = to / from (doctrine: rate from the previous state). */
+function trStats(t, d){
+  const [a, b] = t.split("-").map(Number);
+  if (BLIND_TR[t]) return {blind:true, a, b};
+  if (t === "4-5") return {partial:true, a, b, from:d.sent, to:d.v5, rate:d.sent ? d.v5/d.sent : null, lost:d.sent - d.v5, open:d.tracked ? d.mopen/d.tracked : null};
+  const from = cnt(a, d), to = cnt(b, d);
+  return {a, b, from, to, rate: from ? to/from : null, lost: from - to};
+}
+function biggest(d){
+  let best = null, bl = -1;
+  for (const t of ["5-6","6-7","7-8","8-9"]){ const s = trStats(t, d); if (s.lost > bl){ bl = s.lost; best = t; } }
+  return best;
+}
+const tasksOn = t => TASKS.filter(x => x.t === t);
+const blindText = {
+  "0-1":"A kiválasztás minőségét csak a válaszokból és a leiratkozási okokból látjuk — arány nincs.",
+  "1-2":"Hány levél érkezett meg, ma nem mérjük: a visszapattanót eldobjuk. Ez a lépés vakfolt, nem nulla.",
+  "2-3":"Az észrevétel közvetlenül nem mérhető; közvetett jel a tervnyitás időzítése.",
+  "3-4":"Az észrevétel és a nyitás közti esés nem mérhető, mert a 3-as állapot vakfolt.",
+  "9-10":"Nincs még vevő, ezért a megmaradás még nem mérhető.",
+};
+
+/* ───────────── fragments ───────────── */
+const mchip = m => {
+  if (m === "mérve") return `<span class="mchip m-merve">${IC.check()}mérve</span>`;
+  if (m === "részben") return `<span class="mchip m-reszben">${IC.half()}részben</span>`;
+  return `<span class="mchip m-vakfolt">${IC.eyeoff(11)}vakfolt</span>`;
+};
+const kb = k => ({state:`<span class="kb k-state">állapot</span>`, igazolt:`<span class="kb k-igazolt">ok · igazolt</span>`, felteves:`<span class="kb k-felteves">ok · feltevés</span>`, kar:`<span class="kb k-kar">kar</span>`}[k]);
+function tw(key, val, fmt){ // tweened number
+  let from = val;
+  if (prevD && prevD.kind === "ok" && typeof key === "function") from = key(prevD);
+  else if (prevD && prevD.kind === "ok" && key && prevD[key] != null) from = prevD[key];
+  if (from == null || !isFinite(from)) from = val;
+  const f = fmt === "pct" ? fmtPct : fmtInt;
+  return `<span data-tw data-from="${from}" data-to="${val}" data-fmt="${fmt||"int"}">${f(reduce ? val : from)}</span>`;
+}
+function bar(frac, prevFrac){
+  const p = Math.max(0, Math.min(1, frac)) * 100;
+  const pp = prevFrac == null ? p : Math.max(0, Math.min(1, prevFrac)) * 100;
+  return `<div class="trk"><i data-w="${p.toFixed(2)}" style="width:${(reduce ? p : pp).toFixed(2)}%"></i></div>`;
+}
+function taskPill(task){
+  if (!task.who) return `<span class="task none"><span class="tx">${IC.flag()} Még nincs gazdája</span><span class="minta">minta</span></span>`;
+  return `<span class="task"><span class="pulse"></span><span class="tx">${IC.user()} ${esc(task.who)} · ${task.since}-től · előtte ${task.before}</span><span class="minta">minta</span></span>`;
+}
+function rateWhere(t){
+  const [a, b] = t.split("-");
+  if (BLIND_TR[t]) return `a ${a}→${b} arányon látszana — ma vakfolt, előbb mérés kell`;
+  if (t === "4-5") return `a ${a}→${b} arányon látszik (ma az 1→5 összesítve mérhető)`;
+  return `a ${a}→${b} arányon látszik`;
+}
+function causeCard(c, t, d){
+  const levs = c.lev.length ? `<ul class="levers">${c.lev.map(l => {
+    const task = l.id ? TASKS.find(x => x.lever === l.id) : null;
+    return `<li class="lever" ${l.id ? `data-lever="${l.id}"` : ""}><div class="lt">${kb("kar")} ${esc(l.name)}</div><div class="ld">${esc(l.d)}</div><div class="lh">hatása ${rateWhere(t)}</div>${task ? taskPill(task) : ""}</li>`;
+  }).join("")}</ul>` : `<div class="nolever">Még nincs kar ehhez az okhoz.</div>`;
+  const ret = c.retNote && d.kind === "ok" ? ` · visszatérő másik napon: <b>${tw("ret", d.ret)}</b>` : "";
+  return `<div class="cause ${c.k === "igazolt" ? "igaz" : "fel"}"><div class="ch">${kb(c.k)} ${mchip(c.m)}</div><div class="ct">${esc(c.t)}</div>${c.ev || ret ? `<div class="ev">${esc(c.ev)}${ret}</div>` : ""}${levs}</div>`;
+}
+function trSummary(t, d){
+  const s = trStats(t, d);
+  if (s.blind) return `<div class="blindnote">${IC.eyeoff(15)}<span>${blindText[t]}</span></div>`;
+  if (s.partial) return `<div class="tsum"><span>1→5 összesítve: <b>${tw("sent", d.sent)}</b> → <b>${tw("v5", d.v5)}</b> · <b>${tw(x => x.v5/x.sent, s.rate, "pct")}</b> nyitotta meg a tervet</span></div>
+    <div class="blindnote">${IC.half()}<span>A 4-es (levélnyitás) csak részben mért: <b>${tw("mopen", d.mopen)}</b> / ${tw("tracked", d.tracked)} követett levél = <b>${tw(x => x.tracked ? x.mopen/x.tracked : 0, s.open, "pct")}</b> — 11-23 óta mérve; a Gmailen kívül alulszámol. Ezért a 4→5 arányt nem számoljuk ki.</span></div>`;
+  return `<div class="tsum"><span><b>${tw(x => cnt(s.a, x), s.from)}</b> → <b>${tw(x => cnt(s.b, x), s.to)}</b></span><span>továbblép: <b>${tw(x => { const f = cnt(s.a, x); return f ? cnt(s.b, x)/f : 0; }, s.rate, "pct")}</b></span><span style="color:var(--citui-bad-ink)">elvész: <b>${tw(x => cnt(s.a, x) - cnt(s.b, x), s.lost)}</b></span></div>`;
+}
+function trDetail(t, d){
+  const tr = TR[t];
+  const causes = tr.causes.length ? `<div class="causes">${tr.causes.map(c => causeCard(c, t, d)).join("")}</div>` : `<div class="nolever">Ide még nem tartozik ok: nincs adat.</div>`;
+  return trSummary(t, d) + causes;
+}
+function dropLabel(t, d){
+  const s = trStats(t, d);
+  if (s.blind) return `<span class="drop blind">${IC.eyeoff(11)} vakfolt</span>`;
+  if (s.partial) return `<span class="drop">1→5: −${tw(x => x.sent - x.v5, s.lost)} (${fmtPct(1 - s.rate)} esés)</span>`;
+  return `<span class="drop">−${tw(x => cnt(s.a, x) - cnt(s.b, x), s.lost)} · ${fmtPct(s.from ? 1 - s.rate : null)} esés</span>`;
+}
+function taskCount(t){
+  const ts = tasksOn(t); if (!ts.length) return "";
+  const none = ts.every(x => !x.who);
+  return `<span class="tcount ${none ? "none" : ""}"><i></i>${ts.length} feladat</span>`;
+}
+function stateValue(st, d, big){
+  if (st.m === "vakfolt") return `<span class="holetxt">nem mérjük</span>`;
+  if (st.n === 4) return `<span class="g-rate">${tw("mopen", d.mopen)} / ${tw("tracked", d.tracked)}</span>`;
+  return tw(st.k, cnt(st.n, d));
+}
+function stateRate(st, d){
+  const n = st.n;
+  if (n === 1) return `a kiválasztottakból: <span class="mut">vakfolt</span>`;
+  if (n === 4) return `<span class="g-rate">${tw(x => x.tracked ? x.mopen/x.tracked : 0, d.tracked ? d.mopen/d.tracked : null, "pct")}</span> a követett levelekből · 11-23 óta mérve; a Gmailen kívül alulszámol`;
+  if (n === 5) return `<span class="g-rate">${tw(x => x.v5/x.sent, d.v5/d.sent, "pct")}</span> a kiküldöttekből (2–4 vakfolt)`;
+  if (n >= 6 && n <= 9){ const f = cnt(n-1, d); return `<span class="g-rate">${f ? tw(x => { const ff = cnt(n-1, x); return ff ? cnt(n, x)/ff : 0; }, cnt(n, d)/f, "pct") : "—"}</span> az előzőből`; }
+  return "";
+}
+
+/* ───────────── A · Gerinc ───────────── */
+function renderA(d){
+  const big = biggest(d);
+  const segW = c => c == null ? 12 : Math.max(2, 4 + 22 * (c / d.sent));
+  let h = `<div class="gerinc"><div class="g-list">`;
+  for (const st of STATES){
+    const hole = st.m === "vakfolt", part = st.m === "részben";
+    const c = cnt(st.n, d);
+    const prevFrac = prevD && prevD.kind === "ok" && st.k && st.n !== 4 ? cnt(st.n, prevD) / prevD.sent : null;
+    h += `<div class="g-row" id="st-${st.n}"><div class="g-sp"><div class="g-num ${hole ? "hole" : part ? "part" : ""}">${st.n}</div></div>
+      <div class="g-state"><div class="g-card ${hole ? "hole" : ""}">
+        <div class="g-top"><span class="g-name">${esc(st.name)}</span>${kb("state")} ${mchip(st.m)}<span class="g-val">${stateValue(st, d)}</span></div>
+        <div class="g-meta"><span>${esc(st.sub)}</span>${stateRate(st, d) ? `<span>· ${stateRate(st, d)}</span>` : ""}</div>
+        ${hole ? "" : st.n !== 4 && c != null ? bar(c / d.sent, prevFrac) : `<div class="trk" style="background:var(--hole-bg)"></div>`}
+      </div></div></div>`;
+    if (st.n < 10){
+      const t = st.n + "-" + (st.n + 1);
+      const open = S.open.has(t);
+      const blindSeg = BLIND_TR[t] || st.n === 2 || st.n === 3 || st.n === 4 || st.n === 0;
+      const sw = segW(blindSeg ? null : c);
+      const psw = prevD && prevD.kind === "ok" && !blindSeg ? segW(cnt(st.n, prevD) * d.sent / prevD.sent) : sw;
+      h += `<div class="g-row g-trrow"><div class="g-sp"><div class="g-seg ${blindSeg ? "hole" : ""}" data-sw="${sw.toFixed(1)}" style="width:${(reduce ? sw : psw).toFixed(1)}px"></div></div>
+        <div class="g-tr ${open ? "open" : ""} ${t === big ? "biggest" : ""}" data-t="${t}" id="tr-${t}">
+          <button class="g-trbtn" aria-expanded="${open}" data-toggle="${t}"><span class="lbl">${t.replace("-", " → ")} · ${TR[t].lbl}</span>${dropLabel(t, d)}<span class="mut">${TR[t].causes.length} ok</span>${taskCount(t)}${IC.chev()}</button>
+          <div class="coll ${open ? "" : "shut"}"><div class="in"><div class="detail">${trDetail(t, d)}</div></div></div>
+        </div></div>`;
+    }
+  }
+  h += `</div><aside class="g-rail">${exitsPanel(d)}${tasksMini()}${legendPanel()}</aside></div>`;
+  return h;
+}
+function exitsPanel(d){
+  return `<div class="panel"><h3>Oldalkijárat <span class="mut small">— bármely szintről</span></h3><div class="exits">
+    <div class="exit">${IC.reply()} Válaszolt<b>${tw("rep", d.rep)}</b><span class="r">${tw(x => x.rep/x.sent, d.rep/d.sent, "pct")}</span></div>
+    <div class="exit">${IC.out()} Leiratkozott<b>${tw("unsub", d.unsub)}</b><span class="r">${tw(x => x.unsub/x.sent, d.unsub/d.sent, "pct")}</span></div>
+    <div class="exit">${IC.back()} Visszatért másik napon<b>${tw("ret", d.ret)}</b><span class="r">${tw(x => x.v5 ? x.ret/x.v5 : 0, d.v5 ? d.ret/d.v5 : null, "pct")}</span></div>
+  </div><div class="tiny mut" style="margin-top:6px">arány: a kiküldöttekből; visszatérő: a tervnyitókból · ${mchip("mérve")}</div></div>`;
+}
+function tasksMini(){
+  return `<div class="panel"><h3>Aktív feladatok <span class="minta">minta</span></h3><div style="display:grid;gap:8px">${TASKS.map(x => `<div><div class="small"><b>${x.t.replace("-", "→")}</b> · ${esc(x.name)}</div>${taskPill(x)} <button class="linkbtn" data-goto="${x.t}">megnyitom</button></div>`).join("")}</div></div>`;
+}
+function legendPanel(){
+  return `<div class="panel small"><h3>Jelmagyarázat</h3><div style="display:grid;gap:6px">
+    <div>${kb("state")} hol tart a lead · ${kb("igazolt")} ${kb("felteves")} miért nem lép tovább · ${kb("kar")} mivel javítjuk</div>
+    <div>${mchip("mérve")} ${mchip("részben")} ${mchip("vakfolt")}</div>
+    <div class="mut tiny">A kar hatását mindig a szülő-állapot arányán mérjük, előtte–utána számmal. A vakfolt nem nulla: nem tudjuk.</div></div></div>`;
+}
+
+/* ───────────── B · Folyam ───────────── */
+const B_NODES = [1, 5, 6, 7, 8, 9];
+const B_UNITS = [0, 2, 3, 4, 5, 6];
+const B_TR = ["1-5", "5-6", "6-7", "7-8", "8-9"];
+function bStats(t, d){
+  if (t === "1-5"){ const s = trStats("4-5", d); return {from:d.sent, to:d.v5, lost:d.sent - d.v5, rate:s.rate, blind:true}; }
+  return trStats(t, d);
+}
+function renderB(d){
+  const chips = B_TR.map(t => {
+    const s = bStats(t, d);
+    return `<button class="${t === "1-5" ? "blind" : ""} ${S.selB === t ? "on" : ""}" data-selb="${t}">${t.replace("-", "→")}<span class="dv">−${fmtInt(s.lost)}</span>${t === "1-5" ? IC.eyeoff(11) : ""}${(t === "1-5" ? ["1-2","2-3","3-4","4-5"] : [t]).some(x => tasksOn(x).length) ? `<span class="tcount ${t === "1-5" ? "none" : ""}"><i></i></span>` : ""}</button>`;
+  }).join("");
+  return `<div class="folyam">
+    <div class="sk-wrap" id="skWrap"></div>
+    <div class="sk-legend"><span><span class="sw" style="background:var(--viz-1)"></span>továbbjutók (szélesség ∝ lead)</span><span><span class="sw" style="background:var(--viz-ghost)"></span>lemorzsolódás — koppints rá</span><span><span class="sw" style="background:var(--hole-bg);border:1px dashed var(--citui-line-strong)"></span>2·3·4 vakfolt: itt vész el, de nem tudjuk, melyik lépésben</span><span>0 és 10 vakfolt, a folyam 1–9.</span></div>
+    <div class="dropchips" role="tablist" aria-label="Esések">${chips}</div>
+    <div class="bpanel" id="bpanel">${bPanel(d)}</div>
+    <div class="panel" style="margin-top:12px">${exitsInline(d)}</div>
+  </div>`;
+}
+function exitsInline(d){
+  return `<h3>Oldalkijárat <span class="mut small">— bármely szintről, nem része a folyamnak</span></h3><div class="exits">
+    <div class="exit">${IC.reply()} Válaszolt<b>${tw("rep", d.rep)}</b><span class="r">${tw(x => x.rep/x.sent, d.rep/d.sent, "pct")}</span></div>
+    <div class="exit">${IC.out()} Leiratkozott<b>${tw("unsub", d.unsub)}</b><span class="r">${tw(x => x.unsub/x.sent, d.unsub/d.sent, "pct")}</span></div>
+    <div class="exit">${IC.back()} Visszatért másik napon<b>${tw("ret", d.ret)}</b><span class="r">a tervnyitókból</span></div></div>`;
+}
+function bPanel(d){
+  const t = S.selB;
+  if (t === "1-5"){
+    const parts = ["1-2","2-3","3-4","4-5"].map(x => `<div class="subhd">${x.replace("-", " → ")} · ${TR[x].lbl} ${taskCount(x)}</div>${x === "4-5" ? "" : `<div class="blindnote">${IC.eyeoff(14)}<span>${blindText[x]}</span></div>`}<div class="causes">${TR[x].causes.map(c => causeCard(c, x, d)).join("")}</div>`).join("");
+    return `<div class="panel fadein"><h3>1 → 5 · nem nyitotta meg a tervet ${mchip("vakfolt")}</h3>${trSummary("4-5", d)}${parts}</div>`;
+  }
+  return `<div class="panel fadein"><h3>${t.replace("-", " → ")} · ${TR[t].lbl} ${taskCount(t)}</h3>${trDetail(t, d)}</div>`;
+}
+function drawSankey(d, sel){
+  const wrap = document.getElementById("skWrap"); if (!wrap) return;
+  const W = Math.max(300, wrap.clientWidth);
+  const vert = W < 640;
+  const nt = 8;
+  let v0, H, dropV, uStep, u0, total;
+  if (vert){ v0 = 138; H = Math.min(110, (W - v0 - 22) / 2); dropV = v0 + H + 16; u0 = 28; uStep = 74; total = u0 + 6 * uStep + 34; }
+  else { v0 = 58; H = 150; dropV = v0 + H + 30; u0 = 16; uStep = (W - u0 - 110) / 6; total = dropV + H + 30; }
+  const P = (u, v) => vert ? [v, u] : [u, v];
+  const pt = (u, v) => P(u, v).map(n => n.toFixed(1)).join(",");
+  const hh = c => H * (c / d.sent);
+  const nu = i => u0 + B_UNITS[i] * uStep;
+  const ribbon = (u1, a1, a2, u2, b1, b2) => {
+    const um = (u1 + u2) / 2;
+    return `M${pt(u1,a1)} C${pt(um,a1)} ${pt(um,b1)} ${pt(u2,b1)} L${pt(u2,b2)} C${pt(um,b2)} ${pt(um,a2)} ${pt(u1,a2)} Z`;
+  };
+  const [Wsv, Hsv] = vert ? [W, total] : [W, total];
+  let s = `<svg viewBox="0 0 ${Wsv} ${Hsv}" role="img" aria-label="Lemorzsolódási folyam 1-től 9-ig"><defs>
+    <pattern id="skHatch" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)"><rect width="9" height="9" class="sk-hatchbg"/><rect width="3.5" height="9" class="sk-hatchln"/></pattern>
+    <pattern id="skHatchSel" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)"><rect width="9" height="9" class="sk-hatchsel"/><rect width="3.5" height="9" class="sk-hatchln"/></pattern></defs>`;
+  const vals = B_NODES.map(n => cnt(n, d));
+  // drops (under the main band so the band edge stays crisp)
+  B_TR.forEach((t, i) => {
+    const from = vals[i], to = vals[i + 1];
+    const u1 = nu(i) + nt, u2 = nu(i + 1);
+    const dh = Math.max(1.5, hh(from) - hh(to));
+    const a1 = v0 + hh(to), a2 = Math.max(a1 + 1.5, v0 + hh(from));
+    s += `<path class="sk-drop ${t === "1-5" ? "hole" : ""} ${sel === t ? "sel" : ""}" data-selb="${t}" d="${ribbon(u1, a1, a2, u2 - 2, dropV, dropV + dh)}"><title>${t.replace("-", "→")}: ${fmtInt(from - to)} lead esett ki</title></path>`;
+    // drop label
+    const lost = fmtInt(from - to), pc = from ? fmtPct(1 - to / from) : "—";
+    if (vert){
+      const [x, y] = P(u2 + 13, dropV + 2);
+      s += `<text class="sk-t d ${t === "1-5" ? "blind" : ""}" data-selb="${t}" x="${x}" y="${y}">−${lost}</text><text class="sk-t m" data-selb="${t}" x="${x}" y="${y + 13}">${pc} esés${t === "1-5" ? " · vakfolt" : ""}</text>`;
+    } else {
+      const [x, y] = P(u2 - 4, dropV + dh + 15);
+      s += `<text class="sk-t d ${t === "1-5" ? "blind" : ""}" data-selb="${t}" x="${x}" y="${y}" text-anchor="end">−${lost}</text><text class="sk-t m" data-selb="${t}" x="${x}" y="${y + 13}" text-anchor="end">${pc} esés${t === "1-5" ? " · 2–4 vakfolt" : ""}</text>`;
+    }
+  });
+  // main band links
+  B_TR.forEach((t, i) => {
+    const to = vals[i + 1], u1 = nu(i) + nt, u2 = nu(i + 1), hTo = Math.max(0, hh(to));
+    if (hTo <= 0) return;
+    const [x, y] = P(u1, v0), [x2, y2] = P(u2, v0 + hTo);
+    s += `<rect class="sk-band" x="${Math.min(x, x2).toFixed(1)}" y="${Math.min(y, y2).toFixed(1)}" width="${Math.abs(x2 - x).toFixed(1)}" height="${Math.abs(y2 - y).toFixed(1)}" opacity=".85"/>`;
+  });
+  // blind markers 2,3,4 between node 1 and 5
+  [2, 3, 4].forEach((n, j) => {
+    const u = nu(0) + nt + (nu(1) - nu(0) - nt) * (j + 1) / 4;
+    const [cx, cy] = P(u, v0 + hh(vals[1]) + 13);
+    s += `<circle class="sk-hm" cx="${cx}" cy="${cy}" r="8.5"/><text class="sk-t h" x="${cx}" y="${cy + 3.5}" text-anchor="middle">${n}</text>`;
+  });
+  // nodes + labels
+  B_NODES.forEach((n, i) => {
+    const c = vals[i], hN = hh(c);
+    const [x, y] = P(nu(i), v0);
+    if (hN > 0.4){
+      const [w, h] = vert ? [hN, nt] : [nt, hN];
+      s += `<rect class="sk-node" x="${x}" y="${y}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5"/>`;
+    } else {
+      const [w, h] = vert ? [14, nt] : [nt, 14];
+      s += `<rect class="sk-node0" x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5"/>`;
+    }
+    const st = STATES[n];
+    const rate = i === 0 ? "" : i === 1 ? ` · ${fmtPct(c / d.sent)}` : vals[i - 1] ? ` · ${fmtPct(c / vals[i - 1])}` : "";
+    if (vert){
+      s += `<text class="sk-t" x="4" y="${nu(i) + 9}">${n} · ${esc(st.short)}</text><text class="sk-t v" x="4" y="${nu(i) + 26}">${fmtInt(c)}<tspan class="sk-t m" dx="4">${rate}</tspan></text>`;
+    } else {
+      s += `<text class="sk-t" x="${nu(i)}" y="${v0 - 26}">${n} · ${esc(st.short)}</text><text class="sk-t v" x="${nu(i)}" y="${v0 - 9}">${fmtInt(c)}<tspan class="sk-t m" dx="5">${rate}</tspan></text>`;
+    }
+  });
+  // state 4 partial note on the blind zone
+  {
+    const u = nu(0) + nt + (nu(1) - nu(0) - nt) * 3 / 4;
+    const [x, y] = P(u, v0 + hh(vals[1]) + 34);
+    const op = d.tracked ? fmtPct(d.mopen / d.tracked) : "—";
+    s += vert
+      ? `<text class="sk-t m halo" x="${x - 8}" y="${y + 4}" text-anchor="start">4: levélnyitás ${op}*</text>`
+      : `<text class="sk-t m halo" x="${x}" y="${y}" text-anchor="middle">4: levélnyitás ${op}*</text>`;
+  }
+  s += `</svg>`;
+  wrap.innerHTML = s;
+}
+
+/* ───────────── C · Térkép ───────────── */
+function tileTr(n){ return n === 0 ? "0-1" : (n - 1) + "-" + n; }
+function renderC(d){
+  let tiles = "";
+  for (const st of STATES){
+    const t = tileTr(st.n), hole = st.m === "vakfolt", c = cnt(st.n, d);
+    const s = trStats(t, d);
+    let drop = "";
+    if (st.n > 0){
+      if (s.blind) drop = `<span class="tdrop blind">${t.replace("-", "→")} ?</span>`;
+      else if (s.partial) drop = `<span class="tdrop blind">4→5 ?</span>`;
+      else drop = `<span class="tdrop">−${fmtPct(s.from ? 1 - s.rate : null)}</span>`;
+    }
+    const frac = c != null && st.n !== 4 ? c / d.sent : 0;
+    const pf = prevD && prevD.kind === "ok" && c != null && st.n !== 4 ? cnt(st.n, prevD) / prevD.sent : frac;
+    const tsk = tasksOn(t);
+    let val;
+    if (hole) val = `<span class="tv hole">${IC.eyeoff(12)} vakfolt</span>`;
+    else if (st.n === 4) val = `<span class="tv">${tw(x => x.tracked ? x.mopen/x.tracked : 0, d.tracked ? d.mopen/d.tracked : null, "pct")}<span class="tiny mut" style="font-family:var(--citui-font-text);font-weight:600"> követett*</span></span>`;
+    else val = `<span class="tv">${tw(st.k, c)}</span>`;
+    tiles += `<button class="tile ${hole ? "hole" : ""} ${S.sel === t && st.n !== 0 || (S.sel === "0-1" && st.n === 0) ? "sel" : ""}" data-sel="${t}" data-n="${st.n}" aria-label="${st.n}. ${esc(st.name)}">
+      ${hole || st.n === 4 ? "" : `<span class="fill" data-h="${(frac * 100).toFixed(2)}" style="height:${((reduce ? frac : pf) * 100).toFixed(2)}%"></span>`}
+      <span class="tn">${st.n}</span>${drop}<span class="tnm">${esc(st.short)}</span>${val}${tsk.length ? `<span class="tdot ${tsk.every(x => !x.who) ? "none" : ""}"></span>` : ""}</button>`;
+  }
+  tiles += `<div class="tile exitt"><span class="tn">↳</span><span class="tnm">Oldalkijárat</span><span class="tiny">válasz <b>${tw("rep", d.rep)}</b></span><span class="tiny">leiratkozás <b>${tw("unsub", d.unsub)}</b></span></div>`;
+  return `<div class="terkep"><div><div class="tiles">${tiles}</div><div class="tiny mut" style="margin-top:6px">A csempe kitöltése ∝ a kiküldöttekből megmaradt leadek · a sarokban az esés az előző állapotból · * a 4-es 11-23 óta mérve; a Gmailen kívül alulszámol</div></div><aside class="tpanel" id="tpanel">${cPanel(d)}</aside></div>`;
+}
+function cPanel(d){
+  const t = S.sel, [a, b] = t.split("-").map(Number);
+  return `<div class="panel fadein"><h3>${a} → ${b} · ${TR[t].lbl} ${taskCount(t)}</h3>
+    <div class="g-meta" style="margin:0 0 8px">${kb("state")} <b>${esc(STATES[a].short)}</b> ${mchip(STATES[a].m)} → <b>${esc(STATES[b].short)}</b> ${mchip(STATES[b].m)}</div>
+    ${trDetail(t, d)}
+</div>`;
+}
+
+/* ───────────── tasks view ───────────── */
+function renderTasks(d){
+  const rows = TASKS.map(x => {
+    const s = trStats(x.t, d);
+    const now = s.blind ? "vakfolt" : fmtPct(s.rate);
+    return {x, now};
+  });
+  const desk = `<table class="ttable"><thead><tr><th>Csomópont</th><th>Ok</th><th>Kar</th><th>Ki</th><th>Mióta</th><th>Szülő-arány előtte</th><th>Utána</th><th></th></tr></thead><tbody>${rows.map(({x}) => `<tr>
+    <td><b>${x.t.replace("-", " → ")}</b><div class="tiny mut">${TR[x.t].lbl}</div></td><td>${esc(x.cause)}</td><td>${kb("kar")} ${esc(x.name)}</td>
+    <td>${x.who ? `${IC.user()} ${esc(x.who)}` : `<span class="task none">${IC.flag()} még nincs gazdája</span>`}</td><td>${x.since ? x.since + "-től" : "—"}</td>
+    <td>${x.before ? `<b>${x.before}</b> <span class="tiny mut">(${x.t.replace("-", "→")})</span>` : `<span class="mut">vakfolt — előbb mérni kell</span>`}</td><td class="mut">${x.who ? "fut, még nincs" : "—"}</td>
+    <td><button class="linkbtn" data-goto="${x.t}">a fában</button></td></tr>`).join("")}</tbody></table>`;
+  const mob = `<div class="tcards">${rows.map(({x}) => `<div class="tcard"><div class="small"><b>${x.t.replace("-", " → ")}</b> · ${TR[x.t].lbl}</div><div style="margin-top:4px">${kb("kar")} <b>${esc(x.name)}</b></div>${taskPill(x)}
+    <dl><dt>Ok</dt><dd>${esc(x.cause)}</dd><dt>Előtte</dt><dd>${x.before ? x.before : "vakfolt — előbb mérni kell"}</dd><dt>Utána</dt><dd class="mut">${x.who ? "fut, még nincs" : "—"}</dd></dl>
+    <div style="margin-top:8px"><button class="linkbtn" data-goto="${x.t}">megnyitom a fában</button></div></div>`).join("")}</div>`;
+  return `<div class="panel" style="margin:0"><h3>Aktív feladatok <span class="minta">minta</span> <span class="mut small" style="font-weight:500">— mi melyik csomóponton dolgozik</span></h3>
+    <div class="small mut" style="margin:-2px 0 10px">Szabály: kar csak ok alá kerülhet, és a hatását a szülő-állapot arányán mérjük, előtte–utána számmal.</div>
+    <div class="tasks-desk">${desk}</div><div class="tasks-mob">${mob}</div></div>`;
+}
+
+/* ───────────── empty / conflict ───────────── */
+function renderHR(){
+  return `<div class="empty fadein"><div class="ei">${IC.inbox()}</div><h4>Ebben a szűrésben nem ment ki levél</h4>
+    <p>Horvát (HR) leadeknek még egyetlen e-mail sem ment ki. A fa az első HR-kiküldés után telik meg — addig nincs mit mérni, ezért nullát sem mutatunk.</p>
+    <button class="btn pri" data-set="c:mind">Ország: Mind</button><button class="btn" data-set="c:HU">Ország: HU</button>
+    <div class="ghostspine">${STATES.map(s => `<span>${s.n}</span>`).join("")}</div></div>`;
+}
+function renderConflict(){
+  const mbName = S.mb === "gmail" ? "Gmail" : "Egyéb";
+  return `<div class="empty fadein"><div class="ei">${IC.split()}</div><h4>Ez a kombináció nincs kiszámolva</h4>
+    <p>A mérés a postafiókot és az országot külön bontja, a kettő együtt (${mbName} × ${S.c}) nincs meg. Kitalált számot nem mutatunk — válaszd az egyiket:</p>
+    <button class="btn pri" data-set="c:mind">Postafiók: ${mbName} marad</button><button class="btn" data-set="mb:mind">Ország: ${S.c} marad</button></div>`;
+}
+
+/* ───────────── measurement log ───────────── */
+function renderLog(){
+  const trend = [["10-26",48],["11-02",40],["11-09",32],["11-16",20],["11-23",15]];
+  const r = ROWS["pilot|mind|mind"];
+  return `<button class="loghead" id="logHead" aria-expanded="${S.logOpen}">${IC.log()} Mérési napló <span class="mut small" style="font-weight:500">· 1 bejegyzés · újabb elöl</span>${IC.chev()}</button>
+  <div class="coll ${S.logOpen ? "" : "shut"}" id="logColl"><div class="in"><div class="logwrap">
+    <div class="logentry"><div class="ld">2026-11-28 · e-mailes első kör (pilot, 11-09 óta), [TESZT] nélkül</div>
+      <ul>
+        <li>1 kiküldve <b>${fmtInt(r.sent)}</b> · 5 tervnyitás <b>${r.v5}</b> (${fmtPct(r.v5 / r.sent)})</li>
+        <li>4 levélnyitás: <b>${r.mopen}</b> / ${r.tracked} követett levél (${fmtPct(r.mopen / r.tracked)}) — 11-23 óta mérve; a Gmailen kívül alulszámol</li>
+        <li>6 végignézte <b>${r.v6}</b> · 7 ajánlathoz nyúlt <b>${r.v7}</b> · 8 próba ${r.tr}, rendelés ${r.od} · 9 fizetett 0</li>
+        <li>oldalkijárat: válasz <b>${r.rep}</b>, leiratkozás <b>${r.unsub}</b> · visszatérő másik napon <b>${r.ret}</b></li>
+      </ul><div class="tiny mut" style="margin-top:4px">forrás: éles SQL, csak olvasás</div></div>
+    <div><div class="small"><b>Heti tervnyitás / kiküldés — Gmail</b> <span class="mut">(küldési hét)</span></div>
+      <div class="trend">${trend.map(([w, p]) => `<div class="tb"><b>${p}%</b><i data-th="${p}" style="height:${S.logOpen ? p * 1.7 : 0}px"></i><span>${w}</span></div>`).join("")}</div>
+      <div class="tiny mut">Öt hét alatt 48%-ról 15%-ra esett — a 4→5 és a 2→3 okai ellen dolgozó karok hatása itt látszik majd.</div></div>
+  </div></div></div>`;
+}
+
+/* ───────────── render ───────────── */
+const NOTES = {
+  A:"<b>A · Gerinc</b> — a fa függőlegesen, ahogy a doktrína leírja: 11 állapot egymás alatt, köztük az átmenet nyitható (okok → mérés → karok). A gerinc vastagsága a megmaradt leadekkel arányos. Azt dönti el: a fa <b>szerkezete</b> legyen a fő nézet (olvasás felülről lefelé).",
+  B:"<b>B · Folyam</b> — a leadek áramlása 1-től 9-ig, a sáv szélessége ∝ lead, a lemorzsolódás leválik; a levált ágra koppintva nyílnak az okok. Asztalon vízszintes, mobilon függőleges folyam. Azt dönti el: a <b>mennyiség</b> (hol vész el a legtöbb) legyen a belépő.",
+  C:"<b>C · Térkép</b> — tömör csempe-rács, a sarokban az esés; egy csempére koppintva oldalt (mobilon alatta) nyílik a részlet. Azt dönti el: <b>áttekintés egy képernyőn</b>, a részlet csak kérésre.",
+};
+function filtersHTML(){
+  const grp = (lbl, key, opts) => `<div class="fg"><span>${lbl}</span><div class="chips">${opts.map(([v, t]) => `<button data-f="${key}:${v}" class="${S[key] === v ? "on" : ""}">${t}</button>`).join("")}</div></div>`;
+  return grp("Időszak", "per", [["7d","7 nap"],["30d","30 nap"],["pilot","Pilot · 11-09 óta"]]) +
+    grp("Postafiók", "mb", [["mind","Mind"],["gmail","Gmail"],["egyeb","Egyéb"]]) +
+    grp("Ország", "c", [["mind","Mind"],["HU","HU"],["HR","HR"]]) +
+    `<div class="fg viewsw"><span>Nézet</span><div class="chips"><button data-view="fa" class="${S.view === "fa" ? "on" : ""}">Fa</button><button data-view="feladatok" class="${S.view === "feladatok" ? "on" : ""}">${IC.list()} Feladatok (${TASKS.length})</button></div></div>`;
+}
+function render(){
+  const d = getD();
+  document.querySelectorAll("[data-size]").forEach(b => b.classList.toggle("on", b.dataset.size === S.size));
+  document.querySelectorAll("[data-var]").forEach(b => b.classList.toggle("on", b.dataset.var === S.v));
+  document.getElementById("stage").classList.toggle("m", S.size === "m");
+  document.getElementById("note").innerHTML = NOTES[S.v] + " Minden szám valós (éles, 2026-11-28) és a szűrőre számolódik; a feladatok mintapéldák.";
+  document.getElementById("filt").innerHTML = filtersHTML();
+  const facts = document.getElementById("facts");
+  const sum = document.getElementById("secSum");
+  if (d.kind === "ok"){
+    facts.innerHTML = `<span><b>${fmtInt(d.sent)}</b> kiküldött e-mail az időszakban</span><span>csak e-mail · [TESZT] nélkül · éles adat, 2026-11-28</span><span>levélnyitás-követés 11-23 óta: <b>${d.tracked}</b> levél</span>`;
+    sum.innerHTML = `${fmtInt(d.sent)} kiküldve → ${fmtInt(d.v5)} tervet nyitott → ${fmtInt(d.v7)} ajánlathoz nyúlt → ${fmtInt(d.s8)} próba → 0 fizetett · legnagyobb mért esés: ${biggest(d).replace("-", "→")}`;
+  } else {
+    facts.innerHTML = d.kind === "hr" ? `<span>0 kiküldött e-mail ebben a szűrésben</span>` : `<span>postafiók × ország: nincs kiszámolva</span>`;
+    sum.textContent = d.kind === "hr" ? "Ebben a szűrésben nem ment ki levél." : "A postafiók × ország kombináció nincs kiszámolva.";
+  }
+  const body = document.getElementById("body");
+  if (d.kind === "hr") body.innerHTML = renderHR();
+  else if (d.kind === "conflict") body.innerHTML = renderConflict();
+  else if (S.view === "feladatok") body.innerHTML = renderTasks(d);
+  else body.innerHTML = S.v === "A" ? renderA(d) : S.v === "B" ? renderB(d) : renderC(d);
+  document.getElementById("log").innerHTML = renderLog();
+  body.dataset.kind = d.kind; body.dataset.variant = S.v;
+  if (d.kind === "ok" && S.view === "fa" && S.v === "B") tweenSankey(prevD && prevD.kind === "ok" ? prevD : d, d);
+  runTweens();
+  prevD = d.kind === "ok" ? d : prevD;
+  writeHash();
+}
+function runTweens(){
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll("[data-w]").forEach(el => el.style.width = el.dataset.w + "%");
+    document.querySelectorAll("[data-h]").forEach(el => el.style.height = el.dataset.h + "%");
+    document.querySelectorAll("[data-sw]").forEach(el => el.style.width = el.dataset.sw + "px");
+  }));
+  const els = [...document.querySelectorAll("[data-tw]")].filter(el => el.dataset.from !== el.dataset.to);
+  if (reduce || !els.length) return;
+  const t0 = performance.now(), dur = 520;
+  const step = now => {
+    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    for (const el of els){
+      if (!el.isConnected) continue;
+      const a = +el.dataset.from, b = +el.dataset.to, v = a + (b - a) * e;
+      el.textContent = el.dataset.fmt === "pct" ? fmtPct(v) : fmtInt(v);
+    }
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+let skAnim = 0;
+function tweenSankey(a, b){
+  const id = ++skAnim;
+  if (reduce || a === b){ drawSankey(b, S.selB); return; }
+  const t0 = performance.now(), dur = 520;
+  const step = now => {
+    if (id !== skAnim) return;
+    const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    const m = {}; NUMKEYS.forEach(key => m[key] = a[key] + (b[key] - a[key]) * e);
+    drawSankey(k < 1 ? m : b, S.selB);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  drawSankey(a, S.selB);
+  requestAnimationFrame(step);
+}
+
+/* ───────────── interactions ───────────── */
+function toggleTr(t){
+  const el = document.querySelector(`.g-tr[data-t="${t}"]`); if (!el) return;
+  const open = !S.open.has(t);
+  if (open) S.open.add(t); else S.open.delete(t);
+  el.classList.toggle("open", open);
+  el.querySelector(".coll").classList.toggle("shut", !open);
+  el.querySelector(".g-trbtn").setAttribute("aria-expanded", String(open));
+  writeHash();
+}
+function selectB(t){
+  S.selB = t;
+  const d = getD();
+  document.querySelectorAll(".dropchips button").forEach(b => b.classList.toggle("on", b.dataset.selb === t));
+  drawSankey(d, t);
+  const bp = document.getElementById("bpanel"); bp.innerHTML = bPanel(d);
+  if (S.size === "m" || document.getElementById("stage").clientWidth < 720) bp.scrollIntoView({behavior: reduce ? "auto" : "smooth", block:"nearest"});
+  writeHash();
+}
+function selectC(t){
+  S.sel = t;
+  const d = getD();
+  document.querySelectorAll(".tile[data-sel]").forEach(b => {
+    const n = +b.dataset.n; b.classList.toggle("sel", t === "0-1" ? n === 0 : b.dataset.sel === t && n !== 0);
+  });
+  const tp = document.getElementById("tpanel"); tp.innerHTML = cPanel(d);
+  if (document.getElementById("stage").clientWidth < 720) tp.scrollIntoView({behavior: reduce ? "auto" : "smooth", block:"nearest"});
+  writeHash();
+}
+function gotoTr(t){
+  S.view = "fa"; S.open.add(t); S.sel = t; S.selB = ["1-2","2-3","3-4","4-5"].includes(t) ? "1-5" : t;
+  render();
+  const target = S.v === "A" ? document.getElementById("tr-" + t) : S.v === "B" ? document.getElementById("bpanel") : document.getElementById("tpanel");
+  if (target) target.scrollIntoView({behavior: reduce ? "auto" : "smooth", block:"center"});
+}
+document.addEventListener("click", e => {
+  const q = sel => e.target.closest(sel);
+  let el;
+  if ((el = q("[data-size]"))){ S.size = el.dataset.size; render(); return; }
+  if ((el = q("[data-var]"))){ S.v = el.dataset.var; render(); return; }
+  if ((el = q("[data-f]"))){ const [k, v] = el.dataset.f.split(":"); S[k] = v; render(); return; }
+  if ((el = q("[data-set]"))){ const [k, v] = el.dataset.set.split(":"); S[k] = v; render(); return; }
+  if ((el = q("[data-view]"))){ S.view = el.dataset.view; render(); return; }
+  if ((el = q("[data-toggle]"))){ toggleTr(el.dataset.toggle); return; }
+  if ((el = q("[data-selb]"))){ selectB(el.dataset.selb); return; }
+  if ((el = q(".tile[data-sel]"))){ selectC(el.dataset.sel); return; }
+  if ((el = q("[data-goto]"))){ gotoTr(el.dataset.goto); return; }
+  if ((el = q("#logHead"))){
+    S.logOpen = !S.logOpen;
+    const lg = document.getElementById("log"); lg.classList.toggle("open", S.logOpen);
+    el.setAttribute("aria-expanded", String(S.logOpen));
+    document.getElementById("logColl").classList.toggle("shut", !S.logOpen);
+    requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("[data-th]").forEach(i => i.style.height = (S.logOpen ? +i.dataset.th * 1.7 : 0) + "px")));
+    writeHash(); return;
+  }
+  if ((el = q("#secHead"))){
+    S.secOpen = !S.secOpen;
+    document.getElementById("sec").classList.toggle("closed", !S.secOpen);
+    document.getElementById("secColl").classList.toggle("shut", !S.secOpen);
+    el.setAttribute("aria-expanded", String(S.secOpen));
+    return;
+  }
+});
+let lastW = 0;
+new ResizeObserver(() => {
+  const w = document.getElementById("stage").clientWidth;
+  if (Math.abs(w - lastW) < 2) return; lastW = w;
+  if (S.v === "B" && S.view === "fa"){ const d = getD(); if (d.kind === "ok") drawSankey(d, S.selB); }
+}).observe(document.getElementById("stage"));
+// the stage animates max-width on size switch → redraw the sankey once it settles
+document.getElementById("stage").addEventListener("transitionend", e => {
+  if (e.propertyName === "max-width" && S.v === "B" && S.view === "fa"){ const d = getD(); if (d.kind === "ok") drawSankey(d, S.selB); }
+});
+
+/* ───────────── hash state (for screenshots / sharing) ───────────── */
+function writeHash(){
+  const p = new URLSearchParams({v:S.v, s:S.size, per:S.per, mb:S.mb, c:S.c});
+  if (S.view !== "fa") p.set("view", S.view);
+  if (S.logOpen) p.set("log", "1");
+  history.replaceState(null, "", "#" + p.toString());
+}
+(function init(){
+  const p = new URLSearchParams(location.hash.slice(1));
+  S.size = innerWidth < 720 ? "m" : "d";
+  if (["A","B","C"].includes(p.get("v"))) S.v = p.get("v");
+  if (["m","d"].includes(p.get("s"))) S.size = p.get("s");
+  if (["7d","30d","pilot"].includes(p.get("per"))) S.per = p.get("per");
+  if (["mind","gmail","egyeb"].includes(p.get("mb"))) S.mb = p.get("mb");
+  if (["mind","HU","HR"].includes(p.get("c"))) S.c = p.get("c");
+  if (p.get("view") === "feladatok") S.view = "feladatok";
+  if (p.get("log") === "1"){ S.logOpen = true; }
+  render();
+  if (S.logOpen){ document.getElementById("log").classList.add("open"); document.querySelectorAll("[data-th]").forEach(i => i.style.height = (+i.dataset.th * 1.7) + "px"); }
+})();
+</script>
+</body></html>
