@@ -117,20 +117,36 @@ export async function listPendingApprovals(): Promise<PendingApproval[]> {
   // Owner 2026-11-25: only what went through the WHOLE chain is shown — the machine render gate passed
   // on the current file (cached verdict, current rule version). Owner 2026-11-26: the quality colleague's
   // pass is NOT required (the colleague finds rules on a sample); a colleague's FAIL on this file still holds.
-  const whole: typeof rows.rows = [];
-  for (const r of rows.rows) {
+  // The per-row checks are independent, so they run on a small pool instead of one after another:
+  // measured 2026-11-28 on citoviso-2 with 379 leads on the page, the sequential loop took 7,8 s per
+  // call and every „Mehet" paid it twice (POST + the next page), so the owner's clicks timed out.
+  // Same checks, same order of the result.
+  const altOf = async (r: (typeof rows.rows)[number]): Promise<string | null> => {
     const qa = await qaReviewState(r.main_id);
-    if (qa.state === "fail" || qa.state === "nofile") continue;
+    if (qa.state === "fail" || qa.state === "nofile") return null;
     const mtime = await mockFileMtime(r.main_id);
-    if (mtime == null) continue;
+    if (mtime == null) return null;
     const a = await db.selectFrom("mock_artifact").select("inputs").where("id", "=", r.main_id).executeTakeFirst();
-    if (cachedRenderGate(a?.inputs, mtime, await stockOkFor(r.main_id))?.verdict !== "pass") continue;
+    if (cachedRenderGate(a?.inputs, mtime, await stockOkFor(r.main_id))?.verdict !== "pass") return null;
     // …and its SECOND plan went through the same chain (owner 2026-11-25: „Csak az hagyható jóvá, ahol
     // van második terv is.”) — the very plan the dispatcher attaches (secondPlan.ts).
     const alt = await secondPlanOf(r.lead_id, r.main_id);
-    if (!(await planChainPassed(alt))) continue;
-    whole.push({ ...r, alt_id: alt!.id });
-  }
+    if (!(await planChainPassed(alt))) return null;
+    return alt!.id;
+  };
+  const alts: (string | null)[] = new Array(rows.rows.length).fill(null);
+  let nextRow = 0;
+  const worker = async (): Promise<void> => {
+    while (nextRow < rows.rows.length) {
+      const i = nextRow++;
+      alts[i] = await altOf(rows.rows[i]!);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(16, rows.rows.length) }, worker));
+  const whole: typeof rows.rows = [];
+  rows.rows.forEach((r, i) => {
+    if (alts[i]) whole.push({ ...r, alt_id: alts[i] });
+  });
   rows.rows.splice(0, rows.rows.length, ...whole);
   const lang = consoleLang();
   return rows.rows.map((r) => {
