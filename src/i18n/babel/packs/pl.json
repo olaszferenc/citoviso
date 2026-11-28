@@ -3805,6 +3805,7 @@
  "Fizetős lekérés — a fizetős scrape-API-k ki vannak kapcsolva (SCRAPE_PAID_APIS), ezért most nem futtatható.": "Płatne zapytanie — płatne API do scrapingu są wyłączone (SCRAPE_PAID_APIS), więc teraz nie da się go uruchomić.",
  "fizetve": "opłacone",
  "Fizetve": "Opłacone",
+ "Fizetve — a számla készül": "Opłacono — faktura jest przygotowywana",
  "fizetve / rendelés": "zapłacone / zamówienie",
  "Fizetve 30 n.": "Zapłacone 30 dni",
  "Fizetve, vételre vár": "Opłacona, czeka na zakup",

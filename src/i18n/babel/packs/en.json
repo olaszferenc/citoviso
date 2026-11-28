@@ -3777,6 +3777,7 @@
  "Fizetős lekérés — a fizetős scrape-API-k ki vannak kapcsolva (SCRAPE_PAID_APIS), ezért most nem futtatható.": "Paid request — paid scrape APIs are turned off (SCRAPE_PAID_APIS), so it can't run now.",
  "fizetve": "paid",
  "Fizetve": "Paid",
+ "Fizetve — a számla készül": "Paid — the invoice is being prepared",
  "fizetve / rendelés": "paid / order",
  "Fizetve 30 n.": "Paid 30 d",
  "Fizetve, vételre vár": "Paid, waiting for purchase",

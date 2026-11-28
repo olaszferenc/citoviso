@@ -3805,6 +3805,7 @@
  "Fizetős lekérés — a fizetős scrape-API-k ki vannak kapcsolva (SCRAPE_PAID_APIS), ezért most nem futtatható.": "Kostenpflichtige Abfrage — die kostenpflichtigen Scrape-APIs sind ausgeschaltet (SCRAPE_PAID_APIS), daher jetzt nicht ausführbar.",
  "fizetve": "bezahlt",
  "Fizetve": "Bezahlt",
+ "Fizetve — a számla készül": "Bezahlt — die Rechnung wird erstellt",
  "fizetve / rendelés": "bezahlt / Bestellung",
  "Fizetve 30 n.": "Bezahlt 30 T.",
  "Fizetve, vételre vár": "Bezahlt, wartet auf Kauf",

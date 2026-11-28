@@ -3779,6 +3779,7 @@
  "Fizetős lekérés — a fizetős scrape-API-k ki vannak kapcsolva (SCRAPE_PAID_APIS), ezért most nem futtatható.": "Plačljiva poizvedba — plačljivi scrape-API-ji so izklopljeni (SCRAPE_PAID_APIS), zato tega trenutno ni mogoče izvesti.",
  "fizetve": "plačano",
  "Fizetve": "Plačano",
+ "Fizetve — a számla készül": "Plačano — račun je v pripravi",
  "fizetve / rendelés": "plačano / naročilo",
  "Fizetve 30 n.": "Plačano 30 dni",
  "Fizetve, vételre vár": "Plačano, čaka na nakup",
