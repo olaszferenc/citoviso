@@ -10,7 +10,7 @@
 
 import { normalizePhone } from "../sms/sender.js";
 import { prettyPhone } from "../text/phone.js";
-import { normalizePhoneIn, prettyPhoneIn, type PhoneRules } from "../text/phoneCountry.js";
+import { displayPhoneIn, normalizePhoneIn, prettyPhoneIn, type PhoneRules } from "../text/phoneCountry.js";
 
 export interface ContactFacts {
   readonly address: string;
@@ -49,7 +49,10 @@ export { prettyPhone } from "../text/phone.js";
 
 /** A stored phone as it is PRINTED (an unedited scrape keeps its raw "06305161631"
  *  form in the site data; a letter shows the same readable shape the admin saves). */
-export function displayPhone(raw: string): string {
+export function displayPhone(raw: string, rules?: PhoneRules | null): string {
+  // The lodging's country plan when the caller knows it (nemzetközi audit 2026-11-27);
+  // without it, the Hungarian rule this always was.
+  if (rules) return displayPhoneIn(raw, rules);
   const n = normalizePhone(raw.trim().replace(/\//g, ""));
   return n ? prettyPhone(n) : raw.trim();
 }

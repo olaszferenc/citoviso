@@ -9,6 +9,7 @@
 - [2026-11-27_teszt-elofizetesek-lezarasa.md](2026-11-27_teszt-elofizetesek-lezarasa.md) — Teszt-előfizetések lezárása — téves terhelés-riasztás, egy valódi kockázat élesen (2026-11-27)
 - [2026-11-27_programajanlo-nemzetkozi.md](2026-11-27_programajanlo-nemzetkozi.md) — Programajánló (poi) nemzetközi — az ország nyelvén keres, az új vevő azonnal kap (2026-11-27)
 - [2026-11-27_production_lanc_es_mennyiseg.md](2026-11-27_production_lanc_es_mennyiseg.md) — 2026-11-27 — Production: lánc-utánpótlás, kinézeti szabálykörök, mennyiségi fordulat
+- [2026-11-27_nemzetkozi-modul-audit.md](2026-11-27_nemzetkozi-modul-audit.md) — 2026-11-27 — Nemzetközi modul-audit: minden vevő-oldali modul valódi helyi adattal (HR + IT)
 - [2026-11-27_levelnyitas-riport.md](2026-11-27_levelnyitas-riport.md) — Levél-megnyitás a Riport-tölcsérben (2026-11-27)
 - [2026-11-27_lanc-utanpotlas.md](2026-11-27_lanc-utanpotlas.md) — 2026-11-27 — Lánc-utánpótlás: régi mock újragenerálása, sor nélküli kész mock, render-kapu újrapróba, párhuzamos kapu, kontraszt, félkész elöl, egyedi szakaszcím
 - [2026-11-27_javito-level.md](2026-11-27_javito-level.md) — 2026-11-27 — Javító levél a hibás nyitóképpel kiküldött 7 leadnek + kurált településtár (SUB `cit8acda5c6`)

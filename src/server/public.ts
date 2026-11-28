@@ -576,6 +576,20 @@ async function serveHomepage(
   send(res, 200, withPwaHead(rendered, "public"));
 }
 
+/**
+ * The browser's language for a platform page without a hint (login, the installed app): the
+ * first Accept-Language tag a country row speaks and the UI has; "" = none (the caller keeps
+ * Hungarian). One rule for the login and the PWA (nemzetközi audit 2026-11-27).
+ */
+function browserCountryLang(req: http.IncomingMessage): string {
+  const spoken = new Set(allCountriesSync().map((c) => c.defaultLang));
+  for (const part of String(req.headers["accept-language"] ?? "").split(",")) {
+    const tag = part.split(";")[0]!.trim().toLowerCase().split("-")[0]!;
+    if (tag && spoken.has(tag) && uiLangs().includes(tag)) return tag;
+  }
+  return "";
+}
+
 /** Serve the generated preview HTML for a request token. */
 async function servePreview(res: http.ServerResponse, token: string): Promise<void> {
   const row = await db
@@ -994,7 +1008,7 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
     tax === null
       ? T(lang, "Idegenforgalmi adó: a helyszínen fizetendő, összeg nélkül.")
       : tax > 0
-        ? T(lang, "Idegenforgalmi adó (a helyszínen): {amount}", { amount: formatAmount(tax * payers * n, quote.currency) }) +
+        ? T(lang, "Idegenforgalmi adó (a helyszínen): {amount}", { amount: formatAmount(tax * payers * n, quote.currency, lang) }) +
           " " + minorsTaxNote(lang, countedChildAge(meals, plan))
         : "";
   return {
@@ -1002,14 +1016,14 @@ async function bookingSetupTrial(ctx: BookingSetupCtx, body: Record<string, unkn
     notes,
     quote: {
       // "Szállás:" stays the stay alone; the meal lines and the total follow when a meal is chosen.
-      totalText: formatAmount(quote.total, quote.currency),
+      totalText: formatAmount(quote.total, quote.currency, lang),
       mealLines: mLines.map((l) => {
-        const v = { label: l.label, n: l.nights, per: formatAmount(l.perNight, quote.currency), g: l.guests, sum: formatAmount(l.sum, quote.currency) };
+        const v = { label: l.label, n: l.nights, per: formatAmount(l.perNight, quote.currency, lang), g: l.guests, sum: formatAmount(l.sum, quote.currency, lang) };
         return l.guests > 1
           ? T(lang, "{label}: {n} éj × {per} × {g} fő = {sum}", v)
           : T(lang, "{label}: {n} éj × {per} = {sum}", v);
       }),
-      grandText: mealSum ? formatAmount(quote.total + mealSum, quote.currency) : null,
+      grandText: mealSum ? formatAmount(quote.total + mealSum, quote.currency, lang) : null,
     },
     taxText,
   };
@@ -2651,7 +2665,14 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   const tenantSite = await resolveTenantSite(req);
   // Installable citoviso.com app (2026-11-19, src/ui/pwa.ts): manifest, service worker, icons —
   // on platform hosts only. A tenant's site (its subdomain or own domain) is NOT our app.
-  if (!tenantSite && !isTenantishHost(req) && (await servePwa("public", req.method ?? "GET", pathname, res))) return;
+  // Nemzetközi audit 2026-11-27: the manifest and the offline page in the visitor's language.
+  if (!tenantSite && !isTenantishHost(req)) {
+    const pwaLang =
+      pathname === "/manifest.webmanifest" || pathname === "/sw.js"
+        ? await prepareRenderLang(browserCountryLang(req) || DEFAULT_LANG)
+        : DEFAULT_LANG;
+    if (await servePwa("public", req.method ?? "GET", pathname, res, pwaLang)) return;
+  }
   // ADR-0356: a former slug answers GET/HEAD with a 301 to the current address — path and
   // query kept, so a token link from an old mail lands on the same handler on the new host.
   // A POST is NOT redirected (a 301 turns it into a GET, and a GET never decides): it is
@@ -4743,17 +4764,7 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     // without the hint landed a Croatian owner on a Hungarian login and password-reset page. No hint → the
     // browser's Accept-Language, but only a language a country row speaks and the UI has (a Hungarian or an
     // unknown browser keeps the Hungarian page exactly as before).
-    let loginHint = url.searchParams.get("lang") ?? url.searchParams.get("l") ?? "";
-    if (!loginHint) {
-      const spoken = new Set(allCountriesSync().map((c) => c.defaultLang));
-      for (const part of String(req.headers["accept-language"] ?? "").split(",")) {
-        const tag = part.split(";")[0]!.trim().toLowerCase().split("-")[0]!;
-        if (tag && spoken.has(tag) && uiLangs().includes(tag)) {
-          loginHint = tag;
-          break;
-        }
-      }
-    }
+    const loginHint = (url.searchParams.get("lang") ?? url.searchParams.get("l") ?? "") || browserCountryLang(req);
     const loginLang = await prepareRenderLang(uiLangs().includes(loginHint) ? loginHint : DEFAULT_LANG);
     if (pathname === "/login") {
       return send(

@@ -11,7 +11,8 @@
 import { guestVisibleContact } from "../scraper/contactLedger.js";
 import type { Industry, QualifiedLead } from "../scraper/types.js";
 import { isNonCaption, neutralAlt } from "./photoCaption.js";
-import { onePhone } from "../text/phone.js";
+import { onePhoneIn } from "../text/phoneCountry.js";
+import { countryConfigSync } from "../country.js";
 import type { Photo, SiteData } from "./recipe.js";
 
 /** ADR-0041: Schema.org business @type per industry. The industry is a PARAMETER (not baked-in
@@ -100,7 +101,7 @@ export function leadToSiteData(
   if (clean(lead.email) && guestVisibleContact(lead.contacts, "email", clean(lead.email)))
     contact.email = clean(lead.email);
   if (clean(lead.phone) && guestVisibleContact(lead.contacts, "phone", clean(lead.phone)))
-    contact.phone = onePhone(clean(lead.phone));
+    contact.phone = onePhoneIn(clean(lead.phone), countryConfigSync(clean(lead.country)));
   if (clean(lead.address)) contact.address = clean(lead.address);
 
   // ADR-0041 locality facets (ADR-0038/0040 fills them on the lead) — NAP fields for the

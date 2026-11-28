@@ -21,7 +21,9 @@ import { copyOf, esc, firstSentence, galleryPhotos, hasOwnBedroomPhoto, roomsFor
 import { isStockPhoto, stockGallery, stockHeroBackdrop, stockUrl, styledStockLibrary } from "./stock.js";
 import { addressWithCity, addressWithoutOwnCountry } from "./displayAddress.js";
 import { withoutFilenameAlts } from "./photoCaption.js";
-import { onePhone } from "../text/phone.js";
+import { onePhoneIn } from "../text/phoneCountry.js";
+import { AMENITY_CATALOG } from "../tenant/amenityCatalog.js";
+import { countryConfigSync } from "../country.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 import { hungarianBedNote, hungarianRoomName, localRoomName } from "./roomNames.js";
 import { setHighlightSources } from "./copyFields.js";
@@ -1169,6 +1171,16 @@ export function renderSite(
   if (phase === "mock" && data.rating && !mockRatingShown(data)) {
     data = { ...data, rating: undefined, googleRating: undefined, stats: (data.stats ?? []).filter((s) => s.icon !== "star") };
   }
+  // Nemzetközi audit (2026-11-27): a page in another language carries the catalogue's facility
+  // labels TRANSLATED („Besplatno parkiralište”), which the catalogue matcher (Hungarian labels +
+  // HU/EN/DE keywords) does not know — on a Croatian page the standard fill came out short and a
+  // ticked facility had no icon. Every catalogue label in the page's language maps to its id; a map
+  // the translation already carries wins. Hungarian pages are untouched.
+  if (data.lang && data.lang !== "hu") {
+    const pageLabels: Record<string, string> = {};
+    for (const a of AMENITY_CATALOG) pageLabels[T(data, a.label).trim()] = a.id;
+    data = { ...data, amenityIconMap: { ...pageLabels, ...(data.amenityIconMap ?? {}) } };
+  }
   // A file name is no alt („kep_128.jpg”, Dobos 2026-10-26): the neutral „<név> — N. kép”.
   if (data.photos.length) {
     const photos = withoutFilenameAlts(data.photos, data.name);
@@ -1177,7 +1189,7 @@ export function renderSite(
   // A phone field listing several numbers („+36 23 312 465;+36 30 505 7524”) prints ONE, the
   // mobile first; render-time, so a rerender fixes an existing mock (24 live, 2026-10-26).
   if (data.contact.phone) {
-    const phone = onePhone(data.contact.phone);
+    const phone = onePhoneIn(data.contact.phone, countryConfigSync(data.place?.country));
     if (phone !== data.contact.phone) data = { ...data, contact: { ...data.contact, phone } };
   }
   // An icon glyph scraped with the address („Makarska, \uE0C8 Ul. Kralja Petra”, coordinator 2026-11-25 —

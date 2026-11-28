@@ -4698,9 +4698,11 @@ export function bookingVerdictPage(r: {
    decides — the guest-cancel pattern below. Old mails keep working: same URL. */
 
 /** Shared shell for the owner's mail-link pages: same card as bookingVerdictPage. */
-function ownerLinkShell(title: string, inner: string, adminHref: string, adminLabel: string): string {
+function ownerLinkShell(title: string, inner: string, adminHref: string, adminLabel: string, lang = "hu"): string {
+  // The page's language on <html> (nemzetközi audit 2026-11-27: a Croatian page marked lang="hu"
+  // makes the browser offer "translate from Hungarian"); Hungarian byte-identical.
   return (
-    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
@@ -4800,6 +4802,7 @@ export function bookingDecideConfirmPage(
       `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin:12px 0 0">${T(lang, "Amíg nem nyomja meg a gombot, semmi nem változik — a kérés döntésre vár.")}</p>`,
     "/admin?tab=foglalasok",
     T(lang, "Foglalások megnyitása"),
+    lang,
   );
 }
 
@@ -4836,6 +4839,7 @@ export function reviewDecideConfirmPage(
       `<p style="font-size:.82rem;color:var(--citui-muted);line-height:1.6;margin:12px 0 0">${T(lang, "Amíg nem nyomja meg a gombot, semmi nem változik — a vélemény döntésre vár.")}</p>`,
     "/admin?tab=modulok&m=reviews",
     T(lang, "Vélemények megnyitása"),
+    lang,
   );
 }
 
@@ -5023,7 +5027,7 @@ export function reviewVerdictPage(r: {
     m.tone === "ok" ? "var(--citui-ok)" : m.tone === "bad" ? "var(--citui-bad)" : "var(--citui-muted)";
 
   return (
-    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
@@ -5050,7 +5054,7 @@ export function reviewThanksPage(opts: { errors?: string[]; backUrl: string; lan
     ? `<ul style="text-align:left;line-height:1.8">${opts.errors!.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`
     : `<p style="font-size:1.02rem;line-height:1.7">${T(lang, "Elküldtük a szállásadónak. A véleménye azután jelenik meg az oldalon, hogy jóváhagyta.")}</p>`;
   return (
-    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +

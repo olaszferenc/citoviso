@@ -15,6 +15,7 @@
 
 import { exactCol, parseOfferAmount, wholeCol } from "./amount.js";
 import { countryOfSite, siteCurrency } from "../tenant/siteCountry.js";
+import type { PhoneRules } from "../text/phoneCountry.js";
 import { chosenPlan, clampChildren, countedChildAge, mealLines, mealPlanLabel, minorsTaxNote, readMeals, taxPayers, type MealLine, type MealPlanId, type MealsSetting } from "../tenant/meals.js";
 import { getSiteModuleConfig } from "../tenant/siteModuleConfig.js";
 import { randomBytes } from "node:crypto";
@@ -285,11 +286,11 @@ async function onSiteTaxRows(req: RequestRow, lang: string): Promise<MailDetailR
   return [
     {
       label: T(lang, "Helyszínen fizetendő: idegenforgalmi adó ({per} / fő / éj × {g} fő × {n} éj)", {
-        per: formatAmount(tax, cur),
+        per: formatAmount(tax, cur, lang),
         g: payers,
         n,
       }),
-      value: formatAmount(tax * payers * n, cur),
+      value: formatAmount(tax * payers * n, cur, lang),
       ...(huRule ? { note: minorsTaxNote(lang, childAge) } : {}),
       rule: true,
     },
@@ -431,7 +432,7 @@ function quoteBlock(req: RequestRow, lang: string): string {
     // "the price list at booking time" would misdescribe where the number came from.
     `\n${req.offered_at ? T(lang, "Az ajánlott ár:") : T(lang, "Ár (a foglaláskor érvényes árak szerint):")}\n` +
     lines +
-    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY)}\n`
+    `\n${T(lang, "Összesen:")} ${formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY, lang)}\n`
   );
 }
 
@@ -442,13 +443,13 @@ function quoteRows(req: RequestRow, lang: string): { label: string; value: strin
   return (req.quoted_lines ?? []).map((l) => {
     if (l.nights && l.per_night * Math.max(1, l.guests) * l.nights !== l.sum && l.guests === 1) {
       // per_stay: one price for the whole stay
-      return { label: `${l.label}: ${T(lang, "a teljes tartózkodásra")}`, value: formatAmount(l.sum, cur) };
+      return { label: `${l.label}: ${T(lang, "a teljes tartózkodásra")}`, value: formatAmount(l.sum, cur, lang) };
     }
-    const per = formatAmount(l.per_night, cur);
+    const per = formatAmount(l.per_night, cur, lang);
     const guests = l.guests > 1 ? ` × ${T(lang, "{n} fő", { n: l.guests })}` : "";
     return {
       label: `${l.label}: ${T(lang, "{n} éj", { n: l.nights })} × ${per}${guests}`,
-      value: formatAmount(l.sum, cur),
+      value: formatAmount(l.sum, cur, lang),
     };
   });
 }
@@ -501,7 +502,7 @@ async function hostContact(siteId: string, hostName: string): Promise<HostContac
   return {
     name: hostName,
     ...(address ? { address } : {}),
-    ...(c.phone ? { phone: displayPhone(c.phone) } : {}),
+    ...(c.phone ? { phone: displayPhone(c.phone, await countryOfSite(siteId)) } : {}),
     ...(c.email ? { email: c.email } : {}),
     ...(website ? { website } : {}),
   };
@@ -520,7 +521,7 @@ function priceRows(req: RequestRow, lang: string): MailDetailRow[] {
     ...lines.map((r, i) => ({ label: r.label, value: r.value, rule: !req.offered_at && i === 0 })),
     {
       label: T(lang, "Összesen"),
-      value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY),
+      value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY, lang),
       emphasis: true,
       rule: !req.offered_at && !lines.length,
     },
@@ -528,8 +529,10 @@ function priceRows(req: RequestRow, lang: string): MailDetailRow[] {
 }
 
 /** Who asked — the first group of every OWNER-facing booking letter. */
-function guestRows(req: RequestRow, lang: string): MailDetailRow[] {
-  const phone = req.guest_phone ? displayPhone(req.guest_phone) : "";
+function guestRows(req: RequestRow, lang: string, rules: PhoneRules | null): MailDetailRow[] {
+  // The lodging's numbering plan (nemzetközi audit 2026-11-27) — a guest who typed a national
+  // number on a Croatian page wrote it in Croatian form.
+  const phone = req.guest_phone ? displayPhone(req.guest_phone, rules) : "";
   return [
     { label: T(lang, "Vendég"), value: req.guest_name },
     ...(phone ? [{ label: T(lang, "Telefon"), value: phone, href: `tel:${phone.replace(/\s+/g, "")}` }] : []),
@@ -1128,7 +1131,7 @@ async function sendGuestAck(id: string): Promise<void> {
                 ...quoteRows(req, lang).map((r, i) => ({ label: r.label, value: r.value, rule: i === 0 })),
                 {
                   label: T(lang, "Összesen"),
-                  value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY),
+                  value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY, lang),
                   emphasis: true,
                 },
               ]
@@ -1257,7 +1260,7 @@ export async function notifyOwner(
   const multiRooms = requestUnitIds(req).length > 1;
   const missing = isQuote && !multiRooms ? await unpricedNights(req.unit_id, from, until) : [];
   // ADR-0393: the rooms the owner has to price (the rest keep their list price).
-  const openRooms = isQuote && multiRooms ? (await multiOfferSplit(req, "hu")).open.map((r) => r.name) : [];
+  const openRooms = isQuote && multiRooms ? (await multiOfferSplit(req, lang)).open.map((r) => r.name) : [];
   const unitName = req.unit_name ?? "";
   // ADR-0267: the offer's price is for THIS request by default; it reaches the price list only
   // when the owner ticks „Mentsem az árlistába is?” on the offer page — the letter must not
@@ -1308,7 +1311,7 @@ export async function notifyOwner(
     `${T(lang, "Létszám:")} ${headcount(req, lang)}\n` +
     (req.meal_plan ? `${T(lang, "Ellátás:")} ${mealPlanLabel(lang, req.meal_plan)}\n` : "") +
     (req.quoted_total
-      ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY)}\n`
+      ? `${T(lang, "Ár összesen (a foglaláskori árlista szerint):")} ${formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY, lang)}\n`
       : "") +
     (req.guest_phone ? `${T(lang, "Telefon:")} ${req.guest_phone}\n` : "") +
     `${T(lang, "E-mail:")} ${req.guest_email}\n` +
@@ -1345,13 +1348,13 @@ export async function notifyOwner(
         ]
       : []),
     mailDetails([
-      ...guestRows(req, lang),
+      ...guestRows(req, lang, await countryOfSite(req.site_id)),
       ...stayRows(req, lang, true),
       ...(req.quoted_total
         ? [
             {
               label: T(lang, "Ár (a foglaláskori árlista szerint)"),
-              value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY),
+              value: formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY, lang),
               emphasis: true,
               rule: true,
             },
@@ -2180,7 +2183,7 @@ export async function cancelRequest(opts: {
               }),
             ),
           ),
-          mailDetails([...guestRows(req, ctx.lang), ...stayRows(req, ctx.lang, true)]),
+          mailDetails([...guestRows(req, ctx.lang, await countryOfSite(req.site_id)), ...stayRows(req, ctx.lang, true)]),
           ...(note ? [mailQuote(T(ctx.lang, "A vendég üzenete:"), note)] : []),
           mailPara(esc(T(ctx.lang, "A napok újra szabadok a naptárban — a honlapon máris foglalhatók."))),
         ],
@@ -2481,7 +2484,7 @@ async function sendOwnerExpired(req: RequestRow, hours: number): Promise<void> {
             ),
           ),
         ),
-        mailDetails([...guestRows(req, lang), ...stayRows(req, lang, true)]),
+        mailDetails([...guestRows(req, lang, await countryOfSite(req.site_id)), ...stayRows(req, lang, true)]),
         mailPara(esc(T(lang, "A vendégnek elküldtük az udvarias értesítést, és a napok újra szabadok a naptárban."))),
         mailNote(esc(T(lang, "A válaszidőt a Foglalások fül beállításainál tudja módosítani."))),
       ],
@@ -3295,7 +3298,7 @@ async function sendOwnerOfferNews(
     to: formatDay(dayStr(req.date_to), lang),
     unit: req.unit_name ?? "",
   };
-  const total = req.quoted_total ? formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY) : "";
+  const total = req.quoted_total ? formatAmount(req.quoted_total, req.quoted_currency ?? LEGACY_CURRENCY, lang) : "";
   const M = {
     accepted: {
       subject: T(lang, "{guest} elfogadta az ajánlatát", hu),
@@ -3345,7 +3348,7 @@ async function sendOwnerOfferNews(
       heading: M.subject,
       blocks: [
         mailPara(esc(M.body)),
-        mailDetails([...guestRows(req, lang), ...stayRows(req, lang, true), ...priceRows(req, lang)]),
+        mailDetails([...guestRows(req, lang, await countryOfSite(req.site_id)), ...stayRows(req, lang, true), ...priceRows(req, lang)]),
       ],
     }),
   );

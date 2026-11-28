@@ -322,6 +322,37 @@ function niceDay(md: string): string {
   return `${md.slice(0, 2)}. ${md.slice(3, 5)}.`;
 }
 
+/**
+ * A price-table date in the PAGE's language (nemzetközi audit 2026-11-27: a Croatian guest
+ * read the Hungarian "2026. 06. 15." year-first order). Hungarian keeps the exact strings the
+ * table always printed (byte-identical); any other language its own numeric day-month order
+ * via Intl ("15. 06. 2026." hr, "15/06/2026" en-GB …). `iso` is 'YYYY-MM-DD' or 'MM-DD'.
+ */
+function priceDay(d: SiteData, iso: string, withYear: boolean): string {
+  const md = iso.length > 5 ? iso.slice(5, 10) : iso;
+  if (!d.lang || d.lang === "hu") return withYear ? `${iso.slice(0, 4)}. ${niceDay(md)}` : niceDay(md);
+  const year = iso.length > 5 ? Number(iso.slice(0, 4)) : 2000;
+  const at = new Date(Date.UTC(year, Number(md.slice(0, 2)) - 1, Number(md.slice(3, 5))));
+  try {
+    return new Intl.DateTimeFormat(d.lang, {
+      timeZone: "UTC",
+      day: "2-digit",
+      month: "2-digit",
+      ...(withYear ? { year: "numeric" as const } : {}),
+    }).format(at);
+  } catch {
+    return withYear ? `${iso.slice(0, 4)}. ${niceDay(md)}` : niceDay(md);
+  }
+}
+
+/** A dated season's span: Hungarian names the year up front once (the old form), every other
+ *  language closes the span with it — "15. 06. – 31. 08. 2026." — and repeats it when it changes. */
+function priceSpan(d: SiteData, start: string, end: string): string {
+  const crosses = end.slice(0, 4) !== start.slice(0, 4);
+  if (!d.lang || d.lang === "hu") return `${priceDay(d, start, true)} – ${priceDay(d, end, crosses)}`;
+  return `${priceDay(d, start, crosses)} – ${priceDay(d, end, true)}`;
+}
+
 /** The price on the generated page. Same rule as everywhere else — before this,
  *  anything that was not EUR printed as "Ft", whatever it actually was. */
 function money(amount: number, currency?: string, lang?: string): string {
@@ -514,24 +545,22 @@ function pricingBlock(d: SiteData): string {
         // year, so the table never promises this year's price for the next one.
         const when =
           s.start && s.end
-            ? `${esc(s.start.slice(0, 4))}. ${esc(niceDay(s.start.slice(5, 10)))} – ` +
-              (s.end.slice(0, 4) !== s.start.slice(0, 4) ? `${esc(s.end.slice(0, 4))}. ` : "") +
-              esc(niceDay(s.end.slice(5, 10)))
-            : `${esc(niceDay(s.from))} – ${esc(niceDay(s.to))}`;
+            ? esc(priceSpan(d, s.start, s.end))
+            : `${esc(priceDay(d, s.from, false))} – ${esc(priceDay(d, s.to, false))}`;
         rows.push(
           `<tr><td>${esc(s.label)}${s.year ? ` ${esc(s.year)}` : ""}${minNote(s.minNights)}</td><td>${when}</td>` +
-            `<td>${esc(money(s.amount, p.currency))}</td></tr>`,
+            `<td>${esc(money(s.amount, p.currency, d.lang))}</td></tr>`,
         );
       }
       if (u.base) {
         // 0072: a DATED base says when it ends — otherwise the table would promise a
         // price for stays the owner never priced (the widget asks for a quote there).
         const until = u.baseUntil
-          ? `– ${esc(u.baseUntil.slice(0, 4))}. ${esc(niceDay(u.baseUntil.slice(5, 10)))}`
+          ? `– ${esc(priceDay(d, u.baseUntil, true))}`
           : "";
         rows.push(
           `<tr><td>${T(d, "Egyéb időszakban")}${minNote(null)}</td><td>${until}</td>` +
-            `<td>${esc(money(u.base, p.currency))}</td></tr>`,
+            `<td>${esc(money(u.base, p.currency, d.lang))}</td></tr>`,
         );
       } else if (u.onRequest) {
         // ADR-0208 ⑥.2 — the owner's stated decision, in the row where the base would
@@ -672,11 +701,11 @@ function withStandardFill(d: SiteData, items: readonly string[]): string[] {
   const fill = STANDARD_FACILITY_FILL.map((k) => catalogueLabel(k))
     .filter((l): l is string => !!l)
     .map((l) => T(d, l))
-    .filter((l) => !(d.sampleAmenityDeny ?? []).some((x) => catalogueIdFor(x) === catalogueIdFor(l)));
+    .filter((l) => !(d.sampleAmenityDeny ?? []).some((x) => catalogueIdFor(x, d.amenityIconMap) === catalogueIdFor(l, d.amenityIconMap)));
   const kinds = new Set(out.map((t) => catalogueIdFor(t, d.amenityIconMap)));
   for (const l of notShownYet(d, fill)) {
     if (out.length >= SAMPLE_AMENITY_MIN) break;
-    const k = catalogueIdFor(l);
+    const k = catalogueIdFor(l, d.amenityIconMap);
     if (kinds.has(k)) continue;
     kinds.add(k);
     out.push(l);
@@ -696,7 +725,7 @@ function amenitiesSampleBlock(d: SiteData): string {
   // yet, up to SAMPLE_AMENITY_MIN — marked as a sample, the owner ticks the real ones after buying.
   const items = withStandardFill(d, sourced);
   return asSample(
-    listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t)),
+    listBlock(d, "amenities", T(d, "Felszereltség"), items, (t) => amenityIconSvg(t, d.amenityIconMap)),
     d,
     T(d, "Minta — a tényleges szolgáltatásait Ön jelöli be."),
   );

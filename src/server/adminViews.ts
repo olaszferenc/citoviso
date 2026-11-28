@@ -5159,7 +5159,7 @@ function overviewSection(
         `${formatDay(r.dateFrom, lang)} → ${formatDay(r.dateTo, lang)}`,
         T(lang, "{n} éj", { n: nights }),
         T(lang, "{n} fő", { n: r.guests }),
-        r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY) : "",
+        r.quotedTotal ? formatAmount(r.quotedTotal, r.quotedCurrency ?? LEGACY_CURRENCY, lang) : "",
         r.unitName,
         left != null ? T(lang, "még {n} óra a válaszra", { n: left }) : "",
       ]

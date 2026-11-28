@@ -114,9 +114,10 @@ const OFFER_CSS = `
 .of-price .of-tot{font-weight:800;border-top:1px solid var(--citui-line);margin-top:6px;padding-top:6px}
 `;
 
-function pageShell(title: string, inner: string): string {
+function pageShell(title: string, inner: string, lang = "hu"): string {
+  // The page's language on <html> (nemzetközi audit 2026-11-27); Hungarian byte-identical.
   return (
-    `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
+    `<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="robots" content="noindex">` +
     `<link rel="stylesheet" href="/assets/ui/citui.css">` +
@@ -345,7 +346,7 @@ export function ownerOfferPage(
     `<script type="application/json" id="of-cfg">${jsonForScript(cfg)}</script>` +
     `<script>${MONEY_JS}</script>` +
     `<script>${OFFER_JS}</script>`;
-  return pageShell(T(lang, "Árajánlat küldése"), inner);
+  return pageShell(T(lang, "Árajánlat küldése"), inner, lang);
 }
 
 /* The page's behaviour — the SAME amount rule as parseOfferAmount (requests.ts) and
@@ -354,7 +355,7 @@ export function ownerOfferPage(
 const OFFER_JS = `(function(){
 var C=JSON.parse(document.getElementById("of-cfg").textContent),f=document.querySelector("[data-offer-form]");
 if(!f)return;var A=f.querySelector("[data-amount]"),S=f.querySelector("[data-send]"),I=f.querySelector("[data-into]"),B=f.querySelector("[data-sub]"),K=f.querySelector("[data-cons]");
-function grp(n){return CitMoney.formatNumber(n,"hu");}
+function grp(n){return CitMoney.formatNumber(n,C.lang||"hu");}
 function money(n){return CitMoney.formatMoney(n,C.currency,C.lang);}
 function parse(raw){var s=String(raw||"").replace(/[\\s.\\u00a0]/g,"").replace(/ft$/i,"");if(s==="")return{empty:1};if(!/^\\d+$/.test(s))return{error:C.msg.num};var n=parseInt(s,10);if(!(n>0))return{error:C.msg.pos};if(n>10000000)return{error:C.msg.big};return{value:n};}
 function pick(){if(!I||!I.checked)return"request";var r=f.querySelector("input[name=save]:checked");return r?r.value:"pick";}
@@ -397,6 +398,7 @@ function ownerOfferClosedPage(v: OfferView): string {
     `<div class="of-card" style="max-width:520px;margin:40px auto"><p class="of-host">${esc(v.hostName ?? "")}</p>` +
       `<p style="line-height:1.6">${text}</p>` +
       `<p style="margin-top:20px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=foglalasok">${T(lang, "Foglalások megnyitása")}</a></p></div>`,
+    lang,
   );
 }
 
@@ -430,6 +432,7 @@ export function ownerOfferSentPage(r: SendOfferResult, hostName: string): string
       (intoLine ? ` ${esc(intoLine)}` : "") +
       `</div>` +
       `<p style="margin-top:20px"><a class="citui-btn citui-btn--ghost" href="/admin?tab=foglalasok#kikuldott-ajanlatok">${T(lang, "Foglalások megnyitása")}</a></p></div>`,
+    lang,
   );
 }
 

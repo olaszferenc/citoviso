@@ -21,6 +21,7 @@
 import { readFile } from "node:fs/promises";
 import type http from "node:http";
 import path from "node:path";
+import { T } from "../i18n/mail.js";
 import { jsonForScript } from "../text/jsonForScript.js";
 
 export type PwaApp = "console" | "public";
@@ -35,14 +36,20 @@ const ICONS = [
   { src: "/pwa/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
 ] as const;
 
-export function pwaManifest(app: PwaApp): Record<string, unknown> {
+/**
+ * The manifest. Nemzetközi audit (2026-11-27): the public app (citoviso.com — the customer login)
+ * speaks the visitor's language (`lang`, negotiated by the caller from Accept-Language like the
+ * login page); Hungarian renders byte-identically. The console is our internal tool: Hungarian.
+ */
+export function pwaManifest(app: PwaApp, lang = "hu"): Record<string, unknown> {
   const isConsole = app === "console";
+  const l = isConsole ? "hu" : lang;
   return {
     id: isConsole ? "/?app=citoviso-console" : "/?app=citoviso",
     name: isConsole ? "Citoviso konzol" : "Citoviso",
     short_name: isConsole ? "Konzol" : "Citoviso",
-    description: isConsole ? "Citoviso belső konzol" : "Citoviso – honlap szálláshelyeknek",
-    lang: "hu",
+    description: isConsole ? "Citoviso belső konzol" : T(l, "Citoviso – honlap szálláshelyeknek"),
+    lang: l,
     dir: "ltr",
     start_url: "/",
     scope: "/",
@@ -77,29 +84,40 @@ export function withPwaHead(html: string, app: PwaApp): string {
   return i < 0 ? html : html.slice(0, i) + pwaHead(app) + html.slice(i);
 }
 
-const OFFLINE_HTML =
-  `<!doctype html><html lang="hu"><head><meta charset="utf-8">` +
-  `<meta name="viewport" content="width=device-width,initial-scale=1"><title>Nincs kapcsolat — Citoviso</title></head>` +
-  `<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;` +
-  `background:${PWA_BG};color:#eaf3f8;font:16px/1.5 system-ui,sans-serif;text-align:center">` + // token-exempt: offline page has no stylesheet
-  `<div style="padding:24px;max-width:420px"><h1 style="font-size:1.4rem;margin:0 0 8px">Nincs internetkapcsolat</h1>` +
-  `<p style="margin:0 0 20px">Az oldal most nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra.</p>` +
-  `<button onclick="location.reload()" style="font:inherit;padding:10px 20px;border:0;border-radius:10px;` +
-  `background:#1fb6d6;color:#06131b;font-weight:600">Újra</button></div></body></html>`; // token-exempt
+/** The offline page in `lang` (the public app: the visitor's language; Hungarian byte-identical). */
+function offlineHtml(lang: string): string {
+  return (
+    `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1"><title>${T(lang, "Nincs kapcsolat")} — Citoviso</title></head>` +
+    `<body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;` +
+    `background:${PWA_BG};color:#eaf3f8;font:16px/1.5 system-ui,sans-serif;text-align:center">` + // token-exempt: offline page has no stylesheet
+    `<div style="padding:24px;max-width:420px"><h1 style="font-size:1.4rem;margin:0 0 8px">${T(lang, "Nincs internetkapcsolat")}</h1>` +
+    `<p style="margin:0 0 20px">${T(lang, "Az oldal most nem érhető el. Ellenőrizd a kapcsolatot, és próbáld újra.")}</p>` +
+    `<button onclick="location.reload()" style="font:inherit;padding:10px 20px;border:0;border-radius:10px;` +
+    `background:#1fb6d6;color:#06131b;font-weight:600">${T(lang, "Újra")}</button></div></body></html>` // token-exempt
+  );
+}
 
-/** The service worker. Caches nothing; only a failed GET navigation gets the offline page. */
-export const PWA_SW_JS =
-  `// Citoviso PWA service worker (src/ui/pwa.ts). Caches NOTHING — live data only.\n` +
-  `const OFFLINE = ${jsonForScript(OFFLINE_HTML)};\n` +
-  `self.addEventListener("install", () => self.skipWaiting());\n` +
-  `self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));\n` +
-  `self.addEventListener("fetch", (e) => {\n` +
-  `  const req = e.request;\n` +
-  `  if (req.mode !== "navigate" || req.method !== "GET") return;\n` +
-  `  e.respondWith(fetch(req).catch(() => new Response(OFFLINE, {\n` +
-  `    status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },\n` +
-  `  })));\n` +
-  `});\n`;
+/** The service worker, its offline page in `lang`. Caches nothing; only a failed GET navigation
+ *  gets the offline page. */
+export function pwaSwJs(lang = "hu"): string {
+  return (
+    `// Citoviso PWA service worker (src/ui/pwa.ts). Caches NOTHING — live data only.\n` +
+    `const OFFLINE = ${jsonForScript(offlineHtml(lang))};\n` +
+    `self.addEventListener("install", () => self.skipWaiting());\n` +
+    `self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));\n` +
+    `self.addEventListener("fetch", (e) => {\n` +
+    `  const req = e.request;\n` +
+    `  if (req.mode !== "navigate" || req.method !== "GET") return;\n` +
+    `  e.respondWith(fetch(req).catch(() => new Response(OFFLINE, {\n` +
+    `    status: 503, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },\n` +
+    `  })));\n` +
+    `});\n`
+  );
+}
+
+/** The Hungarian worker (the console's, and the public app's for a Hungarian visitor). */
+export const PWA_SW_JS = pwaSwJs("hu");
 
 const ICON_FILES: Record<string, string> = {
   "/pwa/icon-192.png": "icon-192.png",
@@ -118,17 +136,20 @@ export async function servePwa(
   method: string,
   pathname: string,
   res: http.ServerResponse,
+  /** The public app's reader language (Accept-Language, negotiated by the caller); console: "hu". */
+  lang = "hu",
 ): Promise<boolean> {
+  const l = app === "console" ? "hu" : lang;
   if (method !== "GET" && method !== "HEAD") return false;
   if (pathname === "/manifest.webmanifest") {
-    res.writeHead(200, { "content-type": "application/manifest+json; charset=utf-8", "cache-control": "max-age=3600" });
-    res.end(method === "HEAD" ? undefined : JSON.stringify(pwaManifest(app)));
+    res.writeHead(200, { "content-type": "application/manifest+json; charset=utf-8", "cache-control": "max-age=3600", vary: "Accept-Language" });
+    res.end(method === "HEAD" ? undefined : JSON.stringify(pwaManifest(app, l)));
     return true;
   }
   if (pathname === "/sw.js") {
     // no-cache: a fixed worker must reach installed apps on their next start.
-    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" });
-    res.end(method === "HEAD" ? undefined : PWA_SW_JS);
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache", vary: "Accept-Language" });
+    res.end(method === "HEAD" ? undefined : l === "hu" ? PWA_SW_JS : pwaSwJs(l));
     return true;
   }
   const file = ICON_FILES[pathname];

@@ -1,3 +1,4 @@
+// gate-lane: own-fixture-only
 // Login hardening guard (ADR-0277) — both realms, on the REAL servers.
 //
 //   ① Secure session cookie: present over HTTPS (X-Forwarded-Proto: https from nginx,
@@ -13,6 +14,10 @@
 //      control: a fresh X-Forwarded-For on every request must NOT reset the login brake nor
 //      the public booking/enquiry throttle (real server, /t/<slug>/api/erdeklodes with an
 //      empty form — throttled before validation, 400 without a DB write).
+//      The site it is measured on is the guard's OWN live fixture (fixture-parent, run-stamped
+//      slug, dropped on exit) — 2026-11-27 the shared dev park had NO live site (every dev
+//      subscription closed), and a guard that borrowed "the first live site" went red on a clean
+//      main, blocking every land for a reason that was not the product.
 //
 // Run:  npx tsx scripts/login-hardening-check.mts
 //       npx tsx scripts/login-hardening-check.mts --self-test   (must go RED — proves it measures)
@@ -167,14 +172,27 @@ guard.resetLoginThrottle();
 
 // The public booking/enquiry throttle (public.ts `throttled`, 5 / 10 min) on the real server.
 {
-  const row = await db
-    .selectFrom("site")
-    .select("slug")
-    .where("status", "=", "live")
-    .where("slug", "is not", null)
-    .orderBy("slug")
-    .executeTakeFirst();
-  if (check(Boolean(row?.slug), "foglalási fék: van élő dev-oldal, amin mérhető (/t/<slug>/)")) {
+  // The guard's OWN live site (never a borrowed park row — see the header).
+  const { createFixtureParent } = await import("./lib/fixture-parent.mts");
+  const { sql } = await import("kysely");
+  const parent = await createFixtureParent(db as never, "loginhard");
+  const STAMP = `${process.pid}${Date.now() % 100000}`;
+  const lead = await db.insertInto("lead")
+    .values({ scrape_run_id: parent.runId, name: "_Belépési fék őr", raw: sql`'{}'::jsonb` } as never)
+    .returning("id").executeTakeFirstOrThrow();
+  const tenant = await db.insertInto("tenant").values({ lead_id: lead.id, display_name: "_Belépési fék őr" } as never)
+    .returning("id").executeTakeFirstOrThrow();
+  const artifact = await db.insertInto("mock_artifact").values({
+    lead_id: lead.id,
+    status: "approved",
+    inputs: sql`${JSON.stringify({ siteData: { name: "_Belépési fék őr", tagline: "", intro: "", highlights: [], photos: [], contact: {} } })}::jsonb`,
+  } as never).returning("id").executeTakeFirstOrThrow();
+  await db.insertInto("site").values({
+    tenant_id: tenant.id, preview_token: `lhchk${STAMP}`, source_artifact_id: artifact.id,
+    status: "live", path: `sites/${tenant.id}/index.html`, slug: `lh-teszt-${STAMP}`,
+  } as never).execute();
+  const row = { slug: `lh-teszt-${STAMP}` };
+  if (check(Boolean(row?.slug), "foglalási fék: a saját élő fixture-oldal elkészült (/t/<slug>/)")) {
     const path = `/t/${row!.slug}/api/erdeklodes`;
     const statuses: number[] = [];
     for (let i = 0; i < 6; i++) statuses.push((await call(PUB, "POST", path, { "X-Forwarded-For": spoof(i) }, "x=1")).status);
@@ -196,6 +214,7 @@ guard.resetLoginThrottle();
       `A=${aStatuses.join(",")} B=${guestB.status}`,
     );
   }
+  await parent.drop();
 }
 
 // The helper itself, and that no brake reads X-Forwarded-For on its own again.

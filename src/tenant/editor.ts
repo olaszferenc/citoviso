@@ -31,7 +31,7 @@ import { toPrivatePreview } from "../conversion/provision.js";
 import { PLATFORM_DOMAIN } from "../domains.js";
 import { getTenantModules, shownModuleIds } from "./modules.js";
 import { getAllSiteModuleConfigs } from "./siteModuleConfig.js";
-import { bookableUnits, ensureUnits, guestUnits, isBookableUnit, isWholeOnlySite, peekUnits } from "./units.js";
+import { DEFAULT_UNIT_NAME, bookableUnits, ensureUnits, guestUnits, isBookableUnit, isWholeOnlySite, peekUnits } from "./units.js";
 import { amenityByLabel, amenitySvg } from "./amenityCatalog.js";
 import { formatSpan, getSitePrices, isPriceActive, priceSpan, publicSeasons, type UnitPrice } from "./prices.js";
 import { publishedReviews } from "../reviews/reviews.js";
@@ -323,6 +323,17 @@ export async function moduleContentFor(
     // by its Hungarian label and shown in the site's language; a hand-typed one as typed.
     const items = lines("amenities").map((x) => (amenityByLabel(x.trim()) ? T(L, x.trim()) : x));
     if (items.length) out.amenities = items;
+    // Nemzetközi audit (2026-11-27): the translated label is no longer the catalogue's Hungarian
+    // one, so the icon matcher must be told which item it is („Ravni TV” had no icon on a Croatian
+    // page). The same label → id map a translated copy carries (multilangCore); Hungarian: none.
+    if (L.lang !== "hu") {
+      const map: Record<string, string> = {};
+      for (const x of lines("amenities")) {
+        const item = amenityByLabel(x.trim());
+        if (item) map[T(L, x.trim()).trim()] = item.id;
+      }
+      if (Object.keys(map).length) out.amenityIconMap = map;
+    }
   }
   if (on("usp")) {
     const items = lines("usp");
@@ -376,7 +387,16 @@ export async function moduleContentFor(
   // whole place while the place is not let as one is not offered — no room card, no price
   // row, no booking option, no review option, no subpage. ONE filter, here, because every
   // guest-facing list below (and the subpage writer, via `units`) reads this array.
-  const units = needsUnits ? guestUnits(await loadUnits(siteId)) : [];
+  // Nemzetközi audit (2026-11-27, live HR [TESZT] Ruža: „A szállás egésze" on a Croatian
+  // rooms card): the default unit's name is OUR stored wording (units.ts DEFAULT_UNIT_NAME),
+  // not the owner's, so every guest-facing list reads it in the page's language — the same
+  // rule the booking admin (bookingViews unitLabel) and the request mails already apply.
+  // A name the owner typed is shown as typed; Hungarian renders byte-identically.
+  const readerUnits = async () =>
+    guestUnits(await loadUnits(siteId)).map((u) =>
+      u.name === DEFAULT_UNIT_NAME ? { ...u, name: T(L, "A szállás egésze") } : u,
+    );
+  const units = needsUnits ? await readerUnits() : [];
   const priceMap: Map<string, UnitPrice[]> =
     on("rooms") || on("pricing") ? await getSitePrices(siteId) : new Map();
   const currency = text("pricing", "currency") || "HUF";
@@ -506,8 +526,8 @@ export async function moduleContentFor(
       const oneP = !span || Math.round(span.min) === Math.round(span.max);
       const priceLine = span
         ? oneP
-          ? perUnit(formatSpan(span.min, span.max, currency))
-          : perUnit(T(L, "{p}-tól", { p: formatSpan(span.min, span.min, currency) }))
+          ? perUnit(formatSpan(span.min, span.max, currency, L.lang))
+          : perUnit(T(L, "{p}-tól", { p: formatSpan(span.min, span.min, currency, L.lang) }))
         : "";
       return {
         name: u.name,
@@ -587,7 +607,7 @@ export async function moduleContentFor(
     // The collection form. Units are offered only when there is a real choice: a
     // single-unit owner never sees the concept (same rule as booking).
     if (cfg("reviews").collectEnabled !== false) {
-      const revUnits = units.length ? units : guestUnits(await loadUnits(siteId));
+      const revUnits = units.length ? units : await readerUnits();
       out.reviewForm =
         revUnits.length > 1
           ? { units: revUnits.map((u) => ({ id: u.id, name: u.name })) }
@@ -777,6 +797,14 @@ async function assembleEffective(
     overrideActive,
   );
   const merged3: SiteData = { ...photoChecked, ...moduleContent.data };
+  // The owner's facilities' label → icon map joins the one the base data may carry (a translated
+  // copy's), never replaces it (nemzetközi audit 2026-11-27).
+  if (photoChecked.amenityIconMap && moduleContent.data.amenityIconMap) {
+    (merged3 as { amenityIconMap?: Record<string, string> }).amenityIconMap = {
+      ...photoChecked.amenityIconMap,
+      ...(moduleContent.data.amenityIconMap as Record<string, string>),
+    };
+  }
   // A snapshot rating without a link is the Magellan scout's Maps reading (no Places
   // id to build a reviews URL from). Link it to the place card it was read from, so
   // the badge is verifiable instead of a dead box (Duna Vibe House, 2026-11-05).

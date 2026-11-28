@@ -65,9 +65,21 @@ try {
   ids.leadId = lead.id;
   const tenant = await db.insertInto("tenant").values({ lead_id: lead.id, display_name: "Törlés-teszt Panzió" }).returning("id").executeTakeFirstOrThrow();
   ids.tenantId = tenant.id;
-  const art = await db.selectFrom("site").innerJoin("mock_artifact", "mock_artifact.id", "site.source_artifact_id")
-    .select("site.source_artifact_id as id").where("site.status", "=", "live").where("site.source_artifact_id", "is not", null).executeTakeFirst();
-  if (!art?.id) throw new Error("nincs használható artifact");
+  // The guard's OWN engine artifact (2026-11-27: it used to borrow the recipe of "a live park
+  // site"; the shared dev park then had none — every dev subscription closed — and the guard
+  // went red on a clean main for a reason that was not the product). Same minimal recipe the
+  // contact-edit guard renders.
+  const art = await db.insertInto("mock_artifact").values({
+    lead_id: lead.id,
+    status: "approved",
+    inputs: JSON.stringify({
+      recipe: { template: "editorial", skin: "editorial-warm", archetype: "classic", sections: [{ kind: "hero" }] },
+      siteData: {
+        name: "Törlés-teszt Panzió", tagline: "Teszt", intro: "Teszt szállás az őrhöz.", highlights: ["Kert"], photos: [],
+        contact: { address: "8360 Keszthely, Teszt u. 1." },
+      },
+    }),
+  } as never).returning("id").executeTakeFirstOrThrow();
   const slug = `udc-${stamp}`;
   const site = await db.insertInto("site").values({
     tenant_id: tenant.id, preview_token: `udc_${stamp}`, slug, status: "live", live_at: new Date(),

@@ -11,7 +11,7 @@
 //
 // International input ("+CC…", "00CC…") is the same for every country: phone.ts's rules.
 import type { CountryConfig } from "../country.js";
-import { HU_PHONE_TEXT_PATTERN, isHuMobileE164, normalizePhone, prettyPhone, splitPhones } from "./phone.js";
+import { HU_PHONE_TEXT_PATTERN, isHuMobileE164, normalizePhone, onePhone, prettyPhone, splitPhones } from "./phone.js";
 import { jsonForScript } from "./jsonForScript.js";
 
 export type PhoneRules = Pick<CountryConfig, "dialCode" | "trunkPrefix" | "mobilePrefixes" | "phonePlan" | "phoneNsnMin" | "phoneNsnMax">;
@@ -86,6 +86,37 @@ export function prettyPhoneIn(e164: string, cfg: PhoneRules | null): string {
   }
   groups.push(nsn.slice(i));
   return `${prefix} ${groups.join(" ")}`;
+}
+
+/**
+ * A stored phone as it is PRINTED to a reader, in the lodging's country (nemzetközi audit
+ * 2026-11-27): the Hungarian plan (or no row) keeps phone.ts's displayPhone rule exactly; another
+ * country reads its own national form and spaces it like its admin saves it — before this, a
+ * Croatian "+385 91 234 5678" was squeezed back to "+385912345678" in every booking letter.
+ * A number that does not parse is printed as written.
+ */
+export function displayPhoneIn(raw: string, cfg: PhoneRules | null): string {
+  const clean = raw.trim().replace(/\//g, "");
+  if (!cfg || cfg.phonePlan === "hu") {
+    const n = normalizePhone(clean);
+    return n ? prettyPhone(n) : raw.trim();
+  }
+  const n = normalizePhoneIn(clean, cfg);
+  return n ? prettyPhoneIn(n, cfg) : raw.trim();
+}
+
+/**
+ * The ONE number a page prints for a field holding several, in the lodging's country — phone.ts
+ * onePhone() for the Hungarian plan (byte-identical), for another country the same rule with its
+ * own plan: the mobile first, else the first, printed readable. A field with one number is
+ * returned as written (this cuts lists, it does not restyle).
+ */
+export function onePhoneIn(raw: string, cfg: PhoneRules | null): string {
+  if (!cfg || cfg.phonePlan === "hu") return onePhone(raw);
+  const all = splitPhonesIn(raw, cfg);
+  if (all.length < 2) return raw;
+  const pick = all.find((p) => isMobileE164In(p, cfg)) ?? all[0]!;
+  return prettyPhoneIn(pick, cfg);
 }
 
 /** A sample number in the country's shape, for an error sentence ("+420 712 345 678"). */

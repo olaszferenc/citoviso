@@ -16,6 +16,7 @@
 // this page states must stay true in the branch where the payment never arrives
 // and the site closes for good on T+30.
 
+import { countryConfigSync } from "../country.js";
 import { esc } from "../console/views.js";
 import { T } from "../i18n/mail.js";
 import { displayPhone, effectiveContact } from "../tenant/contact.js";
@@ -84,7 +85,8 @@ export function suspendedPageData(inputs: unknown, edits: unknown): SuspendedPag
     name: String(ed.name ?? sd.name ?? ""),
     city: String(place.city ?? ""),
     email: c.email,
-    phone: c.phone ? displayPhone(c.phone) : "",
+    // The lodging's numbering plan, like the live page (nemzetközi audit 2026-11-27).
+    phone: c.phone ? displayPhone(c.phone, countryConfigSync(place.country)) : "",
     address: c.address,
   };
 }

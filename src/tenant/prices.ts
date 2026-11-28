@@ -680,9 +680,12 @@ export function priceSpan(
   return { min: Math.min(...amounts), max: Math.max(...amounts) };
 }
 
-/** "24 000–32 000 Ft" (one currency mark), or a single amount when the span is flat. */
-export function formatSpan(min: number, max: number, currency: string): string {
-  if (min === max || (Number.isInteger(min) && Number.isInteger(max) && Math.round(min) === Math.round(max))) return formatAmount(min, currency);
+/** "24 000–32 000 Ft" (one currency mark), or a single amount when the span is flat. Another page
+ *  language (nemzetközi audit 2026-11-27) prints both ends in its own form („1.200 €–1.800 €”) —
+ *  where its currency sign stands is the language's, so the end is not cut off. */
+export function formatSpan(min: number, max: number, currency: string, lang?: string): string {
+  if (min === max || (Number.isInteger(min) && Number.isInteger(max) && Math.round(min) === Math.round(max))) return formatAmount(min, currency, lang);
+  if (lang && lang !== "hu") return `${formatAmount(min, currency, lang)}–${formatAmount(max, currency, lang)}`;
   // A fractional low end keeps its decimals (the unit follows once, after the high end).
   const n = Number.isInteger(min) ? formatNumber(min) : formatAmount(min, currency).replace(/\s*\S+$/, "");
   return `${n}–${formatAmount(max, currency)}`;

@@ -4068,6 +4068,25 @@ if [ -f scripts/portal-sync-guard-check.mts ] && \
   echo "[pre-commit] portal-sync-guard-check (export minden hoszton, ütközés, korlát, SSRF, runtime, fordulónap, dupla POST)…"
   npx tsx scripts/portal-sync-guard-check.mts >"$GATE_LOG" || gate_failed
 fi
+# NEMZETKÖZI MODUL-AUDIT (2026-11-27, tulaj: „akkor hogy sikerült eddig letesztelni a nemzetközi indulást?”):
+#   ① customer-locale-check — a VEVŐ-oldali könyvtárak MINDEN fájljában (új fájl is) nincs égetett magyar
+#      locale: "hu-HU", Europe/Budapest, magyar hónapnevek, name:hu, magyar keresési nyelv, „hu” nyelv-argumentum,
+#      nyelv nélküli összeg-formázás, csak-magyar telefon-forma, <html lang="hu">. Indokolt kivétel ALLOW-on, a
+#      lejárt kivétel bukik. Csak forrást olvas, ~1 mp. Piros önteszttel.
+#   ② country-module-data-e2e — scratch DB, a VALÓDI HR (0142) és IT (0150) sor, minden modul a tulaj helyi
+#      adatával: minden modul a lapon, nincs magyar szivárgás, a lap dátum-/szám-/telefonformája, teljes
+#      felszereltség ikonnal, a magyar iker bájtra. Böngésző nélkül.
+#     ⚠️ ÖN-TRIGGER: a minta az ŐR SAJÁT fájlját is tartalmazza (guard-wiring-check ②).
+if [ -f scripts/customer-locale-check.mts ] && \
+   changed_files | grep -qE '^src/(engine|tenant|booking|ui|server|email|reviews|events|payment|invoicing|domains|trial|outreach|conversion|text)/|^src/legal[A-Za-z]*\.ts$|^scripts/customer-locale-check\.mts$'; then
+  echo "[pre-commit] customer-locale-check (vevő-oldali útvonalon nincs égetett magyar locale)…"
+  npx tsx scripts/customer-locale-check.mts --self-test >"$GATE_LOG" && npx tsx scripts/customer-locale-check.mts >"$GATE_LOG" || gate_failed
+fi
+if [ -f scripts/country-module-data-e2e.mts ] && \
+   changed_files | grep -qE '^src/tenant/(editor|units|prices|contact|siteModuleConfig|amenityCatalog)\.ts$|^src/engine/(moduleSections|render|siteData|amenityIcon|templateKit)\.ts$|^src/text/(phone|phoneCountry|money)\.ts$|^src/conversion/provision\.ts$|^src/i18n/babel/packs/|^src/country\.ts$|^migrations/|^scripts/country-module-data-e2e\.mts$'; then
+  echo "[pre-commit] country-module-data-e2e (minden modul valódi helyi adattal, HR + IT, HU bájtra)…"
+  npx tsx scripts/country-module-data-e2e.mts >"$GATE_LOG" || gate_failed
+fi
 # NEMZETKÖZI C — a két nem-HU felület (tulaj-kivétel 2026-11-22, ADR: *nemzetkozi-c-ket-nem-hu-felulet-kivetellel*):
 #     nem-HU, nem-angol mockon az angol portál-szobanév helyett a típus T()-vel (fallback jelentve, magyar lap
 #     bájtra azonos); a szállás-admin „Hirdeti máshol is?” kártyája az ország calendarSyncPortals-ából
