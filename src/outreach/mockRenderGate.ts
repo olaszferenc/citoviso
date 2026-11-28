@@ -106,6 +106,34 @@ export function heroTitleContrast(rgb: readonly [number, number, number], grey: 
   return { ratio: Math.round(ratio * 100) / 100, text };
 }
 
+/** A computed CSS colour as [r,g,b] 0–255: „rgb(…)/rgba(…)” or the „color(srgb r g b / a)” a color-mix() resolves to. */
+export function cssRgb(c: string): [number, number, number] | null {
+  const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(c);
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+  const k = /color\(srgb\s+([\d.e-]+)\s+([\d.e-]+)\s+([\d.e-]+)/.exec(c);
+  return k ? [Number(k[1]) * 255, Number(k[2]) * 255, Number(k[3]) * 255] : null;
+}
+
+/**
+ * A text colour against a clip of its GROUND (the letters made transparent): the ground is the clip's median grey —
+ * typical of what most of the letters stand on. Grey luma → WCAG luminance (sRGB curve).
+ */
+export function groundContrast(rgb: readonly [number, number, number], ground: Uint8Array | Buffer, text: string): { ratio: number; text: string; groundLuma: number } | null {
+  if (!ground.length) return null;
+  const g = [...ground].sort((a, b) => a - b);
+  const textLuma = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+  const median = g[Math.floor(g.length / 2)]!;
+  // the part of the ground closest to the letters' own tone: the lighter quarter for a light line, the darker for a dark one
+  const bg = textLuma >= median ? g[Math.floor(g.length * 0.75)]! : g[Math.floor(g.length * 0.25)]!;
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lt = lin(textLuma);
+  const lb = lin(bg);
+  return { ratio: Math.round(((Math.max(lt, lb) + 0.05) / (Math.min(lt, lb) + 0.05)) * 100) / 100, text, groundLuma: median };
+}
+
 /** Mean luma and Laplacian variance of the band 25–70 % down a greyscale clip (w × h, 1 byte a pixel). */
 export function heroScreenStats(g: Uint8Array | Buffer, w: number, h: number): { midMean: number; midLap: number } {
   const H = Math.floor(h);
@@ -162,6 +190,8 @@ export interface RenderFinding {
   readonly detail: string;
   /** The picture the finding is about (photo findings): the retry step (gateRetry.ts) leaves it out of the next allotment. */
   readonly url?: string;
+  /** A render switch that answers the finding without another picture or template (chainSupply.retryFailedPlan). */
+  readonly fix?: "hero-accent-dark" | "hero-accent-light";
 }
 
 export interface RenderGateResult {
@@ -454,6 +484,7 @@ export async function auditMockFile(
   let heroLightShare = 0;
   let heroScreen: { midMean: number; midLap: number } | null = null;
   let heroTitle: { ratio: number; text: string } | null = null;
+  let heroAccent: { ratio: number; text: string; groundLuma: number; tone: "light" | "dark" } | null = null;
   let mapBlank = false;
   try {
     // The PAGE renders with the browser's own UA: Google Fonts answers a bot UA with another font
@@ -560,12 +591,34 @@ export async function auditMockFile(
     // against the pixels actually behind it (the clip's pixels unlike the text colour = the picture under the letters).
     const t = (await page.evaluate(`(() => { const h = [...document.querySelectorAll("h1")].find((e) => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 10 && r.top < innerHeight && r.bottom > 0 && getComputedStyle(e).visibility !== "hidden"; }); if (!h) return null; const r = h.getBoundingClientRect(); const c = getComputedStyle(h).color; return { x: Math.max(0, r.left), y: Math.max(0, r.top), w: Math.min(innerWidth - Math.max(0, r.left), r.width), h: Math.min(innerHeight - Math.max(0, r.top), r.height), c, text: (h.textContent || "").trim().slice(0, 40) }; })()`)) as { x: number; y: number; w: number; h: number; c: string; text: string } | null;
     if (t && t.w >= 20 && t.h >= 10) {
-      const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(t.c);
-      if (m) {
+      const rgb = cssRgb(t.c);
+      if (rgb) {
         const clip = await page.screenshot({ clip: { x: Math.floor(t.x), y: Math.floor(t.y), width: Math.max(1, Math.floor(t.w)), height: Math.max(1, Math.floor(t.h)) } });
         const px = await sharp(clip).greyscale().raw().toBuffer();
-        heroTitle = heroTitleContrast([Number(m[1]), Number(m[2]), Number(m[3])], px, t.text);
+        heroTitle = heroTitleContrast(rgb, px, t.text);
       }
+    }
+    // THE TITLE'S ACCENT LINE ON ITS PICTURE (quality colleague 11-28: Horizont 1d0dd332, Káma f3b7293d, Napfény 8859b33c —
+    // the light accent tint of the h1's <em> on a light photo). Each <em> of the first-screen h1 against the pixels behind it.
+    const ems = (await page.evaluate(`(() => { const h = [...document.querySelectorAll("h1")].find((e) => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 10 && r.top < innerHeight && r.bottom > 0; }); if (!h) return []; return [...h.querySelectorAll("em")].map((e) => { const r = e.getBoundingClientRect(); return { x: Math.max(0, r.left), y: Math.max(0, r.top), w: Math.min(innerWidth - Math.max(0, r.left), r.width), h: Math.min(innerHeight - Math.max(0, r.top), r.height), c: getComputedStyle(e).color, text: (e.textContent || "").trim().slice(0, 40) }; }).filter((b) => b.w >= 20 && b.h >= 10); })()`)) as { x: number; y: number; w: number; h: number; c: string; text: string }[];
+    // The ground is shot with the letters made transparent for a moment (a light line on a light photo leaves too few
+    // „unlike the text” pixels to tell the ground from the letters). The text-shadow stays: its dark halo is part of what
+    // the reader sees … — measured 11-28: with the halo all three flagged pages passed; without it, against the LIGHTER
+    // part of the ground (75th percentile for a light line), Horizont 2.36 · Napfény 2.80 fail, six good pages 3.19–8.72.
+    if (ems.length) {
+      await page.evaluate(`(() => { const h = [...document.querySelectorAll("h1")][0]; if (!h) return; for (const e of h.querySelectorAll("em")) { e.dataset.citColor = e.style.color; e.dataset.citShadow = e.style.textShadow; e.style.color = "transparent"; e.style.textShadow = "none"; } })()`);
+      for (const e of ems) {
+        const rgb = cssRgb(e.c);
+        if (!rgb) continue;
+        const clip = await page.screenshot({ clip: { x: Math.floor(e.x), y: Math.floor(e.y), width: Math.max(1, Math.floor(e.w)), height: Math.max(1, Math.floor(e.h)) } });
+        const ground = await sharp(clip).greyscale().raw().toBuffer();
+        const v = groundContrast(rgb, ground, e.text);
+        // the fallback the retry will render: whichever of white / the dark ink reads better on THIS ground
+        const white = groundContrast([255, 255, 255], ground, e.text)?.ratio ?? 0;
+        const dark = groundContrast([22, 24, 26], ground, e.text)?.ratio ?? 0;
+        if (v && (!heroAccent || v.ratio < heroAccent.ratio)) heroAccent = { ...v, tone: white >= dark ? "light" : "dark" };
+      }
+      await page.evaluate(`(() => { const h = [...document.querySelectorAll("h1")][0]; if (!h) return; for (const e of h.querySelectorAll("em")) { e.style.color = e.dataset.citColor || ""; e.style.textShadow = e.dataset.citShadow || ""; } })()`);
     }
     // Walk the page so lazy images load, then measure from the top.
     const height = (await page.evaluate("document.documentElement.scrollHeight")) as number;
@@ -667,6 +720,10 @@ export async function auditMockFile(
   // room-hero rule's case (isRoomHero) since this round.
   const heroDim = heroScreen != null && heroScreen.midMean < HERO_SCREEN_DARK;
   if (mapBlank) findings.push({ code: "thin", detail: "a megközelítés-blokkban nem látszik térkép (üres doboz a tűvel)" });
+  if (heroAccent && heroAccent.ratio < HERO_TITLE_MIN_CONTRAST) {
+    // fix: the retry renders the accent in white or the dark ink — whichever measured better on this ground (heroAccentTone)
+    findings.push({ code: "contrast", detail: `a nyitókép címének kiemelt sora halvány a képen: „${heroAccent.text}” ${heroAccent.ratio}:1 (legalább ${HERO_TITLE_MIN_CONTRAST}:1)`, fix: heroAccent.tone === "dark" ? "hero-accent-dark" : "hero-accent-light" });
+  }
   if (heroTitle && heroTitle.ratio < HERO_TITLE_MIN_CONTRAST) {
     findings.push({ code: "contrast", detail: `a nyitókép címe halvány a képen: „${heroTitle.text}” ${heroTitle.ratio}:1 (legalább ${HERO_TITLE_MIN_CONTRAST}:1)` });
   }

@@ -84,7 +84,18 @@ try {
     const { html } = await renderMockMeasured(f.recipe, siteData, { phase: "mock" });
     const file = path.join(dir, `${f.tpl}-${f.id}.html`);
     await writeFile(file, html);
-    const r = await auditMockFile(file);
+    let r = await auditMockFile(file);
+    // A FIXABLE finding (the hero title's accent line too faint on this photo) is answered by the chain itself: the retry
+    // re-renders with the measured tone (chainSupply.retryFailedPlan → siteData.heroAccentTone). The check does the same,
+    // once — what a lead gets after the chain, not before it.
+    const fixable = r.findings.length > 0 && r.findings.every((x) => x.fix);
+    if (fixable) {
+      const tone = r.findings.find((x) => x.fix)!.fix === "hero-accent-dark" ? "dark" : "light";
+      const { html: fixedHtml } = await renderMockMeasured(f.recipe, { ...siteData, heroAccentTone: tone } as SiteData, { phase: "mock" });
+      await writeFile(file, fixedHtml);
+      r = await auditMockFile(file);
+      heroNote += `  (kiemelt sor ${tone === "dark" ? "sötétre" : "fehérre"} váltva — a lánc újrapróbája)`;
+    }
     const blocking = r.findings.filter((x) => x.code !== "broken");
     const broken = r.findings.length - blocking.length;
     if (blocking.length) failed++;

@@ -344,6 +344,17 @@ export async function retryFailedPlan(dispatchId: string, planId: string): Promi
   const freeTemplate = isParallax ? null : ([...SECOND_PLAN_TEMPLATES].find((t) => !used.has(t) && !triedTemplates.has(t)) ?? null);
   const plan5 = retryPlanFor(gate, { planPhoto: own?.step === "photos" ? own.n : 0, lead: leadTries, templateLeft: freeTemplate != null, parallax: isParallax });
   const codes = [...new Set(gate.findings.map((f) => f.code))];
+  // A fixable finding only (the hero accent line too faint): the same plan re-rendered with the switch — no other picture,
+  // no other template, counted like a photo try.
+  const accentFix = gate.findings.find((f) => f.fix)?.fix;
+  if (accentFix && gate.findings.every((f) => f.fix) && !((plan.inputs as { siteData?: { heroAccentTone?: string } } | null)?.siteData?.heroAccentTone)) {
+    const inputs = structuredClone((plan.inputs ?? {}) as Record<string, unknown>) as Record<string, unknown> & { siteData?: Record<string, unknown> };
+    if (inputs.siteData) inputs.siteData.heroAccentTone = accentFix === "hero-accent-dark" ? "dark" : "light";
+    inputs.gateRetry = { n: (own?.step === "photos" ? own.n : 0) + 1, step: "photos", at: new Date().toISOString(), codes: ["contrast"] } satisfies GateRetry;
+    await refreshMock({ id: plan.id, lead_id: plan.lead_id, path: plan.path, inputs, generated_at: plan.generated_at }, { backupDir: path.resolve(process.cwd(), "sites/_mock-refresh-backup") });
+    await db.updateTable("outreach_dispatch").set({ status: "held", note: QA_WAIT_NOTE }).where("id", "=", dispatchId).where("status", "in", ["queued", "held"]).execute();
+    return `kiemelt sor ${accentFix === "hero-accent-dark" ? "sötétre" : "fehérre"} váltva`;
+  }
   let step = plan5;
   if (step.step === "photos") {
     // A lead with its own photos must keep the country's minimum on the page, else the photo rule holds it forever.

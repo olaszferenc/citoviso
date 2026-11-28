@@ -433,6 +433,8 @@ export interface SiteData {
    * (generator/townPhoto.ts) and persisted, so a rerender keeps it. Never a photo of the lodging,
    * never in `photos`, never on the live site.
    */
+  /** The render gate found the hero title's accent line too faint on this photo: dark on a light ground, white on a dark one. */
+  readonly heroAccentTone?: "dark" | "light";
   readonly townPhoto?: TownPhoto;
   /**
    * LOCAL gallery pictures of the town (beach, main square, sight, landscape — media/townPick.ts,

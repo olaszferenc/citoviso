@@ -101,6 +101,10 @@ const PARALLAX_CSS = `
     .t-hero h1{font-size:clamp(26px,8vh,36px);max-width:24ch}
   }
   .t-hero h1 em{font-style:normal;color:color-mix(in srgb, var(--cit-accent) 60%, #fff)}
+  /* the render gate measured the accent line too faint on THIS photo (siteData.heroAccentTone): dark on a light ground
+     (with a light halo), white on a dark one */
+  .t-hero h1.t-em-dark em{color:#16181a;text-shadow:0 1px 14px rgba(255,255,255,.7),0 0 2px rgba(255,255,255,.6)}
+  .t-hero h1.t-em-light em{color:#fff}
   .t-herosub{max-width:540px;font-size:18px;margin-bottom:34px;opacity:.92}
   .t-heroctas{display:inline-flex;gap:14px;flex-wrap:wrap}
 
@@ -421,7 +425,7 @@ function renderParallax(recipe: Recipe, data: SiteData, phase: RenderPhase): str
   const hero = `${heroPanelOpen}
     ${mast}
     <div class="t-wrap t-parin t-hero">
-      <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}>${accented(h1, heroCopy.accent)}</h1>
+      <h1${hookPick(["hero.lead", heroCopy.lead], ["tagline", data.tagline])} ${heroFit(h1)}${data.heroAccentTone ? ` class="t-em-${data.heroAccentTone}"` : ""}>${accented(h1, heroCopy.accent)}</h1>
       ${sub ? `<p class="t-herosub"${hookPick(["intro", firstSentence(data.intro), { part: "first-sentence" }], ["tagline", data.tagline])}>${esc(sub)}</p>` : ""}
       <div class="t-heroctas">
         ${hasContact ? `<a class="cit-btn" href="#cit-enquiry">${T(data, "Szabad időpontot kérek")}</a>` : ""}

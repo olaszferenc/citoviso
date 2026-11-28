@@ -12,7 +12,7 @@ import { renderSkinVars, SKINS } from "../src/engine/skins.js";
 import { headingKey, withUniqueSectionHeadings } from "../src/engine/render.js";
 import { bandCaption } from "../src/engine/templates/parallax.js";
 import { isRoomHero, withBestHeroFirst } from "../src/media/photoKind.js";
-import { heroScreenStats, HERO_SCREEN_DARK, HERO_SCREEN_DIM } from "../src/outreach/mockRenderGate.js";
+import { cssRgb, groundContrast, heroScreenStats, HERO_SCREEN_DARK, HERO_SCREEN_DIM } from "../src/outreach/mockRenderGate.js";
 import { contrastRatio, parseHex, TEXT_MIN_CONTRAST } from "../src/engine/palette.js";
 
 let failed = 0;
@@ -162,6 +162,14 @@ const fresh = { planPhoto: 0, lead: 0, templateLeft: true };
   check("mennyiség: a fék csak a valódi munkát számolja (frissítés vagy a fotószabályon átmenő, ítélet nélküli aktuális terv)", /\(\$\{DISPATCH_PHOTOS_OK_SQL\} and coalesce\(\(a\.inputs->'renderGate'->>'version'\)::int, 0\) < 15\)/.test(mr));
   check("mennyiség: az elavult (bélyeg nélküli) településkép-választás frissítésre kerül, és a mai készletből újraválasztódik, naponta egyszer próbálva", /export const TOWN_PICK_STALE_SQL/.test(mr) && /not \$\{MOCK_CURRENT_GENERATOR_SQL\} or \$\{TOWN_PICK_STALE_SQL\}/.test(mr) && /await townPhotosForMock\(/.test(mr) && /townRepickAt/.test(mr));
   check("az eszkalációs utánkövető az elutasító válaszolót is kihagyja (bármely prospect leiratkozása, vagy Poe „elutasító / nem érintett” minősítése)", /export async function leadRejected/.test(read("../src/outreach/escalationFollowup.ts")) && /suggestion_basis\[1\] ilike 'elutasító%'/.test(read("../src/outreach/escalationFollowup.ts")));
+}
+// the hero title's accent line on its picture (quality colleague 11-28: Horizont, Káma, Napfény)
+{
+  const g = read("../src/outreach/mockRenderGate.ts");
+  const grey = (v: number) => Buffer.alloc(400, v);
+  check("a kiemelt sor a mögötte lévő képhez mérve (betűk átlátszók, árnyék nélkül, a háttér világosabb negyede): világos kiemelés világos háttéren bukik, sötéten átmegy", (groundContrast([185, 193, 137], grey(150), "x")?.ratio ?? 9) < 3 && (groundContrast([185, 193, 137], grey(40), "x")?.ratio ?? 0) >= 3);
+  check("a kapu a fehér és a sötét tartalék közül a jobban olvashatót írja elő, az újrapróba azzal renderel (kép- és sablonváltás nélkül)", /tone: white >= dark \? "light" : "dark"/.test(g) && /fix: heroAccent\.tone === "dark" \? "hero-accent-dark" : "hero-accent-light"/.test(g) && /inputs\.siteData\.heroAccentTone = /.test(read("../src/generator/chainSupply.ts")) && /\.t-hero h1\.t-em-light em\{color:#fff\}/.test(read("../src/engine/templates/parallax.ts")));
+  check("a color-mix()-ből számolt szín („color(srgb …)”) is olvasható a kapunak", JSON.stringify(cssRgb("color(srgb 0.5 1 0)")?.map(Math.round)) === "[128,255,0]" && JSON.stringify(cssRgb("rgb(1, 2, 3)")) === "[1,2,3]");
 }
 // wiring
 {
