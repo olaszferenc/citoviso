@@ -180,7 +180,7 @@ A gép által generált kimenet (mock, kép, hero, szöveg, levél, kontakt-tal�
 | Munkafa | lokál | `~/wt/cit<sid>` | Itt fejlesztünk, szálanként külön (a watchdog hozza létre) |
 | DB | unix socket | `/tmp:5433`, `citoviso_dev` | **KÖZÖS** minden szálnak (12 MB) — a `sites/`, `node_modules`, `.env` szintén symlink a fő fába |
 | Git | `origin` | `git@github-citoviso:olaszferenc/citoviso.git` | Verziótörténet **és** (ADR-0053 után) a deploy forrása |
-| Éles VPS | `ssh -i ~/.ssh/citoviso_hetzner root@178.104.3.223` | `/opt/citoviso/app` | Hetzner CX23/Debian13. Backupok: `/opt/citoviso/backups/<szál>-<ts>/` |
+| Éles VPS | `ssh -i ~/.ssh/citoviso_hetzner root@77.216.131.165` (vagy `~/.ssh/citoviso_contabo`) | `/opt/citoviso/app` | Contabo Cloud VPS 8 NVMe `citoviso-2` (8 vCPU / 23 GB / 150 GB), Debian 13; 2026-11-28-ig Hetzner CX23 `178.104.3.223`. Backupok: `/opt/citoviso/backups/<szál>-<ts>/` |
 | Éles service-ek | systemd | `citoviso-public` (:4800), `citoviso-console` (:4600) | `WorkingDirectory=/opt/citoviso/app`, `npx tsx src/server/public.ts` |
 | Domain | Cloudflare | `citoviso.com` | tenant-aldomainek: `<slug>.citoviso.com` |
 

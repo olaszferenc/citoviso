@@ -37,7 +37,7 @@ set -u
 # Globálisan azért nem: a `… | grep -q` mintáknál a korán kilépő grep SIGPIPE-ot okoz az
 # íróban, és pipefail-lel hamis bukást adna. Őr: scripts/deploy-pipe-check.mts.
 
-HOST=178.104.3.223
+HOST=77.216.131.165
 KEY="$HOME/.ssh/citoviso_hetzner"
 SSH="ssh -i $KEY root@$HOST"
 APP=/opt/citoviso/app

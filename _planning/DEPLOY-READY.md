@@ -8,7 +8,7 @@
 > külön engedély — az egyik engedélye nem viszi a másikat.
 
 ```bash
-SSH="ssh -i ~/.ssh/citoviso_hetzner root@178.104.3.223"   # a lenti parancsok ezt használják
+SSH="ssh -i ~/.ssh/citoviso_hetzner root@77.216.131.165"   # a lenti parancsok ezt használják
 ```
 
 ---
@@ -154,7 +154,7 @@ deploynál visszaállítja).
 ### 3.4 Lépésről lépésre (visszagörgetés `263ef8dd`-re)
 
 ```bash
-SSH="ssh -i ~/.ssh/citoviso_hetzner root@178.104.3.223"
+SSH="ssh -i ~/.ssh/citoviso_hetzner root@77.216.131.165"
 OLD=263ef8dddef0a7f1dbbc43af1003c8045776c198      # a DEPLOYED-sor prev= mezője
 NEW=$($SSH 'git -C /opt/citoviso/app rev-parse HEAD')
 TS=$(date +%Y%m%d-%H%M%S)

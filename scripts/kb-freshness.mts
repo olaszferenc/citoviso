@@ -18,7 +18,7 @@
 import { execFileSync, execSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const PROD_HOST = "178.104.3.223";
+const PROD_HOST = "77.216.131.165";
 const PROD_KEY = `${process.env.HOME}/.ssh/citoviso_hetzner`;
 const PROD_APP = "/opt/citoviso/app";
 // Days the live system may trail origin/main before the sweep flags it. Deploys are

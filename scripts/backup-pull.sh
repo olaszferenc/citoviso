@@ -20,7 +20,7 @@
 # Csak OLVAS az élesről (pg_dump + rsync) — élesi írást soha nem végez (CLAUDE.md §0.4).
 set -euo pipefail
 
-HOST=178.104.3.223
+HOST=77.216.131.165
 KEY="$HOME/.ssh/citoviso_hetzner"
 SSH="ssh -i $KEY -o ConnectTimeout=20 -o BatchMode=yes root@$HOST"
 REMOTE_DB=citoviso

@@ -52,7 +52,7 @@ const skipFile = val("--skip-file");
 const budgetMs = val("--budget-min") ? Number(val("--budget-min")) * 60000 : Infinity;
 const t0 = Date.now();
 
-const SSH = ["-i", `${process.env.HOME}/.ssh/citoviso_hetzner`, "-o", "BatchMode=yes", "root@178.104.3.223"];
+const SSH = ["-i", `${process.env.HOME}/.ssh/citoviso_hetzner`, "-o", "BatchMode=yes", "root@77.216.131.165"];
 const DEV = ["-h", process.env.CIT_DEV_PGHOST ?? "/tmp", "-p", process.env.CIT_DEV_PGPORT ?? "5433", "-U", "postgres", "-d", process.env.CIT_DEV_PGDB ?? "citoviso_dev"];
 
 /** Run SQL on the chosen DB (stdin), -At output. */
