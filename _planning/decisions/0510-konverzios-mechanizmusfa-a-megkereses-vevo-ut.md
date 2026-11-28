@@ -1,4 +1,4 @@
-## ADR-XXXX — Konverziós mechanizmusfa: a megkeresés → vevő út egyetlen közös modellje
+## ADR-0510 — Konverziós mechanizmusfa: a megkeresés → vevő út egyetlen közös modellje
 
 - **Dátum:** 2026-11-28
 - **Státusz:** elfogadva (tulaj, `cit96bd8170`-utód koordinátor; a tulaj szava: „most csak ilyen nagyon intuitíven, nagyon ad hoc dobálunk be ötleteket… valami alapfelállást kéne csinálni, amiben megegyezünk a teljes konverziós folyamatról”; „Ez a fájl legyen … doktrína szintű dolog, amit majd építünk, és ide rögzítünk méréseket”)

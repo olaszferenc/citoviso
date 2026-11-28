@@ -9,7 +9,7 @@
 - [05-MODULES.md](05-MODULES.md) — modul-katalógus (szállás pilot): a generált oldal FUNKCIÓ-tengelye (KÍNÁLAT·ELÉRHETŐSÉG·KONVERZIÓ), Szint 0–1; a modul=adat, archetípus=befogadó (ADR-0009/0010)
 - [06-UI-CONTRACT.md](06-UI-CONTRACT.md) — modul-megjelenítés archetípus-függetlenül (téma-token · modul-horog · nyelvi kontraktus); a 03-INVARIANTS §B dizájn-kontraktusa erre horgonyoz
 
-- [07-CONVERSION-TREE.md](07-CONVERSION-TREE.md) — **konverziós mechanizmusfa** (ADR-XXXX): a megkeresés → vevő út állapotai, okai, mérései és karjai egy fában, aktív feladatokkal és mérési naplóval. Konverziós ötlet, kísérlet vagy mérés előtt KÖTELEZŐ: ami nem köthető egy csomópontjához, azt nem csináljuk.
+- [07-CONVERSION-TREE.md](07-CONVERSION-TREE.md) — **konverziós mechanizmusfa** (ADR-0510): a megkeresés → vevő út állapotai, okai, mérései és karjai egy fában, aktív feladatokkal és mérési naplóval. Konverziós ötlet, kísérlet vagy mérés előtt KÖTELEZŐ: ami nem köthető egy csomópontjához, azt nem csináljuk.
 
 ## Karbantartás
 - Élő dokumentumok — új tudás felbukkanásakor a megfelelő fájlt bővítsd, ne a memóriában hagyd szétszórva.

@@ -1,4 +1,4 @@
-# 07 — KONVERZIÓS MECHANIZMUSFA (élő dokumentum, ADR-XXXX)
+# 07 — KONVERZIÓS MECHANIZMUSFA (élő dokumentum, ADR-0510)
 
 > A megkeresés → vevő út EGYETLEN közös modellje. Minden konverziós ötlet, mérés és kísérlet ehhez a fához
 > kötődik: ami nem köthető egy csomópontjához, azt nem csináljuk. Kiinduló vázlat: a tulaj kézi skicce
