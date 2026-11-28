@@ -30,7 +30,8 @@ eltérés ugyanolyan súlyos, mint a kapu megkerülése.
   `order_intent.kind` + `billing_period` — ugyanaz a két oszlop, amiből az ÖSSZEG is
   származik (`src/billing/invoiceItem.ts`). Egy sor így szerkezetileg nem tud olyan
   terméket megnevezni, amit nem számláztunk.
-- A **„Számlázás folyamatban"** (bizonylat nélküli) sor főcíme VÁLTOZATLAN marad —
+- A **„Fizetve — a számla készül"** (bizonylat nélküli) sor főcíme VÁLTOZATLAN szerkezetű — (2026-11-28, tulaj:
+  a régi „Számlázás folyamatban" horvátul „Naplata u tijeku" lett, ami fizetésnek olvasható; a sor fizetett tételé) —
   ott a tétel a halvány alsorba kerül. Ennek a sornak nincs száma, tehát az állapot
   a fontosabb állítás.
 - **Ugyanaz a megnevezés megy ki a számla-levél TÁRGYÁBAN is.** Egy igazság, egy

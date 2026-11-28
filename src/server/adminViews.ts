@@ -5654,7 +5654,9 @@ export function documentsSection(d: DocumentsAdminData, lang = "hu"): string {
           // The contract keeps the STATE as the headline here: this row has no
           // number, so „mi történik vele" outranks „mit vettem". The item name
           // moves into the muted line, so the row still says what it is about.
-          `<div class="adm-inv__t"><strong>${T(lang, "Számlázás folyamatban")}</strong>` +
+          // Owner 2026-11-28 (HR live run): the row is PAID — „Számlázás folyamatban” read as „payment in
+          // progress” (HR „Naplata u tijeku”), so the headline says the money is in and the document is coming.
+          `<div class="adm-inv__t"><strong>${T(lang, "Fizetve — a számla készül")}</strong>` +
           `<span class="sub">${esc([item, when].filter(Boolean).join(" · "))}</span>` +
           `<span class="adm-chip2 adm-chip2--warn">${T(lang, "Még nincs bizonylat")}</span></div>` +
           `<div class="adm-inv__r"><div class="adm-inv__amt">${esc(fmtMoney(i.gross, i.currency, lang))}</div></div>` +

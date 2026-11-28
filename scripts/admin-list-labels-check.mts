@@ -412,10 +412,10 @@ console.log(
     "tétel-név nélkül 18 közel azonos sorból nem lehet kiválasztani a keresettet (Elek FK-001 E1)",
   );
   // A bizonylat nélküli sor is megnevezi, MIRŐL szól — csak nem a főcímben.
-  const pending = rows.find((r) => text(r).includes("Számlázás folyamatban"));
+  const pending = rows.find((r) => text(r).includes("Fizetve — a számla készül"));
   check(
     Boolean(pending && known.some((l) => text(pending).includes(l))),
-    "a „Számlázás folyamatban” sor is megnevezi a tételt",
+    "a „Fizetve — a számla készül” sor is megnevezi a tételt",
     "ez a sor azért NEM kap főcímbe tételt, mert nincs száma — de a tárgyát akkor is ki kell mondania",
   );
   // A keresés arra is találjon, ami a soron LÁTSZIK (a felirat és a predikátum
