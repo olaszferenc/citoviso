@@ -39,6 +39,18 @@ egésze" csak NÉV — **a rendszer maga termelt dupla foglalást** (mérve).
   kellene bontani, és egy kimaradt visszabontás olyan éjszakát hagy, amit senki nem tud
   felszabadítani.
 - **Szoba ↔ szoba: NINCS kizárás** (egy négy-apartmanos ház négy foglalást vesz fel).
+- **Több szobás kérés (ADR-0393): EGY `booking_request`, több egység.** A `booking_request.unit_ids`
+  (0111) a kérés MINDEN egységét hordozza a vendég sorrendjében. A `[1]` elem a régi `unit_id`;
+  egy-egységes beszúrásnál trigger tölti ki. ⚠️ Gotcha: a `unit_id` oszlop él, de csak az első
+  szobát mondja meg. Ütközés-, foglaltság- és elutasítás-logika a `unit_ids`-re kérdezzen
+  (`unit_ids && $set`), különben a 2. szobától kezdve vak.
+- **Ütközés = közös éjszaka ÉS közös egység** (a hierarchikus kizárás — egész ↔ szoba — ezen felül
+  érvényes). A dátum-átfedés önmagában nem elég: a felület egyszer olyan elutasítást ígért, amit a
+  szerver nem tett meg. Kód: `src/booking/requests.ts::overlappingPending`.
+- **Vegyes árazás:** ha egy szobának nincs ára az árazottak mellett, a kérés árajánlat-kérés lesz.
+  A vendég „Az ismert rész” részösszeget látja, az ár nélküli szoba „egyedi ár”. Az ajánlat-lapon
+  az árazott szobák listaáron állnak, a tulaj csak a nyitott szobákra ad árat (`multiOfferSplit`).
+  Ellátás csak arra a szobára kérhető, amelyhez a tulaj felajánlotta (`requestMealLines`).
 - Mind a **négy kapun** érvényes: vendég-naptár (`getBlockedDaysFrom`), űrlap gyors-elutasítás,
   elfogadás-tranzakció (`src/booking/requests.ts`), admin hónap-nézet (`source:"linked"`, nem
   szerkeszthető). Az elfogadás a kizárt egységekre váró pending kéréseket is lezárja.
@@ -156,6 +168,12 @@ modul, piros ikerrel), és a szöveg-alapú `module-preview-check` fejléce ma k
 DB-állapotot vesse össze, ne a kód szándékát.**
 <!-- distill:end -->
 
+### Egy generátor-javítás három mélységben ér el a kész mockig
+A kész mock a tárolt `inputs.siteData`-ból renderel. Javítás után először azt kell eldönteni, a hiba melyik rétegben ül, mert a rétegek nem helyettesítik egymást:
+1. **Render-idejű szabály** (pl. fájlnév-alt, kapcsolat-kép, angol szobanév) → a SIMA `rerender-mock` elég. Determinisztikus, AI nélkül.
+2. **A siteData-ban PERZISZTÁLT jelzés** (minta-jelzések: szolgáltatás, szobaszám, egységfajta) → `rerender-mock --resample`. Ez újraszámolja és elmenti a jelzést, AI nélkül. A sima rerender a régi jelzést renderelné újra.
+3. **A generáláskor befagyott halmaz** (a fotókészlet `siteData.photos`, a mock SZÖVEGE) → új generálás vagy képlevétel. A rerender nem hoz be új képet, és a szövegbe korábban került állítást sem javítja. A `--rehero` csak dev-eszköz, és megtagadja azt a mockot, amelynek linkje már kiment (§I).
+Kód: `scripts/rerender-mock.mts` (fejléc-komment). A javítás commitjában mondd ki, melyik mélység kell — „deploy után” ez az egyetlen teendő.
 
 ## Realizált konverziós & pénzügyi entitás-lánc (kód-igazság, ADR-0014/0029/0080)
 > Ezek a korábban „tervezett" entitások MA a kódban élnek (`src/db/schema.ts`, `migrations/`).
@@ -227,7 +245,7 @@ DB-állapotot vesse össze, ne a kód szándékát.**
 > A gép a SZAKASZ végére tette; a pont-szintű helyet ember dönti el. Elfogadás = a keret-kommentek és ez az idézet-blokk törlése.
 
 - **free_trial** (0097, 0099) — a próba a `subscription`-ön KÍVÜL él (ld. [00-GLOSSARY] Ingyenes próba); `tenant_id` FK `SET NULL`, mert a törlés után a sor marad az ÁSZF-elfogadás bizonyítékaként (`purged`, `purge_report`). Napló: `free_trial_notice` (t3/t1/p7), `free_trial_alert`.
-- **outreach_reply / outreach_reply_send** (0094, 0096) — a megkeresésre érkezett válasz (SMS a gammu-ból, e-mail IMAP-ból) és a konzolról küldött válasz. ⛔ A válasz NEM suppression-esemény (ld. [03-INVARIANTS] §C).
+- **outreach_reply / outreach_reply_send** (0094, 0096) — a megkeresésre érkezett válasz (SMS a gammu-ból, e-mail IMAP-ból) és a konzolról küldött válasz. ⛔ A válasz NEM suppression-esemény, de az elutasító/nem érintett válaszoló a további küldésből kiesik (ld. [03-INVARIANTS] §C).
 - **lead.preview_label** (0090, egyedi, kisbetűs) — a lead SAJÁT előnézeti aldomainje (`<címke>.citoviso.com`), ez a megkeresés linkje; vásárláskor a slug-alapértelmezés, más slug esetén elengedődik (`src/outreach/previewLabel.ts`, ADR-0330).
 <!-- distill:end -->
 
@@ -270,6 +288,13 @@ kivágás ~18, más fotó 27–40).
 ⚠️ **Ötödik valóság — a közös jel a MI hibánk:** két lead egyező e-mailje/telefonja ugyanarról a `own_site` forrású honlapról származhat, mert az egyik leadhez TÉVESEN rendeltünk honlapot (mérve 2026-10-08: Mohács ↔ Fadd, más város, más telefon, a Mohács-lead e-mailje a faddi honlapról). Ez nem iker és nem `same_owner`, hanem rossz presence-találat ([03-INVARIANTS] §F.14). Összevonás ELŐTT: ha a város és a telefon eltér, és az egyező kontakt egy honlapról jön → nincs összevonás, a honlap-hozzárendelést kell javítani.
 <!-- distill:end -->
 
+## Adatmodell-gotcha: a forrás-oldal nem mind a szállás tartalma
+Egy portál-adatlap vagy saját honlap HTML-je több szereplő tartalmát hordozza. Ami azonos hoszton ül, az sem biztos, hogy a lead-é, ezért a §B.17 cross-site (hoszt-) szabály ezt nem fogja meg:
+- **Szomszéd-ajánló blokkok.** A hovamenjek `div.places_nearby` („Közeli szállások”) 4 másik szállás bélyegképét mutatja azok saját mappájából. A `largestPhotoUrl` fullHD-re emelte, így átment a méretszűrőn. Mérve: 900 profilból 223-ban 373 szomszéd-kép. A booked.hu leírásába az ajánló értékelés-kártyája ömlik („7.0 / 10 – Nagyon jó | 52 értékelés”). Kód: `RELATED_BLOCK` és `withoutRatingCards` (`src/scraper/sources/portals/extract.ts`), `withoutNeighbourFolders` (`src/scraper/portalPhotos.ts`: a profilon belül a leggyakoribb place-mappa a sajátja; döntetlennél a listing slugja dönt, egyértelmű vezető nélkül minden marad).
+- **A fájlnév nem képaláírás.** Az `alt="kep_128.jpg"` / „IMG_1182” nem forrás-szöveg (`isFilenameCaption`, `src/engine/photoCaption.ts`; render-időben „<név> — N. kép”). Mérve élesen 238 ilyen alt. A saját honlap valódi `<img alt>`-ja viszont forrásnak számít.
+- **A srcset-URL vesszőt tartalmazhat** (Wix: `…/v1/fit/w_480,h_480,q_90,…/<fájl>`). Minden vesszőnél vágni halott `<host>/quality_auto/<fájl>` URL-t ad. Egyetlen, HTML-szabvány szerinti olvasó van: `parseSrcset` (`src/scraper/srcset.ts`). A már tárolt csonkokat olvasáskor ejtjük (`isCutSrcsetUrl`).
+- **Portál-szintű kizárók:** a zimmerinfo.hu MINDEN fotója portál-vízjeles (mérve 2026-10-26), ezért a §A.2 miatt a csak-zimmerinfós lead fotó nélkül marad. Kontakt- és cím-forrásnak a zimmerinfo jó. A szallas.hu nem olvasható (Cloudflare); a booked.hu-ikre (`<slug>.booked.hu`) olvasható, de az aldomain nem mindig a slug, és nyílt, megbízható keresési út nincs (mérve: 25/25 szallas.hu-s leadnél nem volt iker a slug alatt).
+⭐ A tisztítás OLVASÁSKOR is fut (`writerSources`, `distinctPortalPhotos`, `judgePhoto`), így a tárolt profil újragyűjtés nélkül is tiszta (§B.6e: nem törlünk, olvasáskor ítélünk).
 
 ## Tervezett entitások (még nincs kód)
 > ⚠️ A `Tenant` és a `Booking` KIKERÜLT innen: mindkettő realizált (`tenant`/`site`/

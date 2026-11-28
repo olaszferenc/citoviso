@@ -16,6 +16,7 @@
 
 <!-- GENERÁLT FÁJL (scripts/planning-index.mts build) — ne szerkeszd kézzel. -->
 
+- [ADR-XXXX](decisions/XXXX-konverzios-mechanizmusfa.md) — Konverziós mechanizmusfa: a megkeresés → vevő út egyetlen közös modellje
 - [ADR-0509](decisions/0509-hr-lead-kepek-a-maps-kartya-nyitokepe-a-leadre.md) — HR lead-képek: a Maps-kártya nyitóképe a leadre, a portál-galéria a linkjeiből, vízjeles host fotóra kizárva
 - [ADR-0508](decisions/0508-javito-level-a-hibas-nyitokeppel-kikuldott-es.md) — Javító levél a hibás nyitóképpel kiküldött és megnézett tervekre + kurált településtár
 - [ADR-0507](decisions/0507-a-maps-csillag-szam-nelkul-is-megmarad-es-a.md) — A Maps-csillag szám nélkül is megmarad, és a mockon 4,5-től látszik

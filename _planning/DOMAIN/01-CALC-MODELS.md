@@ -248,6 +248,13 @@
   (`ec.europa.eu/.../ms/{CC}/vat/{n}`), ami a cég jogi nevét is visszaadja — ez tölti ki a
   számlázási identitást ([03-INVARIANTS] §K).
 
+## Külső API-költség — a plafon csak azt látja, amit a mérő összegez (ADR-0412/0413)
+- **Invariáns:** minden fizetős külső hívásnak mérő ÉS plafon kell, és a plafonnak ugyanazt kell összegeznie, amit a hívás ír. Mérve 2026-10-27: a napi AI-plafon (`AI_DAILY_CAP_USD`, alap $20, `src/ai/dailyCap.ts`) CSAK a `mock_artifact.inputs.aiUsage`-t összegzi. A `recordAiUsage` a mock-futáson kívül no-op. Ezért egy óra alatt $130 fordítás és napi 6–9 ezer kép hős-pontozása (≈ $13–18/nap) ment el úgy, hogy a mérő „AI-költség: 0 hívás”-t írt.
+- **Hős-fotó pontozás** (`scoreHeroCandidates`, Haiku 4.5): mért egységár ≈ **$0,002/kép** (8 mért hívás, 24 kép/hívás). ADR-0413 óta ① élőben CSAK a generálás pontoz (plusz a kifejezett operátori/szkript hívók), a többi út a cache-t olvassa (`readCachedScores`); ② minden hívás `ai_spend` sort ír (migráció 0118, `src/ai/spend.ts`, folyamattól függetlenül); ③ napi plafon `HERO_SCORE_DAILY_CAP_USD` (alap **$5**, budapesti nap, lépésenként). **A plafon OLVASÁSA fail-closed**: ha a napi költés nem mérhető, a plafon eléréseként kezeljük.
+- **Fordítás: API-költés = 0, doktrína szerint** (ADR-0412, §B.18). Bábel előfizetésből fordít; őr `scripts/no-api-translation-check.mts`.
+- **A generálás nem fizet a Google-nek** (ADR-0413 ⑤): nincs Places az „auto” úton, nincs Details-reviews újralekérés, nincs Street View Static. Fizetni csak a kurátor gombja tud, `SCRAPE_PAID_APIS` kapuval.
+- ⚠️ Nyitott (mérve 2026-10-27): egy Anthropic-kulcs a dev és az éles gépen is; a `GOOGLE_MAPS_BROWSER_KEY` értéke = a szerver-kulcs; a Google valós számlája vak (billing export ki); a nyilvános `POST /api/mock-request`-nek nincs fékje.
+
 ## Rejtett költség
 - **Support** — skálázódik a tenant-számmal; önkiszolgáló admin nélkül megöli a margint. Modellben: `support_óra/hó × tenant` → tartsd ~0 közelében.
 
